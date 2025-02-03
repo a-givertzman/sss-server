@@ -1,0 +1,49 @@
+name: Cargo Tests
+
+on:
+  # push:
+  pull_request:
+
+env: 
+  TERM: dumb
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2      
+        # uses: actions/checkout@v3
+
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          # profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Static analysis | Markdown lint tool
+        uses: docker://avtodev/markdown-lint:v1
+        with:
+          config: '.github/markdownlint/markdownlint.yaml'
+          args: "**/*.md"
+      - name: Static analysis | cargo check
+        run: |
+          cargo check
+      - name: Static analysis | cargo clippy
+        run: |
+          cargo clippy
+          # cargo fmt --check
+      - name: Static analysis | cargo fmt
+        run: |
+          echo "escaped for now because of to much of errors, will be turned on later"
+          # cargo fmt --check
+      # - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      # - run: cargo build --release
+      - name: Unit tests
+        run: |
+          cargo test --release -- --show-output
+  
