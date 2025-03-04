@@ -21,13 +21,7 @@ rm -rf ./target/coverage
 
 cargo test --release --no-fail-fast 2>/dev/null
 
-grcov \
-  --source-dir . \
-  --binary-path target/release \
-  --output-path target/coverage \
-  --output-types html,covdir \
-  --keep-only 'src/*' \
-  --ignore 'tests/*'
+grcov target/coverage -s . --binary-path target/release -o target/coverage --keep-only 'src/*' --output-types html,covdir --ignore 'src/tests/*'
 
 ############ REPORT ############
 

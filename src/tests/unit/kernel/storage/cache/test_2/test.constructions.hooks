@@ -1,0 +1,38 @@
+[
+  {
+    "gost": "GOST 10242-88",
+    "type": "Single",
+    "load_capacity_m13": 7.5,
+    "load_capacity_m46": 7.0,
+    "load_capacity_m78": 6.5,
+    "shank_diameter": 35.0,
+    "weight": 50.0
+  },
+  {
+    "gost": "GOST 18442-81",
+    "type": "Double",
+    "load_capacity_m13": 12.0,
+    "load_capacity_m46": 11.0,
+    "load_capacity_m78": 10.0,
+    "shank_diameter": 55.0,
+    "weight": 60.0
+  },
+  {
+    "gost": "GOST 23858-79",
+    "type": "Forged",
+    "load_capacity_m13": 22.0,
+    "load_capacity_m46": 20.0,
+    "load_capacity_m78": 18.5,
+    "shank_diameter": 80.0,
+    "weight": 70.0
+  },
+  {
+    "gost": "GOST 31272-92",
+    "type": "Laminated",
+    "load_capacity_m13": 17.0,
+    "load_capacity_m46": 16.0,
+    "load_capacity_m78": 14.0,
+    "shank_diameter": 65.0,
+    "weight": 80.0
+  }
+]

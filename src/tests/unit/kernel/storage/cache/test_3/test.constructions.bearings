@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Bearing A",
+    "outer_diameter": 120.5,
+    "inner_diameter": 60.2,
+    "static_load_capacity": 1500.0,
+    "height": 35.0
+  },
+  {
+    "name": "Bearing B",
+    "outer_diameter": 100.0,
+    "inner_diameter": 50.0,
+    "static_load_capacity": 1200.0,
+    "height": 30.0
+  },
+  {
+    "name": "Bearing C",
+    "outer_diameter": 140.0,
+    "inner_diameter": 70.0,
+    "static_load_capacity": 1800.0,
+    "height": 40.0
+  }
+]
