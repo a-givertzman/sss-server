@@ -32,7 +32,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Err(err) = app.run() {
         log::error!("main | Error: {:#?}", err);
     }
-    let cache_path = "./src/tests/unit/kernel/storage/cache/test_2";
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
     let _result = Initial::new(
