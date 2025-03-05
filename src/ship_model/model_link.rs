@@ -13,7 +13,6 @@ pub struct ModelLink {
     send: Sender<Query>,
     recv: Option<Receiver<Reply>>,
     timeout: Duration,
-    exit: Arc<AtomicBool>,
 }
 //
 //
@@ -34,7 +33,6 @@ impl ModelLink {
             send, 
             recv: Some(recv),
             timeout: Self::DEFAULT_TIMEOUT,
-            exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
@@ -90,16 +88,6 @@ impl ModelLink {
             },
             Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
         }
-    }
-    ///
-    /// Returns internal `exit` signal to be paired
-    pub fn exit_pair(&self) -> Arc<AtomicBool> {
-        self.exit.clone()
-    }
-    ///
-    /// Sends "exit" signal to the `listen` task
-    pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
     }
 }
 //
