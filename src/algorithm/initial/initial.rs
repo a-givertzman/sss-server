@@ -4,7 +4,7 @@ use crate::{
         context::{context::Context, context_access::{ContextReadRef, ContextWrite}, ctx_result::CtxResult},
         entities::{serde_parser::IFromJson, strength::{ComputedFrameData, ComputedFrameDataArray}, DataArray},
     },
-    infrostructure::{api::client::api_client::ApiClient, query::restart_eval::RestartEvalQuery},
+    infrostructure::api::client::api_client::ApiClient,
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult}
 };
 
@@ -36,15 +36,15 @@ impl Initial {
     //
     //
 }
-impl Eval<RestartEvalQuery, EvalResult> for Initial {
-    fn eval(&mut self, query: RestartEvalQuery) -> futures::future::BoxFuture<'_, EvalResult> {
+impl Eval<(), EvalResult> for Initial {
+    fn eval(&mut self, _: ()) -> futures::future::BoxFuture<'_, EvalResult> {
         Box::pin(async move {
             let initial_ctx: &InitialCtx = ContextReadRef::read(&self.ctx);
             let mut initial_ctx = initial_ctx.to_owned();
             let bounds = self.api_client
                 .fetch(&format!(
                     "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={};",
-                    query.ship_id
+                    initial_ctx.ship_id
                 ));
             match bounds {
                 Ok(bounds) => {

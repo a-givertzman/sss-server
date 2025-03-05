@@ -7,8 +7,7 @@ mod ship_model;
 #[cfg(test)]
 mod tests;
 use algorithm::{
-    context::context::Context,
-    initial::{initial::Initial, initial_ctx::InitialCtx},
+    areas_strength::areas_strength::AreasStrength, context::context::Context, initial::{initial::Initial, initial_ctx::InitialCtx}
 };
 //
 use api_tools::debug::dbg_id::DbgId;
@@ -42,16 +41,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
     );
     let ship_model_handle = ship_model.run().await.unwrap();
-    let _result = 
-    Initial::new(
-        dbg,
-        ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
-        Context::new(
-            InitialCtx::default(),
+    log::debug!("main | Calculations...");
+    let _result = AreasStrength::new(
+        &dbg,
+        ship_model.link().await,
+        Initial::new(
+            &dbg,
+            ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
+            Context::new(
+                InitialCtx::new(
+                    ship_id,
+                ),
+            ),
         ),
     )
-    .eval(RestartEvalQuery { ship_id })
+    .eval(())
     .await;
+    ship_model.exit();
     ship_model_handle.await.unwrap();
     Ok(())
 }

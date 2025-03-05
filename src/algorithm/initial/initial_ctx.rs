@@ -3,6 +3,7 @@
 /// для расчетов.
 #[derive(Debug, Clone)]
 pub struct InitialCtx {
+    pub ship_id: usize,
     /// разбиение на шпации - фреймы
     pub bounds: Option<Vec<(f64, f64)>>,
 
@@ -133,6 +134,17 @@ pub struct InitialCtx {
     // /// Cуммарая площадь проекции на диаметральную плоскость от осадки, м^2
     // pub bow_area: Vec<(f64, f64)>,
 }
+impl InitialCtx {
+    ///
+    /// Struct constructor
+    /// - 'ship_id' - the identifier of the ship in the database
+    pub fn new(ship_id: usize) -> Self {
+        Self {
+            ship_id,
+            bounds: None,
+        }
+    }
+}
 //
 //
 impl Default for InitialCtx {
@@ -141,6 +153,7 @@ impl Default for InitialCtx {
     /// - 'storage_initial_data' - [Storage] instance, where store initial data
     fn default() -> Self {
         Self {
+            ship_id: 0,
             bounds: None,
         }
     }

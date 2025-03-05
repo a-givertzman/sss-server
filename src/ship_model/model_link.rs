@@ -68,15 +68,15 @@ impl ModelLink {
     ///
     /// - Returns strength areas by ship frames
     pub async fn areas(&self) -> Result<(Vec<VerticalArea>, Vec<HAreaStrength>), StrErr> {
-        let timeout = Duration::from_secs(1000);
+        let timeout = Duration::from_secs(300);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {
-                log::trace!("{}.areas | Sent request: {:#?}", self.name, Query::AreasStrength);
+                log::debug!("{}.areas | Sent request: {:#?}", self.name, Query::AreasStrength);
                 tokio::task::block_in_place(move|| {
                     match &self.recv {
                         Some(recv) => match recv.recv_timeout(timeout) {
                             Ok(reply) => {
-                                log::trace!("{}.req | Received reply: {:#?}", self.name, reply);
+                                log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
                                 match reply {
                                     Reply::AreasStrength(items) => items,
                                     _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
