@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::
 use coco::Stack;
 use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
 use tokio::task::JoinSet;
-use crate::{kernel::types::fx_map::FxIndexMap, ship_model::reply::Reply};
+use crate::{algorithm::entities::{area::HAreaStrength, math::{Bound, Bounds}, serde_parser::IFromJson, strength::{self, HStrAreaArray}}, infrostructure::api::client::api_client::ApiClient, kernel::{error::error::Error, types::fx_map::FxIndexMap}, ship_model::reply::Reply};
 
 use super::{link::Link, query::Query};
 ///
@@ -10,9 +10,11 @@ use super::{link::Link, query::Query};
 pub struct ShipModel {
     txid: usize,
     name: Name,
+    ship_id: usize,
+    // bounds: Bounds,
     clients_tx: Sender<(String, Sender<Reply>, Receiver<Query>)>,
     clients_rx: Stack<Receiver<(String, Sender<Reply>, Receiver<Query>)>>,
-    receivers: Arc<AtomicUsize>,
+    clients: Arc<AtomicUsize>,
     timeout: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -27,7 +29,7 @@ impl ShipModel {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>) -> Self {
+    pub fn new(parent: impl Into<String>, ship_id: usize) -> Self {
         let name = Name::new(parent, "ShipModel");
         let (receivers_tx, receivers_rx) = mpsc::channel();
         let receivers_rx_stack = Stack::new();
@@ -35,7 +37,8 @@ impl ShipModel {
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
-            receivers: Arc::new(AtomicUsize::new(0)),
+            ship_id,
+            clients: Arc::new(AtomicUsize::new(0)),
             clients_tx: receivers_tx,
             clients_rx: receivers_rx_stack,
             timeout: Self::DEFAULT_TIMEOUT,
@@ -47,7 +50,7 @@ impl ShipModel {
     pub async fn link(&self) -> Link {
         let (loc_send, rem_recv) = mpsc::channel();
         let (rem_send, loc_recv) = mpsc::channel();
-        let receivers = self.receivers.clone();
+        let receivers = self.clients.clone();
         let remote = Link::new(&format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)), rem_send, rem_recv);
         let key = remote.name().join();
         let len = receivers.load(Ordering::SeqCst);
@@ -68,7 +71,7 @@ impl ShipModel {
         let dbg = self.name.join();
         let timeout = self.timeout;
         let interval = self.timeout;    //Duration::from_millis(1000);
-        let self_receivers = self.receivers.clone();
+        let self_receivers = self.clients.clone();
         let clients_rx = self.clients_rx.pop().unwrap();
         let exit = self.exit.clone();
         join_set.spawn(async move {
@@ -147,4 +150,37 @@ impl Debug for ShipModel {
             .field("exit", &self.exit)
             .finish()
     }
+}
+
+fn areas_strength(api_server: &ApiClient, ship_id: usize) -> Result<(Vec<strength::VerticalArea>, Vec<HAreaStrength>), StrErr> {
+    let area_h_str = HStrAreaArray::parse(
+        &api_server
+            .fetch(&format!(
+        "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={};",
+        ship_id
+    ))
+            .map_err(|e| StrErr(format!("api_server get_data area_h_str error: {e}")))?,
+    )
+    .map_err(|e| StrErr(format!("api_server get_data area_h_str error: {e}")))?;
+    let area_v_str = strength::VerticalAreaArray::parse(
+        &api_server
+            .fetch(&format!(
+        "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={};",
+        ship_id
+    ))
+            .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?,
+    )
+    .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?;
+    let area_h_str: Result<Vec<HAreaStrength>, Error> = area_h_str.data().into_iter().map(|v| {
+        match Bound::new(v.bound_x1, v.bound_x2) {
+            Ok(bound) => Ok(HAreaStrength::new(
+                v.value,
+                bound,
+            )),
+            Err(err) => Err(err),
+        }
+    }).collect();
+    let area_h_str = area_h_str
+        .map_err(|e|StrErr(format!("api_server get_data area_v_str error: {e}")))?;
+    Ok((area_v_str.data(), area_h_str))
 }

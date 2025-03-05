@@ -20,13 +20,13 @@ impl ApiClient {
         }
     }
     //
-    pub fn fetch(&mut self, sql: &str) -> Result<Vec<u8>, Error> {
+    pub fn fetch(&self, sql: &str) -> Result<Vec<u8>, Error> {
         let mut request = ApiRequest::new(
             &api_tools::debug::dbg_id::DbgId("parent".to_owned()),
             self.host.clone() + ":" + &self.port,
             "auth_token",
             ApiQuery::new(
-                ApiQueryKind::Sql(ApiQuerySql::new(self.database.clone(), sql)),
+                ApiQueryKind::Sql(ApiQuerySql::new(&self.database, sql)),
                 false,
             ),
             true,
