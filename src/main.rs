@@ -19,6 +19,7 @@ use infrostructure::{api::client::api_client::ApiClient, query::restart_eval::Re
 use kernel::{
     eval::Eval, run::Run,
 };
+use ship_model::ship_model::ShipModel;
 ///
 /// Application entry point
 // #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
@@ -34,14 +35,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let _result = Initial::new(
+    let ship_id = 0;
+    let ship_model = ShipModel::new(
+        &dbg,
+        ship_id,
+        ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
+    );
+    let ship_model_handle = ship_model.run().await.unwrap();
+    let _result = 
+    Initial::new(
         dbg,
         ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
         Context::new(
             InitialCtx::default(),
         ),
     )
-    .eval(RestartEvalQuery { ship_id: 0 })
+    .eval(RestartEvalQuery { ship_id })
     .await;
+    ship_model_handle.await.unwrap();
     Ok(())
 }

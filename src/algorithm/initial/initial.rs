@@ -1,7 +1,7 @@
 use sal_sync::services::entity::error::str_err::StrErr;
 use crate::{
     algorithm::{
-        context::{context::Context, context_access::{ContextRead, ContextWrite}, ctx_result::CtxResult},
+        context::{context::Context, context_access::{ContextReadRef, ContextWrite}, ctx_result::CtxResult},
         entities::{serde_parser::IFromJson, strength::{ComputedFrameData, ComputedFrameDataArray}, DataArray},
     },
     infrostructure::{api::client::api_client::ApiClient, query::restart_eval::RestartEvalQuery},
@@ -13,7 +13,7 @@ use super::initial_ctx::InitialCtx;
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Initial {
     dbg: DbgId,
     api_client: ApiClient,
@@ -39,7 +39,7 @@ impl Initial {
 impl Eval<RestartEvalQuery, EvalResult> for Initial {
     fn eval(&mut self, query: RestartEvalQuery) -> futures::future::BoxFuture<'_, EvalResult> {
         Box::pin(async move {
-            let initial_ctx: &InitialCtx = ContextRead::read(&self.ctx);
+            let initial_ctx: &InitialCtx = ContextReadRef::read(&self.ctx);
             let mut initial_ctx = initial_ctx.to_owned();
             let bounds = self.api_client
                 .fetch(&format!(

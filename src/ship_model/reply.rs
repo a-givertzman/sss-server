@@ -6,5 +6,5 @@ use crate::algorithm::entities::{area::HAreaStrength, strength};
 /// Replies from the `ShipModel`
 #[derive(Debug)]
 pub enum Reply {
-    AreasStrength(Result<Vec<(strength::VerticalArea, HAreaStrength)>, StrErr>)
+    AreasStrength(Result<(Vec<strength::VerticalArea>, Vec<HAreaStrength>), StrErr>)
 }

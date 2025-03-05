@@ -1,10 +1,10 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, time::{Duration, Instant}};
 use coco::Stack;
 use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
-use tokio::task::JoinSet;
-use crate::{algorithm::entities::{area::HAreaStrength, math::{Bound, Bounds}, serde_parser::IFromJson, strength::{self, HStrAreaArray}}, infrostructure::api::client::api_client::ApiClient, kernel::{error::error::Error, types::fx_map::FxIndexMap}, ship_model::reply::Reply};
+use tokio::task::JoinHandle;
+use crate::{algorithm::entities::{area::HAreaStrength, math::Bound, serde_parser::IFromJson, strength::{self, HStrAreaArray}}, infrostructure::api::client::api_client::ApiClient, kernel::{error::error::Error, types::fx_map::FxIndexMap}, ship_model::reply::Reply};
 
-use super::{link::Link, query::Query};
+use super::{model_link::ModelLink, query::Query};
 ///
 /// 
 pub struct ShipModel {
@@ -16,6 +16,7 @@ pub struct ShipModel {
     clients_rx: Stack<Receiver<(String, Sender<Reply>, Receiver<Query>)>>,
     clients: Arc<AtomicUsize>,
     timeout: Duration,
+    api_client: Stack<ApiClient>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -29,11 +30,13 @@ impl ShipModel {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>, ship_id: usize) -> Self {
+    pub fn new(parent: impl Into<String>, ship_id: usize, api_client: ApiClient) -> Self {
         let name = Name::new(parent, "ShipModel");
         let (receivers_tx, receivers_rx) = mpsc::channel();
         let receivers_rx_stack = Stack::new();
         receivers_rx_stack.push(receivers_rx);
+        let client = Stack::new();
+        client.push(api_client);
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
@@ -42,16 +45,17 @@ impl ShipModel {
             clients_tx: receivers_tx,
             clients_rx: receivers_rx_stack,
             timeout: Self::DEFAULT_TIMEOUT,
+            api_client: client,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Returns connected `Link`
-    pub async fn link(&self) -> Link {
+    pub async fn link(&self) -> ModelLink {
         let (loc_send, rem_recv) = mpsc::channel();
         let (rem_send, loc_recv) = mpsc::channel();
         let receivers = self.clients.clone();
-        let remote = Link::new(&format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)), rem_send, rem_recv);
+        let remote = ModelLink::new(&format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)), rem_send, rem_recv);
         let key = remote.name().join();
         let len = receivers.load(Ordering::SeqCst);
         self.clients_tx.send((key, loc_send, loc_recv)).unwrap();
@@ -64,70 +68,69 @@ impl ShipModel {
     }
     ///
     /// Entry point
-    pub async fn run(&self) -> Result<JoinSet<()>, StrErr> {
+    pub async fn run(&self) -> Result<JoinHandle<()>, StrErr> {
         let dbg = self.name.join();
         log::info!("{}.run | Starting...", dbg);
-        let mut join_set = JoinSet::new();
-        let dbg = self.name.join();
         let timeout = self.timeout;
         let interval = self.timeout;    //Duration::from_millis(1000);
         let self_receivers = self.clients.clone();
         let clients_rx = self.clients_rx.pop().unwrap();
+        let ship_id = self.ship_id;
+        let api_client = self.api_client.pop().unwrap();
         let exit = self.exit.clone();
-        join_set.spawn(async move {
-            tokio::task::spawn_blocking(move|| {
-                log::debug!("{}.run | Locals | Start", dbg);
-                let mut clients = FxIndexMap::default();
-                'main: loop {
-                    for (key, sender, receiver) in clients_rx.try_iter() {
-                        clients.insert(key, (sender, receiver));
-                        self_receivers.fetch_add(1, Ordering::SeqCst);
-                    }
-                    log::debug!("{}.run | Locals | Receivers: {}", dbg, clients.len());
-                    let cycle = Instant::now();
-                    for (_key, (send, recv)) in &clients {
-                        match recv.recv_timeout(timeout) {
-                            Ok(query) => {
-                                log::trace!("{}.run | Received query: {:?}", dbg, query);
-                                match query {
-                                    Query::AreasStrength => {
-                                        if let Err(err) = send.send(Reply::AreasStrength(Ok(vec![]))) {
-                                            log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                        }
-                                    }
-                                }
-                            }
-                            Err(err) => match err {
-                                mpsc::RecvTimeoutError::Timeout => {
-                                    log::trace!("{}.run | Listening...", dbg);
-                                }
-                                mpsc::RecvTimeoutError::Disconnected => {
-                                    if log::max_level() >= log::LevelFilter::Trace {
-                                        log::warn!("{}.run | Receive error, all senders has been closed", dbg);
+        let handle = tokio::task::spawn_blocking(move|| {
+            log::debug!("{}.run | Locals | Start", dbg);
+            let mut clients = FxIndexMap::default();
+            'main: loop {
+                for (key, sender, receiver) in clients_rx.try_iter() {
+                    clients.insert(key, (sender, receiver));
+                    self_receivers.fetch_add(1, Ordering::SeqCst);
+                }
+                log::debug!("{}.run | Locals | Receivers: {}", dbg, clients.len());
+                let cycle = Instant::now();
+                for (_key, (send, recv)) in &clients {
+                    match recv.recv_timeout(timeout) {
+                        Ok(query) => {
+                            log::trace!("{}.run | Received query: {:?}", dbg, query);
+                            match query {
+                                Query::AreasStrength => {
+                                    let result = areas_strength(&api_client, ship_id);
+                                    if let Err(err) = send.send(Reply::AreasStrength(result)) {
+                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
                                     }
                                 }
                             }
                         }
-                        if exit.load(Ordering::SeqCst) {
-                            break 'main;
+                        Err(err) => match err {
+                            mpsc::RecvTimeoutError::Timeout => {
+                                log::trace!("{}.run | Listening...", dbg);
+                            }
+                            mpsc::RecvTimeoutError::Disconnected => {
+                                if log::max_level() >= log::LevelFilter::Trace {
+                                    log::warn!("{}.run | Receive error, all senders has been closed", dbg);
+                                }
+                            }
                         }
                     }
                     if exit.load(Ordering::SeqCst) {
                         break 'main;
                     }
-                    if clients.len() == 0 {
-                        let elapsed = cycle.elapsed();
-                        if elapsed < interval {
-                            std::thread::sleep(interval - elapsed);
-                        }
+                }
+                if exit.load(Ordering::SeqCst) {
+                    break 'main;
+                }
+                if clients.len() == 0 {
+                    let elapsed = cycle.elapsed();
+                    if elapsed < interval {
+                        std::thread::sleep(interval - elapsed);
                     }
                 }
-                log::info!("{}.run | Exit", dbg);
-            });
+            }
+            log::info!("{}.run | Exit", dbg);
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);
-        Ok(join_set)
+        Ok(handle)
     }
     ///
     /// Sends "exit" signal to the service's task
@@ -152,9 +155,9 @@ impl Debug for ShipModel {
     }
 }
 
-fn areas_strength(api_server: &ApiClient, ship_id: usize) -> Result<(Vec<strength::VerticalArea>, Vec<HAreaStrength>), StrErr> {
+fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<strength::VerticalArea>, Vec<HAreaStrength>), StrErr> {
     let area_h_str = HStrAreaArray::parse(
-        &api_server
+        &api_client
             .fetch(&format!(
         "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={};",
         ship_id
@@ -163,7 +166,7 @@ fn areas_strength(api_server: &ApiClient, ship_id: usize) -> Result<(Vec<strengt
     )
     .map_err(|e| StrErr(format!("api_server get_data area_h_str error: {e}")))?;
     let area_v_str = strength::VerticalAreaArray::parse(
-        &api_server
+        &api_client
             .fetch(&format!(
         "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={};",
         ship_id

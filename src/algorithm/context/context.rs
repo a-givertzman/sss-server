@@ -1,6 +1,6 @@
 use crate::
     algorithm::{
-        initial::initial_ctx::InitialCtx,
+        areas_strength::areas_strength_ctx::AreasStrengthCtx, initial::initial_ctx::InitialCtx
     }
 ;
 use super::testing_ctx::TestingCtx;
@@ -12,8 +12,8 @@ use super::testing_ctx::TestingCtx;
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
-    /// result of calculation [steady-state-lifting-speed](design/docs/algorithm/part02/chapter_01_choose_hook.md)
-    // pub(super) lifting_speed: LiftingSpeedCtx,
+    /// TODO: DOC
+    pub(super) areas_strength: Option<AreasStrengthCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
@@ -28,7 +28,7 @@ impl Context {
     pub fn new(initial: InitialCtx) -> Self {
         Self {
             initial,
-            // lifting_speed: LiftingSpeedCtx::default(),
+            areas_strength: None,
             testing: None,
         }
     }

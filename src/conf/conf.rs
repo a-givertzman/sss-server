@@ -1,6 +1,5 @@
 use std::{fs::OpenOptions, path::Path};
 
-use sal_sync::services::entity::dbg_id::DbgId;
 use serde::{Deserialize, Serialize};
 
 use super::api_conf::ApiConf;

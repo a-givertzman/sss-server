@@ -7,7 +7,7 @@ use super::{query::Query, reply::Reply};
 /// Contains local side `send` & `recv` of `channel`
 /// - provides simple direct to `send` & `recv`
 /// - provides request operation
-pub struct Link {
+pub struct ModelLink {
     txid: usize,
     name: Name,
     send: Sender<Query>,
@@ -17,17 +17,17 @@ pub struct Link {
 }
 //
 //
-impl Link {
+impl ModelLink {
     ///
     /// Default timeout to await `recv`` operation, 300 ms
     const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
     ///
-    /// Returns [Link] new instance
+    /// Returns [ModelLink] new instance
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
     pub fn new(parent: impl Into<String>, send: Sender<Query>, recv: Receiver<Reply>) -> Self {
-        let name = Name::new(parent, "Link");
+        let name = Name::new(parent, "ModelLink");
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
@@ -43,9 +43,9 @@ impl Link {
         self.name.clone()
     }
     // ///
-    // /// Returns `local: [Link] remote: [Link]` new instance
+    // /// Returns `local: [ModelLink] remote: [ModelLink]` new instance
     // pub fn split<>(parent: impl Into<String>) -> (Self, Self) {
-    //     let name = Name::new(parent, "Link");
+    //     let name = Name::new(parent, "ModelLink");
     //     let (loc_send, rem_recv) = mpsc::channel();
     //     let (rem_send, loc_recv) = mpsc::channel();
     //     (
@@ -67,7 +67,7 @@ impl Link {
     // }
     ///
     /// - Returns strength areas by ship frames
-    pub async fn areas(&self) -> Result<Vec<(VerticalArea, HAreaStrength)>, StrErr> {
+    pub async fn areas(&self) -> Result<(Vec<VerticalArea>, Vec<HAreaStrength>), StrErr> {
         let timeout = Duration::from_secs(1000);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {
@@ -104,12 +104,12 @@ impl Link {
 }
 //
 //
-unsafe impl Sync for Link {}
+unsafe impl Sync for ModelLink {}
 //
 //
-impl Debug for Link {
+impl Debug for ModelLink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Link")
+        f.debug_struct("ModelLink")
         .field("txid", &self.txid)
         .field("name", &self.name)
         // .field("send", &self.send)
