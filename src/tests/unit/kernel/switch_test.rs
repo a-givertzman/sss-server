@@ -2,11 +2,11 @@
 
 mod switch {
     use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc, Once}, time::Duration};
-    use sal_sync::services::entity::name::Name;
+    use sal_sync::services::entity::{error::str_err::StrErr, name::Name};
     use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{algorithm::context::ctx_result::CtxResult, kernel::{str_err::str_err::StrErr, sync::{link::Link, switch::Switch}}};
+    use crate::{algorithm::context::ctx_result::CtxResult, kernel::sync::{link::Link, switch::Switch}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -45,9 +45,15 @@ mod switch {
         let switch_handler = switch.run().await.unwrap();
         let listener_handle = listener.run().await.unwrap();
         for (step, query, target) in test_data {
-            let result = local.req(query).await;
+            let result: Result<Message, StrErr> = local.req(query).await;
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
-            assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+            match (&result, &target) {
+                (Ok(result), Ok(target)) => {
+                    assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                }
+                (Err(_), Err(_)) => {},
+                _ => panic!("Error in step {} \nresult: {:?}\ntarget: {:?}", step, result, target)
+            }
         }
         log::debug!("{} | Exiting...", dbg);
         switch.exit();

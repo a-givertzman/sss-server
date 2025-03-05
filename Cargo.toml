@@ -38,3 +38,9 @@ dashmap = "^6.1"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 futures = "^0.3"
+#
+# Error
+thiserror = "^2.0"
+#
+# Math
+splines = "^4.4"

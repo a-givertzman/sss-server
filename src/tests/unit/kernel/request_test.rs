@@ -4,7 +4,10 @@ mod request {
     use std::{sync::Once, time::Duration};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{algorithm::{context::{context::Context, testing_ctx::{MokUserReplyTestCtx, TestingCtx}}, initial_ctx::initial_ctx::InitialCtx}, kernel::{request::Request, storage::storage::Storage, sync::link::Link}};
+    use crate::{
+        algorithm::{context::{context::Context, testing_ctx::{MokUserReplyTestCtx, TestingCtx}}, initial::initial_ctx::InitialCtx},
+        kernel::{request::Request, sync::link::Link},
+    };
     ///
     ///
     static INIT: Once = Once::new();
@@ -34,18 +37,12 @@ mod request {
         let test_data: [(usize, InitialCtx, MokUserReplyTestCtx); 2] = [
             (
                 1,
-                InitialCtx::new(&mut Storage::new(
-                    "./src/tests/unit/kernel/storage/cache/test_3",
-                ))
-                .unwrap(),
+                InitialCtx::default(),
                 MokUserReplyTestCtx { value: Value::String("Hello World!".to_string()) },
             ),
             (
                 2,
-                InitialCtx::new(&mut Storage::new(
-                    "./src/tests/unit/kernel/storage/cache/test_3",
-                ))
-                .unwrap(),
+                InitialCtx::default(),
                 MokUserReplyTestCtx {value: Value::Real(123.456) },
             )
         ];

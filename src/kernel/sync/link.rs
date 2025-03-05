@@ -1,8 +1,8 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, time::Duration};
-use sal_sync::services::entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status};
+use sal_sync::services::entity::{cot::Cot, error::str_err::StrErr, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::task::JoinHandle;
-use crate::{algorithm::context::ctx_result::CtxResult, kernel::str_err::str_err::StrErr};
+use crate::algorithm::context::ctx_result::CtxResult;
 ///
 /// Contains local side `send` & `recv` of `channel`
 /// - provides simple direct to `send` & `recv`

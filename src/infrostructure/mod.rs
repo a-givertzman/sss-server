@@ -1,3 +1,4 @@
 //!
 //! Client - Server interface implementation
-pub mod client;
+pub mod api;
+pub mod query;

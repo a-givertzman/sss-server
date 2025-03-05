@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::infrostructure::client::query::Query;
+use crate::infrostructure::query::query::Query;
 use super::{diag::Diag, info::Info};
 
 ///
