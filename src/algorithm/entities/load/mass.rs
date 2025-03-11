@@ -1,5 +1,7 @@
 //! Масса груз
-use crate::{math::*, Error, ILoad, LoadingType};
+
+use super::*;
+
 /// Абстрактная масса груза.
 /// Может вернуть какая масса попадает в указанные границы
 pub trait ILoadMass: ILoad {

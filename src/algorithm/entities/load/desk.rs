@@ -1,7 +1,7 @@
 //! Палубный груз
-use crate::{math::*, Error, ILoad};
 
-use crate::load::ILoadMass;
+use crate::{algorithm::entities::*, kernel::error::error::Error};
+
 
 /// Палубный груз, имеет площадь и парусность
 pub trait IDesk: ILoad {

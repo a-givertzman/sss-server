@@ -4,7 +4,8 @@ use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::poin
 use tokio::task::JoinHandle;
 use crate::{algorithm::entities::{area::HAreaStrength, math::Bound, serde_parser::IFromJson, strength::{self, HStrAreaArray}}, infrostructure::api::client::api_client::ApiClient, kernel::{error::error::Error, types::fx_map::FxIndexMap}, ship_model::reply::Reply};
 
-use super::{model_link::ModelLink, query::Query};
+use super::{model_link::ModelLink, query::Query, temp_data::area_v_str};
+use super::temp_data::*;
 ///
 /// 
 pub struct ShipModel {
@@ -156,7 +157,7 @@ impl Debug for ShipModel {
 }
 
 fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<strength::VerticalArea>, Vec<HAreaStrength>), StrErr> {
-    let area_h_str = HStrAreaArray::parse(
+ /*   let area_h_str = HStrAreaArray::parse(
         &api_client
             .fetch(&format!(
         "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={};",
@@ -174,7 +175,8 @@ fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<strengt
             .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?,
     )
     .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?;
-    let area_h_str: Result<Vec<HAreaStrength>, Error> = area_h_str.data().into_iter().map(|v| {
+*/
+    let area_h_str: Result<Vec<HAreaStrength>, Error> = area_h_str::area_h_str().data().into_iter().map(|v| {
         match Bound::new(v.bound_x1, v.bound_x2) {
             Ok(bound) => Ok(HAreaStrength::new(
                 v.value,
@@ -185,5 +187,6 @@ fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<strengt
     }).collect();
     let area_h_str = area_h_str
         .map_err(|e|StrErr(format!("api_server get_data area_v_str error: {e}")))?;
-    Ok((area_v_str.data(), area_h_str))
+
+    Ok((area_v_str::area_v_str().data(), area_h_str))
 }

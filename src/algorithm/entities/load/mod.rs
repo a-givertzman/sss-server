@@ -1,13 +1,6 @@
 //! Нагрузка на судно: постоянный и переменный груз.
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    data::structs::loads::{
-        CargoGeneralCategory, CompartmentData, LoadCargo, LoadConstantData, LoadConstantType,
-        MatterType,
-    },
-    Bound, Error, InertiaMoment, Position,
-};
 mod bulk;
 mod desk;
 mod mass;
@@ -17,6 +10,11 @@ pub use bulk::*;
 pub use desk::*;
 pub use mass::*;
 pub use tank::*;
+
+use crate::kernel::error::error::Error;
+
+use super::*;
+
 
 type Shell<T> = Rc<RefCell<Option<Rc<Vec<Rc<T>>>>>>;
 

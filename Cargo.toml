@@ -44,3 +44,6 @@ thiserror = "^2.0"
 #
 # Math
 splines = "^4.4"
+#
+# Helpful macros for working with enums and strings
+strum_macros = "^0.26"

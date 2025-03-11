@@ -1,7 +1,9 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::{Deserialize, Serialize};
-use crate::data::structs::DataArray;
+use crate::algorithm::entities::DataArray;
+
 use super::CargoGeneralCategory;
+
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadCargo {

@@ -1,5 +1,7 @@
 //! Цистерна с жидкостью
-use crate::{math::*, Error, ILoad, ILoadMass, LoadingType};
+use crate::{algorithm::entities::*, kernel::error::error::Error};
+
+use super::{ILoad, ILoadMass, LoadingType};
 
 /// Цистерна с жидкостью.
 /// Имеет свойства свободной поверхности жидкости.

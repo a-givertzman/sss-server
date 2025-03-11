@@ -1,7 +1,9 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use crate::data::structs::DataArray;
 use serde::{Deserialize, Serialize};
+use crate::algorithm::entities::DataArray;
+
 use super::{CargoGeneralCategory, MatterType};
+
 /// Помещения судна: цистерны и трюмы  
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompartmentData {

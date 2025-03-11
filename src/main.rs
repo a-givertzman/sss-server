@@ -19,6 +19,8 @@ use kernel::{
     eval::Eval, run::Run,
 };
 use ship_model::ship_model::ShipModel;
+
+pub use crate::kernel::error::error::Error as Error;
 ///
 /// Application entry point
 // #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
@@ -38,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
-        ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
+        ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
     );
     let ship_model_handle = ship_model.run().await.unwrap();
     log::debug!("main | Calculations...");
@@ -47,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ship_model.link().await,
         Initial::new(
             &dbg,
-            ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
+            ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
             Context::new(
                 InitialCtx::new(
                     ship_id,
