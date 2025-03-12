@@ -1,8 +1,9 @@
 //! Распределение площади горизонтальных поверхностей и
 //! площади парусности судна для осадки dmin
 use std::rc::Rc;
+use crate::algorithm::entities::area::*;
 use crate::kernel::error::error::Error;
-use crate::algorithm::entities::{icing_timber::*, Bound, Bounds, HAreaStrength, IDesk, VerticalArea};
+use crate::algorithm::entities::{icing_timber::*, Bound, Bounds, IDesk};
 
 /// Распределение площади горизонтальных поверхностей и
 /// площадь парусности судна для осадки dmin

@@ -6,9 +6,8 @@ mod conf;
 mod ship_model;
 #[cfg(test)]
 mod tests;
-use algorithm::{
-    areas_strength::areas_strength::AreasStrength, context::context::Context, initial::{initial::Initial, initial_ctx::InitialCtx}
-};
+mod prelude;
+use algorithm::{areas_strength::areas_strength::AreasStrength, icing_stab_eval::icing_stab_eval::IcingStabEval};
 //
 use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
@@ -19,8 +18,8 @@ use kernel::{
     eval::Eval, run::Run,
 };
 use ship_model::ship_model::ShipModel;
+use prelude::*;
 
-pub use crate::kernel::error::error::Error as Error;
 ///
 /// Application entry point
 // #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
@@ -44,15 +43,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().await.unwrap();
     log::debug!("main | Calculations...");
-    let _result = AreasStrength::new(
+    let _result = 
+    IcingStabEval::new(
         &dbg,
-        ship_model.link().await,
-        Initial::new(
+        AreasStrength::new(
             &dbg,
-            ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
-            Context::new(
-                InitialCtx::new(
-                    ship_id,
+            ship_model.link().await,
+            Initial::new(
+                &dbg,
+                ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+                Context::new(
+                    InitialCtx::new(
+                        ship_id,
+                    ),
                 ),
             ),
         ),

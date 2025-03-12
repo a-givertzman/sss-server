@@ -13,7 +13,7 @@ pub use tank::*;
 
 use crate::kernel::error::error::Error;
 
-use super::*;
+use super::{data::loads::{CargoGeneralCategory, CompartmentData, LoadCargo, LoadConstantData, LoadConstantType, MatterType}, *};
 
 
 type Shell<T> = Rc<RefCell<Option<Rc<Vec<Rc<T>>>>>>;

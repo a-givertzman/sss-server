@@ -1,7 +1,5 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc}, time::Duration};
 use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
-use crate::algorithm::entities::{area::HAreaStrength, strength::VerticalArea};
-
 use super::{query::Query, reply::Reply};
 ///
 /// Contains local side `send` & `recv` of `channel`
@@ -65,7 +63,7 @@ impl ModelLink {
     // }
     ///
     /// - Returns strength areas by ship frames
-    pub async fn areas(&self) -> Result<(Vec<VerticalArea>, Vec<HAreaStrength>), StrErr> {
+    pub async fn areas(&self) -> Result<(Vec<crate::algorithm::entities::data::strength::VerticalArea>, Vec<crate::algorithm::entities::area::HAreaStrength>), StrErr> {
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {

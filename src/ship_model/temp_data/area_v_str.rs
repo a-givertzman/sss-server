@@ -1,12 +1,13 @@
 use std::collections::HashMap;
-use crate::algorithm::entities::strength::*;
+
+use crate::algorithm::entities::data::strength::VerticalAreaArray;
 //
 impl From<Vec<(&str, f64, f64, f64)>> for VerticalAreaArray {
     fn from(src: Vec<(&str, f64, f64, f64)>) -> Self {
         Self {
             data: src
                 .into_iter()
-                .map(|(name, value, bound_x1, bound_x2)| VerticalArea {
+                .map(|(name, value, bound_x1, bound_x2)| crate::algorithm::entities::data::strength::VerticalArea {
                     name: name.to_owned(),
                     value,
                     bound_x1,

@@ -1,13 +1,7 @@
 use sal_sync::services::entity::error::str_err::StrErr;
 use crate::{
-    algorithm::{
-        context::{context::Context, context_access::{ContextReadRef, ContextWrite}, ctx_result::CtxResult},
-        entities::{serde_parser::IFromJson, strength::{ComputedFrameData, ComputedFrameDataArray}, DataArray}, initial::initial_ctx::InitialCtx,
-    },
-    infrostructure::{api::client::api_client::ApiClient, query::restart_eval::RestartEvalQuery},
-    kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult}, ship_model::model_link::ModelLink
+    kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult}, ship_model::model_link::ModelLink, ContextWrite, CtxResult
 };
-
 use super::areas_strength_ctx::AreasStrengthCtx;
 
 

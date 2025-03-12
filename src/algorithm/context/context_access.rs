@@ -1,8 +1,7 @@
 use sal_sync::services::entity::error::str_err::StrErr;
 
 use super::{context::Context, ctx_result::CtxResult};
-use crate::algorithm::{areas_strength::areas_strength_ctx::AreasStrengthCtx, 
-        initial::initial_ctx::InitialCtx};
+use crate::algorithm::{areas_strength::areas_strength_ctx::AreasStrengthCtx, icing_stab_eval::icing_stab_ctx::IcingStabCtx, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -11,7 +10,7 @@ pub trait ContextWrite<T> {
 ///
 /// Provides simple read access to the [Context] members
 pub trait ContextReadRef<T> {
-    fn read(&self) -> &T;
+    fn read_ref(&self) -> &T;
 }
 ///
 /// Provides simple read access to the [Context] members
@@ -27,7 +26,7 @@ impl ContextWrite<InitialCtx> for Context {
     }
 }
 impl ContextReadRef<InitialCtx> for Context {
-    fn read(&self) -> &InitialCtx {
+    fn read_ref(&self) -> &InitialCtx {
         &self.initial
     }
 }
@@ -46,3 +45,16 @@ impl ContextRead<AreasStrengthCtx> for Context {
         self.areas_strength.clone().unwrap()
     }
 }
+//
+impl ContextWrite<IcingStabCtx> for Context {
+    fn write(mut self, value: IcingStabCtx) -> CtxResult<Self, StrErr> {
+        self.icing_stab = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<IcingStabCtx> for Context {
+    fn read(&self) -> IcingStabCtx {
+        self.icing_stab.clone().unwrap()
+    }
+}
+

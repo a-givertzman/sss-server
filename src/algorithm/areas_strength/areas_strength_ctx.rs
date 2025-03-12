@@ -1,5 +1,4 @@
-use crate::algorithm::entities::{area::HAreaStrength, strength::VerticalArea};
-
+use crate::algorithm::entities::{area::HAreaStrength, data::strength::VerticalArea};
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.

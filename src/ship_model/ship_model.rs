@@ -2,9 +2,8 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::
 use coco::Stack;
 use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
 use tokio::task::JoinHandle;
-use crate::{algorithm::entities::{area::HAreaStrength, math::Bound, serde_parser::IFromJson, strength::{self, HStrAreaArray}}, infrostructure::api::client::api_client::ApiClient, kernel::{error::error::Error, types::fx_map::FxIndexMap}, ship_model::reply::Reply};
-
-use super::{model_link::ModelLink, query::Query, temp_data::area_v_str};
+use crate::{algorithm::entities::{area::HAreaStrength, data::strength::VerticalArea, Bound}, infrostructure::api::client::api_client::ApiClient, kernel::types::fx_map::FxIndexMap, prelude::Error};
+use super::{model_link::ModelLink, query::Query, reply::Reply, temp_data::area_v_str};
 use super::temp_data::*;
 ///
 /// 
@@ -156,7 +155,7 @@ impl Debug for ShipModel {
     }
 }
 
-fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<strength::VerticalArea>, Vec<HAreaStrength>), StrErr> {
+fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<VerticalArea>, Vec<HAreaStrength>), StrErr> {
  /*   let area_h_str = HStrAreaArray::parse(
         &api_client
             .fetch(&format!(

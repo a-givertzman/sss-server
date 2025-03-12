@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::algorithm::entities::strength::*;
+use crate::algorithm::entities::data::{HStrArea, HStrAreaArray};
 //
 impl From<Vec<(&str, f64, f64, f64)>> for HStrAreaArray {
     fn from(src: Vec<(&str, f64, f64, f64)>) -> Self {
