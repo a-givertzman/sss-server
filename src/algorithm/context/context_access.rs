@@ -1,7 +1,7 @@
 use sal_sync::services::entity::error::str_err::StrErr;
 
 use super::{context::Context, ctx_result::CtxResult};
-use crate::algorithm::{areas_strength::areas_strength_ctx::AreasStrengthCtx, icing_stab_eval::icing_stab_ctx::IcingStabCtx, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{eval::*, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {

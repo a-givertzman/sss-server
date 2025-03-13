@@ -2,7 +2,9 @@ use sal_sync::services::entity::error::str_err::StrErr;
 use crate::{
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult}, ship_model::model_link::ModelLink, ContextWrite, CtxResult
 };
+
 use super::areas_strength_ctx::AreasStrengthCtx;
+
 
 
 ///

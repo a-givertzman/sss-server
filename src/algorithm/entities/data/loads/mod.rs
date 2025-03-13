@@ -1,65 +1,69 @@
-pub mod bulkhead;
-pub mod cargo;
-pub mod compartment;
-pub mod container;
-pub mod load_constant;
-pub use bulkhead::*;
-pub use cargo::*;
-pub use compartment::*;
-pub use container::*;
-pub use load_constant::*;
+pub mod constant;
+pub mod liquid;
+pub mod gaseous;
+pub mod bulk;
+pub mod unit;
+
+pub use constant::*;
+pub use liquid::*;
+pub use gaseous::*;
+pub use bulk::*;
+pub use unit::*;
 
 use serde::{Deserialize, Serialize};
-/// Тип груза по назначению
+/// Тип назначения груза
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum CargoGeneralCategory {
+pub enum AssignmentType {
     #[serde(alias = "lightship")]
     Lightship,
     #[serde(alias = "ballast")]
     Ballast,
-    #[serde(alias = "bulkhead")]
-    Bulkhead,
     #[serde(alias = "stores")]
     Stores,
-    #[serde(alias = "cargo")]
-    Cargo,
+    #[serde(alias = "cargo_load")]
+    CargoLoad,
+    #[serde(alias = "unspecified")]
+    Unspecified,
 }
 //
-impl std::fmt::Display for CargoGeneralCategory {
+impl std::fmt::Display for AssignmentType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                CargoGeneralCategory::Lightship => "Lightship",
-                CargoGeneralCategory::Ballast => "Ballast",
-                CargoGeneralCategory::Bulkhead => "Bulkhead",
-                CargoGeneralCategory::Stores => "Stores",
-                CargoGeneralCategory::Cargo => "Cargo",
+                AssignmentType::Lightship => "Lightship",
+                AssignmentType::Ballast => "Ballast",
+                AssignmentType::Stores => "Stores",
+                AssignmentType::CargoLoad => "CargoLoad",
+                AssignmentType::Unspecified => "Unspecified",
             },
         )
     }
 }
-/// Физический тип груза судна
+/// Тип груза судна
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum MatterType {
+pub enum CargoType {
     #[serde(alias = "bulk")]
     Bulk,
+    #[serde(alias = "unit")]
+    Unit,
+    #[serde(alias = "gaseous")]
+    Gaseous,
     #[serde(alias = "liquid")]
     Liquid,
-    #[serde(alias = "solid")]
-    Solid,
 }
 //
-impl std::fmt::Display for MatterType {
+impl std::fmt::Display for CargoType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                MatterType::Bulk => "Bulk",
-                MatterType::Liquid => "Liquid",
-                MatterType::Solid => "Solid",
+                CargoType::Bulk => "Bulk",
+                CargoType::Unit => "Unit",
+                CargoType::Gaseous => "Gaseous",                
+                CargoType::Liquid => "Liquid",
             },
         )
     }

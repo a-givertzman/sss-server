@@ -7,7 +7,8 @@ mod ship_model;
 #[cfg(test)]
 mod tests;
 mod prelude;
-use algorithm::{areas_strength::areas_strength::AreasStrength, icing_stab_eval::icing_stab_eval::IcingStabEval};
+
+use algorithm::eval::*;
 //
 use api_tools::debug::dbg_id::DbgId;
 use app::app::App;

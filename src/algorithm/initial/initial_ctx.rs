@@ -1,4 +1,4 @@
-use crate::algorithm::entities::data::{IcingArray, Ship, ShipParametersArray, Voyage};
+use crate::algorithm::entities::data::{loads::*, IcingArray, Ship, ShipParametersArray, Voyage};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
@@ -16,6 +16,13 @@ pub struct InitialCtx {
     pub voyage: Option<Voyage>,
     /// Данные по обледенению
     pub icing: Option<IcingArray>,
+    /// Постоянная нагрузка на судно
+    pub load_constant: Option<LoadConstantArray>,
+    /// Переменная нагрузка на судно
+    pub bulk: Option<LoadBulkArray>,
+    pub liquid: Option<LoadLiquidArray>,
+    pub unit: Option<LoadUnitArray>,
+    pub gaseous: Option<LoadGaseousArray>,
 }
 impl InitialCtx {
     ///
@@ -42,6 +49,11 @@ impl Default for InitialCtx {
             ship_parameters: None,
             voyage: None,
             icing: None,
+            load_constant: None,
+            bulk: None,
+            liquid: None,
+            unit: None,
+            gaseous: None,
         }
     }
 }

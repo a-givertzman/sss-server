@@ -1,4 +1,5 @@
 use super::initial_ctx::InitialCtx;
+use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::{
@@ -206,11 +207,57 @@ impl Eval<(), EvalResult> for Initial {
                     )))
                 }
             };
+            let data = self.api_client.fetch(&format!(
+                "SELECT 
+                    l.mass AS mass, \
+                    l.bound_x1 AS bound_x1, \
+                    l.bound_x2 AS bound_x2, \
+                    cc.key as loading_type \
+                FROM 
+                    load_constant AS l
+                JOIN 
+                    cargo_category AS cc 
+                ON 
+                    l.category_id = cc.id
+                WHERE 
+                    l.ship_id={};",
+                initial_ctx.ship_id
+            ));
+            let load_constant = match data {
+                Ok(data) => match LoadConstantArray::parse(&data) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        return CtxResult::Err(StrErr(format!(
+                            "{}.eval | Error load_constant: {err}",
+                            self.dbg
+                        )))
+                    }
+                },
+                Err(err) => {
+                    return CtxResult::Err(StrErr(format!(
+                        "{}.eval | Error load_constant: {err}",
+                        self.dbg
+                    )))
+                }
+            };
+            pub load_constant: Option<LoadConstantArray>,
+            pub bulk: Option<LoadBulkArray>,
+            pub liquid: Option<LoadLiquidArray>,
+            pub unit: Option<LoadUnitArray>,
+            pub gaseous: Option<LoadGaseousArray>,
+
+
             initial_ctx.bounds = Some(bounds.data());
             initial_ctx.ship = Some(ship);
             initial_ctx.ship_parameters = Some(ship_parameters);
             initial_ctx.voyage = Some(voyage);
             initial_ctx.icing = Some(icing);
+            initial_ctx.load_constant: Option<LoadConstantArray>,
+            initial_ctx.bulk: Option<LoadBulkArray>,
+            initial_ctx.liquid: Option<LoadLiquidArray>,
+            initial_ctx.unit: Option<LoadUnitArray>,
+            initial_ctx.gaseous: Option<LoadGaseousArray>,
+
             self.ctx.clone().write(initial_ctx.to_owned())
         })
     }

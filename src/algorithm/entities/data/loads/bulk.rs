@@ -1,16 +1,20 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::data::DataArray;
-use super::CargoGeneralCategory;
-/// Груз без привязки к помещению, всегда твердый
+use super::{AssignmentType, CargoType};
+///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LoadCargo {
-    /// Имя груза
-    pub name: String,
-    /// Общая масса, т
+pub struct LoadBulkData {
+    /// ID груза
+    pub space_id: usize,
+    /// масса, т
     pub mass: Option<f64>,
-    /// Классификация груза
-    pub general_category: CargoGeneralCategory,
+    /// Общая масса, т
+    pub volume: Option<f64>,
+    /// Тип назначения груза
+    pub assigment_type: AssignmentType,
+    /// Тип груза судна
+    pub cargo_type: CargoType,
     /// Груз - лес и может намокать и обмерзать
     pub timber: bool,
     /// Груз на палубе, имеет площадь поверхностей
@@ -40,11 +44,11 @@ pub struct LoadCargo {
     pub vertical_area_shift_z: Option<f64>,
 }
 //
-impl std::fmt::Display for LoadCargo {
+impl std::fmt::Display for LoadBulkData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LoadCargo(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {}) 
+            "LoadBulkData(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {}) 
             mass_shift:({}, {}, {}) horizontal_area:{} vertical_area:{} vertical_area_shift_y:({}, {}, {}) )",
             self.name,
             self.mass.unwrap_or(0.),            
@@ -70,10 +74,10 @@ impl std::fmt::Display for LoadCargo {
     }
 }
 /// Массив данных по грузам
-pub type LoadCargoArray = DataArray<LoadCargo>;
+pub type LoadBulkArray = DataArray<LoadBulkData>;
 //
-impl LoadCargoArray {
-    pub fn data(self) -> Vec<LoadCargo> {
+impl LoadBulkArray {
+    pub fn data(self) -> Vec<LoadBulkData> {
         self.data
     }
 }

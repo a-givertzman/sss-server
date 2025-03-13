@@ -43,15 +43,3 @@ pub struct IcingStabCtx {
     /// при отсутствии обледенения
     pub icing_coef_v_moment_zero: f64,
 }
-//
-//
-// impl Default for AreasStrengthCtx {
-//     ///
-//     /// Struct constructor
-//     /// - 'storage_initial_data' - [Storage] instance, where store initial data
-//     fn default() -> Self {
-//         Self {
-//             bounds: None,
-//         }
-//     }
-// }

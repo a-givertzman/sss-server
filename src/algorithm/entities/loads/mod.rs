@@ -13,7 +13,7 @@ pub use tank::*;
 
 use crate::kernel::error::error::Error;
 
-use super::{data::loads::{CargoGeneralCategory, CompartmentData, LoadCargo, LoadConstantData, LoadConstantType, MatterType}, *};
+use super::{data::loads::{AssignmentType, CargoType, CompartmentData, LoadBulkData, LoadCargo, LoadConstantData, LoadConstantType, LoadGaseousData, LoadLiquidData, LoadUnitData}, *};
 
 
 type Shell<T> = Rc<RefCell<Option<Rc<Vec<Rc<T>>>>>>;
@@ -23,10 +23,10 @@ type Shell<T> = Rc<RefCell<Option<Rc<Vec<Rc<T>>>>>>;
 pub enum LoadingType {
     Hull,
     Equipment,
-    Bulkhead,
     Ballast,
     Stores,
-    Cargo,
+    CargoLoad,
+    Unspecified,
 }
 //
 impl std::fmt::Display for LoadingType {
@@ -37,23 +37,23 @@ impl std::fmt::Display for LoadingType {
             match self {
                 LoadingType::Hull => "Hull",
                 LoadingType::Equipment => "Equipment",
-                LoadingType::Bulkhead => "Bulkhead",
                 LoadingType::Ballast => "Ballast",
                 LoadingType::Stores => "Stores",
-                LoadingType::Cargo => "Cargo",
+                LoadingType::CargoLoad => "CargoLoad",
+                LoadingType::Unspecified => "Unspecified",
             },
         )
     }
 }
 //
-impl From<CargoGeneralCategory> for LoadingType {
-    fn from(value: CargoGeneralCategory) -> Self {
+impl From<AssignmentType> for LoadingType {
+    fn from(value: AssignmentType) -> Self {
         match value {
-            CargoGeneralCategory::Lightship => LoadingType::Hull,
-            CargoGeneralCategory::Ballast => LoadingType::Ballast,
-            CargoGeneralCategory::Bulkhead => LoadingType::Bulkhead,
-            CargoGeneralCategory::Stores => LoadingType::Stores,
-            CargoGeneralCategory::Cargo => LoadingType::Cargo,
+            AssignmentType::Lightship => LoadingType::Hull,
+            AssignmentType::Ballast => LoadingType::Ballast,
+            AssignmentType::Stores => LoadingType::Stores,
+            AssignmentType::CargoLoad => LoadingType::CargoLoad,
+            AssignmentType::Unspecified => LoadingType::Unspecified,
         }
     }
 }
@@ -77,18 +77,13 @@ pub trait ILoad {
     fn shift(&self) -> Position;
 }
 /// Нагрузка судна: грузы, корпус, механизмы
-pub struct Loads<'a> {
-    load_constants: &'a Vec<LoadConstantData>,
+pub struct Loads {
+    load_constants: Vec<LoadConstantData>,
     shift_const: Position,
-    cargoes: &'a Vec<LoadCargo>,
-    compartments: &'a Vec<CompartmentData>,
-    tanks: Shell<dyn ITank>,
-    desks: Shell<dyn IDesk>,
-    bulks: Shell<dyn IBulk>,
-    load_variable: Shell<LoadMass>,
-    load_timber: Shell<LoadMass>,
-    // Постоянная масса судна
-    loads_const: Shell<LoadMass>,
+    bulk: Vec<LoadBulkData>,
+    liquid: Vec<LoadLiquidData>,
+    unit: Vec<LoadUnitData>,
+    gaseous: Vec<LoadGaseousData>
 }
 //
 impl<'a> Loads<'_> {
@@ -250,7 +245,7 @@ impl<'a> Loads<'_> {
                 log::trace!("\t Mass load_variable from compartments src:{:?} trg:{:?}", v, load, );
                 load_variable.push(load);
             }
-            if v.matter_type == MatterType::Liquid && v.m_f_s_x.is_some() && v.m_f_s_y.is_some() {
+            if v.matter_type == CargoType::Liquid && v.m_f_s_x.is_some() && v.m_f_s_y.is_some() {
                 let tank = Tank::new(
                     v.density.unwrap_or(0.),
                     v.volume.unwrap_or(0.),
@@ -266,7 +261,7 @@ impl<'a> Loads<'_> {
                 let tank: Rc<dyn ITank> = Rc::new(tank);
                 tanks.push(tank);
             }
-            if v.matter_type == MatterType::Bulk {
+            if v.matter_type == CargoType::Bulk {
                 let bulk: Rc<dyn IBulk> = Rc::new(Bulk::new(
                     1. / v.density.ok_or("CompartmentData error: no density for PhysicalType::Bulk!".to_string())?,
                     v.grain_moment.ok_or("CompartmentData error: no grain_moment for PhysicalType::Bulk!".to_string())?,
