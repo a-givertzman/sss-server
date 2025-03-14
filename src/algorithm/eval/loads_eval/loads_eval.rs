@@ -126,9 +126,21 @@ impl Eval<(), EvalResult> for LoadsEval {
                         }
                     };
 
-
+                    match self.model.areas().await {
+                        Ok(areas) => {
+                            let result = AreasStrengthCtx { areas };
+                            ctx.write(result)
+                        },
+                        Err(err) => {
+                            return CtxResult::Err(StrErr(format!(
+                                "{}.eval | Read context error: {:?}",
+                                self.dbg, err
+                            )));
+                        },
+                    }
+                    
                     let result = LoadsCtx {
-                        load_constant: initial.load_constant.data,
+                        load_constant,
                         shift_const,
                         bulk,
                         liquid,

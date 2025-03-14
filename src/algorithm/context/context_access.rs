@@ -57,4 +57,16 @@ impl ContextRead<IcingStabCtx> for Context {
         self.icing_stab.clone().unwrap()
     }
 }
+//
+impl ContextWrite<LoadsCtx> for Context {
+    fn write(mut self, value: LoadsCtx) -> CtxResult<Self, StrErr> {
+        self.loads = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<LoadsCtx> for Context {
+    fn read(&self) -> LoadsCtx {
+        self.loads.clone().unwrap()
+    }
+}
 

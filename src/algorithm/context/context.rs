@@ -15,6 +15,8 @@ pub struct Context {
     pub(super) areas_strength: Option<AreasStrengthCtx>,
     /// TODO: DOC
     pub(super) icing_stab: Option<IcingStabCtx>,
+    /// TODO: DOC
+    pub(super) loads: Option<LoadsCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
@@ -31,6 +33,7 @@ impl Context {
             initial,
             areas_strength: None,
             icing_stab: None,
+            loads: None,
             testing: None,
         }
     }

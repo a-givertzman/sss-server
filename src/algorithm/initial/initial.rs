@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::initial_ctx::InitialCtx;
 use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
@@ -65,8 +67,8 @@ impl Eval<(), EvalResult> for Initial {
                         }
             */
             let data = self.api_client.fetch(&format!(
-                "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={};",
-                initial_ctx.ship_id
+                "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
             ));
             let bounds = match data {
                 Ok(data) => match ComputedFrameDataArray::parse(&data) {
@@ -86,23 +88,17 @@ impl Eval<(), EvalResult> for Initial {
                 }
             };
             let data = self.api_client.fetch(&format!(
-                "SELECT             
-                    s.name AS name, \
-                    tr.title_eng AS ship_type, \
-                    n.area::TEXT AS navigation_area, \
-                    n.p_v AS p_v, \
-                    n.m AS m, \
-                    s.freeboard_type AS freeboard_type      
+                "SELECT   
+                    name, \
+                    ship_type, \
+                    navigation_area, \
+                    p_v, \
+                    m, \
+                    freeboard_type      
                 FROM             
-                   ship AS s        
-                JOIN             
-                    ship_type AS t ON s.ship_type_id = t.id        
-                JOIN             
-                    ship_type_rmrs AS tr ON t.type_rmrs = tr.id         
-                JOIN             
-                    navigation_area AS n ON s.navigation_area_id = n.id        
+                    ship_view     
                 WHERE  
-                    s.id={};",
+                    id = {};",
                 initial_ctx.ship_id
             ));
             let ship = match data {
@@ -126,20 +122,16 @@ impl Eval<(), EvalResult> for Initial {
             };
             let data = self.api_client.fetch(&format!(
                 "SELECT             
-                    v.density AS density, \
-                    v.operational_speed AS operational_speed, \
-                    v.wetting_timber AS wetting_timber, \
-                    i.icing_type::TEXT AS icing_type, \
-                    it.icing_type::TEXT AS icing_timber_type
+                    density, \
+                    operational_speed, \
+                    wetting_timber, \
+                    icing_type::TEXT, \
+                    icing_timber_type::TEXT
                 FROM             
-                    voyage AS v           
-                JOIN             
-                    ship_icing AS i ON v.icing_type_id = i.id        
-                JOIN             
-                    ship_icing_timber AS it ON v.icing_timber_type_id = it.id            
+                    voyage_view            
                 WHERE  
-                    s.id={};",
-                initial_ctx.ship_id
+                    ship_id = {} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
             ));
             let voyage = match data {
                 Ok(data) => match VoyageArray::parse(&data) {
@@ -167,8 +159,8 @@ impl Eval<(), EvalResult> for Initial {
                 }
             };
             let data = self.api_client.fetch(&format!(
-                "SELECT key, value FROM ship_parameters WHERE ship_id={};",
-                initial_ctx.ship_id
+                "SELECT key, value FROM \"ship/ship_general_characteristics\" WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.ship_id
             ));
             let ship_parameters = match data {
                 Ok(data) => match ShipParametersArray::parse(&data) {
@@ -209,19 +201,14 @@ impl Eval<(), EvalResult> for Initial {
             };
             let data = self.api_client.fetch(&format!(
                 "SELECT 
-                    l.mass AS mass, \
-                    l.bound_x1 AS bound_x1, \
-                    l.bound_x2 AS bound_x2, \
-                    cc.key as loading_type \
+                    mass, \
+                    bound_x1, \
+                    bound_x2
                 FROM 
-                    load_constant AS l
-                JOIN 
-                    cargo_category AS cc 
-                ON 
-                    l.category_id = cc.id
+                    \"ship/ship_structures/load_constant\"
                 WHERE 
-                    l.ship_id={};",
-                initial_ctx.ship_id
+                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
             ));
             let load_constant = match data {
                 Ok(data) => match LoadConstantArray::parse(&data) {
@@ -240,24 +227,120 @@ impl Eval<(), EvalResult> for Initial {
                     )))
                 }
             };
-            pub load_constant: Option<LoadConstantArray>,
-            pub bulk: Option<LoadBulkArray>,
-            pub liquid: Option<LoadLiquidArray>,
-            pub unit: Option<LoadUnitArray>,
-            pub gaseous: Option<LoadGaseousArray>,
-
-
+            let data = self.api_client.fetch(&format!(
+                "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_type, \
+                    cargo_type, \
+                    stowage_factor, \
+                    weight AS mass
+                FROM 
+                    bulk_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
+            ));
+            let bulk = match data {
+                Ok(data) => match LoadBulkArray::parse(&data) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        return CtxResult::Err(StrErr(format!(
+                            "{}.eval | Error bulk: {err}",
+                            self.dbg
+                        )))
+                    }
+                },
+                Err(err) => {
+                    return CtxResult::Err(StrErr(format!(
+                        "{}.eval | Error bulk: {err}",
+                        self.dbg
+                    )))
+                }
+            };
+            let data = self.api_client.fetch(&format!(
+                "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_type, \
+                    cargo_type, \
+                    density, \
+                    weight AS mass
+                FROM 
+                    liquid_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
+            ));
+            let liquid = match data {
+                Ok(data) => match LoadLiquidArray::parse(&data) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        return CtxResult::Err(StrErr(format!(
+                            "{}.eval | Error liquid: {err}",
+                            self.dbg
+                        )))
+                    }
+                },
+                Err(err) => {
+                    return CtxResult::Err(StrErr(format!(
+                        "{}.eval | Error liquid: {err}",
+                        self.dbg
+                    )))
+                }
+            };
+            let data = self.api_client.fetch(&format!(
+                "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_type, \
+                    cargo_type, \
+                    density, \
+                    weight AS mass
+                FROM 
+                    gaseous_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
+            ));
+            let gaseous = match data {
+                Ok(data) => match LoadGaseousArray::parse(&data) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        return CtxResult::Err(StrErr(format!(
+                            "{}.eval | Error gaseous: {err}",
+                            self.dbg
+                        )))
+                    }
+                },
+                Err(err) => {
+                    return CtxResult::Err(StrErr(format!(
+                        "{}.eval | Error gaseous: {err}",
+                        self.dbg
+                    )))
+                }
+            };
+            // TODO
+            let unit = DataArray::<LoadUnitData>{ data: Vec::new(), error: HashMap::new()};
             initial_ctx.bounds = Some(bounds.data());
             initial_ctx.ship = Some(ship);
             initial_ctx.ship_parameters = Some(ship_parameters);
             initial_ctx.voyage = Some(voyage);
             initial_ctx.icing = Some(icing);
-            initial_ctx.load_constant: Option<LoadConstantArray>,
-            initial_ctx.bulk: Option<LoadBulkArray>,
-            initial_ctx.liquid: Option<LoadLiquidArray>,
-            initial_ctx.unit: Option<LoadUnitArray>,
-            initial_ctx.gaseous: Option<LoadGaseousArray>,
-
+            initial_ctx.load_constant = Some(load_constant);
+            initial_ctx.bulk = Some(bulk);
+            initial_ctx.liquid = Some(liquid);
+            initial_ctx.unit = Some(unit);
+            initial_ctx.gaseous = Some(gaseous);
             self.ctx.clone().write(initial_ctx.to_owned())
         })
     }

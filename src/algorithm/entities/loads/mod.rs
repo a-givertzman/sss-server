@@ -13,7 +13,7 @@ pub use tank::*;
 
 use crate::kernel::error::error::Error;
 
-use super::{data::loads::{AssignmentType, CargoType, CompartmentData, LoadBulkData, LoadCargo, LoadConstantData, LoadConstantType, LoadGaseousData, LoadLiquidData, LoadUnitData}, *};
+use super::{data::loads::{AssignmentType, CargoType, LoadBulkData, LoadConstantData, LoadGaseousData, LoadLiquidData, LoadUnitData}, *};
 
 
 type Shell<T> = Rc<RefCell<Option<Rc<Vec<Rc<T>>>>>>;
@@ -21,8 +21,7 @@ type Shell<T> = Rc<RefCell<Option<Rc<Vec<Rc<T>>>>>>;
 /// Тип груза
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum LoadingType {
-    Hull,
-    Equipment,
+    Constant,
     Ballast,
     Stores,
     CargoLoad,
@@ -35,8 +34,7 @@ impl std::fmt::Display for LoadingType {
             f,
             "{}",
             match self {
-                LoadingType::Hull => "Hull",
-                LoadingType::Equipment => "Equipment",
+                LoadingType::Constant => "Constant",
                 LoadingType::Ballast => "Ballast",
                 LoadingType::Stores => "Stores",
                 LoadingType::CargoLoad => "CargoLoad",
@@ -49,20 +47,10 @@ impl std::fmt::Display for LoadingType {
 impl From<AssignmentType> for LoadingType {
     fn from(value: AssignmentType) -> Self {
         match value {
-            AssignmentType::Lightship => LoadingType::Hull,
             AssignmentType::Ballast => LoadingType::Ballast,
             AssignmentType::Stores => LoadingType::Stores,
             AssignmentType::CargoLoad => LoadingType::CargoLoad,
             AssignmentType::Unspecified => LoadingType::Unspecified,
-        }
-    }
-}
-//
-impl From<LoadConstantType> for LoadingType {
-    fn from(value: LoadConstantType) -> Self {
-        match value {
-            LoadConstantType::Equipment => LoadingType::Equipment,
-            LoadConstantType::Hull => LoadingType::Hull,
         }
     }
 }
@@ -86,7 +74,7 @@ pub struct Loads {
     gaseous: Vec<LoadGaseousData>
 }
 //
-impl<'a> Loads<'_> {
+impl Loads {
     /// Основной конструктор
     /// * load_constants - Постоянная нагрузка на судно
     /// * shift_const - Смещение центра масс постоянной нагрузки на судно

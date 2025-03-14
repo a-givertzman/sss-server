@@ -14,8 +14,6 @@ use serde::{Deserialize, Serialize};
 /// Тип назначения груза
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum AssignmentType {
-    #[serde(alias = "lightship")]
-    Lightship,
     #[serde(alias = "ballast")]
     Ballast,
     #[serde(alias = "stores")]
@@ -32,7 +30,6 @@ impl std::fmt::Display for AssignmentType {
             f,
             "{}",
             match self {
-                AssignmentType::Lightship => "Lightship",
                 AssignmentType::Ballast => "Ballast",
                 AssignmentType::Stores => "Stores",
                 AssignmentType::CargoLoad => "CargoLoad",
@@ -64,6 +61,66 @@ impl std::fmt::Display for CargoType {
                 CargoType::Unit => "Unit",
                 CargoType::Gaseous => "Gaseous",                
                 CargoType::Liquid => "Liquid",
+            },
+        )
+    }
+}
+/// Тип сыпучего груза судна
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum BulkCargoType {
+    #[serde(alias = "timber")]
+    Timber,
+    #[serde(alias = "grain")]
+    Grain,
+    #[serde(alias = "undefined")]
+    Undefined,
+}
+//
+impl std::fmt::Display for BulkCargoType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                BulkCargoType::Timber => "Timber",
+                BulkCargoType::Grain => "Grain",
+                BulkCargoType::Undefined => "Undefined",                
+            },
+        )
+    }
+}
+/// Тип жидкого груза судна
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum LiquidCargoType {
+    #[serde(alias = "crude_oil")]
+    CrudeOil,
+    #[serde(alias = "fuel_oil")]
+    FuelOil,
+    #[serde(alias = "lubricating_oil")]
+    LubricatingOil,
+    #[serde(alias = "fresh_water")]
+    FreshWater,
+    #[serde(alias = "sullage")]    
+    Sullage,
+    #[serde(alias = "water_ballast")]
+    WaterBallast,
+    #[serde(alias = "undefined")]
+    Undefined,
+}
+//
+impl std::fmt::Display for LiquidCargoType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                LiquidCargoType::CrudeOil => "CrudeOil",
+                LiquidCargoType::FuelOil => "FuelOil",
+                LiquidCargoType::LubricatingOil => "LubricatingOil",
+                LiquidCargoType::FreshWater => "FreshWater",
+                LiquidCargoType::Sullage => "Sullage",
+                LiquidCargoType::WaterBallast => "WaterBallast",
+                LiquidCargoType::Undefined => "Undefined",                
             },
         )
     }

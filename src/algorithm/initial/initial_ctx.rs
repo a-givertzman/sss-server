@@ -5,7 +5,8 @@ use crate::algorithm::entities::data::{loads::*, IcingArray, Ship, ShipParameter
 /// для расчетов.
 #[derive(Debug, Clone)]
 pub struct InitialCtx {
-    pub ship_id: usize,
+    pub ship_id: String,
+    pub project_id: String,
     /// разбиение на шпации - фреймы
     pub bounds: Option<Vec<(f64, f64)>>,
     /// Текстовые данные по судну
@@ -28,9 +29,10 @@ impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize) -> Self {
+    pub fn new(ship_id: String, project_id: String) -> Self {
         Self {
             ship_id,
+            project_id,
             ..Self::default()
         }
     }
@@ -43,7 +45,8 @@ impl Default for InitialCtx {
     /// - 'storage_initial_data' - [Storage] instance, where store initial data
     fn default() -> Self {
         Self {
-            ship_id: 0,
+            ship_id: "NUll".to_owned(),
+            project_id: "NUll".to_owned(),
             bounds: None,
             ship: None,
             ship_parameters: None,

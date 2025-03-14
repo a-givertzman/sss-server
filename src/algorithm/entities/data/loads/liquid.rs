@@ -1,47 +1,30 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::data::DataArray;
-use super::{AssignmentType, CargoType};
+use super::{AssignmentType, LiquidCargoType};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadLiquidData {
-    /// ID груза
+    /// ID помещения
     pub space_id: usize,
-    /// масса, т
-    pub mass: Option<f64>,
-    /// Общая масса, т
-    pub volume: Option<f64>,
+    /// Имя помещения
+    pub space_name: String,
+    /// ID груза
+    pub cargo_id: usize,
+    /// Имя груза
+    pub cargo_name: String,
+    /// ID assigned
+    pub assigned_id: usize,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
-    /// Тип груза судна
-    pub cargo_type: CargoType,
-    /// Груз - лес и может намокать и обмерзать
-    pub timber: bool,
-    /// Груз на палубе, имеет площадь поверхностей
-    pub is_on_deck: bool,
-    /// Груз - контейнер
-    pub container: Option<bool>,
-    /// Диапазон по длинне, м
-    pub bound_x1: f64,
-    pub bound_x2: f64,
-    /// Диапазон по ширине
-    pub bound_y1: Option<f64>,
-    pub bound_y2: Option<f64>,
-    /// Диапазон по высоте
-    pub bound_z1: Option<f64>,
-    pub bound_z2: Option<f64>,
-    /// Отстояние центра величины, м
-    pub mass_shift_x: Option<f64>,
-    pub mass_shift_y: Option<f64>,
-    pub mass_shift_z: Option<f64>,
-    /// Площадь горизонтальной поверхности, м^2
-    pub horizontal_area: Option<f64>,
-    /// Площадь вертикальной поверхности, м^2
-    pub vertical_area: Option<f64>,
-    /// Смещение центра площади вертикальной поверхности, м
-    pub vertical_area_shift_x: Option<f64>,
-    pub vertical_area_shift_y: Option<f64>,
-    pub vertical_area_shift_z: Option<f64>,
+    /// Тип жидкого груза
+    pub cargo_type: LiquidCargoType,
+    /// масса, т
+    pub mass: Option<f64>,
+    /// Плотность 
+    pub density: Option<f64>,
+    /// Обьем, м^3
+    pub volume: Option<f64>,
 }
 //
 impl std::fmt::Display for LoadLiquidData {

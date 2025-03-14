@@ -8,8 +8,7 @@ use super::areas_strength_ctx::AreasStrengthCtx;
 
 
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+/// Площади боковой и горизонтальной поверхностей для расчета прочности
 pub struct AreasStrength {
     dbg: DbgId,
     model: ModelLink,
