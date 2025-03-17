@@ -13,6 +13,7 @@ use sal_sync::services::entity::error::str_err::StrErr;
 /// для расчетов.
 pub struct IcingStabEval {
     dbg: DbgId,
+    value: Option<IcingStabCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
@@ -28,6 +29,7 @@ impl IcingStabEval {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "IcingStabEval");
         Self {
             dbg,
+            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -191,6 +193,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
                         icing_coef_v_moment_half,
                         icing_coef_v_moment_zero,
                     };
+                    self.value = Some(result.clone());
                     ctx.write(result)
                 }
                 CtxResult::Err(err) => CtxResult::Err(StrErr(format!(
@@ -206,6 +209,9 @@ impl Eval<(), EvalResult> for IcingStabEval {
 //
 impl std::fmt::Debug for IcingStabEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IcingStabEval").field("dbg", &self.dbg).finish()
+        f.debug_struct("IcingStabEval")
+            .field("dbg", &self.dbg)
+            .field("value", &self.value)
+            .finish()
     }
 }

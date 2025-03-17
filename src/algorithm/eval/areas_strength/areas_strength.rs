@@ -12,6 +12,7 @@ use super::areas_strength_ctx::AreasStrengthCtx;
 pub struct AreasStrength {
     dbg: DbgId,
     model: ModelLink,
+    value: Option<AreasStrengthCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
@@ -25,6 +26,7 @@ impl AreasStrength {
         Self {
             dbg,
             model,
+            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -39,6 +41,7 @@ impl Eval<(), EvalResult> for AreasStrength {
                     match self.model.areas().await {
                         Ok(areas) => {
                             let result = AreasStrengthCtx { areas };
+                            self.value = Some(result.clone());
                             ctx.write(result)
                         },
                         Err(err) => {
@@ -64,6 +67,7 @@ impl std::fmt::Debug for AreasStrength {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AreasStrength")
             .field("dbg", &self.dbg)
+            .field("value", &self.value)
             .finish()
     }
 }

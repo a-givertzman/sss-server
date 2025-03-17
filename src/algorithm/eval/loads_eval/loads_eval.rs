@@ -15,6 +15,7 @@ use sal_sync::services::entity::error::str_err::StrErr;
 pub struct LoadsEval {
     dbg: DbgId,
     model: ModelLink,
+    value: Option<LoadsCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
@@ -32,6 +33,7 @@ impl LoadsEval {
         Self {
             dbg,
             model,
+            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -147,6 +149,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                         unit,
                         gaseous
                     };
+                    self.value = Some(result.clone());
                     ctx.write(result)
                 }
                 CtxResult::Err(err) => CtxResult::Err(StrErr(format!(
@@ -162,6 +165,9 @@ impl Eval<(), EvalResult> for LoadsEval {
 //
 impl std::fmt::Debug for IcingStabEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IcingStabEval").field("dbg", &self.dbg).finish()
+        f.debug_struct("IcingStabEval")
+            .field("dbg", &self.dbg)
+            .field("value", &self.value)
+            .finish()
     }
 }

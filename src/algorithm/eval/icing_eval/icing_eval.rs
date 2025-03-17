@@ -11,6 +11,7 @@ use sal_sync::services::entity::error::str_err::StrErr;
 /// Учет обледенения судна.
 pub struct IcingEval {
     dbg: DbgId,
+    value: Option<IcingCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
@@ -26,6 +27,7 @@ impl IcingEval {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "IcingEval");
         Self {
             dbg,
+            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -51,6 +53,7 @@ impl Eval<(), EvalResult> for IcingEval {
                     let result = IcingCtx {
 
                     };
+                    self.value = Some(result.clone());
                     ctx.write(result)
                 }
                 CtxResult::Err(err) => CtxResult::Err(StrErr(format!(
@@ -66,6 +69,9 @@ impl Eval<(), EvalResult> for IcingEval {
 //
 impl std::fmt::Debug for IcingEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IcingEval").field("dbg", &self.dbg).finish()
+        f.debug_struct("IcingEval")
+            .field("dbg", &self.dbg)
+            .field("value", &self.value)
+            .finish()
     }
 }

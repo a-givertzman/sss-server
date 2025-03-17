@@ -17,6 +17,7 @@ use super::wetting_ctx::WettingCtx;
 /// при расчете прочности.
 pub struct WettingEval {
     dbg: DbgId,
+    value: Option<WettingCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
@@ -32,6 +33,7 @@ impl WettingEval {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "WettingEval");
         Self {
             dbg,
+            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -73,6 +75,7 @@ impl Eval<(), EvalResult> for WettingEval {
                         mass,
                         mass_shift,
                     };
+                    self.value = Some(result.clone());
                     ctx.write(result)
                 }
                 CtxResult::Err(err) => CtxResult::Err(StrErr(format!(
@@ -88,6 +91,9 @@ impl Eval<(), EvalResult> for WettingEval {
 //
 impl std::fmt::Debug for WettingEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WettingEval").field("dbg", &self.dbg).finish()
+            f.debug_struct("WettingEval")
+            .field("dbg", &self.dbg)
+            .field("value", &self.value)
+            .finish()
     }
 }
