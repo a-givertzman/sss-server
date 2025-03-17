@@ -329,6 +329,37 @@ impl Eval<(), EvalResult> for Initial {
                     )))
                 }
             };
+            let data = self.api_client.fetch(&format!(
+                "SELECT 
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    weight AS mass, \
+                    centre_of_gravity AS mass_shift, \
+                    permeability
+                FROM 
+                    dry_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.project_id
+            ));
+            let dry = match data {
+                Ok(data) => match LoadDryArray::parse(&data) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        return CtxResult::Err(StrErr(format!(
+                            "{}.eval | Error gaseous: {err}",
+                            self.dbg
+                        )))
+                    }
+                },
+                Err(err) => {
+                    return CtxResult::Err(StrErr(format!(
+                        "{}.eval | Error gaseous: {err}",
+                        self.dbg
+                    )))
+                }
+            };
             // TODO
             let unit = DataArray::<LoadUnitData>{ data: Vec::new(), error: HashMap::new()};
             initial_ctx.bounds = Some(bounds.data());
@@ -341,6 +372,7 @@ impl Eval<(), EvalResult> for Initial {
             initial_ctx.liquid = Some(liquid);
             initial_ctx.unit = Some(unit);
             initial_ctx.gaseous = Some(gaseous);
+            initial_ctx.dry = Some(dry);
             self.ctx.clone().write(initial_ctx.to_owned())
         })
     }

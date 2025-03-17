@@ -3,12 +3,14 @@ pub mod liquid;
 pub mod gaseous;
 pub mod bulk;
 pub mod unit;
+pub mod dry;
 
 pub use constant::*;
 pub use liquid::*;
 pub use gaseous::*;
 pub use bulk::*;
 pub use unit::*;
+pub use dry::*;
 
 use serde::{Deserialize, Serialize};
 /// Тип назначения груза

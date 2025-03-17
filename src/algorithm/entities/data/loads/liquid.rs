@@ -26,7 +26,7 @@ pub struct LoadLiquidData {
     /// Обьем, м^3
     pub volume: Option<f64>,
 }
-//
+/*
 impl std::fmt::Display for LoadLiquidData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -55,7 +55,7 @@ impl std::fmt::Display for LoadLiquidData {
             self.vertical_area_shift_z.unwrap_or(0.),
         )
     }
-}
+}*/
 /// Массив данных по грузам
 pub type LoadLiquidArray = DataArray<LoadLiquidData>;
 //

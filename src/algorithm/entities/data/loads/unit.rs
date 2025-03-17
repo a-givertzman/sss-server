@@ -44,7 +44,7 @@ pub struct LoadUnitData {
     pub vertical_area_shift_z: Option<f64>,
 }
 //
-impl std::fmt::Display for LoadUnitData {
+/*impl std::fmt::Display for LoadUnitData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -72,7 +72,7 @@ impl std::fmt::Display for LoadUnitData {
             self.vertical_area_shift_z.unwrap_or(0.),
         )
     }
-}
+}*/
 /// Массив данных по грузам
 pub type LoadUnitArray = DataArray<LoadUnitData>;
 //

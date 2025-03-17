@@ -13,9 +13,9 @@ pub struct Context {
     pub(super) initial: InitialCtx,
     /// TODO: DOC
     pub(super) areas_strength: Option<AreasStrengthCtx>,
-    /// TODO: DOC
     pub(super) icing_stab: Option<IcingStabCtx>,
-    /// TODO: DOC
+    pub(super) icing: Option<IcingCtx>,
+    pub(super) wetting: Option<WettingCtx>,
     pub(super) loads: Option<LoadsCtx>,
     ///
     /// Uset for testing only
@@ -33,6 +33,8 @@ impl Context {
             initial,
             areas_strength: None,
             icing_stab: None,
+            icing: None,
+            wetting: None,
             loads: None,
             testing: None,
         }

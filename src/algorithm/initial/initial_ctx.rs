@@ -24,6 +24,7 @@ pub struct InitialCtx {
     pub liquid: Option<LoadLiquidArray>,
     pub unit: Option<LoadUnitArray>,
     pub gaseous: Option<LoadGaseousArray>,
+    pub dry: Option<LoadDryArray>,
 }
 impl InitialCtx {
     ///
@@ -57,6 +58,7 @@ impl Default for InitialCtx {
             liquid: None,
             unit: None,
             gaseous: None,
+            dry: None,
         }
     }
 }

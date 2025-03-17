@@ -76,3 +76,25 @@ impl AddAssign for Position {
         };
     }
 }
+use std::str::FromStr;
+//
+#[derive(Debug, PartialEq, Eq)]
+struct ParsePositionError;
+//
+impl FromStr for Position {
+    type Err = ParsePositionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut values = s
+            .strip_prefix('(')
+            .and_then(|s| s.strip_suffix(')'))
+            .ok_or(ParsePositionError)?
+            .split(',');
+
+        let x = values.next().ok_or(ParsePositionError)?.parse::<f64>().map_err(|_| ParsePositionError)?;
+        let y = values.next().ok_or(ParsePositionError)?.parse::<f64>().map_err(|_| ParsePositionError)?;
+        let z = values.next().ok_or(ParsePositionError)?.parse::<f64>().map_err(|_| ParsePositionError)?;
+
+        Ok(Position { x, y, z })
+    }
+}

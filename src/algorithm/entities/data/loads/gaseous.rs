@@ -44,7 +44,7 @@ pub struct LoadGaseousData {
     pub vertical_area_shift_z: Option<f64>,
 }
 //
-impl std::fmt::Display for LoadGaseousData {
+/*impl std::fmt::Display for LoadGaseousData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -72,7 +72,7 @@ impl std::fmt::Display for LoadGaseousData {
             self.vertical_area_shift_z.unwrap_or(0.),
         )
     }
-}
+}*/
 /// Массив данных по грузам
 pub type LoadGaseousArray = DataArray<LoadGaseousData>;
 //

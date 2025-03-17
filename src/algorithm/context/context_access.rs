@@ -58,6 +58,30 @@ impl ContextRead<IcingStabCtx> for Context {
     }
 }
 //
+impl ContextWrite<IcingCtx> for Context {
+    fn write(mut self, value: IcingCtx) -> CtxResult<Self, StrErr> {
+        self.icing = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<IcingCtx> for Context {
+    fn read(&self) -> IcingCtx {
+        self.icing.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<WettingCtx> for Context {
+    fn write(mut self, value: WettingCtx) -> CtxResult<Self, StrErr> {
+        self.wetting = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WettingCtx> for Context {
+    fn read(&self) -> WettingCtx {
+        self.wetting.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<LoadsCtx> for Context {
     fn write(mut self, value: LoadsCtx) -> CtxResult<Self, StrErr> {
         self.loads = Some(value);
@@ -69,4 +93,7 @@ impl ContextRead<LoadsCtx> for Context {
         self.loads.clone().unwrap()
     }
 }
+
+
+
 

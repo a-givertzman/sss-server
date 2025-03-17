@@ -1,37 +1,38 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::data::DataArray;
-use super::{AssignmentType, BulkCargoType};
-///
+use crate::algorithm::entities::math::Position;
+//
+fn deserialize_from_string<'de, D>(deserializer: D) -> Result<Position, D::Error>
+where D: Deserializer<'de> {
+    let buf = String::deserialize(deserializer)?;
+    Position::from_str(&buf)
+}
+//
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LoadBulkData {
-    /// ID помещения
-    pub space_id: usize,
-    /// Имя помещения
-    pub space_name: String,
+pub struct LoadDryData {
     /// ID груза
     pub cargo_id: usize,
     /// Имя груза
     pub cargo_name: String,
     /// ID assigned
     pub assigned_id: usize,
-    /// Тип назначения груза
-    pub assigment_type: AssignmentType,
-    /// Тип сыпучего груза
-    pub cargo_type: BulkCargoType,
     /// масса, т
     pub mass: Option<f64>,
-    /// Средний удельный погрузочный объем, м^3/т
-    pub stowage_factor: Option<f64>,
-    /// Обьем, м^3
-    pub volume: Option<f64>,
+    /// Центр тяжести, м
+    #[serde(deserialize_with = "deserialize_from_string")]
+    pub mass_shift: Option<Position>,
+    /// Проницаемость, %
+    pub permeability: Option<f64>,
 }
-//
-impl std::fmt::Display for LoadBulkData {
+/*
+impl std::fmt::Display for LoadDryData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LoadBulkData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assigned_id:{} 
+            "LoadDryData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assigned_id:{} 
                 assigment_type:{} cargo_type:{}, mass:{}, stowage_factor:{} volume:{} )",
             self.space_id,
             self.space_name,            
@@ -45,12 +46,12 @@ impl std::fmt::Display for LoadBulkData {
             self.volume.unwrap_or(0.),
         )
     }
-}
+}*/
 /// Массив данных по грузам
-pub type LoadBulkArray = DataArray<LoadBulkData>;
+pub type LoadDryArray = DataArray<LoadDryData>;
 //
-impl LoadBulkArray {
-    pub fn data(self) -> Vec<LoadBulkData> {
+impl LoadDryArray {
+    pub fn data(self) -> Vec<LoadDryData> {
         self.data
     }
 }
