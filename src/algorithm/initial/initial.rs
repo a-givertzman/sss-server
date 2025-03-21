@@ -234,7 +234,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_id, \
                     cargo_name, \
                     assigned_id, \
-                    assigment_type, \
+                    assigment_context as assigment_type, \
                     cargo_type, \
                     stowage_factor, \
                     weight AS mass
@@ -268,7 +268,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_id, \
                     cargo_name, \
                     assigned_id, \
-                    assigment_type, \
+                    assigment_context as assigment_type, \
                     cargo_type, \
                     density, \
                     weight AS mass
@@ -302,7 +302,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_id, \
                     cargo_name, \
                     assigned_id, \
-                    assigment_type, \
+                    assigment_context as assigment_type, \
                     cargo_type, \
                     density, \
                     weight AS mass

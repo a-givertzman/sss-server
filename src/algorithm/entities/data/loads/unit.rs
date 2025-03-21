@@ -14,7 +14,7 @@ pub struct LoadUnitData {
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип груза судна
-    pub cargo_type: CargoType,
+    pub cargo_type: UnitCargoType,
     /// Груз - лес и может намокать и обмерзать
     pub timber: bool,
     /// Груз на палубе, имеет площадь поверхностей

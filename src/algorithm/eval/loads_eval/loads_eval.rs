@@ -83,7 +83,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                         )));
                     };
                     let load_constant = match initial.load_constant.clone() {
-                        Some(data) => data,
+                        Some(data) => data.data(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read load_constant error: no data!",
@@ -92,7 +92,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                         }
                     };
                     let bulk = match initial.bulk.clone() {
-                        Some(data) => data,
+                        Some(data) => data.data(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read bulk error: no data!",
@@ -101,7 +101,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                         }
                     };
                     let liquid = match initial.liquid.clone() {
-                        Some(data) => data,
+                        Some(data) => data.data(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read liquid error: no data!",
@@ -110,7 +110,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                         }
                     };
                     let unit = match initial.unit.clone() {
-                        Some(data) => data,
+                        Some(data) => data.data(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read unit error: no data!",
@@ -119,7 +119,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                         }
                     };
                     let gaseous = match initial.gaseous.clone() {
-                        Some(data) => data,
+                        Some(data) => data.data(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read gaseous error: no data!",
@@ -127,20 +127,6 @@ impl Eval<(), EvalResult> for LoadsEval {
                             )))
                         }
                     };
-
-                    match self.model.areas().await {
-                        Ok(areas) => {
-                            let result = AreasStrengthCtx { areas };
-                            ctx.write(result)
-                        },
-                        Err(err) => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read context error: {:?}",
-                                self.dbg, err
-                            )));
-                        },
-                    }
-                    
                     let result = LoadsCtx {
                         load_constant,
                         shift_const,

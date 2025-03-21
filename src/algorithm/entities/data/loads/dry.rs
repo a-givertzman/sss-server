@@ -1,11 +1,11 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use crate::algorithm::entities::data::DataArray;
 use crate::algorithm::entities::math::Position;
 //
-fn deserialize_from_string<'de, D>(deserializer: D) -> Result<Position, D::Error>
+fn deserialize_from_string<'de, D>(deserializer: D) -> Result<Option<Position>, D::Error>
 where D: Deserializer<'de> {
     let buf = String::deserialize(deserializer)?;
     Position::from_str(&buf)

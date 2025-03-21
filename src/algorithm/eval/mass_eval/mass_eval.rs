@@ -3,26 +3,24 @@ use crate::{
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult}, ship_model::model_link::ModelLink, ContextWrite, CtxResult
 };
 
-use super::areas_strength_ctx::AreasStrengthCtx;
-
-
+use super::mass_ctx::MassCtx;
 
 ///
 /// Площади боковой и горизонтальной поверхностей для расчета прочности
-pub struct AreasStrength {
+pub struct MassEval {
     dbg: DbgId,
     model: ModelLink,
-    value: Option<AreasStrengthCtx>,
+    value: Option<MassCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
 //
-impl AreasStrength {
+impl MassEval {
     ///
     /// Fetches all initiall data
     /// - 'api_client' - access to the database
     pub fn new(parent: impl Into<String>, model: ModelLink, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
-        let dbg = DbgId::with_parent(&DbgId(parent.into()), "AreasStrength");
+        let dbg = DbgId::with_parent(&DbgId(parent.into()), "MassEval");
         Self {
             dbg,
             model,
@@ -33,14 +31,14 @@ impl AreasStrength {
     //
     //
 }
-impl Eval<(), EvalResult> for AreasStrength {
+impl Eval<(), EvalResult> for MassEval {
     fn eval(&mut self, _: ()) -> futures::future::BoxFuture<'_, EvalResult> {
         Box::pin(async move {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
                     match self.model.areas().await {
                         Ok(areas) => {
-                            let result = AreasStrengthCtx { areas };
+                            let result = MassCtx { areas };
                             self.value = Some(result.clone());
                             ctx.write(result)
                         },
@@ -63,9 +61,9 @@ impl Eval<(), EvalResult> for AreasStrength {
 }
 //
 //
-impl std::fmt::Debug for AreasStrength {
+impl std::fmt::Debug for MassEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AreasStrength")
+        f.debug_struct("MassEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

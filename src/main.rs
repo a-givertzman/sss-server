@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _result = 
     IcingStabEval::new(
         &dbg,
-        AreasStrength::new(
+        AreasStrengthEval::new(
             &dbg,
             ship_model.link().await,
             Initial::new(

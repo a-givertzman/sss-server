@@ -14,7 +14,7 @@ pub struct LoadGaseousData {
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип груза судна
-    pub cargo_type: CargoType,
+    pub cargo_type: GaseousCargoType,
     /// Груз - лес и может намокать и обмерзать
     pub timber: bool,
     /// Груз на палубе, имеет площадь поверхностей

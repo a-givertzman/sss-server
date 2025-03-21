@@ -127,3 +127,30 @@ impl std::fmt::Display for LiquidCargoType {
         )
     }
 }
+/// Тип штучного груза судна
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum UnitCargoType {
+    #[serde(alias = "timber")]
+    Timber,
+    #[serde(alias = "container")]
+    Container,
+    #[serde(alias = "grain_bulkhead")]
+    GrainBulkhead,
+    #[serde(alias = "undefined")]
+    Undefined,
+}
+//
+impl std::fmt::Display for UnitCargoType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                UnitCargoType::Timber => "Timber",
+                UnitCargoType::Container => "Container",
+                UnitCargoType::GrainBulkhead => "GrainBulkhead",
+                UnitCargoType::Undefined => "Undefined",                
+            },
+        )
+    }
+}
