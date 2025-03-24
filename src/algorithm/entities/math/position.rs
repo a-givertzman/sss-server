@@ -3,8 +3,29 @@ use std::{
     iter::Sum,
     ops::{Add, AddAssign, Sub},
 };
+use serde::Deserialize;
+
 //
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Deserialize, Debug, PartialEq)]
+pub struct Point3 {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+//
+impl TryFrom<Point3> for Position {
+    type Error = String;
+    fn try_from(data: Point3) -> Result<Self, Self::Error> {
+        Ok(Position {
+            x: data.x,
+            y: data.y,
+            z: data.z,
+        })
+    }
+}
+//
+#[derive(Copy, Clone, Deserialize, Debug, PartialEq)]
+#[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,
     y: f64,
@@ -74,27 +95,5 @@ impl AddAssign for Position {
             y: self.y + other.y,
             z: self.z + other.z,
         };
-    }
-}
-use std::str::FromStr;
-//
-#[derive(Debug, PartialEq, Eq)]
-struct ParsePositionError;
-//
-impl FromStr for Position {
-    type Err = ParsePositionError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut values = s
-            .strip_prefix('(')
-            .and_then(|s| s.strip_suffix(')'))
-            .ok_or(ParsePositionError)?
-            .split(',');
-
-        let x = values.next().ok_or(ParsePositionError)?.parse::<f64>().map_err(|_| ParsePositionError)?;
-        let y = values.next().ok_or(ParsePositionError)?.parse::<f64>().map_err(|_| ParsePositionError)?;
-        let z = values.next().ok_or(ParsePositionError)?.parse::<f64>().map_err(|_| ParsePositionError)?;
-
-        Ok(Position { x, y, z })
     }
 }

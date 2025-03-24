@@ -1,47 +1,26 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::data::DataArray;
-use super::{AssignmentType, CargoType};
+use super::AssignmentType;
 ///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadGaseousData {
     /// ID груза
+    pub cargo_id: usize,
+    /// Имя груза
+    pub cargo_name: String,   
+    /// ID помещения
     pub space_id: usize,
+    /// Имя помещения
+    pub space_name: usize,
+    /// ID assigned
+    pub assigned_id: usize,
+    /// Тип назначения груза
+    pub assigment_type: AssignmentType,    
     /// масса, т
     pub mass: Option<f64>,
     /// Общая масса, т
     pub volume: Option<f64>,
-    /// Тип назначения груза
-    pub assigment_type: AssignmentType,
-    /// Тип груза судна
-    pub cargo_type: GaseousCargoType,
-    /// Груз - лес и может намокать и обмерзать
-    pub timber: bool,
-    /// Груз на палубе, имеет площадь поверхностей
-    pub is_on_deck: bool,
-    /// Груз - контейнер
-    pub container: Option<bool>,
-    /// Диапазон по длинне, м
-    pub bound_x1: f64,
-    pub bound_x2: f64,
-    /// Диапазон по ширине
-    pub bound_y1: Option<f64>,
-    pub bound_y2: Option<f64>,
-    /// Диапазон по высоте
-    pub bound_z1: Option<f64>,
-    pub bound_z2: Option<f64>,
-    /// Отстояние центра величины, м
-    pub mass_shift_x: Option<f64>,
-    pub mass_shift_y: Option<f64>,
-    pub mass_shift_z: Option<f64>,
-    /// Площадь горизонтальной поверхности, м^2
-    pub horizontal_area: Option<f64>,
-    /// Площадь вертикальной поверхности, м^2
-    pub vertical_area: Option<f64>,
-    /// Смещение центра площади вертикальной поверхности, м
-    pub vertical_area_shift_x: Option<f64>,
-    pub vertical_area_shift_y: Option<f64>,
-    pub vertical_area_shift_z: Option<f64>,
 }
 //
 /*impl std::fmt::Display for LoadGaseousData {

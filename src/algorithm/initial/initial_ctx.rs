@@ -1,4 +1,6 @@
-use crate::algorithm::entities::data::{loads::*, IcingArray, Ship, ShipParametersArray, Voyage};
+use std::collections::HashMap;
+use crate::algorithm::entities::Bounds;
+use crate::algorithm::entities::data::{loads::*, IcingArray, Ship, Voyage};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
@@ -8,11 +10,11 @@ pub struct InitialCtx {
     pub ship_id: String,
     pub project_id: String,
     /// разбиение на шпации - фреймы
-    pub bounds: Option<Vec<(f64, f64)>>,
+    pub bounds: Option<Bounds>,
     /// Текстовые данные по судну
     pub ship: Option<Ship>,
     /// Численные данные по судну
-    pub ship_parameters: Option<ShipParametersArray>,
+    pub ship_parameters: Option<HashMap<String, f64>>,
     /// Данные по обстановке
     pub voyage: Option<Voyage>,
     /// Данные по обледенению
@@ -24,7 +26,6 @@ pub struct InitialCtx {
     pub liquid: Option<LoadLiquidArray>,
     pub unit: Option<LoadUnitArray>,
     pub gaseous: Option<LoadGaseousArray>,
-    pub dry: Option<LoadDryArray>,
 }
 impl InitialCtx {
     ///
@@ -58,7 +59,6 @@ impl Default for InitialCtx {
             liquid: None,
             unit: None,
             gaseous: None,
-            dry: None,
         }
     }
 }

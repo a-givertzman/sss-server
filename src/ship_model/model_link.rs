@@ -63,7 +63,7 @@ impl ModelLink {
     // }
     ///
     /// - Returns strength areas by ship frames
-    pub async fn areas(&self) -> Result<(Vec<crate::algorithm::entities::data::strength::VerticalArea>, Vec<crate::algorithm::entities::area::HAreaStrength>), StrErr> {
+    pub async fn areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {

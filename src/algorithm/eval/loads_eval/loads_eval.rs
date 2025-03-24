@@ -46,9 +46,8 @@ impl Eval<(), EvalResult> for LoadsEval {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
                     let initial: &InitialCtx = ctx.read_ref();
-                    let shift_const = if let Some(ship_parameters) = initial.ship_parameters {
-                        let ship_data = ship_parameters.data();
-                        let const_mass_shift_x = *match ship_data.get("LCG from middle") { 
+                    let shift_const = if let Some(ship_parameters) = initial.ship_parameters.as_ref() {
+                        let const_mass_shift_x = *match ship_parameters.get("LCG from middle") { 
                             Some(data) => data,
                             None => {
                                 return CtxResult::Err(StrErr(format!(
@@ -57,7 +56,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                                 )))
                             }
                         };
-                        let const_mass_shift_y = *match ship_data.get("TCG from CL") { 
+                        let const_mass_shift_y = *match ship_parameters.get("TCG from CL") { 
                             Some(data) => data,
                             None => {
                                 return CtxResult::Err(StrErr(format!(
@@ -66,7 +65,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                                 )))
                             }
                         };     
-                        let const_mass_shift_z = *match ship_data.get("VCG from BL") { 
+                        let const_mass_shift_z = *match ship_parameters.get("VCG from BL") { 
                             Some(data) => data,
                             None => {
                                 return CtxResult::Err(StrErr(format!(
@@ -149,9 +148,9 @@ impl Eval<(), EvalResult> for LoadsEval {
 }
 //
 //
-impl std::fmt::Debug for IcingStabEval {
+impl std::fmt::Debug for LoadsEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IcingStabEval")
+        f.debug_struct("LoadsEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

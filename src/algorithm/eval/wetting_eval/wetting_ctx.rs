@@ -5,4 +5,6 @@ use crate::algorithm::entities::Position;
 pub struct WettingCtx {
     pub mass: f64,
     pub mass_shift: Position,
+    /// Распределение массы намокания по шпациям
+    pub mass_array: Vec<f64>,
 }

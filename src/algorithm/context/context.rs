@@ -14,6 +14,8 @@ pub struct Context {
     /// TODO: DOC
     pub(super) areas_strength: Option<AreasStrengthCtx>,
     pub(super) icing_stab: Option<IcingStabCtx>,
+    /// Ограничение горизонтальной площади обледенения палубного груза - леса
+    pub(super)  icing_timber: Option<IcingTimberCtx>,
     pub(super) icing: Option<IcingCtx>,
     pub(super) wetting: Option<WettingCtx>,
     pub(super) loads: Option<LoadsCtx>,
@@ -33,6 +35,7 @@ impl Context {
             initial,
             areas_strength: None,
             icing_stab: None,
+            icing_timber: None,
             icing: None,
             wetting: None,
             loads: None,

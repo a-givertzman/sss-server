@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-
 use super::initial_ctx::InitialCtx;
+use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
@@ -11,7 +11,7 @@ use crate::{
             context_access::{ContextReadRef, ContextWrite},
             ctx_result::CtxResult,
         },
-        entities::data::{ComputedFrameData, ComputedFrameDataArray, DataArray},
+        entities::data::ComputedFrameDataArray,
     },
     infrostructure::api::client::api_client::ApiClient,
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
@@ -67,12 +67,12 @@ impl Eval<(), EvalResult> for Initial {
                         }
             */
             let data = self.api_client.fetch(&format!(
-                "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {} ORDER BY index ASC;",
                 initial_ctx.ship_id, initial_ctx.project_id
             ));
             let bounds = match data {
                 Ok(data) => match ComputedFrameDataArray::parse(&data) {
-                    Ok(data) => data,
+                    Ok(data) => data.data(),
                     Err(err) => {
                         return CtxResult::Err(StrErr(format!(
                             "{}.eval | Error bounds: {err}",
@@ -80,6 +80,15 @@ impl Eval<(), EvalResult> for Initial {
                         )))
                     }
                 },
+                Err(err) => {
+                    return CtxResult::Err(StrErr(format!(
+                        "{}.eval | Error bounds: {err}",
+                        self.dbg
+                    )))
+                }
+            };
+            let bounds: Bounds = match Bounds::from_frames(&bounds) {
+                Ok(data) => data,
                 Err(err) => {
                     return CtxResult::Err(StrErr(format!(
                         "{}.eval | Error bounds: {err}",
@@ -331,40 +340,54 @@ impl Eval<(), EvalResult> for Initial {
             };
             let data = self.api_client.fetch(&format!(
                 "SELECT 
+                    space_id, \
+                    space_name, \
                     cargo_id, \
                     cargo_name, \
                     assigned_id, \
+                    assigment_context as assigment_type, \
+                    cargo_type, \
+                    density, \
                     weight AS mass, \
                     centre_of_gravity AS mass_shift, \
-                    permeability
+                    permeability, \
+                    stowage_factor, \
+                    icing_area, \
+                    centre_of_icing_area, \
+                    windage_area, \
+                    centre_of_windage_area, \
+                    bound_x1, \
+                    bound_x2, \
+                    bound_y1, \
+                    bound_y2, \
+                    bound_z1, \
+                    bound_z2
                 FROM 
-                    dry_cargo_view
+                    unit_cargo_view
                 WHERE 
                     language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                 initial_ctx.ship_id, initial_ctx.project_id
             ));
-            let dry = match data {
-                Ok(data) => match LoadDryArray::parse(&data) {
+            let unit = match data {
+                Ok(data) => match LoadUnitArray::parse(&data) {
                     Ok(data) => data,
                     Err(err) => {
                         return CtxResult::Err(StrErr(format!(
-                            "{}.eval | Error gaseous: {err}",
+                            "{}.eval | Error unit: {err}",
                             self.dbg
                         )))
                     }
                 },
                 Err(err) => {
                     return CtxResult::Err(StrErr(format!(
-                        "{}.eval | Error gaseous: {err}",
+                        "{}.eval | Error unit: {err}",
                         self.dbg
                     )))
                 }
             };
-            // TODO
-            let unit = DataArray::<LoadUnitData>{ data: Vec::new(), error: HashMap::new()};
-            initial_ctx.bounds = Some(bounds.data());
+            initial_ctx.bounds = Some(bounds);
             initial_ctx.ship = Some(ship);
-            initial_ctx.ship_parameters = Some(ship_parameters);
+            initial_ctx.ship_parameters = Some(ship_parameters.data());
             initial_ctx.voyage = Some(voyage);
             initial_ctx.icing = Some(icing);
             initial_ctx.load_constant = Some(load_constant);
@@ -372,7 +395,6 @@ impl Eval<(), EvalResult> for Initial {
             initial_ctx.liquid = Some(liquid);
             initial_ctx.unit = Some(unit);
             initial_ctx.gaseous = Some(gaseous);
-            initial_ctx.dry = Some(dry);
             self.ctx.clone().write(initial_ctx.to_owned())
         })
     }

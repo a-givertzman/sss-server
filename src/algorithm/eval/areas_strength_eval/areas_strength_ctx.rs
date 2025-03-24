@@ -1,21 +1,12 @@
-use crate::algorithm::entities::{area::HAreaStrength, data::strength::VerticalArea};
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
 #[derive(Debug, Clone)]
 pub struct AreasStrengthCtx {
-    /// разбиение на шпации - фреймы
-    pub areas: (Vec<VerticalArea>, Vec<HAreaStrength>),
+    /// Площадь парусности
+    pub area_v: Vec<f64>,
+    /// Площадь горизонтальных поверхностей открытых палуб
+    pub area_h: Vec<f64>, 
+    /// Площадь горизонтальных поверхностей палубного лесного груза
+    pub area_timber_h: Vec<f64>, 
 }
-//
-//
-// impl Default for AreasStrengthCtx {
-//     ///
-//     /// Struct constructor
-//     /// - 'storage_initial_data' - [Storage] instance, where store initial data
-//     fn default() -> Self {
-//         Self {
-//             bounds: None,
-//         }
-//     }
-// }

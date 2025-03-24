@@ -1,5 +1,5 @@
 //! Непрерывный набор диапазонов значений
-use crate::kernel::error::error::Error;
+use api_tools::error::str_err::StrErr;
 
 use super::Bound;
 /// Непрерывный набор диапазонов значений
@@ -11,16 +11,16 @@ pub struct Bounds {
 //
 impl Bounds {
     /// Основной конструктор
-    pub fn new(values: Vec<Bound>) -> Result<Self, Error> {
+    pub fn new(values: Vec<Bound>) -> Result<Self, StrErr> {
         for v in &values {
             match v {
-                Bound::None => return Err(Error::FromString("Bounds new error: Bound::None in values".to_owned())),
-                Bound::Full => return Err(Error::FromString("Bounds new error: Bound::Full in values".to_owned())),
+                Bound::None => return Err(StrErr::from("Bounds new error: Bound::None in values".to_owned())),
+                Bound::Full => return Err(StrErr::from("Bounds new error: Bound::Full in values".to_owned())),
                 Bound::Value(_, _) => continue,
             }
         }
         if values.len() < 2 {
-            return Err(Error::FromString(
+            return Err(StrErr::from(
                 "Bounds::new error: values.len() < 2 ".to_string(),
             ));
         }
@@ -31,14 +31,14 @@ impl Bounds {
     /// * middle_x - X midship from Fr0
     /// * n - Number of Parts
     #[allow(unused)]
-    pub fn from_n(loa: f64, middle_x: f64, n: usize) -> Result<Self, Error> {
+    pub fn from_n(loa: f64, middle_x: f64, n: usize) -> Result<Self, StrErr> {
         if loa <= 0. {
-            return Err(Error::FromString(format!(
+            return Err(StrErr::from(format!(
                 "Bounds from_n error: loa {loa} <= 0."
             )));
         }
         if n <= 1 {
-            return Err(Error::FromString(format!(
+            return Err(StrErr::from(format!(
                 "Bounds from_n error: n {n} <= 1"
             )));
         }
@@ -52,14 +52,14 @@ impl Bounds {
     }
     /// Вспомогательный конструктор
     #[allow(unused)]
-    pub fn from_min_max(min: f64, max: f64, n: usize) -> Result<Self, Error> {
+    pub fn from_min_max(min: f64, max: f64, n: usize) -> Result<Self, StrErr> {
         if min >= max {
-            return Err(Error::FromString(format!(
+            return Err(StrErr::from(format!(
                 "Bounds from_min_max error: min {min} >= max {max}"
             )));
         }
         if n <= 1 {
-            return Err(Error::FromString(format!(
+            return Err(StrErr::from(format!(
                 "Bounds from_min_max error: n {n} <= 1"
             )));
         }
@@ -73,9 +73,9 @@ impl Bounds {
         Self::new(values)
     }
     /// Вспомогательный конструктор
-    pub fn from_frames(frames: &[(f64, f64)]) -> Result<Self, Error> {
+    pub fn from_frames(frames: &[(f64, f64)]) -> Result<Self, StrErr> {
         if frames.len() <= 1 {
-            return Err(Error::FromString(
+            return Err(StrErr::from(
                 "Bounds from_frames error: frames.len() <= 1".to_string(),
             ));
         }

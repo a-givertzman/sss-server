@@ -1,0 +1,68 @@
+//! Ограничение горизонтальной площади обледенения палубного груза - леса
+use api_tools::error::str_err::StrErr;
+use serde::{Deserialize, Serialize};
+use crate::algorithm::entities::Bound;
+/// Тип обледенения горизонтальной площади палубного груза - леса
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum IcingTimberType {
+    #[serde(alias = "full")]
+    Full,
+    #[serde(alias = "half left")]
+    HalfLeft,
+    #[serde(alias = "half right")]
+    HalfRight,
+    #[serde(alias = "bow")]
+    Bow,
+}
+//
+impl IcingTimberType {
+    pub fn from_str(src: &str) -> Result<Self, StrErr> {
+        Ok(match src.trim().to_lowercase().as_str() {
+            "full" => IcingTimberType::Full,
+            "half left" => IcingTimberType::HalfLeft,
+            "half right" => IcingTimberType::HalfRight,
+            "bow" => IcingTimberType::Bow,
+            src => return Err(StrErr::from(format!("IcingTimberType from_str error: no type {src}"))),
+        })
+    }
+}
+/// Общая структура для ввода данных. Содержит все данные
+/// для расчетов.
+#[derive(Debug, Clone)]
+pub struct IcingTimberCtx {
+    /// Ширина корпуса судна  
+    width: f64,
+    /// Длинна корпуса судна  
+    length: f64,
+    /// Тип обледенения  
+    icing_timber_stab: IcingTimberType,
+}
+//
+impl IcingTimberCtx {
+    /// Основной конструктор
+    /// * width - Ширина корпуса судна  
+    /// * length - Длинна корпуса судна    
+    /// * icing_timber_stab - Тип обледенения   
+    pub fn new(width: f64, length: f64, icing_timber_stab: IcingTimberType) -> Self {
+        Self {
+            width,
+            length,
+            icing_timber_stab,
+        }
+    }
+    /// Ограничение по x
+    pub fn bound_x(&self) -> Result<Bound, StrErr> {
+        Ok(match self.icing_timber_stab {
+            IcingTimberType::Bow => Bound::new(self.length / 6., self.length / 2.)?,
+            _ => Bound::Full,
+        })
+    }
+    /// Ограничение по y
+    pub fn bound_y(&self) -> Result<Bound, StrErr> {
+        Ok(match self.icing_timber_stab {
+            IcingTimberType::HalfLeft => Bound::new(-self.width / 2., 0.)?,
+            IcingTimberType::HalfRight => Bound::new(0., self.width / 2.)?,
+            _ => Bound::Full,
+        })
+    }
+}

@@ -5,14 +5,14 @@ use super::{AssignmentType, LiquidCargoType};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadLiquidData {
-    /// ID помещения
-    pub space_id: usize,
-    /// Имя помещения
-    pub space_name: String,
     /// ID груза
     pub cargo_id: usize,
     /// Имя груза
-    pub cargo_name: String,
+    pub cargo_name: String,   
+    /// ID помещения
+    pub space_id: usize,
+    /// Имя помещения
+    pub space_name: usize,
     /// ID assigned
     pub assigned_id: usize,
     /// Тип назначения груза

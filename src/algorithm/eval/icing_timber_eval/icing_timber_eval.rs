@@ -1,28 +1,23 @@
-//! Учет намокания груза
 use crate::algorithm::context::context_access::*;
-use crate::algorithm::entities::{bound, Bound, Moment, Position};
 use crate::{
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
     ContextWrite, CtxResult,
 };
 use sal_sync::services::entity::error::str_err::StrErr;
-
-use super::wetting_ctx::WettingCtx;
+use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
 
 ///
-/// Учет намокания палубного груза.  
-/// При расчете намокания необходимо учитывать изменения водоизмещения и  
-/// возвышения центра тяжести. Масса намокания и его моменты учитывается
-/// при расчете прочности.
-pub struct WettingEval {
+/// Общая структура для ввода данных. Содержит все данные
+/// для расчетов.
+pub struct IcingTimberEval {
     dbg: DbgId,
-    value: Option<WettingCtx>,
+    value: Option<IcingTimberCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
 //
-impl WettingEval {
+impl IcingTimberEval {
     ///
     /// Fetches all initiall data
     /// - 'api_client' - access to the database
@@ -30,7 +25,7 @@ impl WettingEval {
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + 'static,
     ) -> Self {
-        let dbg = DbgId::with_parent(&DbgId(parent.into()), "WettingEval");
+        let dbg = DbgId::with_parent(&DbgId(parent.into()), "IcingTimberEval");
         Self {
             dbg,
             value: None,
@@ -40,22 +35,13 @@ impl WettingEval {
     //
     //
 }
-impl Eval<(), EvalResult> for WettingEval {
+impl Eval<(), EvalResult> for IcingTimberEval {
     fn eval(&mut self, _: ()) -> futures::future::BoxFuture<'_, EvalResult> {
         Box::pin(async move {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
                     let initial: &InitialCtx = ctx.read_ref();
-                    let bounds = match initial.bounds.as_ref() {
-                        Some(data) => data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read bounds error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let voyage = match initial.voyage.as_ref() {
+                    let voyage = match initial.voyage.clone() {
                         Some(data) => data,
                         None => {
                             return CtxResult::Err(StrErr(format!(
@@ -64,33 +50,43 @@ impl Eval<(), EvalResult> for WettingEval {
                             )))
                         }
                     };
-                    let wetting_timber = voyage.wetting_timber*0.01;
-                    let unit = match initial.unit.as_ref() {
-                        Some(data) => data.data(),
+                    let icing_timber_stab = match IcingTimberType::from_str(&voyage.icing_timber_type) {
+                        Ok(data) => data,
+                        Err(err) => {
+                            return CtxResult::Err(StrErr(format!(
+                                "{}.eval | Read icing_timber_stab error: {:?}",
+                                self.dbg, err
+                            )))
+                        }
+                    };
+                    let ship_parameters = match initial.ship_parameters.as_ref() {
+                        Some(data) => data,
                         None => {
                             return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read unit error: no data!",
+                                "{}.eval | Read voyage error: no data!",
                                 self.dbg
                             )))
                         }
-                    };                    
-                    let (mass, mass_moment) = unit.iter().fold((0., Moment::zero()), |(mass, moment), v| {
-                        match (v.mass, v.mass_shift, v.permeability)  {
-                            (Some(mass), Some(mass_shift), Some(permeability)) => (mass*permeability, Moment::from_pos(mass_shift, mass*permeability)),
-                            _ => (0., Position::zero()),
-                        }
-                    });
-                    let mass_array = bounds.iter().map(|b| {
-                        unit.iter().filter(|u| u.bound_x1.is_some() && u.bound_x2.is_some()).map(|u| {
-                            Bound::new(u.bound_x1, u.bound_x2).part_ratio(b)? * u.mass.unwrap_or(0.) * u.permeability.unwrap_or(0.)
-                    }).sum()
-                    }).collect();
-                    let mass_shift = mass_moment.scale(1./mass);
-                    let result = WettingCtx {
-                        mass,
-                        mass_shift,
-                        mass_array,
                     };
+                    let length_loa = match ship_parameters.get("L.O.A") {
+                        Some(data) => *data,
+                        None => {
+                            return CtxResult::Err(StrErr(format!(
+                                "{}.eval | Read length_loa error: no data!",
+                                self.dbg
+                            )))
+                        }
+                    };
+                    let width = match ship_parameters.get("MouldedBreadth") {
+                        Some(data) => *data,
+                        None => {
+                            return CtxResult::Err(StrErr(format!(
+                                "{}.eval | Read width error: no data!",
+                                self.dbg
+                            )))
+                        }
+                    };                 
+                    let result = IcingTimberCtx::new(width, length_loa, icing_timber_stab);
                     self.value = Some(result.clone());
                     ctx.write(result)
                 }
@@ -105,9 +101,9 @@ impl Eval<(), EvalResult> for WettingEval {
 }
 //
 //
-impl std::fmt::Debug for WettingEval {
+impl std::fmt::Debug for IcingTimberEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("WettingEval")
+        f.debug_struct("IcingTimberEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

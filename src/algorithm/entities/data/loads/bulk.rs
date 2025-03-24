@@ -5,14 +5,14 @@ use super::{AssignmentType, BulkCargoType};
 ///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadBulkData {
-    /// ID помещения
-    pub space_id: usize,
-    /// Имя помещения
-    pub space_name: String,
     /// ID груза
     pub cargo_id: usize,
     /// Имя груза
-    pub cargo_name: String,
+    pub cargo_name: String,   
+    /// ID помещения
+    pub space_id: usize,
+    /// Имя помещения
+    pub space_name: usize,
     /// ID assigned
     pub assigned_id: usize,
     /// Тип назначения груза
@@ -26,7 +26,7 @@ pub struct LoadBulkData {
     /// Обьем, м^3
     pub volume: Option<f64>,
 }
-//
+/*
 impl std::fmt::Display for LoadBulkData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -45,7 +45,7 @@ impl std::fmt::Display for LoadBulkData {
             self.volume.unwrap_or(0.),
         )
     }
-}
+}*/
 /// Массив данных по грузам
 pub type LoadBulkArray = DataArray<LoadBulkData>;
 //

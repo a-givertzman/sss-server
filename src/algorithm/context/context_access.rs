@@ -93,6 +93,19 @@ impl ContextRead<LoadsCtx> for Context {
         self.loads.clone().unwrap()
     }
 }
+//
+impl ContextWrite<IcingTimberCtx> for Context {
+    fn write(mut self, value: IcingTimberCtx) -> CtxResult<Self, StrErr> {
+        self.icing_timber = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<IcingTimberCtx> for Context {
+    fn read(&self) -> IcingTimberCtx {
+        self.icing_timber.clone().unwrap()
+    }
+}
+
 
 
 

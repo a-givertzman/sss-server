@@ -1,47 +1,45 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::data::DataArray;
-use super::{AssignmentType, CargoType};
+use serde::Deserialize;
+use crate::algorithm::entities::{data::DataArray, Position};
+use super::{AssignmentType, UnitCargoType};
 ///
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct LoadUnitData {
     /// ID груза
+    pub cargo_id: usize,
+    /// ID assigned
+    pub assigned_id: usize,
+    /// ID помещения
     pub space_id: usize,
-    /// масса, т
-    pub mass: Option<f64>,
-    /// Общая масса, т
-    pub volume: Option<f64>,
+    /// Имя груза
+    pub cargo_name: String,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип груза судна
     pub cargo_type: UnitCargoType,
-    /// Груз - лес и может намокать и обмерзать
-    pub timber: bool,
-    /// Груз на палубе, имеет площадь поверхностей
-    pub is_on_deck: bool,
-    /// Груз - контейнер
-    pub container: Option<bool>,
-    /// Диапазон по длинне, м
-    pub bound_x1: f64,
-    pub bound_x2: f64,
-    /// Диапазон по ширине
+    /// масса, т
+    pub mass: Option<f64>,
+    /// Центр тяжести, м
+    pub mass_shift: Option<Position>,
+    /// Средний удельный погрузочный объем, м^3/т
+    pub stowage_factor: Option<f64>,
+    /// Проницаемость определяет количество, на которое груз впитывает воду
+    pub permeability: Option<f64>, 
+    /// Обьем, м^3
+    pub volume: Option<f64>,
+    /// Площадь поверхности груза подвергающаяся обледенению (верхняя площадь груза)
+    pub icing_area: Option<f64>,
+    pub centre_of_icing_area: Option<Position>,
+    /// Площадь парусности груза (площадь проекции груза на ДП судна)  
+    pub windage_area: Option<f64>,
+    pub centre_of_windage_area: Option<Position>,
+    /// Границы груза в связанной с судном системой координат
+    pub bound_x1: Option<f64>,
+    pub bound_x2: Option<f64>,
     pub bound_y1: Option<f64>,
-    pub bound_y2: Option<f64>,
-    /// Диапазон по высоте
+    pub bound_y2: Option<f64>,    
     pub bound_z1: Option<f64>,
     pub bound_z2: Option<f64>,
-    /// Отстояние центра величины, м
-    pub mass_shift_x: Option<f64>,
-    pub mass_shift_y: Option<f64>,
-    pub mass_shift_z: Option<f64>,
-    /// Площадь горизонтальной поверхности, м^2
-    pub horizontal_area: Option<f64>,
-    /// Площадь вертикальной поверхности, м^2
-    pub vertical_area: Option<f64>,
-    /// Смещение центра площади вертикальной поверхности, м
-    pub vertical_area_shift_x: Option<f64>,
-    pub vertical_area_shift_y: Option<f64>,
-    pub vertical_area_shift_z: Option<f64>,
 }
 //
 /*impl std::fmt::Display for LoadUnitData {
