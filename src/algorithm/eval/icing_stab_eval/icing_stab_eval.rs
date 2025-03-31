@@ -124,7 +124,6 @@ impl Eval<(), EvalResult> for IcingStabEval {
                             )))
                         }
                     };
-        //            let wetting_timber = voyage.wetting_timber * 0.01;
                     let icing_coef_v_area_full = *match icing.get("icing_coef_v_area_full") {
                         Some(data) => data,
                         None => {

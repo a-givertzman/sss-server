@@ -1,6 +1,7 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
+use api_tools::error::str_err::StrErr;
 use serde::Deserialize;
-use crate::algorithm::entities::{data::DataArray, Position};
+use crate::algorithm::entities::{data::DataArray, Bound, Position};
 use super::{AssignmentType, UnitCargoType};
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -37,10 +38,27 @@ pub struct LoadUnitData {
     pub bound_x1: Option<f64>,
     pub bound_x2: Option<f64>,
     pub bound_y1: Option<f64>,
-    pub bound_y2: Option<f64>,    
+    pub bound_y2: Option<f64>,  
     pub bound_z1: Option<f64>,
     pub bound_z2: Option<f64>,
 }
+//
+impl LoadUnitData {
+    pub fn horizontal_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<f64, StrErr> {
+        let part_x = if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
+            Bound::new(self_bound_x1, self_bound_x2)?.part_ratio(bound_x)?
+        } else {
+            0.
+        };
+        let part_y = if let (Some(self_bound_y1), Some(self_bound_y2)) = (self.bound_y1, self.bound_y2) {
+            Bound::new(self_bound_y1, self_bound_y2)?.part_ratio(bound_y)?
+        } else {
+            0.
+        };
+        Ok(part_x * part_y * self.icing_area.unwrap_or(0.))
+    }
+}
+
 //
 /*impl std::fmt::Display for LoadUnitData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -75,7 +93,7 @@ pub struct LoadUnitData {
 pub type LoadUnitArray = DataArray<LoadUnitData>;
 //
 impl LoadUnitArray {
-    pub fn data(self) -> Vec<LoadUnitData> {
-        self.data
+    pub fn data(&self) -> Vec<LoadUnitData> {
+        self.data.clone()
     }
 }

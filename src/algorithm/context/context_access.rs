@@ -34,15 +34,15 @@ impl ContextReadRef<InitialCtx> for Context {
 //
 //
 //
-impl ContextWrite<AreasStrengthCtx> for Context {
-    fn write(mut self, value: AreasStrengthCtx) -> CtxResult<Self, StrErr> {
-        self.areas_strength = Some(value);
+impl ContextWrite<StrengthAreaCtx> for Context {
+    fn write(mut self, value: StrengthAreaCtx) -> CtxResult<Self, StrErr> {
+        self.strength_area = Some(value);
         CtxResult::Ok(self)
     }
 }
-impl ContextRead<AreasStrengthCtx> for Context {
-    fn read(&self) -> AreasStrengthCtx {
-        self.areas_strength.clone().unwrap()
+impl ContextRead<StrengthAreaCtx> for Context {
+    fn read(&self) -> StrengthAreaCtx {
+        self.strength_area.clone().unwrap()
     }
 }
 //

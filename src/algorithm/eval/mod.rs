@@ -1,5 +1,6 @@
 //! Entities implemented the Eval trate
-pub mod areas_strength_eval;
+pub mod area_eval;
+pub mod strength_area_eval;
 pub mod icing_stab_eval;
 pub mod icing_eval;
 pub mod wetting_eval;
@@ -7,8 +8,8 @@ pub mod loads_eval;
 pub mod mass_eval;
 pub mod icing_timber_eval;
 
-pub use areas_strength_eval::areas_strength_eval::AreasStrengthEval;
-pub use areas_strength_eval::areas_strength_ctx::AreasStrengthCtx; 
+pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
+pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx; 
 
 pub use icing_stab_eval::icing_stab_eval::IcingStabEval;
 pub use icing_stab_eval::icing_stab_ctx::IcingStabCtx;

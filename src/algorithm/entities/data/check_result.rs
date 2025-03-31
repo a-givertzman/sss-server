@@ -46,12 +46,6 @@ impl ParsedShipData {
                 self.icing_m_h_half
             )));
         }
-        if self.wetting_timber < 0. {
-            return Err(Error::Parameter(format!(
-                "Error check ParsedShipData: wetting_timber:{} < 0",
-                self.wetting_timber
-            )));
-        }
         if self.multipler_x1.data.is_empty() {
             return Err(Error::Parameter(
                 "Error check MultiplerX1Array: no data".to_string(),

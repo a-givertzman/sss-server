@@ -55,18 +55,8 @@ impl Eval<(), EvalResult> for WettingEval {
                             )))
                         }
                     };
-                    let voyage = match initial.voyage.as_ref() {
-                        Some(data) => data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read voyage error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let wetting_timber = voyage.wetting_timber*0.01;
                     let unit = match initial.unit.as_ref() {
-                        Some(data) => data.data(),
+                        Some(data) => &data.data(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read unit error: no data!",
@@ -81,9 +71,14 @@ impl Eval<(), EvalResult> for WettingEval {
                         }
                     });
                     let mass_array = bounds.iter().map(|b| {
-                        unit.iter().filter(|u| u.bound_x1.is_some() && u.bound_x2.is_some()).map(|u| {
-                            Bound::new(u.bound_x1, u.bound_x2).part_ratio(b)? * u.mass.unwrap_or(0.) * u.permeability.unwrap_or(0.)
-                    }).sum()
+                        unit.iter().filter(|u| u.bound_x1.is_some() && u.bound_x2.is_some()).map(|u| (
+                                Bound::new(u.bound_x1.unwrap(), u.bound_x2.unwrap()).ok(), 
+                                u.mass.unwrap_or(0.), 
+                                u.permeability.unwrap_or(0.)
+                            ))
+                            .filter(|(bound, mass, permeability)| bound.is_some() && *mass > 0. && *permeability > 0.)
+                            .map(|(bound, mass, permeability)| bound.unwrap().part_ratio(b).unwrap_or(0.)*mass*permeability)                    
+                            .sum()
                     }).collect();
                     let mass_shift = mass_moment.scale(1./mass);
                     let result = WettingCtx {

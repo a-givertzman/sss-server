@@ -1,5 +1,7 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc}, time::Duration};
 use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
+use crate::algorithm::entities::Position;
+
 use super::{query::Query, reply::Reply};
 ///
 /// Contains local side `send` & `recv` of `channel`
@@ -62,8 +64,33 @@ impl ModelLink {
     //     )
     // }
     ///
-    /// - Returns strength areas by ship frames
-    pub async fn areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
+    /// - Returns areas
+    pub async fn areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), StrErr> {
+        let timeout = Duration::from_secs(300);
+        match self.send.send(Query::AreasStrength) {
+            Ok(_) => {
+                log::debug!("{}.areas | Sent request: {:#?}", self.name, Query::AreasStrength);
+                tokio::task::block_in_place(move|| {
+                    match &self.recv {
+                        Some(recv) => match recv.recv_timeout(timeout) {
+                            Ok(reply) => {
+                                log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
+                                match reply {
+                                    Reply::AreasStrength(items) => items,
+                                    _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
+                                }
+                            }
+                            _ => Err(StrErr(format!("{}.req | Request timeout ({:?})", self.name, timeout))),
+                        }
+                        None => todo!(),
+                    }
+                })
+            },
+            Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
+        }
+    }
+    /// - Returns areas by ship frames
+    pub async fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {

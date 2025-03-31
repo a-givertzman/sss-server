@@ -133,7 +133,6 @@ impl Eval<(), EvalResult> for Initial {
                 "SELECT             
                     density, \
                     operational_speed, \
-                    wetting_timber, \
                     icing_type::TEXT, \
                     icing_timber_type::TEXT
                 FROM             

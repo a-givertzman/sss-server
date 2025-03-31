@@ -39,8 +39,6 @@ pub struct ParsedShipData {
     /// Масса льда на квадратный метр площади горизонтальной  
     /// поверхности при учете частичного обледенения
     pub icing_m_h_half: f64,
-    /// Cтепень намокания палубного лесного груза, %
-    pub wetting_timber: f64,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
     pub multipler_x1: MultiplerX1Array,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
@@ -309,7 +307,6 @@ impl ParsedShipData {
             "ParsedShipData parse error: no icing_m_h_half for ship id:{}",
             ship_id
         ))?;
-        let wetting_timber = voyage.wetting_timber*0.01;
         let icing_coef_v_area_full = *icing.get("icing_coef_v_area_full").ok_or(format!(
             "ParsedShipData parse error: no icing_coef_v_area_full for ship id:{}",
             ship_id
@@ -374,7 +371,6 @@ impl ParsedShipData {
             icing_m_v_half,
             icing_m_h_full,
             icing_m_h_half,
-            wetting_timber,
             icing_coef_v_area_full,
             icing_coef_v_area_half,
             icing_coef_v_area_zero,

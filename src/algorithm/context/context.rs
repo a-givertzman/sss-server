@@ -12,7 +12,7 @@ pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
     /// TODO: DOC
-    pub(super) areas_strength: Option<AreasStrengthCtx>,
+    pub(super) strength_area: Option<StrengthAreaCtx>,
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
     pub(super)  icing_timber: Option<IcingTimberCtx>,
@@ -33,7 +33,7 @@ impl Context {
     pub fn new(initial: InitialCtx) -> Self {
         Self {
             initial,
-            areas_strength: None,
+            strength_area: None,
             icing_stab: None,
             icing_timber: None,
             icing: None,
