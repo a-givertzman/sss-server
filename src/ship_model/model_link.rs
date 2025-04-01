@@ -65,7 +65,7 @@ impl ModelLink {
     // }
     ///
     /// - Returns areas
-    pub async fn areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), StrErr> {
+ /*   pub async fn areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), StrErr> {
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {
@@ -88,7 +88,7 @@ impl ModelLink {
             },
             Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
         }
-    }
+    }*/
     /// - Returns areas by ship frames
     pub async fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
         let timeout = Duration::from_secs(300);

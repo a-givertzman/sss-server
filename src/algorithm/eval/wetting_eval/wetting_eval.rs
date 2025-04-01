@@ -64,9 +64,9 @@ impl Eval<(), EvalResult> for WettingEval {
                             )))
                         }
                     };                    
-                    let (mass, mass_moment) = unit.iter().fold((0., Moment::zero()), |(mass, moment), v| {
+                    let (mass, mass_moment) = unit.iter().fold((0., Moment::zero()), |(res_mass, res_moment), v| {
                         match (v.mass, v.mass_shift, v.permeability)  {
-                            (Some(mass), Some(mass_shift), Some(permeability)) => (mass*permeability, Moment::from_pos(mass_shift, mass*permeability)),
+                            (Some(v_mass), Some(v_mass_shift), Some(v_permeability)) => (res_mass + v_mass*v_permeability, res_moment + Moment::from_pos(v_mass_shift, v_mass*v_permeability)),
                             _ => (0., Position::zero()),
                         }
                     });

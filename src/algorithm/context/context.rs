@@ -11,13 +11,17 @@ use super::testing_ctx::TestingCtx;
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
-    /// TODO: DOC
+    /// Распределение площади для расчета прочности
     pub(super) strength_area: Option<StrengthAreaCtx>,
+    /// Коэффициенты для расчета обледенения судна
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
-    pub(super)  icing_timber: Option<IcingTimberCtx>,
+    pub(super) icing_timber: Option<IcingTimberCtx>,
+    /// Учет обледенения судна и  груза
     pub(super) icing: Option<IcingCtx>,
+    /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
+    /// Все грузы судна
     pub(super) loads: Option<LoadsCtx>,
     ///
     /// Uset for testing only

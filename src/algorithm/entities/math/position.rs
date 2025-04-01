@@ -4,7 +4,6 @@ use std::{
     ops::{Add, AddAssign, Sub},
 };
 use serde::Deserialize;
-
 //
 #[derive(Copy, Clone, Deserialize, Debug, PartialEq)]
 pub struct Point3 {

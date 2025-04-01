@@ -36,7 +36,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let ship_id = 0;
+    let ship_id = 2;
+    let project_id = "NULL";
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
@@ -44,18 +45,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().await.unwrap();
     log::debug!("main | Calculations...");
-    let _result = 
-    IcingStabEval::new(
-        &dbg,
-        AreasStrengthEval::new(
-            &dbg,
-            ship_model.link().await,
-            Initial::new(
+    let _result =     
+    MassEval::new(
+        &dbg,  
+        WettingEval::new(
+            &dbg,   
+            IcingEval::new(
                 &dbg,
-                ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
-                Context::new(
-                    InitialCtx::new(
-                        ship_id,
+                StrengthAreaEval::new(
+                    &dbg,
+                    ship_model.link().await,
+                    IcingTimberEval::new(
+                        &dbg,
+                        IcingStabEval::new(
+                            &dbg,
+                            Initial::new(
+                                &dbg,
+                                ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+                                Context::new(
+                                    InitialCtx::new(
+                                        ship_id,
+                                        project_id,
+                                    ),
+                                ),
+                            ),
+                        ),
                     ),
                 ),
             ),

@@ -44,7 +44,8 @@ pub struct LoadUnitData {
 }
 //
 impl LoadUnitData {
-    pub fn horizontal_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<f64, StrErr> {
+    //
+    pub fn icing_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<f64, StrErr> {
         let part_x = if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
             Bound::new(self_bound_x1, self_bound_x2)?.part_ratio(bound_x)?
         } else {
@@ -56,6 +57,20 @@ impl LoadUnitData {
             0.
         };
         Ok(part_x * part_y * self.icing_area.unwrap_or(0.))
+    }
+    //
+    pub fn windage_area(&self, bound_x: &Bound, bound_z: &Bound) -> Result<f64, StrErr> {
+        let part_x = if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
+            Bound::new(self_bound_x1, self_bound_x2)?.part_ratio(bound_x)?
+        } else {
+            0.
+        };
+        let part_z = if let (Some(self_bound_z1), Some(self_bound_z2)) = (self.bound_z1, self.bound_z2) {
+            Bound::new(self_bound_z1, self_bound_z2)?.part_ratio(bound_z)?
+        } else {
+            0.
+        };
+        Ok(part_x * part_z * self.windage_area.unwrap_or(0.))
     }
 }
 

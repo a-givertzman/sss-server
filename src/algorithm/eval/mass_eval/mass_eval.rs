@@ -9,7 +9,6 @@ use super::mass_ctx::MassCtx;
 /// Площади боковой и горизонтальной поверхностей для расчета прочности
 pub struct MassEval {
     dbg: DbgId,
-    model: ModelLink,
     value: Option<MassCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
@@ -19,11 +18,10 @@ impl MassEval {
     ///
     /// Fetches all initiall data
     /// - 'api_client' - access to the database
-    pub fn new(parent: impl Into<String>, model: ModelLink, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "MassEval");
         Self {
             dbg,
-            model,
             value: None,
             ctx: Box::new(ctx),
         }
@@ -36,19 +34,8 @@ impl Eval<(), EvalResult> for MassEval {
         Box::pin(async move {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
-                    match self.model.areas().await {
-                        Ok(areas) => {
-                            let result = MassCtx { areas };
-                            self.value = Some(result.clone());
-                            ctx.write(result)
-                        },
-                        Err(err) => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read context error: {:?}",
-                                self.dbg, err
-                            )));
-                        },
-                    }
+
+
                 },
                 CtxResult::Err(err) => CtxResult::Err(StrErr(format!(
                     "{}.eval | Read context error: {:?}",

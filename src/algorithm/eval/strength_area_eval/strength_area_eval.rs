@@ -47,8 +47,8 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
                     let initial: &InitialCtx = ctx.read_ref();
-                    let unit = match initial.unit.clone() {
-                        Some(data) => data.data().iter().filter(|v| v.icing_area.is_some()),
+                    let unit: Vec<_> = match initial.unit.as_ref() {
+                        Some(data) => data.data().into_iter().filter(|v| v.icing_area.is_some()).collect(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read unit error: no data!",
@@ -56,7 +56,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                             )))
                         }
                     };
-                    let timber_unit = unit.filter(|v| v.cargo_type == UnitCargoType::Timber);
+                    let timber_unit: Vec<_> = unit.iter().filter(|v| v.cargo_type == UnitCargoType::Timber).collect();
                     let bounds = match initial.bounds.clone() {
                         Some(data) => data,
                         None => {
@@ -94,110 +94,90 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                             )));
                         }
                     };
-                    let mut area_h = Vec::new();
-                    let mut area_timber_h = Vec::new();
-
-                    // Ищем площадь горизонтальной поверхности палубных грузов.
-                    // Перебираем горизонтальую поверхность с шагом, проходим по грузам и
-                    // берем максимальную площадь среди всех грузов на этом шаге.
-                    let min_x = unit
+                    // Ищем площадь парусности палубных грузов.
+                    // Перебираем поверхность парусности с шагом, проходим по грузам и
+                    // берем площадь как диапазон между максимальными ограничениями всех грузов на этом шаге.                    
+                    let mut area_v = Vec::new();
+                    // Границы грузов
+                    let min_x = unit.iter()
                         .filter_map(|v| v.bound_x1)
                         .min_by(|&a, &b| a.partial_cmp(&b).unwrap());
-                    let max_x = unit
+                    let max_x = unit.iter()
                         .filter_map(|v| v.bound_x2)
                         .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
-                    let units_bound = if let (Some(min_x), Some(max_x)) = (min_x, max_x) { 
-                        Bound::new(min_x, max_x)?;
-                    }
-                    else {
-
-                    };
-                    
-                    for b in bounds.iter() {
-                        if let (Some(min_x), Some(max_x)) = (min_x, max_x) {
-                            let mut area_sum = 0.;
-                            let bound = b.intersect(&Bound::new(min_x, max_x)?)?;
-
-                            if bound.is_some() {
-                                let (min_x, max_x) = (
-                                    match bound.start() {
-                                        Some(data) => data,
-                                        None => {
-                                            return CtxResult::Err(StrErr(format!(
-                                                "{}.eval | bound intersect error: {:?}",
-                                                self.dbg, err
-                                            )));
-                                        }
-                                    },
-
-                                    bound.start().ok_or(Error::FromString(
-                                        "Area area_v error: bound.start()".to_owned(),
-                                    ))?,
-                                    bound.end().ok_or(Error::FromString(
-                                        "Area area_v error: bound.end()".to_owned(),
-                                    ))?,
-                                );
-                                area_sum += Bounds::from_min_max(min_x, max_x, 200)?
-                                    .iter()
-                                    .map(|bound_x| {
-                                        let min_z = self
-                                            .desks
-                                            .iter()
-                                            .filter_map(|v| v.min_z())
-                                            .min_by(|&a, &b| a.partial_cmp(&b).unwrap());
-                                        let max_z = self
-                                            .desks
-                                            .iter()
-                                            .filter_map(|v| v.max_z())
-                                            .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
-                                        if let (Some(min_z), Some(max_z)) = (min_z, max_z) {
-                                            Bounds::from_min_max(min_z, max_z, 50)
-                                                .expect("Area area_v error: Bounds::from_min_max")
-                                                .iter()
-                                                .map(|bound_z| {
-                                                    self.desks
-                                                        .iter()
-                                                        .filter_map(|v| {
-                                                            v.windage_area(bound_x, bound_z).ok()
-                                                        })
-                                                        .max_by(|&a, &b| a.partial_cmp(&b).unwrap())
-                                                        .unwrap_or(0.)
-                                                })
-                                                .sum()
-                                        } else {
-                                            0.
-                                        }
-                                    })
-                                    .sum::<f64>()
+                    // Если есть границы грузов ищемраспределения площадей грузов
+                    if let (Some(min_x), Some(max_x)) = (min_x, max_x) { 
+                        // Диапазон грузов по оси Х
+                        let units_bound = match Bound::new(min_x, max_x) {
+                            Ok(data) => data,
+                            Err(err) => {
+                                return CtxResult::Err(StrErr(format!(
+                                    "{}.eval | units_bound error: {:?}",
+                                    self.dbg, err
+                                )));
                             }
-
-                            area_h.push(area_sum);
-                        }
-
-                        {
-                            let mut area_sum = 0.;
-                            for u in timber_unit {
-                                area_sum += match u.horizontal_area(
-                                    &b.intersect(&icing_timber_bound_x).unwrap_or(Bound::None),
-                                    &icing_timber_bound_y,
-                                ) {
-                                    Ok(area) => area,
-                                    Err(err) => {
-                                        return CtxResult::Err(StrErr(format!(
-                                            "{}.eval | Read unit horizontal_area error: {:?}",
-                                            self.dbg, err
-                                        )))
-                                    }
-                                };
+                        };
+                        // Перебираем шпации и ищем площадь попавшую в текущую шпацию
+                        for (i, bound_x) in bounds.iter().enumerate() { 
+                            // Площадь парусности корпуса, попадающая в текущую шпацию
+                            let mut current_area = match const_area_v.get(i) {
+                                Some(&data) => data,
+                                None => {
+                                    return CtxResult::Err(StrErr(format!(
+                                        "{}.eval | const_area_h.get error: no value for bound {i}", self.dbg
+                                    )));
+                                }
+                            };
+                            // Пересечение шпации и диапазона грузов
+                            let bound_x = match bound_x.intersect(&units_bound) { 
+                                Ok(data) => data,
+                                Err(err) => {
+                                    return CtxResult::Err(StrErr(format!(
+                                        "{}.eval | bound_x.intersect error: {:?}",
+                                        self.dbg, err
+                                    )));
+                                }
+                            };
+                            // Если есть пересечение шпации и диапазона грузов
+                            if bound_x.is_some() {     
+                                // грузы имеющие площадь парусности в текущей шпации
+                                let unit = unit.iter()
+                                    .filter(|v| v.windage_area(&bound_x, &Bound::Full).unwrap_or(0.) > 0. );
+                                // границы грузов в текущей шпации
+                                let min_z = unit.clone()
+                                    .filter_map(|v| v.bound_z1 )
+                                    .min_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                                let max_z = unit
+                                    .filter_map(|v| v.bound_z2)
+                                    .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                                // Прибавляем к площади прямоугольник площади грузов
+                                if let (Some(min_z), Some(max_z)) = (min_z, max_z) { 
+                                    current_area += bound_x.length().unwrap_or(0.) * (max_z - min_z);
+                                }
                             }
-                            area_timber_h.push(area_sum);
+                            area_v.push(current_area);
                         }
                     }
-
-                    for v in const_area_v.iter() {
-                        area_sum += v.value(bound)?;
-                    }
-
+                    // Горизонтальная площадь палубного груза - леса
+                    let mut area_timber_h = Vec::new();
+                    for bound_x in bounds.iter() {
+                        let mut area = 0.;
+                        for u in &timber_unit {
+                            area += match u.icing_area(
+                                &bound_x.intersect(&icing_timber_bound_x).unwrap_or(Bound::None),
+                                &icing_timber_bound_y,
+                            ) {
+                                Ok(area) => area,
+                                Err(err) => {
+                                    return CtxResult::Err(StrErr(format!(
+                                        "{}.eval | Read unit horizontal_area error: {:?}",
+                                        self.dbg, err
+                                    )))
+                                }
+                            };
+                        }
+                        area_timber_h.push(area);
+                    }     
                     let result = StrengthAreaCtx {
                         area_v,
                         area_h: const_area_h,

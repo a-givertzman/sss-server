@@ -22,10 +22,7 @@ impl IcingStabEval {
     ///
     /// Fetches all initiall data
     /// - 'api_client' - access to the database
-    pub fn new(
-        parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + Send + 'static,
-    ) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "IcingStabEval");
         Self {
             dbg,
@@ -69,17 +66,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
                             )))
                         }
                     };
-      /*              let icing_timber_stab =
-                        match IcingTimberType::from_str(&voyage.icing_timber_type) {
-                            Ok(data) => data,
-                            Err(err) => {
-                                return CtxResult::Err(StrErr(format!(
-                                    "{}.eval | Read icing_timber_stab error: {:?}",
-                                    self.dbg, err
-                                )))
-                            }
-                        };
-      */              let icing_m_timber = *match icing.get("icing_m_timber") {
+                    let icing_m_timber = *match icing.get("icing_m_timber") {
                         Some(data) => data,
                         None => {
                             return CtxResult::Err(StrErr(format!(
@@ -178,19 +165,41 @@ impl Eval<(), EvalResult> for IcingStabEval {
                             )))
                         }
                     };
+                    let mass_desc_h = match icing_stab {
+                        IcingStabType::Full => icing_m_h_full,
+                        IcingStabType::Half => icing_m_h_half,
+                        _ => 0.,
+                    };
+                    let mass_timber_h = match icing_stab {
+                        IcingStabType::Full | IcingStabType::Half => icing_m_timber,
+                        _ => 0.,
+                    };
+                    let mass_v = match icing_stab {
+                        IcingStabType::Full => icing_m_v_full,
+                        IcingStabType::Half => icing_m_v_half,
+                        _ => 0.,
+                    };
+                    let coef_v_area = match icing_stab {
+                        IcingStabType::Full => icing_coef_v_area_full,
+                        IcingStabType::Half => icing_coef_v_area_half,
+                        _ => icing_coef_v_area_zero,
+                    };
+                    let coef_v_ds_area = icing_coef_v_area_zero;
+                    let coef_v_moment = match icing_stab {
+                        IcingStabType::Full => icing_coef_v_moment_full,
+                        IcingStabType::Half => icing_coef_v_moment_half,
+                        _ => icing_coef_v_moment_zero,
+                    };
+                    let is_some =
+                        matches!(icing_stab, IcingStabType::Full | IcingStabType::Half);
                     let result = IcingStabCtx {
-                        icing_stab,
-                        icing_m_timber,
-                        icing_m_v_full,
-                        icing_m_v_half,
-                        icing_m_h_full,
-                        icing_m_h_half,
-                        icing_coef_v_area_full,
-                        icing_coef_v_area_half,
-                        icing_coef_v_area_zero,
-                        icing_coef_v_moment_full,
-                        icing_coef_v_moment_half,
-                        icing_coef_v_moment_zero,
+                        mass_desc_h,
+                        mass_timber_h,
+                        mass_v,
+                        coef_v_area,
+                        coef_v_ds_area,
+                        coef_v_moment,
+                        is_some,
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)

@@ -1,5 +1,5 @@
 //! Entities implemented the Eval trate
-pub mod area_eval;
+//pub mod area_eval;
 pub mod strength_area_eval;
 pub mod icing_stab_eval;
 pub mod icing_eval;

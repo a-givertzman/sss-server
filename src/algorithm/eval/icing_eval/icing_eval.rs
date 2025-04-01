@@ -1,7 +1,6 @@
 use super::icing_ctx::IcingCtx;
 use crate::algorithm::context::context_access::*;
-use crate::algorithm::entities::icing_stab::IcingStabType;
-use crate::algorithm::entities::icing_timber::IcingTimberType;
+use crate::algorithm::eval::{IcingStabCtx, StrengthAreaCtx};
 use crate::{
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -42,154 +41,52 @@ impl Eval<(), EvalResult> for IcingEval {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
                     let initial: &InitialCtx = ctx.read_ref();
-                    let voyage = match initial.voyage.clone() {
+                    let bounds = match initial.bounds.clone() {
                         Some(data) => data,
                         None => {
                             return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read voyage error: no data!",
+                                "{}.eval | Read bounds error: no data!",
                                 self.dbg
                             )))
                         }
                     };
-                    let icing = match initial.icing.clone() {
-                        Some(data) => data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    }.data();
-                    let icing_stab = match IcingStabType::from_str(&voyage.icing_type) {
-                        Ok(data) => data,
-                        Err(error) => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_type error: {error}!",
-                                self.dbg
-                            )))
-                        }
-                    };                 
-                    let icing_timber_stab = match IcingTimberType::from_str(&voyage.icing_timber_type) {
-                        Ok(data) => data,
-                        Err(error) => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_timber_type error: {error}!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_m_timber = match icing.get("icing_m_timber") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_m_timber error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_m_v_full = match icing.get("icing_m_v_full") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_m_v_full error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_m_v_half = match icing.get("icing_m_v_half") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_m_v_half error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_m_h_full = match icing.get("icing_m_h_full") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_m_h_full error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_m_h_half = match icing.get("icing_m_h_half") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_m_h_half error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_coef_v_area_full = match icing.get("icing_coef_v_area_full") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_coef_v_area_full error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_coef_v_area_half = match icing.get("icing_coef_v_area_half") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_coef_v_area_half error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_coef_v_area_zero = match icing.get("icing_coef_v_area_zero") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_coef_v_area_zero error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_coef_v_moment_full = match icing.get("icing_coef_v_moment_full") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_coef_v_moment_full error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_coef_v_moment_half = match icing.get("icing_coef_v_moment_half") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_coef_v_moment_half error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let icing_coef_v_moment_zero = match icing.get("icing_coef_v_moment_zero") {
-                        Some(data) => *data,
-                        None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read icing_coef_v_moment_zero error: no data!",
-                                self.dbg
-                            )))
-                        }
-                    };
-                    let result = IcingCtx {
-                        icing_stab,
-                        icing_m_timber,
-                        icing_m_v_full,
-                        icing_m_v_half,
-                        icing_m_h_full,
-                        icing_m_h_half,
-                        icing_coef_v_area_full,
-                        icing_coef_v_area_half,
-                        icing_coef_v_area_zero,
-                        icing_coef_v_moment_full,
-                        icing_coef_v_moment_half,
-                        icing_coef_v_moment_zero,
+                    let area_strength: StrengthAreaCtx = ctx.read();
+                    let icing_stab: IcingStabCtx = ctx.read();
+                    let mut mass = Vec::new();
+                    for (i, _) in bounds.iter().enumerate() { 
+                        let current_area_h = match area_strength.area_h.get(i) {
+                            Some(&data) => data,
+                            None => {
+                                return CtxResult::Err(StrErr(format!(
+                                    "{}.eval | area_strength.area_h.get error: no value for bound {i}", self.dbg
+                                )));
+                            }
+                        };
+                        let current_area_v = match area_strength.area_v.get(i) {
+                            Some(&data) => data,
+                            None => {
+                                return CtxResult::Err(StrErr(format!(
+                                    "{}.eval | area_strength.area_v.get error: no value for bound {i}", self.dbg
+                                )));
+                            }
+                        };
+                        let current_area_timber_h = match area_strength.area_timber_h.get(i) {
+                            Some(&data) => data,
+                            None => {
+                                return CtxResult::Err(StrErr(format!(
+                                    "{}.eval | area_strength.area_timber_h.get error: no value for bound {i}", self.dbg
+                                )));
+                            }
+                        };
+                        mass.push(current_area_h * icing_stab.mass_desc_h
+                            + current_area_timber_h
+                                * (icing_stab.mass_timber_h - icing_stab.mass_desc_h)
+                            + current_area_v
+                                * (1. + icing_stab.coef_v_ds_area)
+                                * icing_stab.mass_v);
+                    }
+                    let result = IcingCtx{
+                        mass,
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)
