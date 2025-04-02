@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::data::DataArray;
+use crate::{algorithm::entities::data::DataArray, ship_model::query::LiquidData};
 use super::{AssignmentType, LiquidCargoType};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -20,11 +20,30 @@ pub struct LoadLiquidData {
     /// Тип жидкого груза
     pub cargo_type: LiquidCargoType,
     /// масса, т
-    pub mass: Option<f64>,
+    pub mass: f64,
     /// Плотность 
     pub density: Option<f64>,
     /// Обьем, м^3
     pub volume: Option<f64>,
+}
+//
+impl LoadLiquidData {
+    pub fn data(&self) -> LiquidData {
+        let volume = if let Some(volume) = self.volume {
+            volume
+        } else {
+            if let Some(density) = self.density {
+                if density > 0. {
+                    self.mass/density
+                } else {
+                    0.
+                }
+            } else {
+                0.
+            }
+        };
+        LiquidData{ space_id: self.space_id, mass: self.mass, volume }
+    }
 }
 /*
 impl std::fmt::Display for LoadLiquidData {

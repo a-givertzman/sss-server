@@ -1,9 +1,9 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::data::DataArray;
+use serde::Deserialize;
+use crate::algorithm::entities::{data::DataArray, Position};
 use super::AssignmentType;
 ///
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct LoadGaseousData {
     /// ID груза
     pub cargo_id: usize,
@@ -18,9 +18,11 @@ pub struct LoadGaseousData {
     /// Тип назначения груза
     pub assigment_type: AssignmentType,    
     /// масса, т
-    pub mass: Option<f64>,
+    pub mass: f64,
     /// Общая масса, т
     pub volume: Option<f64>,
+    /// Центр отсека, размещающего газ, м
+    pub mass_shift: Option<Position>,
 }
 //
 /*impl std::fmt::Display for LoadGaseousData {

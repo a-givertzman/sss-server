@@ -46,26 +46,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_model_handle = ship_model.run().await.unwrap();
     log::debug!("main | Calculations...");
     let _result =     
-    MassEval::new(
+    StrengthMassEval::new(
         &dbg,  
-        WettingEval::new(
-            &dbg,   
-            IcingEval::new(
-                &dbg,
-                StrengthAreaEval::new(
+        ship_model.link().await,
+        LoadsEval::new(
+            &dbg,        
+            WettingEval::new(
+                &dbg,   
+                IcingEval::new(
                     &dbg,
-                    ship_model.link().await,
-                    IcingTimberEval::new(
+                    StrengthAreaEval::new(
                         &dbg,
-                        IcingStabEval::new(
+                        ship_model.link().await,
+                        IcingTimberEval::new(
                             &dbg,
-                            Initial::new(
+                            IcingStabEval::new(
                                 &dbg,
-                                ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
-                                Context::new(
-                                    InitialCtx::new(
-                                        ship_id,
-                                        project_id,
+                                Initial::new(
+                                    &dbg,
+                                    ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+                                    Context::new(
+                                        InitialCtx::new(
+                                            ship_id,
+                                            project_id,
+                                        ),
                                     ),
                                 ),
                             ),

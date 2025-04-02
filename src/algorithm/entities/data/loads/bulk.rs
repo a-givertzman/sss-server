@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::data::DataArray;
+use crate::{algorithm::entities::data::DataArray, ship_model::query::BulkData};
 use super::{AssignmentType, BulkCargoType};
 ///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -20,11 +20,26 @@ pub struct LoadBulkData {
     /// Тип сыпучего груза
     pub cargo_type: BulkCargoType,
     /// масса, т
-    pub mass: Option<f64>,
+    pub mass: f64,
     /// Средний удельный погрузочный объем, м^3/т
     pub stowage_factor: Option<f64>,
     /// Обьем, м^3
     pub volume: Option<f64>,
+}
+//
+impl LoadBulkData {
+    pub fn data(&self) -> BulkData {
+        let volume = if let Some(volume) = self.volume {
+            volume
+        } else {
+            if let Some(stowage_factor) = self.stowage_factor {
+                    self.mass*stowage_factor
+            } else {
+                0.
+            }
+        };
+        BulkData{ space_id: self.space_id, mass: self.mass, volume }
+    }
 }
 /*
 impl std::fmt::Display for LoadBulkData {

@@ -26,10 +26,7 @@ impl WettingEval {
     ///
     /// Fetches all initiall data
     /// - 'api_client' - access to the database
-    pub fn new(
-        parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + Send + 'static,
-    ) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "WettingEval");
         Self {
             dbg,
@@ -63,24 +60,44 @@ impl Eval<(), EvalResult> for WettingEval {
                                 self.dbg
                             )))
                         }
-                    };                    
-                    let (mass, mass_moment) = unit.iter().fold((0., Moment::zero()), |(res_mass, res_moment), v| {
-                        match (v.mass, v.mass_shift, v.permeability)  {
-                            (Some(v_mass), Some(v_mass_shift), Some(v_permeability)) => (res_mass + v_mass*v_permeability, res_moment + Moment::from_pos(v_mass_shift, v_mass*v_permeability)),
-                            _ => (0., Position::zero()),
-                        }
-                    });
-                    let mass_array = bounds.iter().map(|b| {
-                        unit.iter().filter(|u| u.bound_x1.is_some() && u.bound_x2.is_some()).map(|u| (
-                                Bound::new(u.bound_x1.unwrap(), u.bound_x2.unwrap()).ok(), 
-                                u.mass.unwrap_or(0.), 
-                                u.permeability.unwrap_or(0.)
-                            ))
-                            .filter(|(bound, mass, permeability)| bound.is_some() && *mass > 0. && *permeability > 0.)
-                            .map(|(bound, mass, permeability)| bound.unwrap().part_ratio(b).unwrap_or(0.)*mass*permeability)                    
-                            .sum()
-                    }).collect();
-                    let mass_shift = mass_moment.scale(1./mass);
+                    };
+                    let (mass, mass_moment) =
+                        unit.iter()
+                            .fold((0., Moment::zero()), |(res_mass, res_moment), v| {
+                                match (v.mass_shift, v.permeability) {
+                                    (Some(v_mass_shift), Some(v_permeability)) => (
+                                        res_mass + v.mass * v_permeability,
+                                        res_moment
+                                            + Moment::from_pos(
+                                                v_mass_shift,
+                                                v.mass * v_permeability,
+                                            ),
+                                    ),
+                                    _ => (0., Position::zero()),
+                                }
+                            });
+                    let mass_array = bounds
+                        .iter()
+                        .map(|b| {
+                            unit.iter()
+                                .filter(|u| u.bound_x1.is_some() && u.bound_x2.is_some())
+                                .map(|u| {
+                                    (
+                                        Bound::new(u.bound_x1.unwrap(), u.bound_x2.unwrap()).ok(),
+                                        u.mass,
+                                        u.permeability.unwrap_or(0.),
+                                    )
+                                })
+                                .filter(|(bound, mass, permeability)| {
+                                    bound.is_some() && *mass > 0. && *permeability > 0.
+                                })
+                                .map(|(bound, mass, permeability)| {
+                                    bound.unwrap().part_ratio(b).unwrap_or(0.) * mass * permeability
+                                })
+                                .sum()
+                        })
+                        .collect();
+                    let mass_shift = mass_moment.scale(1. / mass);
                     let result = WettingCtx {
                         mass,
                         mass_shift,
@@ -102,7 +119,7 @@ impl Eval<(), EvalResult> for WettingEval {
 //
 impl std::fmt::Debug for WettingEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("WettingEval")
+        f.debug_struct("WettingEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

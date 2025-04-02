@@ -313,7 +313,8 @@ impl Eval<(), EvalResult> for Initial {
                     assigment_context as assigment_type, \
                     cargo_type, \
                     density, \
-                    weight AS mass
+                    weight AS mass, \
+                    centre_of_compartment as mass_shift
                 FROM 
                     gaseous_cargo_view
                 WHERE 

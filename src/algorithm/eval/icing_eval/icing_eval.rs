@@ -100,7 +100,7 @@ impl Eval<(), EvalResult> for IcingEval {
                     let mass_sum = mass_values.iter().sum();
                     let mass_shift_x = mass_moment_x_sum/mass_sum;
                     let result = IcingCtx {
-                        mass_sum,
+                        mass: mass_sum,
                         mass_shift_x,
                         mass_values,
                     };

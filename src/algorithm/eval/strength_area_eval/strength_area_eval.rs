@@ -159,7 +159,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         }
                     }
                     // Горизонтальная площадь палубного груза - леса
-                    let mut area_timber_h = Vec::new();
+                    let mut area_timber_h_values = Vec::new();
                     for bound_x in bounds.iter() {
                         let mut area = 0.;
                         for u in &timber_unit {
@@ -176,12 +176,18 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                                 }
                             };
                         }
-                        area_timber_h.push(area);
+                        area_timber_h_values.push(area);
                     }     
                     let result = StrengthAreaCtx {
-                        area_v_array: area_v,
-                        area_h: const_area_h,
-                        area_timber_h,
+                        area_v,
+                        area_v_shift,
+                        area_v_values,
+                        area_h,
+                        area_h_shift,
+                        area_h_values,
+                        area_timber_h: area_timber_h_values.iter().sum(),
+                        area_timber_h_shift,
+                        area_timber_h_values,
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)

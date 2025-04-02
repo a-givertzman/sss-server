@@ -1,7 +1,6 @@
 use super::loads_ctx::LoadsCtx;
 use crate::algorithm::context::context_access::*;
-use crate::algorithm::entities::Position;
-use crate::ship_model::model_link::ModelLink;
+use crate::algorithm::entities::{Moment, Position};
 use crate::{
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -14,7 +13,6 @@ use sal_sync::services::entity::error::str_err::StrErr;
 /// для расчетов.
 pub struct LoadsEval {
     dbg: DbgId,
-    model: ModelLink,
     value: Option<LoadsCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
@@ -26,13 +24,11 @@ impl LoadsEval {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: ModelLink,
         ctx: impl Eval<(), EvalResult> + Send + 'static,
     ) -> Self {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "LoadsEval");
         Self {
             dbg,
-            model,
             value: None,
             ctx: Box::new(ctx),
         }
@@ -81,8 +77,8 @@ impl Eval<(), EvalResult> for LoadsEval {
                             self.dbg
                         )));
                     };
-                    let load_constant = match initial.load_constant.clone() {
-                        Some(data) => data.data(),
+                    let mass_const = match initial.load_constant.clone() {
+                        Some(data) => data.data().iter().map(|v| v.mass).sum(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read load_constant error: no data!",
@@ -90,8 +86,8 @@ impl Eval<(), EvalResult> for LoadsEval {
                             )))
                         }
                     };
-                    let bulk = match initial.bulk.clone() {
-                        Some(data) => data.data(),
+                    let bulk: Vec<_> = match initial.bulk.clone() {
+                        Some(data) => data.data().iter().map(|v| v.data()).collect(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read bulk error: no data!",
@@ -99,8 +95,8 @@ impl Eval<(), EvalResult> for LoadsEval {
                             )))
                         }
                     };
-                    let liquid = match initial.liquid.clone() {
-                        Some(data) => data.data(),
+                    let liquid: Vec<_> = match initial.liquid.clone() {
+                        Some(data) => data.data().iter().map(|v| v.data()).collect(),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read liquid error: no data!",
@@ -108,8 +104,15 @@ impl Eval<(), EvalResult> for LoadsEval {
                             )))
                         }
                     };
-                    let unit = match initial.unit.clone() {
-                        Some(data) => data.data(),
+                    let (mass_unit, shift_unit) = match initial.unit.clone() {
+                        Some(data) => data.data().iter()
+                            .filter_map(|v| match v.mass_shift() {
+                                Ok(mass_shift) => Some((v.mass, mass_shift)),
+                                Err(_) => None,
+                            })
+                            .fold((0., Moment::zero()), |(mass_sum, moment_sum), (mass, mass_shift)| 
+                                (mass_sum + mass, moment_sum + Moment::from_pos(mass_shift, mass))
+                            ),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read unit error: no data!",
@@ -117,8 +120,15 @@ impl Eval<(), EvalResult> for LoadsEval {
                             )))
                         }
                     };
-                    let gaseous = match initial.gaseous.clone() {
-                        Some(data) => data.data(),
+                    let (mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
+                        Some(data) => data.data().iter()
+                            .filter_map(|v| match v.mass_shift {
+                                Some(mass_shift) => Some((v.mass, mass_shift)),
+                                None => None,
+                            })
+                            .fold((0., Moment::zero()), |(mass_sum, moment_sum), (mass, mass_shift)| 
+                                (mass_sum + mass, moment_sum + Moment::from_pos(mass_shift, mass))
+                            ),
                         None => {
                             return CtxResult::Err(StrErr(format!(
                                 "{}.eval | Read gaseous error: no data!",
@@ -127,12 +137,16 @@ impl Eval<(), EvalResult> for LoadsEval {
                         }
                     };
                     let result = LoadsCtx {
-                        load_constant,
+                        mass_const,
+                        mass_bulk: bulk.iter().fold(0., |sum, v| sum + v.mass),      
+                        mass_liquid: liquid.iter().fold(0., |sum, v| sum + v.mass),                                     
+                        mass_unit,
+                        mass_gaseous,    
                         shift_const,
+                        shift_unit,
+                        shift_gaseous,
                         bulk,
                         liquid,
-                        unit,
-                        gaseous
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)

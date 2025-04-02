@@ -88,6 +88,22 @@ impl LoadUnitData {
             Err(StrErr(format!("LoadUnitData bound_x error: no bounds!")))
         }
     }
+    //
+    pub fn mass_shift(&self) -> Result<Position, StrErr> {
+        if let Some(mass_shift) = self.mass_shift {
+            Ok(mass_shift)
+        } else {
+            if let Ok(bound_x) = self.bound_x() {
+                if let (Some(center_x), Some(bound_y1), Some(bound_y2), Some(bound_z1), Some(bound_z2)) = 
+                    (bound_x.center(), self.bound_y1, self.bound_y2, self.bound_z1, self.bound_z2) {
+                    let center_y = bound_y1 + (bound_y2 - bound_y1)/2.;
+                    let center_z = bound_z1 + (bound_z2 - bound_z1)/2.;
+                    return Ok(Position::new(center_x, center_y, center_z));
+                } 
+            }
+            Err(StrErr(format!("LoadUnitData mass_shift error: no mass_shift and bounds!")))
+        }   
+    }
 }
 
 //
