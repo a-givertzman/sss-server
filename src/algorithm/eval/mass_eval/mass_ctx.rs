@@ -1,42 +1,54 @@
-use crate::algorithm::entities::{area::HAreaStrength, data::strength::VerticalArea};
+use crate::algorithm::entities::Position;
+
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+#[derive(Debug, Clone)]
+pub struct LiquidData {
+    /// ID помещения
+    pub space_id: usize, 
+    pub mass: f64, 
+    pub volume: f64,
+}
+///
+#[derive(Debug, Clone)]
+pub struct GaseousData {
+    /// ID помещения
+    pub space_id: usize, 
+    pub mass: f64, 
+}
+///
+#[derive(Debug, Clone)]
+pub struct GaseousData {
+    /// ID помещения
+    pub space_id: usize, 
+    pub mass: f64, 
+}
+///
 #[derive(Debug, Clone)]
 pub struct MassCtx {
-    /// Постоянная масса судна распределенная по шпациям
-    loads_const: Rc<Vec<Rc<LoadMass>>>,
-    /// Учет распределения обледенения судна
-    icing_mass: Rc<dyn IIcingMass>,
-    /// Учет намокания палубного груза - леса
-    wetting_mass: Rc<dyn IWettingMass>,
-    /// Все грузы судна
-    loads_variable: Rc<Vec<Rc<LoadMass>>>,
-    /// Вектор разбиения на отрезки для эпюров
-    bounds: Rc<Bounds>,
-    /// Набор результатов расчетов для записи в БД
-    results: Rc<dyn IResults>,
-    parameters: Rc<dyn IParameters>,
-    /// Вектор разбиения грузов по отрезкам
-    // TODO - закешировать разбиение грузов  с коэффициентами
-    // по отрезкам
-    //   bounds_values: Rc<RefCell<Option<Vec<(<Rc<LoadMass>>)>>>>,
+    pub hull: f64, 
+    pub hull_shift: Position,
+    pub unit: f64, 
+    pub unit_shift: Position,
+    pub liquid: Vec<(usize, f64, )>,
+
     /// Суммарная масса балласта
-    ballast: Rc<RefCell<Option<f64>>>,
+    pub ballast: f64,
     /// Суммарная масса запасов
-    stores: Rc<RefCell<Option<f64>>>,
+    pub stores: f64,
     /// Суммарная масса обледенения
-    icing: Rc<RefCell<Option<f64>>>,
+    pub icing: f64,
     /// Суммарная масса намокания
-    wetting: Rc<RefCell<Option<f64>>>,
+    pub wetting: f64,
     /// Суммарная масса груза
-    cargo: Rc<RefCell<Option<f64>>>,
+    pub cargo: f64,
     /// Суммарная масса зерновых перегородок
-    bulkhead: Rc<RefCell<Option<f64>>>,
+    pub bulkhead: f64,
     /// Суммарная масса корпуса
-    lightship: Rc<RefCell<Option<f64>>>,
+    pub lightship: f64,
     /// Суммарная масса
-    sum: Rc<RefCell<Option<f64>>>,
+    pub mass_sum: f64,
+    /// Смещение центра площади
+    pub mass_shift: Position,
     /// Распределение массы по вектору разбиения
-    mass_values: Rc<RefCell<Option<Vec<f64>>>>,
+    pub mass_values: Vec<f64>,
 }

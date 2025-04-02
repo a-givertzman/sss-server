@@ -179,7 +179,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         area_timber_h.push(area);
                     }     
                     let result = StrengthAreaCtx {
-                        area_v,
+                        area_v_array: area_v,
                         area_h: const_area_h,
                         area_timber_h,
                     };

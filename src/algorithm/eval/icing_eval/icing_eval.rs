@@ -1,5 +1,6 @@
 use super::icing_ctx::IcingCtx;
 use crate::algorithm::context::context_access::*;
+use crate::algorithm::entities::Moment;
 use crate::algorithm::eval::{IcingStabCtx, StrengthAreaCtx};
 use crate::{
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
@@ -52,9 +53,18 @@ impl Eval<(), EvalResult> for IcingEval {
                     };
                     let area_strength: StrengthAreaCtx = ctx.read();
                     let icing_stab: IcingStabCtx = ctx.read();
-                    let mut mass = Vec::new();
-                    for (i, _) in bounds.iter().enumerate() { 
-                        let current_area_h = match area_strength.area_h.get(i) {
+                    let mut mass_values = Vec::new();
+                    let mut mass_moment_x_sum = 0.;
+                    for (i, bound) in bounds.iter().enumerate() { 
+                        let current_x = match bound.center() {
+                            Some(data) => data,
+                            None => {
+                                return CtxResult::Err(StrErr(format!(
+                                    "{}.eval | bound.center error: no center for bound {i}", self.dbg
+                                )));
+                            }
+                        };
+                        let current_area_h = match area_strength.area_h_values.get(i) {
                             Some(&data) => data,
                             None => {
                                 return CtxResult::Err(StrErr(format!(
@@ -62,7 +72,7 @@ impl Eval<(), EvalResult> for IcingEval {
                                 )));
                             }
                         };
-                        let current_area_v = match area_strength.area_v.get(i) {
+                        let current_area_v = match area_strength.area_v_values.get(i) {
                             Some(&data) => data,
                             None => {
                                 return CtxResult::Err(StrErr(format!(
@@ -70,7 +80,7 @@ impl Eval<(), EvalResult> for IcingEval {
                                 )));
                             }
                         };
-                        let current_area_timber_h = match area_strength.area_timber_h.get(i) {
+                        let current_area_timber_h = match area_strength.area_timber_h_values.get(i) {
                             Some(&data) => data,
                             None => {
                                 return CtxResult::Err(StrErr(format!(
@@ -78,15 +88,21 @@ impl Eval<(), EvalResult> for IcingEval {
                                 )));
                             }
                         };
-                        mass.push(current_area_h * icing_stab.mass_desc_h
+                        let current_mass = current_area_h * icing_stab.mass_desc_h
                             + current_area_timber_h
                                 * (icing_stab.mass_timber_h - icing_stab.mass_desc_h)
                             + current_area_v
                                 * (1. + icing_stab.coef_v_ds_area)
-                                * icing_stab.mass_v);
+                                * icing_stab.mass_v;
+                        mass_moment_x_sum += current_mass * current_x;
+                        mass_values.push(current_mass);
                     }
-                    let result = IcingCtx{
-                        mass,
+                    let mass_sum = mass_values.iter().sum();
+                    let mass_shift_x = mass_moment_x_sum/mass_sum;
+                    let result = IcingCtx {
+                        mass_sum,
+                        mass_shift_x,
+                        mass_values,
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)

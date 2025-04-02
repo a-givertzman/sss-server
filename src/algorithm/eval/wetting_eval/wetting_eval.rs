@@ -84,7 +84,7 @@ impl Eval<(), EvalResult> for WettingEval {
                     let result = WettingCtx {
                         mass,
                         mass_shift,
-                        mass_array,
+                        mass_values: mass_array,
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)
