@@ -19,4 +19,6 @@ pub struct LoadsCtx {
     /// объема и/или положения корпуса, считается в модели
     pub bulk: Vec<BulkData>,
     pub liquid: Vec<LiquidData>,
+    /// Положение зерновых перегородок, координата по х
+    pub grain_bulkhead: Vec<f64>,
 }

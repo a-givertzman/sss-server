@@ -5,7 +5,7 @@ pub mod icing_stab_eval;
 pub mod icing_eval;
 pub mod wetting_eval;
 pub mod loads_eval;
-pub mod strength_mass_eval;
+pub mod balance_eval;
 pub mod icing_timber_eval;
 
 pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
@@ -23,8 +23,8 @@ pub use loads_eval::loads_ctx::LoadsCtx;
 pub use wetting_eval::wetting_eval::WettingEval;
 pub use wetting_eval::wetting_ctx::WettingCtx;
 
-pub use strength_mass_eval::strength_mass_eval::StrengthMassEval;
-pub use strength_mass_eval::strength_mass_ctx::StrengthMassCtx;
+pub use balance_eval::balance_eval::BalanceEval;
+pub use balance_eval::balance_ctx::BalanceCtx;
 
 pub use icing_timber_eval::icing_timber_eval::IcingTimberEval;
 pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;

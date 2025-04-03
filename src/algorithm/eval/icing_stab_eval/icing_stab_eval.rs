@@ -20,8 +20,6 @@ pub struct IcingStabEval {
 //
 impl IcingStabEval {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "IcingStabEval");
         Self {

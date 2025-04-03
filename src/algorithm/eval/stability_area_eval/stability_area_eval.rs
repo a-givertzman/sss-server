@@ -15,8 +15,6 @@ pub struct StabilityAreaEval {
 //
 impl StabilityAreaEval {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(parent: impl Into<String>, model: ModelLink, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
         let dbg = DbgId::with_parent(&DbgId(parent.into()), "Area");
         Self {
@@ -78,9 +76,9 @@ impl Eval<(), EvalResult> for AreaEval {
 }
 //
 //
-impl std::fmt::Debug for AreaEval {
+impl std::fmt::Debug for StabilityAreaEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Area")
+        f.debug_struct("StabilityAreaEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

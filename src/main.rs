@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_model_handle = ship_model.run().await.unwrap();
     log::debug!("main | Calculations...");
     let _result =     
-    StrengthMassEval::new(
+    BalanceEval::new(
         &dbg,  
         ship_model.link().await,
         LoadsEval::new(

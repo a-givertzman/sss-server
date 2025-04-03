@@ -10,29 +10,26 @@ use crate::{
     ContextWrite, CtxResult,
 };
 use sal_sync::services::entity::error::str_err::StrErr;
-
-use super::strength_mass_ctx::StrengthMassCtx;
+use super::balance_ctx::BalanceCtx;
 
 ///
-/// Площади боковой и горизонтальной поверхностей для расчета прочности
-pub struct StrengthMassEval {
+/// Расчет равновесного положения судна
+pub struct BalanceEval {
     dbg: DbgId,
     model: ModelLink,
-    value: Option<StrengthMassCtx>,
+    value: Option<BalanceCtx>,
     ctx: Box<dyn Eval<(), EvalResult> + Send>,
 }
 //
 //
-impl StrengthMassEval {
+impl BalanceEval {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
         model: ModelLink,
         ctx: impl Eval<(), EvalResult> + Send + 'static,
     ) -> Self {
-        let dbg = DbgId::with_parent(&DbgId(parent.into()), "StrengthMassEval");
+        let dbg = DbgId::with_parent(&DbgId(parent.into()), "BalanceEval");
         Self {
             dbg,
             model,
@@ -40,10 +37,9 @@ impl StrengthMassEval {
             ctx: Box::new(ctx),
         }
     }
-    //
-    //
 }
-impl Eval<(), EvalResult> for StrengthMassEval {
+//
+impl Eval<(), EvalResult> for BalanceEval {
     fn eval(&mut self, _: ()) -> futures::future::BoxFuture<'_, EvalResult> {
         Box::pin(async move {
             match self.ctx.eval(()).await {
@@ -72,21 +68,22 @@ impl Eval<(), EvalResult> for StrengthMassEval {
                         moment_const,
                         bulk: loads.bulk.clone(),
                         liquid: loads.liquid.clone(),
+                        grain_bulkhead: loads.grain_bulkhead,
                     };
-                    let (const_area_v, const_area_h) = match self.model.bound_areas().await {
-                        Ok((area_v, area_h)) => (area_v, area_h),
+                    // Расчет баланса в модели
+                    let result = match self.model.compute_balance(balance_src_data).await {
+                        Ok(data) => data,
                         Err(err) => {
                             return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read bound_areas error: {:?}",
+                                "{}.eval | model.compute_balance error: {:?}",
                                 self.dbg, err
                             )));
                         }
-                    };
-                    
-                    let result = StrengthAreaCtx {
-                        area_v_array: area_v,
-                        area_h: const_area_h,
-                        area_timber_h,
+                    };                    
+                    let result = BalanceCtx {
+                        parameters: result.parameters,
+                        bulk: result.bulk,
+                        liquid: result.liquid,
                     };
                     self.value = Some(result.clone());
                     ctx.write(result)
@@ -102,9 +99,9 @@ impl Eval<(), EvalResult> for StrengthMassEval {
 }
 //
 //
-impl std::fmt::Debug for MassEval {
+impl std::fmt::Debug for BalanceEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MassEval")
+        f.debug_struct("BalanceEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

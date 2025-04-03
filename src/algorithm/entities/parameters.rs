@@ -4,7 +4,7 @@ use strum_macros::FromRepr;
 
 use crate::kernel::error::error::Error;
 //
-#[derive(Hash, Eq, PartialEq, FromRepr)]
+#[derive(Clone, Hash, Eq, PartialEq, FromRepr, Debug)]
 pub enum ParameterID {
     CenterMassZFix = 1,
     Displacement = 2,

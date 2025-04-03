@@ -1,14 +1,14 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use serde::{Deserialize, Serialize};
-use crate::{algorithm::entities::data::DataArray, ship_model::query::BulkData};
 use super::{AssignmentType, BulkCargoType};
+use crate::{algorithm::entities::data::DataArray, ship_model::query::BulkData};
+use serde::{Deserialize, Serialize};
 ///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadBulkData {
     /// ID груза
     pub cargo_id: usize,
     /// Имя груза
-    pub cargo_name: String,   
+    pub cargo_name: String,
     /// ID помещения
     pub space_id: usize,
     /// Имя помещения
@@ -33,12 +33,17 @@ impl LoadBulkData {
             volume
         } else {
             if let Some(stowage_factor) = self.stowage_factor {
-                    self.mass*stowage_factor
+                self.mass * stowage_factor
             } else {
                 0.
             }
         };
-        BulkData{ space_id: self.space_id, mass: self.mass, volume }
+        BulkData {
+            cargo_id: self.cargo_id,
+            space_id: self.space_id,
+            mass: self.mass,
+            volume,
+        }
     }
 }
 /*
@@ -46,10 +51,10 @@ impl std::fmt::Display for LoadBulkData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LoadBulkData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assigned_id:{} 
+            "LoadBulkData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assigned_id:{}
                 assigment_type:{} cargo_type:{}, mass:{}, stowage_factor:{} volume:{} )",
             self.space_id,
-            self.space_name,            
+            self.space_name,
             self.cargo_id,
             self.cargo_name,
             self.assigned_id,

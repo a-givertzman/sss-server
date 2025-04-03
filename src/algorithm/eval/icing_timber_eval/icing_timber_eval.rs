@@ -19,8 +19,6 @@ pub struct IcingTimberEval {
 //
 impl IcingTimberEval {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + 'static,

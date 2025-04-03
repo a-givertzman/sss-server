@@ -1,14 +1,14 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use serde::{Deserialize, Serialize};
-use crate::{algorithm::entities::data::DataArray, ship_model::query::LiquidData};
 use super::{AssignmentType, LiquidCargoType};
+use crate::{algorithm::entities::data::DataArray, ship_model::query::LiquidData};
+use serde::{Deserialize, Serialize};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadLiquidData {
     /// ID груза
     pub cargo_id: usize,
     /// Имя груза
-    pub cargo_name: String,   
+    pub cargo_name: String,
     /// ID помещения
     pub space_id: usize,
     /// Имя помещения
@@ -21,7 +21,7 @@ pub struct LoadLiquidData {
     pub cargo_type: LiquidCargoType,
     /// масса, т
     pub mass: f64,
-    /// Плотность 
+    /// Плотность
     pub density: Option<f64>,
     /// Обьем, м^3
     pub volume: Option<f64>,
@@ -34,7 +34,7 @@ impl LoadLiquidData {
         } else {
             if let Some(density) = self.density {
                 if density > 0. {
-                    self.mass/density
+                    self.mass / density
                 } else {
                     0.
                 }
@@ -42,7 +42,12 @@ impl LoadLiquidData {
                 0.
             }
         };
-        LiquidData{ space_id: self.space_id, mass: self.mass, volume }
+        LiquidData {
+            cargo_id: self.cargo_id,
+            space_id: self.space_id,
+            mass: self.mass,
+            volume,
+        }
     }
 }
 /*
@@ -50,10 +55,10 @@ impl std::fmt::Display for LoadLiquidData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LoadLiquidData(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {}) 
+            "LoadLiquidData(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {})
             mass_shift:({}, {}, {}) horizontal_area:{} vertical_area:{} vertical_area_shift_y:({}, {}, {}) )",
             self.name,
-            self.mass.unwrap_or(0.),            
+            self.mass.unwrap_or(0.),
             self.general_category,
             self.timber,
             self.is_on_deck,

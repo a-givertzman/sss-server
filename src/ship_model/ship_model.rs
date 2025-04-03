@@ -1,10 +1,12 @@
+use super::query::*;
+use super::reply::*;
 use super::temp_data::*;
 use super::{model_link::ModelLink, query::Query, reply::Reply, temp_data::area_v_str};
+use crate::algorithm::entities::data::{strength, HStrAreaArray};
+use crate::algorithm::entities::{Bound, Bounds};
 use crate::{
-    algorithm::entities::{area::HAreaStrength, data::strength::VerticalArea, Bound},
     infrostructure::api::client::api_client::ApiClient,
     kernel::types::fx_map::FxIndexMap,
-    prelude::Error,
 };
 use coco::Stack;
 use sal_sync::services::entity::{
@@ -26,7 +28,7 @@ pub struct ShipModel {
     txid: usize,
     name: Name,
     ship_id: usize,
-    // bounds: Bounds,
+    bounds: Bounds,
     clients_tx: Sender<(String, Sender<Reply>, Receiver<Query>)>,
     clients_rx: Stack<Receiver<(String, Sender<Reply>, Receiver<Query>)>>,
     clients: Arc<AtomicUsize>,
@@ -45,7 +47,7 @@ impl ShipModel {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>, ship_id: usize, api_client: ApiClient) -> Self {
+    pub fn new(parent: impl Into<String>, ship_id: usize, bounds: Bounds, api_client: ApiClient) -> Self {
         let name = Name::new(parent, "ShipModel");
         let (receivers_tx, receivers_rx) = mpsc::channel();
         let receivers_rx_stack = Stack::new();
@@ -56,6 +58,7 @@ impl ShipModel {
             txid: PointTxId::from_str(&name.join()),
             name,
             ship_id,
+            bounds,
             clients: Arc::new(AtomicUsize::new(0)),
             clients_tx: receivers_tx,
             clients_rx: receivers_rx_stack,
@@ -98,6 +101,8 @@ impl ShipModel {
         let ship_id = self.ship_id;
         let api_client = self.api_client.pop().unwrap();
         let exit = self.exit.clone();
+        let ship_id = self.ship_id;
+        let bounds = self.bounds.clone();
         let handle = tokio::task::spawn_blocking(move || {
             log::debug!("{}.run | Locals | Start", dbg);
             let mut clients = FxIndexMap::default();
@@ -114,12 +119,17 @@ impl ShipModel {
                             log::trace!("{}.run | Received query: {:?}", dbg, query);
                             match query {
                                 Query::AreasStrength => {
-                                    let result = areas_strength(&api_client, ship_id);
+                                    let result = areas_strength(bounds.clone(), ship_id);
                                     if let Err(err) = send.send(Reply::AreasStrength(result)) {
                                         log::warn!("{}.run | Send error: {:?}", dbg, err);
                                     }
                                 }
-                                Query::ComputeBalance(balance_src_data) => todo!(),
+                                Query::ComputeBalance(balance_src_data) => {
+                                    let result =  compute_balance(bounds.clone(), balance_src_data, ship_id);
+                                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                                    }                                    
+                                }
                             }
                         }
                         Err(err) => match err {
@@ -179,11 +189,11 @@ impl Debug for ShipModel {
     }
 }
 
-fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
-    /*   let area_h_str = HStrAreaArray::parse(
+fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
+  /*     let area_h_str = HStrAreaArray::parse(
             &api_client
                 .fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={};",
+            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
         ))
                 .map_err(|e| StrErr(format!("api_server get_data area_h_str error: {e}")))?,
@@ -192,23 +202,28 @@ fn areas_strength(api_client: &ApiClient, ship_id: usize) -> Result<(Vec<f64>, V
         let area_v_str = strength::VerticalAreaArray::parse(
             &api_client
                 .fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={};",
+            "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
         ))
                 .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?,
         )
         .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?;
-    */
-    let area_h_str: Result<Vec<HAreaStrength>, Error> = area_h_str::area_h_str()
+ */   
+    let area_h_str: Vec<_> = area_h_str::area_h_str()
         .data()
         .into_iter()
-        .map(|v| match Bound::new(v.bound_x1, v.bound_x2) {
-            Ok(bound) => Ok(HAreaStrength::new(v.value, bound)),
-            Err(err) => Err(err),
-        })
+        .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
         .collect();
-    let area_h_str =
-        area_h_str.map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?;
-
-    Ok((area_v_str::area_v_str().data(), area_h_str))
+    let area_v_str: Vec<_> = area_v_str::area_v_str().data().into_iter()
+        .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
+        .collect();
+    let (area_v_str, area_h_str): (Vec<f64>, Vec<f64>) = bounds.iter().map(|b1| {
+        (area_v_str.iter().fold(0., |sum, &(v, b2)| sum + v*b1.part_ratio(&b2).unwrap_or(0.)),
+        area_h_str.iter().fold(0., |sum, &(v, b2)| sum + v*b1.part_ratio(&b2).unwrap_or(0.)))
+    }).collect();
+    Ok((area_v_str, area_h_str))
+}
+//
+fn compute_balance(bounds: Bounds, src_data: BalanceSrcData, ship_id: usize ) -> Result<BalanceResultData, StrErr> {
+    TODO
 }

@@ -20,8 +20,6 @@ pub struct IcingEval {
 //
 impl IcingEval {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + 'static,
@@ -54,7 +52,7 @@ impl Eval<(), EvalResult> for IcingEval {
                     let area_strength: StrengthAreaCtx = ctx.read();
                     let icing_stab: IcingStabCtx = ctx.read();
                     let mut mass_values = Vec::new();
-                    let mut mass_moment_x_sum = 0.;
+                //    let mut mass_moment_x_sum = 0.;
                     for (i, bound) in bounds.iter().enumerate() { 
                         let current_x = match bound.center() {
                             Some(data) => data,
@@ -94,11 +92,19 @@ impl Eval<(), EvalResult> for IcingEval {
                             + current_area_v
                                 * (1. + icing_stab.coef_v_ds_area)
                                 * icing_stab.mass_v;
-                        mass_moment_x_sum += current_mass * current_x;
+                    //    mass_moment_x_sum += current_mass * current_x;
                         mass_values.push(current_mass);
                     }
-                    let mass_sum = mass_values.iter().sum();
-                    let mass_shift_x = mass_moment_x_sum/mass_sum;
+                    let mass_v = area_strength.area_v * (1. + icing_stab.coef_v_ds_area) * icing_stab.mass_v;
+                    let mass_h = area_strength.area_h * icing_stab.mass_desc_h;
+                    let mass_timber_h = area_strength.area_timber_h * (icing_stab.mass_timber_h - icing_stab.mass_desc_h);                  
+                    let mass_sum = mass_v + mass_h + mass_timber_h;
+                    assert!(mass_sum == mass_values.iter().sum::<f64>());
+                    let moment_v = Moment::from_pos(area_strength.area_v_shift, mass_v);
+                    let moment_h = Moment::from_pos(area_strength.area_h_shift, mass_h);
+                    let moment_timber_h = Moment::from_pos(area_strength.area_timber_h_shift, mass_timber_h);            
+                    let moment_sum = moment_v + moment_h + moment_timber_h;
+                    let mass_shift_x = if mass_sum > 0. { moment_sum.x()/mass_sum } else { 0. };
                     let result = IcingCtx {
                         mass: mass_sum,
                         mass_shift_x,

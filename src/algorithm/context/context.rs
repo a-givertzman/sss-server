@@ -7,7 +7,7 @@ use super::testing_ctx::TestingCtx;
 /// # Calculation context
 /// - Provides read/write access to initial
 /// - R/W access to the isoleted data of each step of computations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
@@ -23,6 +23,9 @@ pub struct Context {
     pub(super) wetting: Option<WettingCtx>,
     /// Все грузы судна
     pub(super) loads: Option<LoadsCtx>,
+    /// Расчет равновесного положения судна
+    /// Параметры + данные по смещаемым грузам
+    pub(super) balance: Option<BalanceCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
@@ -37,13 +40,7 @@ impl Context {
     pub fn new(initial: InitialCtx) -> Self {
         Self {
             initial,
-            strength_area: None,
-            icing_stab: None,
-            icing_timber: None,
-            icing: None,
-            wetting: None,
-            loads: None,
-            testing: None,
+            ..Self::default()
         }
     }
 }

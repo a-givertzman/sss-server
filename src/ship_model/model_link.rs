@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Se
 use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
 use crate::algorithm::entities::Position;
 
-use super::{query::{BalanceSrcData, Query}, reply::Reply};
+use super::{query::{BalanceSrcData, Query}, reply::{BalanceResultData, Reply}};
 ///
 /// Contains local side `send` & `recv` of `channel`
 /// - provides simple direct to `send` & `recv`
@@ -115,7 +115,7 @@ impl ModelLink {
         }
     }
     /// - Returns areas by ship frames
-    pub async fn compute_balance(&self, data: BalanceSrcData) -> Result< TODO, StrErr> {
+    pub async fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, StrErr> {
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::ComputeBalance(data)) {
             Ok(_) => {
@@ -126,7 +126,7 @@ impl ModelLink {
                             Ok(reply) => {
                                 log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
                                 match reply {
-                                    Reply::AreasStrength(items) => items,
+                                    Reply::ComputeBalance(reply) => reply,
                                     _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
                                 }
                             }

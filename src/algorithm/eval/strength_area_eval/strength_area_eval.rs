@@ -2,7 +2,7 @@ use super::strength_area_ctx::StrengthAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{data::loads::UnitCargoType, Bound},
+        entities::{data::loads::UnitCargoType, Bound, Position},
         eval::IcingTimberCtx,
     },
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
@@ -23,8 +23,6 @@ pub struct StrengthAreaEval {
 //
 impl StrengthAreaEval {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
         model: ModelLink,
@@ -97,7 +95,8 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     // Ищем площадь парусности палубных грузов.
                     // Перебираем поверхность парусности с шагом, проходим по грузам и
                     // берем площадь как диапазон между максимальными ограничениями всех грузов на этом шаге.                    
-                    let mut area_v = Vec::new();
+                    let mut area_v_values = Vec::new();
+                    let mut area_v_moment = 0.;
                     // Границы грузов
                     let min_x = unit.iter()
                         .filter_map(|v| v.bound_x1)
@@ -105,7 +104,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     let max_x = unit.iter()
                         .filter_map(|v| v.bound_x2)
                         .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
-                    // Если есть границы грузов ищемраспределения площадей грузов
+                    // Если есть границы грузов ищем распределения площадей грузов
                     if let (Some(min_x), Some(max_x)) = (min_x, max_x) { 
                         // Диапазон грузов по оси Х
                         let units_bound = match Bound::new(min_x, max_x) {
@@ -124,7 +123,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                                 Some(&data) => data,
                                 None => {
                                     return CtxResult::Err(StrErr(format!(
-                                        "{}.eval | const_area_h.get error: no value for bound {i}", self.dbg
+                                        "{}.eval | const_area_v.get error: no value for bound {i}", self.dbg
                                     )));
                                 }
                             };
@@ -155,11 +154,41 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                                     current_area += bound_x.length().unwrap_or(0.) * (max_z - min_z);
                                 }
                             }
-                            area_v.push(current_area);
+                            area_v_moment += current_area * bound_x.center().unwrap_or(0.); 
+                            area_v_values.push(current_area);
                         }
                     }
+                    let area_v = area_v_values.iter().sum();
+                    let area_v_shift = if area_v > 0. {
+                        Position::new(area_v_moment/area_v, 0., 0.)
+                    } else {
+                        Position::zero()
+                    };
+                    // Горизонтальная площадь поверхностей
+                    let mut area_h_moment = 0.;
+                    let mut area_h_values = Vec::new();
+                    for (i, bound_x) in bounds.iter().enumerate() { 
+                        // Площадь парусности корпуса, попадающая в текущую шпацию
+                        let mut current_area = match const_area_h.get(i) {
+                            Some(&data) => data,
+                            None => {
+                                return CtxResult::Err(StrErr(format!(
+                                    "{}.eval | area_h.get error: no value for bound {i}", self.dbg
+                                )));
+                            }
+                        };
+                        area_h_moment += current_area * bound_x.center().unwrap_or(0.); 
+                        area_h_values.push(current_area);
+                    }
+                    let area_h = area_v_values.iter().sum();
+                    let area_h_shift = if area_h > 0. {
+                        Position::new(area_h_moment/area_h, 0., 0.)
+                    } else {
+                        Position::zero()
+                    };
                     // Горизонтальная площадь палубного груза - леса
                     let mut area_timber_h_values = Vec::new();
+                    let mut area_timber_moment = 0.;
                     for bound_x in bounds.iter() {
                         let mut area = 0.;
                         for u in &timber_unit {
@@ -176,8 +205,15 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                                 }
                             };
                         }
+                        area_timber_moment += area * bound_x.center().unwrap_or(0.);
                         area_timber_h_values.push(area);
                     }     
+                    let area_timber_h = area_timber_h_values.iter().sum();
+                    let area_timber_h_shift = if area_timber_h > 0. {
+                        Position::new(area_timber_moment/area_timber_h, 0., 0.)
+                    } else {
+                        Position::zero()
+                    };
                     let result = StrengthAreaCtx {
                         area_v,
                         area_v_shift,
@@ -185,7 +221,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         area_h,
                         area_h_shift,
                         area_h_values,
-                        area_timber_h: area_timber_h_values.iter().sum(),
+                        area_timber_h,
                         area_timber_h_shift,
                         area_timber_h_values,
                     };
@@ -205,7 +241,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
 //
 impl std::fmt::Debug for StrengthAreaEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BoundArea")
+        f.debug_struct("StrengthAreaEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()
