@@ -10,8 +10,7 @@ use crate::{
 use sal_sync::services::entity::error::str_err::StrErr;
 
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+/// Расчет положения массы корпуса и грузов судна
 pub struct LoadsEval {
     dbg: DbgId,
     value: Option<LoadsCtx>,

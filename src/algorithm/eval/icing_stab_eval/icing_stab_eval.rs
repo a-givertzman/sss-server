@@ -9,8 +9,7 @@ use crate::{
 use sal_sync::services::entity::error::str_err::StrErr;
 
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+/// Коэффициенты для расчета обледенения судна
 pub struct IcingStabEval {
     dbg: DbgId,
     value: Option<IcingStabCtx>,

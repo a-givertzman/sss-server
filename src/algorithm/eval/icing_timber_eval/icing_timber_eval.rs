@@ -8,8 +8,7 @@ use sal_sync::services::entity::error::str_err::StrErr;
 use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
 
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+/// Ограничение горизонтальной площади обледенения палубного груза - леса
 pub struct IcingTimberEval {
     dbg: DbgId,
     value: Option<IcingTimberCtx>,

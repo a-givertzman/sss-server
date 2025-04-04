@@ -10,7 +10,7 @@ use crate::{
 use sal_sync::services::entity::error::str_err::StrErr;
 
 ///
-/// Учет обледенения судна.
+/// Учет обледенения судна
 pub struct IcingEval {
     dbg: DbgId,
     value: Option<IcingCtx>,

@@ -1,4 +1,4 @@
-//! Учет намокания груза
+//! Учет намокания палубного груза
 use crate::algorithm::entities::Position;
 ///
 #[derive(Debug, Clone)]
