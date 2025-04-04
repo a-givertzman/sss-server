@@ -1,6 +1,6 @@
 use sal_sync::services::entity::error::str_err::StrErr;
 
-use crate::algorithm::entities::{parameters::ParameterID, Position};
+use crate::algorithm::entities::{parameters::ParameterID, Bounds, Position};
 ///
 #[derive(Debug, Clone)]
 pub struct LiquidData {
@@ -34,6 +34,8 @@ pub struct BalanceResultData {
 /// Replies from the `ShipModel`
 #[derive(Debug)]
 pub enum Reply {
+
+    Bounds(Bounds),
     AreasStrength(Result<(Vec<f64>, Vec<f64>), StrErr>),
     ComputeBalance(Result<BalanceResultData, StrErr>),
 }

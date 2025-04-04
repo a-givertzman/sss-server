@@ -36,6 +36,7 @@ pub struct BalanceSrcData {
 //
 #[derive(Debug)]
 pub enum Query {
+    Bounds,
     AreasStrength,
     ComputeBalance(BalanceSrcData),
 }
