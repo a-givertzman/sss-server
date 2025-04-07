@@ -16,13 +16,14 @@ use crate::{
 };
 use sal_sync::services::entity::error::str_err::StrErr;
 
+trait TmpModelLink: IModelLink + std::fmt::Debug {}
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
 #[derive(Debug)]
 pub struct Initial {
     dbg: DbgId,
-    model: Rc<dyn IModelLink>, 
+    model: Box<dyn TmpModelLink>, 
     api_client: ApiClient,
     ctx: Context,
 }
@@ -33,7 +34,7 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Rc<dyn IModelLink>, 
+        model: Box<dyn TmpModelLink>, 
         api_client: ApiClient,
         ctx: Context,
     ) -> Self {
