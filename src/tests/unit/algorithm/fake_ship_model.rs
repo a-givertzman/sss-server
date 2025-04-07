@@ -24,7 +24,7 @@ use std::{
 use tokio::task::JoinHandle;
 ///
 ///
-pub struct ShipModel {
+pub struct FakeShipModel {
     txid: usize,
     name: Name,
     ship_id: usize,
@@ -75,9 +75,12 @@ impl ShipModel {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
+}
+//
+impl IShipModel for FakeShipModel {
     ///
     /// Returns connected `Link`
-    pub async fn link(&self) -> ModelLink {
+    async fn link(&self) -> ModelLink {
         let (loc_send, rem_recv) = mpsc::channel();
         let (rem_send, loc_recv) = mpsc::channel();
         let receivers = self.clients.clone();
@@ -99,7 +102,7 @@ impl ShipModel {
     }
     ///
     /// Entry point
-    pub async fn run(&self) -> Result<JoinHandle<()>, StrErr> {
+    async fn run(&self) -> Result<JoinHandle<()>, StrErr> {
         let dbg = self.name.join();
         log::info!("{}.run | Starting...", dbg);
         let timeout = self.timeout;
@@ -186,7 +189,7 @@ impl ShipModel {
     }
     ///
     /// Sends "exit" signal to the service's task
-    pub fn exit(&self) {
+    fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
     }
 }

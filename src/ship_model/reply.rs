@@ -36,6 +36,6 @@ pub struct BalanceResultData {
 pub enum Reply {
 
     Bounds(Bounds),
-    AreasStrength(Result<(Vec<f64>, Vec<f64>), StrErr>),
+    BoundAreas(Result<(Vec<f64>, Vec<f64>), StrErr>),
     ComputeBalance(Result<BalanceResultData, StrErr>),
 }

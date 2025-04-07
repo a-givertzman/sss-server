@@ -1,12 +1,11 @@
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
+        context::context_access::ContextRead,
         entities::Moment,
         eval::{IcingCtx, LoadsCtx, WettingCtx},
     },
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
-    ship_model::{model_link::ModelLink, query::BalanceSrcData},
+    ship_model::{model_link::*, query::BalanceSrcData},
     ContextWrite, CtxResult,
 };
 use sal_sync::services::entity::error::str_err::StrErr;
@@ -44,7 +43,6 @@ impl Eval<(), EvalResult> for BalanceEval {
         Box::pin(async move {
             match self.ctx.eval(()).await {
                 CtxResult::Ok(ctx) => {
-                    let initial: &InitialCtx = ctx.read_ref();
                     let loads: LoadsCtx = ctx.read();
                     let icing: IcingCtx = ctx.read();
                     let wetting: WettingCtx = ctx.read();

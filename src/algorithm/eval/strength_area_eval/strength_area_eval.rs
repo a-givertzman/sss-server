@@ -7,7 +7,7 @@ use crate::{
     },
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ship_model::model_link::ModelLink,
+    ship_model::model_link::*,
     ContextWrite, CtxResult,
 };
 use sal_sync::services::entity::error::str_err::StrErr;

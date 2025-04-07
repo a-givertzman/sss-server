@@ -38,9 +38,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let ship_id = 2;
     let project_id = "NULL";
+    let n_parts = 200;
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
+        project_id.to_owned(),
+        n_parts,
         ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
     );
     let ship_model_handle = ship_model.run().await.unwrap();
@@ -64,6 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 &dbg,
                                 Initial::new(
                                     &dbg,
+                                    ship_model.link().await,
                                     ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
                                     Context::new(
                                         InitialCtx::new(

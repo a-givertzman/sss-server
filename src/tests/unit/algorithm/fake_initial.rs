@@ -1,47 +1,43 @@
-use std::rc::Rc;
 
-use super::initial_ctx::InitialCtx;
 use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
-use crate::ship_model::model_link::*;
+use crate::algorithm::entities::Bounds;
+use crate::prelude::InitialCtx;
+use crate::ship_model::model_link::ModelLink;
 use crate::{
-    algorithm::context::{
+    algorithm::{
+        context::{
             context::Context,
             context_access::{ContextReadRef, ContextWrite},
             ctx_result::CtxResult,
         },
+        entities::data::ComputedFrameDataArray,
+    },
     infrostructure::api::client::api_client::ApiClient,
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
 };
 use sal_sync::services::entity::error::str_err::StrErr;
 
 ///
-/// Общая структура для ввода данных. Содержит все данные
+/// Заглушка для тестирования, имитирует ввод данных. Содержит все данные
 /// для расчетов.
 #[derive(Debug)]
-pub struct Initial {
+pub struct FakeInitial {
     dbg: DbgId,
-    model: Rc<dyn IModelLink>, 
-    api_client: ApiClient,
     ctx: Context,
 }
 //
-impl Initial {
+//
+impl FakeInitial {
     ///
-    /// Fetches all initiall data
-    /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Rc<dyn IModelLink>, 
-        api_client: ApiClient,
         ctx: Context,
     ) -> Self {
-        let dbg = DbgId::with_parent(&DbgId(parent.into()), "Initial");
+        let dbg = DbgId::with_parent(&DbgId(parent.into()), "FakeInitial");
         Self {
             dbg,
-            model,
-            api_client,
             ctx,
         }
     }
@@ -49,7 +45,7 @@ impl Initial {
     //
 }
 //
-impl Eval<(), EvalResult> for Initial {
+impl Eval<(), EvalResult> for FakeInitial {
     fn eval(&mut self, _: ()) -> futures::future::BoxFuture<'_, EvalResult> {
         Box::pin(async move {
             let initial_ctx: &InitialCtx = self.ctx.read_ref();

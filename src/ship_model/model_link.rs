@@ -1,8 +1,21 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc}, time::Duration};
-use sal_sync::services::entity::{error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId};
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::{Bounds, Position};
+use sal_sync::services::entity::{
+    error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId,
+};
+use std::{
+    fmt::Debug,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{Receiver, Sender},
+        Arc,
+    },
+    time::Duration,
+};
 
-use super::{query::{BalanceSrcData, Query}, reply::{BalanceResultData, Reply}};
+use super::{
+    query::{BalanceSrcData, Query},
+    reply::{BalanceResultData, Reply},
+};
 ///
 /// Contains local side `send` & `recv` of `channel`
 /// - provides simple direct to `send` & `recv`
@@ -30,7 +43,7 @@ impl ModelLink {
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
-            send, 
+            send,
             recv: Some(recv),
             timeout: Self::DEFAULT_TIMEOUT,
         }
@@ -47,14 +60,14 @@ impl ModelLink {
     //     let (loc_send, rem_recv) = mpsc::channel();
     //     let (rem_send, loc_recv) = mpsc::channel();
     //     (
-    //         Self { 
+    //         Self {
     //             txid: PointTxId::from_str(&name.join()),
     //             name: name.clone(),
     //             send: loc_send, recv: Some(loc_recv),
     //             timeout: Self::DEFAULT_TIMEOUT,
     //             exit: Arc::new(AtomicBool::new(false)),
     //         },
-    //         Self { 
+    //         Self {
     //             txid: PointTxId::from_str(&name.join()),
     //             name,
     //             send: rem_send, recv: Some(rem_recv),
@@ -65,7 +78,7 @@ impl ModelLink {
     // }
     ///
     /// - Returns areas
- /*   pub async fn areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), StrErr> {
+    /*   pub async fn areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), StrErr> {
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::AreasStrength) {
             Ok(_) => {
@@ -89,54 +102,102 @@ impl ModelLink {
             Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
         }
     }*/
+    /// - Returns computed ship frames
+    pub async fn bounds(&self) -> Result<Bounds, StrErr> {
+        let timeout = Duration::from_secs(300);
+        match self.send.send(Query::Bounds) {
+            Ok(_) => {
+                log::debug!("{}.bounds | Sent request: {:#?}", self.name, Query::Bounds);
+                tokio::task::block_in_place(move || match &self.recv {
+                    Some(recv) => match recv.recv_timeout(timeout) {
+                        Ok(reply) => {
+                            log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
+                            match reply {
+                                Reply::Bounds(items) => Ok(items),
+                                _ => panic!("{}.bounds | Wrong reply: {:#?}", self.name, reply),
+                            }
+                        }
+                        Err(_) => Err(StrErr(format!(
+                            "{}.req | Request timeout ({:?})",
+                            self.name, timeout
+                        ))),
+                    },
+                    None => todo!(),
+                })
+            }
+            Err(err) => Err(StrErr(format!(
+                "{}.req | Send request error: {:#?}",
+                self.name, err
+            ))),
+        }
+    }
     /// - Returns areas by ship frames
     pub async fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
         let timeout = Duration::from_secs(300);
-        match self.send.send(Query::AreasStrength) {
+        match self.send.send(Query::BoundAreas) {
             Ok(_) => {
-                log::debug!("{}.areas | Sent request: {:#?}", self.name, Query::AreasStrength);
-                tokio::task::block_in_place(move|| {
-                    match &self.recv {
-                        Some(recv) => match recv.recv_timeout(timeout) {
-                            Ok(reply) => {
-                                log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
-                                match reply {
-                                    Reply::AreasStrength(items) => items,
-                                    _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
-                                }
+                log::debug!(
+                    "{}.bound_areas | Sent request: {:#?}",
+                    self.name,
+                    Query::BoundAreas
+                );
+                tokio::task::block_in_place(move || match &self.recv {
+                    Some(recv) => match recv.recv_timeout(timeout) {
+                        Ok(reply) => {
+                            log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
+                            match reply {
+                                Reply::BoundAreas(items) => items,
+                                _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
                             }
-                            _ => Err(StrErr(format!("{}.req | Request timeout ({:?})", self.name, timeout))),
                         }
-                        None => todo!(),
-                    }
+                        _ => Err(StrErr(format!(
+                            "{}.req | Request timeout ({:?})",
+                            self.name, timeout
+                        ))),
+                    },
+                    None => todo!(),
                 })
-            },
-            Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
+            }
+            Err(err) => Err(StrErr(format!(
+                "{}.req | Send request error: {:#?}",
+                self.name, err
+            ))),
         }
     }
     /// - Returns areas by ship frames
     pub async fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, StrErr> {
         let timeout = Duration::from_secs(300);
-        match self.send.send(Query::ComputeBalance(data)) {
+        match self.send.send(Query::ComputeBalance(data.clone())) {
             Ok(_) => {
-                log::debug!("{}.areas | Sent request: {:#?}", self.name, Query::AreasStrength);
-                tokio::task::block_in_place(move|| {
-                    match &self.recv {
-                        Some(recv) => match recv.recv_timeout(timeout) {
-                            Ok(reply) => {
-                                log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
-                                match reply {
-                                    Reply::ComputeBalance(reply) => reply,
-                                    _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
-                                }
+                log::debug!(
+                    "{}.compute_balance | Sent request: {:#?}",
+                    self.name,
+                    Query::ComputeBalance(data)
+                );
+                tokio::task::block_in_place(move || match &self.recv {
+                    Some(recv) => match recv.recv_timeout(timeout) {
+                        Ok(reply) => {
+                            log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
+                            match reply {
+                                Reply::ComputeBalance(reply) => reply,
+                                _ => panic!(
+                                    "{}.compute_balance | Wrong reply: {:#?}",
+                                    self.name, reply
+                                ),
                             }
-                            _ => Err(StrErr(format!("{}.req | Request timeout ({:?})", self.name, timeout))),
                         }
-                        None => todo!(),
-                    }
+                        _ => Err(StrErr(format!(
+                            "{}.req | Request timeout ({:?})",
+                            self.name, timeout
+                        ))),
+                    },
+                    None => todo!(),
                 })
-            },
-            Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
+            }
+            Err(err) => Err(StrErr(format!(
+                "{}.req | Send request error: {:#?}",
+                self.name, err
+            ))),
         }
     }
 }
@@ -148,11 +209,11 @@ unsafe impl Sync for ModelLink {}
 impl Debug for ModelLink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModelLink")
-        .field("txid", &self.txid)
-        .field("name", &self.name)
-        // .field("send", &self.send)
-        // .field("recv", &self.recv)
-        .field("timeout", &self.timeout)
-        .finish()
+            .field("txid", &self.txid)
+            .field("name", &self.name)
+            // .field("send", &self.send)
+            // .field("recv", &self.recv)
+            .field("timeout", &self.timeout)
+            .finish()
     }
 }
