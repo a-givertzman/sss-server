@@ -11,7 +11,7 @@ pub struct LoadUnitData {
     /// ID assigned
     pub assigned_id: usize,
     /// ID помещения
-    pub space_id: usize,
+    pub space_id: String,
     /// Имя груза
     pub cargo_name: String,
     /// Тип назначения груза

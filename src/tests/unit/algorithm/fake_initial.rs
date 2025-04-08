@@ -1,7 +1,7 @@
 
 use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::Bounds;
+use crate::algorithm::entities::{Bounds, Position};
 use crate::prelude::InitialCtx;
 use crate::ship_model::model_link::ModelLink;
 use crate::{
@@ -55,154 +55,13 @@ impl Eval<(), EvalResult> for FakeInitial {
             let voyage = voyage();
             let icing = icing();
             let load_constant = load_constant::load_constant();
-    
-            let data = self.api_client.fetch(&format!(
-                "SELECT 
-                    space_id, \
-                    space_name, \
-                    cargo_id, \
-                    cargo_name, \
-                    assigned_id, \
-                    assigment_context as assigment_type, \
-                    cargo_type, \
-                    stowage_factor, \
-                    weight AS mass
-                FROM 
-                    bulk_cargo_view
-                WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                initial_ctx.ship_id, initial_ctx.project_id
-            ));
-            let bulk = match data {
-                Ok(data) => match LoadBulkArray::parse(&data) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(StrErr(format!(
-                            "{}.eval | Error bulk: {err}",
-                            self.dbg
-                        )))
-                    }
-                },
-                Err(err) => {
-                    return CtxResult::Err(StrErr(format!("{}.eval | Error bulk: {err}", self.dbg)))
-                }
-            };
-            let data = self.api_client.fetch(&format!(
-                "SELECT 
-                    space_id, \
-                    space_name, \
-                    cargo_id, \
-                    cargo_name, \
-                    assigned_id, \
-                    assigment_context as assigment_type, \
-                    cargo_type, \
-                    density, \
-                    weight AS mass
-                FROM 
-                    liquid_cargo_view
-                WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                initial_ctx.ship_id, initial_ctx.project_id
-            ));
-            let liquid = match data {
-                Ok(data) => match LoadLiquidArray::parse(&data) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(StrErr(format!(
-                            "{}.eval | Error liquid: {err}",
-                            self.dbg
-                        )))
-                    }
-                },
-                Err(err) => {
-                    return CtxResult::Err(StrErr(format!(
-                        "{}.eval | Error liquid: {err}",
-                        self.dbg
-                    )))
-                }
-            };
-            let data = self.api_client.fetch(&format!(
-                "SELECT 
-                    space_id, \
-                    space_name, \
-                    cargo_id, \
-                    cargo_name, \
-                    assigned_id, \
-                    assigment_context as assigment_type, \
-                    cargo_type, \
-                    density, \
-                    weight AS mass, \
-                    centre_of_compartment as mass_shift
-                FROM 
-                    gaseous_cargo_view
-                WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                initial_ctx.ship_id, initial_ctx.project_id
-            ));
-            let gaseous = match data {
-                Ok(data) => match LoadGaseousArray::parse(&data) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(StrErr(format!(
-                            "{}.eval | Error gaseous: {err}",
-                            self.dbg
-                        )))
-                    }
-                },
-                Err(err) => {
-                    return CtxResult::Err(StrErr(format!(
-                        "{}.eval | Error gaseous: {err}",
-                        self.dbg
-                    )))
-                }
-            };
-            let data = self.api_client.fetch(&format!(
-                "SELECT 
-                    space_id, \
-                    space_name, \
-                    cargo_id, \
-                    cargo_name, \
-                    assigned_id, \
-                    assigment_context as assigment_type, \
-                    cargo_type, \
-                    density, \
-                    weight AS mass, \
-                    centre_of_gravity AS mass_shift, \
-                    permeability, \
-                    stowage_factor, \
-                    icing_area, \
-                    centre_of_icing_area, \
-                    windage_area, \
-                    centre_of_windage_area, \
-                    bound_x1, \
-                    bound_x2, \
-                    bound_y1, \
-                    bound_y2, \
-                    bound_z1, \
-                    bound_z2
-                FROM 
-                    unit_cargo_view
-                WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                initial_ctx.ship_id, initial_ctx.project_id
-            ));
-            let unit = match data {
-                Ok(data) => match LoadUnitArray::parse(&data) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(StrErr(format!(
-                            "{}.eval | Error unit: {err}",
-                            self.dbg
-                        )))
-                    }
-                },
-                Err(err) => {
-                    return CtxResult::Err(StrErr(format!("{}.eval | Error unit: {err}", self.dbg)))
-                }
-            };
+            let bulk = Vec::<LoadBulkData>::new();
+            let gaseous = gaseous(); 
+            let unit = Vec::new();
+            let liquid = liquid();            
             initial_ctx.bounds = Some(bounds);
             initial_ctx.ship = Some(ship);
-            initial_ctx.ship_parameters = Some(ship_parameters.data());
+            initial_ctx.ship_parameters = Some(ship_parameters);
             initial_ctx.voyage = Some(voyage);
             initial_ctx.icing = Some(icing);
             initial_ctx.load_constant = Some(load_constant);

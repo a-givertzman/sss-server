@@ -374,10 +374,10 @@ impl Eval<(), EvalResult> for Initial {
             initial_ctx.voyage = Some(voyage);
             initial_ctx.icing = Some(icing);
             initial_ctx.load_constant = Some(load_constant);
-            initial_ctx.bulk = Some(bulk);
-            initial_ctx.liquid = Some(liquid);
-            initial_ctx.unit = Some(unit);
-            initial_ctx.gaseous = Some(gaseous);
+            initial_ctx.bulk = Some(bulk.data());
+            initial_ctx.liquid = Some(liquid.data());
+            initial_ctx.unit = Some(unit.data());
+            initial_ctx.gaseous = Some(gaseous.data());
             self.ctx.clone().write(initial_ctx.to_owned())
         })
     }

@@ -22,10 +22,10 @@ pub struct InitialCtx {
     /// Постоянная нагрузка на судно
     pub load_constant: Option<LoadConstantArray>,
     /// Переменная нагрузка на судно
-    pub bulk: Option<LoadBulkArray>,
-    pub liquid: Option<LoadLiquidArray>,
-    pub unit: Option<LoadUnitArray>,
-    pub gaseous: Option<LoadGaseousArray>,
+    pub bulk: Option<Vec::<LoadBulkData>>,
+    pub liquid: Option<Vec::<LoadLiquidData>>,
+    pub unit: Option<Vec::<LoadUnitData>>,
+    pub gaseous: Option<Vec::<LoadGaseousData>>,
 }
 impl InitialCtx {
     ///

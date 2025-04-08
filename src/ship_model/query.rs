@@ -6,7 +6,7 @@ use crate::algorithm::entities::Moment;
 #[derive(Debug, Clone)]
 pub struct LiquidData {
     pub cargo_id: usize, // ID груза
-    pub space_id: usize, // ID помещения
+    pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
 }
@@ -14,7 +14,7 @@ pub struct LiquidData {
 #[derive(Debug, Clone)]
 pub struct BulkData {
     pub cargo_id: usize, // ID груза
-    pub space_id: usize, // ID помещения
+    pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
 }

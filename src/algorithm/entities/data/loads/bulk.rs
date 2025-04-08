@@ -10,9 +10,9 @@ pub struct LoadBulkData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: usize,
+    pub space_id: String,
     /// Имя помещения
-    pub space_name: usize,
+    pub space_name: String,
     /// ID assigned
     pub assigned_id: usize,
     /// Тип назначения груза
@@ -40,7 +40,7 @@ impl LoadBulkData {
         };
         BulkData {
             cargo_id: self.cargo_id,
-            space_id: self.space_id,
+            space_id: self.space_id.clone(),
             mass: self.mass,
             volume,
         }
