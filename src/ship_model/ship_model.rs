@@ -9,9 +9,12 @@ use crate::{
     infrostructure::api::client::api_client::ApiClient, kernel::types::fx_map::FxIndexMap,
 };
 use coco::Stack;
+use sal_core::error::Error;
 use sal_sync::services::entity::{
-    error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId,
+    name::Name, point::point_tx_id::PointTxId,
 };
+use std::thread;
+use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
     sync::{
@@ -21,7 +24,6 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tokio::task::JoinHandle;
 ///
 ///
 pub struct ShipModel {
@@ -77,7 +79,7 @@ impl ShipModel {
     }
     ///
     /// Returns connected `Link`
-    pub async fn link(&self) -> ModelLink {
+    pub fn link(&self) -> ModelLink {
         let (loc_send, rem_recv) = mpsc::channel();
         let (rem_send, loc_recv) = mpsc::channel();
         let receivers = self.clients.clone();
@@ -99,8 +101,9 @@ impl ShipModel {
     }
     ///
     /// Entry point
-    pub async fn run(&self) -> Result<JoinHandle<()>, StrErr> {
+    pub fn run(&self) -> Result<JoinHandle<()>, Error> {
         let dbg = self.name.join();
+        let error = Error::new(&dbg, "run");
         log::info!("{}.run | Starting...", dbg);
         let timeout = self.timeout;
         let interval = self.timeout; //Duration::from_millis(1000);
@@ -113,9 +116,9 @@ impl ShipModel {
         let n_parts = self.n_parts;
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
-            Err(err) => return Err(StrErr(format!("ShipModel get_bounds error: {err}"))),
+            Err(err) => return Err(error.pass_with("get_bounds error", err)),
         };
-        let handle = tokio::task::spawn_blocking(move || {
+        let handle = thread::Builder::new().name(dbg.clone()).spawn(move || {
             log::debug!("{}.run | Locals | Start", dbg);
             let mut clients = FxIndexMap::default();
             'main: loop {
@@ -182,7 +185,7 @@ impl ShipModel {
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);
-        Ok(handle)
+        handle.map_err(|err|error.pass(err.to_string()))
     }
     ///
     /// Sends "exit" signal to the service's task
@@ -207,12 +210,14 @@ impl Debug for ShipModel {
     }
 }
 ///
+/// Type doc comment
 fn get_bounds(
     api_client: &ApiClient,
     ship_id: usize,
     project_id: String,
     n_parts: usize,
-) -> Result<Bounds, StrErr> {
+) -> Result<Bounds, Error> {
+    let error = Error::new("ShipModel", "get_bounds");
     let data = api_client.fetch(&format!(
             "SELECT index, start_x, end_x FROM computed_frame_space WHERE n_parts = {n_parts} AND ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
         ));
@@ -221,7 +226,7 @@ fn get_bounds(
             // TODO: если шпации для разбиения на n_parts есть, значит есть кэш для этого разбиения - читаем их 
             match ComputedFrameDataArray::parse(&data) {
                 Ok(data) => data.data(),
-                Err(err) => return Err(StrErr(format!("ShipModel get_bounds parse error: {err}"))),
+                Err(err) => return Err(error.pass_with("parse error", err)),
             }
         },
         Err(err1) => { 
@@ -233,24 +238,22 @@ fn get_bounds(
                 Ok(data) => {
                     let physical_frames = match PhysicalFrameArray::parse(&data) {
                         Ok(data) => data.data(),
-                        Err(err2) => return Err(StrErr(format!("ShipModel get_bounds error: {err1}, physical_frames parse error: {err2}"))),
+                        Err(err2) => return Err(error.pass(format!("error: {err1}, physical_frames parse error: {err2}"))),
                     };
                     if let (Some(bow_x), Some(stern_x)) = (physical_frames.first(), physical_frames.last()) {
                         return match Bounds::from_min_max(stern_x.1, bow_x.1, n_parts) {
                             Ok(bounds) => Ok(bounds),
                             Err(err2) => {
-                                return Err(StrErr(format!(
-                                    "ShipModel get_bounds error: {err1}, create_bounds error: {err2}"
-                                )))
+                                return Err(error.pass(format!("error: {err1}, create_bounds error: {err2}")))
                             }
                         };
                     } else {
-                        return Err(StrErr(format!("ShipModel get_bounds error: {err1}, can't get bow_x, stern_x!")));
+                        return Err(error.pass(format!("error: {err1}, can't get bow_x, stern_x!")));
                     };
                 }
                 Err(err2) => {
-                    return Err(StrErr(format!(
-                        "ShipModel get_bounds error: {err1}, physical_frames error: {err2}"
+                    return Err(error.pass(format!(
+                        "error: {err1}, physical_frames error: {err2}"
                     )))
                 }
             };
@@ -258,12 +261,14 @@ fn get_bounds(
     };
     let bounds: Bounds = match Bounds::from_frames(&bounds) {
         Ok(data) => data,
-        Err(err) => return Err(StrErr(format!("ShipModel get_bounds error: {err}"))),
+        Err(err) => return Err(error.pass(err)),
     };
     Ok(bounds)
 }
 ///
-fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
+/// Type doc comment
+fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>), Error> {
+    let error = Error::new("ShipModel", "areas_strength");
     /*     let area_h_str = HStrAreaArray::parse(
                &api_client
                    .fetch(&format!(
@@ -309,6 +314,6 @@ fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>)
     Ok((area_v_str, area_h_str))
 }
 //
-fn compute_balance(bounds: Bounds, src_data: BalanceSrcData, ship_id: usize) -> Result<BalanceResultData, StrErr> {
+fn compute_balance(bounds: Bounds, src_data: BalanceSrcData, ship_id: usize) -> Result<BalanceResultData, Error> {
     todo!()
 }

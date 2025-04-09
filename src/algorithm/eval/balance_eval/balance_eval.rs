@@ -18,7 +18,7 @@ pub struct BalanceEval {
     dbg: Dbg,
     model: ModelLink,
     value: Option<BalanceCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -27,7 +27,7 @@ impl BalanceEval {
     pub fn new(
         parent: impl Into<String>,
         model: ModelLink,
-        ctx: impl Eval<(), EvalResult> + Send + 'static,
+        ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "BalanceEval");
         Self {

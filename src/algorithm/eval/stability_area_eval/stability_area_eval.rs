@@ -9,13 +9,13 @@ pub struct StabilityAreaEval {
     dbg: DbgId,
     model: ModelLink,
     value: Option<AreaCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
 impl StabilityAreaEval {
     ///
-    pub fn new(parent: impl Into<String>, model: ModelLink, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, model: ModelLink, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "Area");
         Self {
             dbg,

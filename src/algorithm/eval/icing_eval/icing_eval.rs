@@ -14,7 +14,7 @@ use sal_core::{dbg::Dbg, error::Error};
 pub struct IcingEval {
     dbg: Dbg,
     value: Option<IcingCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -22,7 +22,7 @@ impl IcingEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + Send + 'static,
+        ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "IcingEval");
         Self {

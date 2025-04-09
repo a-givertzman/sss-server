@@ -70,7 +70,7 @@ impl Link {
     /// - Sends a request, 
     /// - Await reply,
     /// - Returns parsed reply
-    pub fn req<T: DeserializeOwned + Debug + Send>(&self, query: impl Serialize + Debug) -> Result<T, Error> {
+    pub fn req<T: DeserializeOwned + Debug>(&self, query: impl Serialize + Debug) -> Result<T, Error> {
         let error = Error::new(&self.name, "req");
         match serde_json::to_string(&query) {
             Ok(query) => {

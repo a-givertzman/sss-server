@@ -1,6 +1,7 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, time::{Duration, Instant}};
 use coco::Stack;
-use sal_sync::services::entity::{cot::Cot, error::str_err::StrErr, name::Name, point::{point::Point, point_tx_id::PointTxId}};
+use sal_core::error::Error;
+use sal_sync::services::entity::{cot::Cot, name::Name, point::{point::Point, point_tx_id::PointTxId}};
 use tokio::task::JoinSet;
 use crate::kernel::types::fx_map::{FxDashMap, FxIndexMap};
 use super::link::Link;
@@ -78,7 +79,7 @@ impl Switch {
     }
     ///
     /// Returns connected `Link`
-    pub async fn link(&self) -> Link {
+    pub fn link(&self) -> Link {
         let (loc_send, rem_recv) = mpsc::channel();
         let (rem_send, loc_recv) = mpsc::channel();
         let remote = Link::new(&format!("{}:{}", self.name, self.subscribers.len()), rem_send, rem_recv);
@@ -87,16 +88,14 @@ impl Switch {
         let receivers = self.receivers.clone();
         let len = receivers.load(Ordering::SeqCst);
         self.receivers_tx.send((key, loc_recv)).unwrap();
-        let _ = tokio::task::spawn_blocking(async move || {
-            while len == receivers.load(Ordering::SeqCst) {
-                tokio::time::sleep(Duration::from_millis(3));
-            }
-        });
+        while len == receivers.load(Ordering::SeqCst) {
+            std::thread::sleep(Duration::from_millis(3));
+        }
         remote
     }
     ///
     /// Entry point
-    pub async fn run(&self) -> Result<JoinSet<()>, StrErr> {
+    pub fn run(&self) -> Result<JoinSet<()>, Error> {
         let dbg = self.name.join();
         log::info!("{}.run | Remote | Starting...", dbg);
         let subscribers = self.subscribers.clone();

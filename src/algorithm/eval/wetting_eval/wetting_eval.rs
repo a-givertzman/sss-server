@@ -17,13 +17,13 @@ use super::wetting_ctx::WettingCtx;
 pub struct WettingEval {
     dbg: Dbg,
     value: Option<WettingCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
 impl WettingEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "WettingEval");
         Self {
             dbg,

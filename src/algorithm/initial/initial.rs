@@ -32,14 +32,14 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Box<dyn TmpModelLink>, 
+        model: impl TmpModelLink + 'static, 
         api_client: ApiClient,
         ctx: Context,
     ) -> Self {
         let dbg = Dbg::new(parent, "Initial");
         Self {
             dbg,
-            model,
+            model: Box::new(model),
             api_client,
             ctx,
         }
@@ -102,7 +102,7 @@ impl Eval<(), EvalResult> for Initial {
                 Err(err) => {
                     return CtxResult::Err(error.pass_with("Error ship", err))
                 }
-            },
+            }
             Err(err) => {
                 return CtxResult::Err(error.pass_with("Error ship", err))
             }

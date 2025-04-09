@@ -14,7 +14,7 @@ use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use infrostructure::{api::client::api_client::ApiClient, query::restart_eval::RestartEvalQuery};
+use infrostructure::api::client::api_client::ApiClient;
 use kernel::{
     eval::Eval, run::Run,
 };
@@ -25,8 +25,7 @@ use prelude::*;
 /// Application entry point
 // #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
 // #[tokio::main]
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     let dbg = DbgId("main".into());
     let path = "config.yaml";
@@ -86,6 +85,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .eval(())
     ;
     ship_model.exit();
-    ship_model_handle.unwrap();
+    ship_model_handle.join().unwrap();
     Ok(())
 }

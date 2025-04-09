@@ -1,5 +1,5 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use api_tools::error::str_err::StrErr;
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::{data::DataArray, Bound};
 /// Груз, приходящийся на шпацию
@@ -14,7 +14,7 @@ pub struct LoadConstantData {
 //
 impl LoadConstantData {
     //
-    pub fn mass(&self, bound_x: &Bound) -> Result<f64, StrErr> {
+    pub fn mass(&self, bound_x: &Bound) -> Result<f64, Error> {
         Ok(self.mass*Bound::new(self.bound_x1, self.bound_x2)?.part_ratio(bound_x)?)
     }
 }

@@ -13,13 +13,13 @@ use super::mass_ctx::MassCtx;
 pub struct MassEval {
     dbg: Dbg,
     value: Option<MassCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
 impl MassEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "MassEval");
         Self {
             dbg,

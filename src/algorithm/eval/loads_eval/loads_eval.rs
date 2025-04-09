@@ -14,13 +14,13 @@ use sal_core::{dbg::Dbg, error::Error};
 pub struct LoadsEval {
     dbg: Dbg,
     value: Option<LoadsCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
 impl LoadsEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "LoadsEval");
         Self {
             dbg,

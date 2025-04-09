@@ -13,13 +13,13 @@ use crate::{
 pub struct IcingStabEval {
     dbg: Dbg,
     value: Option<IcingStabCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
 impl IcingStabEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "IcingStabEval");
         Self {
             dbg,

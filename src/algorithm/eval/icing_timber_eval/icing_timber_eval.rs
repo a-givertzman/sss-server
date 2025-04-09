@@ -12,7 +12,7 @@ use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
 pub struct IcingTimberEval {
     dbg: Dbg,
     value: Option<IcingTimberCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -20,7 +20,7 @@ impl IcingTimberEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + Send + 'static,
+        ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "IcingTimberEval");
         Self {

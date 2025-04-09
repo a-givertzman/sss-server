@@ -118,7 +118,7 @@ impl IModelLink for ModelLink {
                     self.name,
                     Query::ComputeBalance(data)
                 );
-                tokio::task::block_in_place(move || match &self.recv {
+                match &self.recv {
                     Some(recv) => match recv.recv_timeout(timeout) {
                         Ok(reply) => {
                             log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
@@ -130,18 +130,12 @@ impl IModelLink for ModelLink {
                                 ),
                             }
                         }
-                        _ => Err(StrErr(format!(
-                            "{}.req | Request timeout ({:?})",
-                            self.name, timeout
-                        ))),
+                        _ => Err(error.err(format!("Request timeout ({:?})", timeout))),
                     },
                     None => todo!(),
-                })
+                }
             }
-            Err(err) => Err(StrErr(format!(
-                "{}.req | Send request error: {:#?}",
-                self.name, err
-            ))),
+            Err(err) => Err(error.pass_with("Send request error: {:#?}", err.to_string())),
         }
     }
 }

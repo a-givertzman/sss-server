@@ -19,7 +19,7 @@ use super::sync::link::Link;
 /// ```
 pub struct Request<In, T> {
     link: Stack<Link>,
-    op: Box<dyn AsyncFn<In, T> + Send + Sync>,
+    op: Box<dyn AsyncFn<In, T> + Sync>,
 }
 //
 //
@@ -28,7 +28,7 @@ impl<In, T> Request<In, T> {
     /// Returns [Request] new instance
     /// - `link` - `Link` - communication entity
     /// - `op` - the body of the request
-    pub fn new(link: Link, op: impl AsyncFn<In, T> + Send + Sync + 'static) -> Self {
+    pub fn new(link: Link, op: impl AsyncFn<In, T> + Sync + 'static) -> Self {
         let stack = Stack::new();
         stack.push(link);
         Self {
@@ -55,7 +55,7 @@ pub trait AsyncFn<In, Out> {
 impl<T, F, In, Out> AsyncFn<In, Out> for T
 where
     T: Fn(In, Link) -> F,
-    F: std::future::Future<Output = (Out, Link)> + Send + 'static,
+    F: std::future::Future<Output = (Out, Link)> + 'static,
 {
     fn eval(&self, val: In, link: Link) -> BoxFuture<'_, (Out, Link)> {
         Box::pin(self(val, link))

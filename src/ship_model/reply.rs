@@ -1,24 +1,37 @@
-use sal_sync::services::entity::error::str_err::StrErr;
+use sal_core::error::Error;
 
 use crate::algorithm::entities::{parameters::ParameterID, Bounds, Position};
 ///
+/// Type doc here
 #[derive(Debug, Clone)]
 pub struct LiquidData {
-    pub cargo_id: usize, // ID груза
-    pub space_id: usize, // ID помещения
-    pub mass_shift: Position, // смещение центра массы
-    pub long_moment_of_inertia: f64, // продольный момент свободной поверхности жидкости
-    pub trans_moment_of_inertia: f64, // поперечный момент свободной поверхности жидкости
-    pub mass_values: Vec<(usize, f64)>, // Распределение массы по шпациям, (index, value)
+    /// ID груза
+    pub cargo_id: usize,
+    /// ID помещения
+    pub space_id: usize,
+    /// смещение центра массы
+    pub mass_shift: Position,
+    /// продольный момент свободной поверхности жидкости
+    pub long_moment_of_inertia: f64,
+    /// поперечный момент свободной поверхности жидкости
+    pub trans_moment_of_inertia: f64,
+    /// Распределение массы по шпациям, (index, value)
+    pub mass_values: Vec<(usize, f64)>,
 }
 ///
+/// Type doc here
 #[derive(Debug, Clone)]
 pub struct BulkData {
-    pub cargo_id: usize, // ID груза
-    pub space_id: usize, // ID помещения
-    pub mass_shift: Position, // смещение центра массы
-    pub mass_values: Vec<(usize, f64)>, // Распределение массы по шпациям, (index, value)
+    /// ID груза
+    pub cargo_id: usize,
+    /// ID помещения
+    pub space_id: usize,
+    /// смещение центра массы
+    pub mass_shift: Position,
+    /// Распределение массы по шпациям, (index, value)
+    pub mass_values: Vec<(usize, f64)>,
 }
+///
 /// Структура результатов расчета баланса судна
 #[derive(Debug, Clone)]
 pub struct BalanceResultData {
@@ -34,8 +47,7 @@ pub struct BalanceResultData {
 /// Replies from the `ShipModel`
 #[derive(Debug)]
 pub enum Reply {
-
     Bounds(Bounds),
-    BoundAreas(Result<(Vec<f64>, Vec<f64>), StrErr>),
-    ComputeBalance(Result<BalanceResultData, StrErr>),
+    BoundAreas(Result<(Vec<f64>, Vec<f64>), Error>),
+    ComputeBalance(Result<BalanceResultData, Error>),
 }

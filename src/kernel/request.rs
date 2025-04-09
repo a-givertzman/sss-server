@@ -15,7 +15,7 @@ use crate::{algorithm::context::context::Context, kernel::sync::link::Link};
 /// )
 /// ```
 pub struct Request<T> {
-    op: Box<dyn Fn(&Context, Link) -> T + Send + Sync>,
+    op: Box<dyn Fn(&Context, Link) -> T>,
 }
 //
 //
@@ -23,7 +23,7 @@ impl<T> Request<T> {
     ///
     /// Returns [Request] new instance
     /// - `op` - the body of the request
-    pub fn new(op: impl Fn(&Context, Link) -> T + Send + Sync + 'static) -> Self {
+    pub fn new(op: impl Fn(&Context, Link) -> T + 'static) -> Self {
         Self { op: Box::new(op) }
     }
     ///
