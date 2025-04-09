@@ -59,7 +59,7 @@ mod request {
             let mut ctx = Context::new(initial.clone());
             ctx.testing = Some(TestingCtx { mok_user_reply: value });
             let ctx = ctx.testing.unwrap().mok_user_reply;
-            let result = request.fetch(ctx).await;
+            let result = request.fetch(ctx);
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
         test_duration.exit();

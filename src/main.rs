@@ -46,12 +46,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         n_parts,
         ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
     );
-    let ship_model_handle = ship_model.run().await.unwrap();
+    let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
     let _result =     
     BalanceEval::new(
         &dbg,  
-        ship_model.link().await,
+        ship_model.link(),
         LoadsEval::new(
             &dbg,        
             WettingEval::new(
@@ -60,14 +60,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &dbg,
                     StrengthAreaEval::new(
                         &dbg,
-                        ship_model.link().await,
+                        ship_model.link(),
                         IcingTimberEval::new(
                             &dbg,
                             IcingStabEval::new(
                                 &dbg,
                                 Initial::new(
                                     &dbg,
-                                    ship_model.link().await,
+                                    ship_model.link(),
                                     ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
                                     Context::new(
                                         InitialCtx::new(
@@ -84,8 +84,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .eval(())
-    .await;
+    ;
     ship_model.exit();
-    ship_model_handle.await.unwrap();
+    ship_model_handle.unwrap();
     Ok(())
 }

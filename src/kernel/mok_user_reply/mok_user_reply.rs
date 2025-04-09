@@ -127,7 +127,7 @@ impl MokUserReply {
                     None
                 }
             }
-        }).await;
+        });
         // log::debug!("{}.run | Exit", dbg);
         handle
     }

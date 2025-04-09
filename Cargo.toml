@@ -1,7 +1,7 @@
 [package]
 name = "cdt-math"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 #
@@ -10,11 +10,11 @@ log = "^0.4"
 env_logger = "^0.11"
 #
 # Internal deps
-testing = { git = "https://github.com/a-givertzman/rust-testing.git" }
-# testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
+testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.0" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.3" }
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.4" }
 # sal-sync = { path = "../sal-sync" }
 #
 # Time
@@ -46,4 +46,4 @@ thiserror = "^2.0"
 splines = "^4.4"
 #
 # Helpful macros for working with enums and strings
-strum_macros = "^0.26"
+strum_macros = "^0.27"

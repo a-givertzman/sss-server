@@ -1,6 +1,9 @@
+//!
 //! Диапазон значений
-use api_tools::error::str_err::StrErr;
 
+use sal_core::error::Error;
+///
+/// Диапазон значений между двумя заданными
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Bound {
     None,
@@ -13,22 +16,20 @@ impl Bound {
     /// Основной конструктор  
     /// * start - начало диапазона
     /// * end - конец диапазона
-    pub fn new(start: f64, end: f64) -> Result<Self, StrErr> {
+    pub fn new(start: f64, end: f64) -> Result<Self, Error> {
         if end <= start {
-            return Err(StrErr::from(
-                "Bound new error: end <= start".to_string(),
-            ));
+            return Err(Error::from("Bound.new | error: end <= start"));
         }
         Ok(Self::Value(start, end))
     }
     /// Дополнительный конструктор  
     /// * (f64, f64) - (начало диапазона, конец диапазона)
     #[allow(unused)]
-    pub fn from(v: (f64, f64)) -> Result<Self, StrErr> {
+    pub fn from(v: (f64, f64)) -> Result<Self, Error> {
         Self::new(v.0, v.1)
     }
     /// Отношение общей части пересечения к длине диапазона
-    pub fn part_ratio(&self, other: &Bound) -> Result<f64, StrErr> {
+    pub fn part_ratio(&self, other: &Bound) -> Result<f64, Error> {
         Ok(match self.intersect(other)? {
             Bound::None => 0.,
             Bound::Full => 1.,
@@ -39,7 +40,7 @@ impl Bound {
         })
     }
     /// Пересечение c другим диапазоном, возвращает общий диапазон
-    pub fn intersect(&self, other: &Bound) -> Result<Bound, StrErr> {
+    pub fn intersect(&self, other: &Bound) -> Result<Bound, Error> {
         Ok(match self {
             Bound::None => Bound::None,
             Bound::Full => *other,

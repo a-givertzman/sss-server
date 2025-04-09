@@ -1,7 +1,7 @@
 //! Обледенение судна
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 
-use crate::kernel::error::error::Error;
 /// Тип обледенения судна
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IcingStabType {
@@ -19,7 +19,7 @@ impl IcingStabType {
             "full" => IcingStabType::Full,
             "half" => IcingStabType::Half,
             "none" => IcingStabType::None,
-            src => return Err(Error::FromString(format!("IcingStabType from_str error: no type {src}"))),
+            src => return Err(Error::from(format!("IcingStabType.from_str | error: no type {src}"))),
         })
     }
 }

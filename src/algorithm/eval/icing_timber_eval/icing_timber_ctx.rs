@@ -1,5 +1,5 @@
 //! Ограничение горизонтальной площади обледенения палубного груза - леса
-use api_tools::error::str_err::StrErr;
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::Bound;
 /// Тип обледенения горизонтальной площади палубного груза - леса
@@ -16,13 +16,13 @@ pub enum IcingTimberType {
 }
 //
 impl IcingTimberType {
-    pub fn from_str(src: &str) -> Result<Self, StrErr> {
+    pub fn from_str(src: &str) -> Result<Self, Error> {
         Ok(match src.trim().to_lowercase().as_str() {
             "full" => IcingTimberType::Full,
             "half left" => IcingTimberType::HalfLeft,
             "half right" => IcingTimberType::HalfRight,
             "bow" => IcingTimberType::Bow,
-            src => return Err(StrErr::from(format!("IcingTimberType from_str error: no type {src}"))),
+            src => return Err(Error::from(format!("IcingTimberType.from_str | from_str error: no type {src}"))),
         })
     }
 }
@@ -51,14 +51,14 @@ impl IcingTimberCtx {
         }
     }
     /// Ограничение по x
-    pub fn bound_x(&self) -> Result<Bound, StrErr> {
+    pub fn bound_x(&self) -> Result<Bound, Error> {
         Ok(match self.icing_timber_stab {
             IcingTimberType::Bow => Bound::new(self.length / 6., self.length / 2.)?,
             _ => Bound::Full,
         })
     }
     /// Ограничение по y
-    pub fn bound_y(&self) -> Result<Bound, StrErr> {
+    pub fn bound_y(&self) -> Result<Bound, Error> {
         Ok(match self.icing_timber_stab {
             IcingTimberType::HalfLeft => Bound::new(-self.width / 2., 0.)?,
             IcingTimberType::HalfRight => Bound::new(0., self.width / 2.)?,

@@ -1,5 +1,6 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, time::Duration};
-use sal_sync::services::entity::{cot::Cot, error::str_err::StrErr, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status};
+use sal_core::error::Error;
+use sal_sync::services::entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::task::JoinHandle;
 use crate::algorithm::context::ctx_result::CtxResult;
@@ -69,7 +70,8 @@ impl Link {
     /// - Sends a request, 
     /// - Await reply,
     /// - Returns parsed reply
-    pub async fn req<T: DeserializeOwned + Debug + Send>(&self, query: impl Serialize + Debug) -> Result<T, StrErr> {
+    pub fn req<T: DeserializeOwned + Debug + Send>(&self, query: impl Serialize + Debug) -> Result<T, Error> {
+        let error = Error::new(&self.name, "req");
         match serde_json::to_string(&query) {
             Ok(query) => {
                 let query = Point::String(PointHlr::new(
@@ -82,29 +84,27 @@ impl Link {
                 match self.send.send(query.clone()) {
                     Ok(_) => {
                         log::trace!("{}.req | Sent request: {:#?}", self.name, query);
-                        tokio::task::block_in_place(move|| {
-                            match &self.recv {
-                                Some(recv) => match recv.recv_timeout(timeout) {
-                                    Ok(reply) => {
-                                        log::trace!("{}.req | Received reply: {:#?}", self.name, reply);
-                                        let reply = reply.as_string().value;
-                                        match serde_json::from_str::<T>(reply.as_str()) {
-                                            Ok(reply) => {
-                                                Ok(reply)
-                                            }
-                                            Err(err) => Err(StrErr(format!("{}.req | Deserialize error for {:?} in {}, \n\terror: {:#?}", self.name, std::any::type_name::<T>(), reply, err))),
+                        match &self.recv {
+                            Some(recv) => match recv.recv_timeout(timeout) {
+                                Ok(reply) => {
+                                    log::trace!("{}.req | Received reply: {:#?}", self.name, reply);
+                                    let reply = reply.as_string().value;
+                                    match serde_json::from_str::<T>(reply.as_str()) {
+                                        Ok(reply) => {
+                                            Ok(reply)
                                         }
+                                        Err(err) => Err(error.pass_with(format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), reply), err.to_string())),
                                     }
-                                    _ => Err(StrErr(format!("{}.req | Request timeout ({:?})", self.name, timeout))),
                                 }
-                                None => todo!(),
+                                _ => Err(error.err(format!("{}.req | Request timeout ({:?})", self.name, timeout))),
                             }
-                        })
+                            None => todo!(),
+                        }
                     },
-                    Err(err) => Err(StrErr(format!("{}.req | Send request error: {:#?}", self.name, err))),
+                    Err(err) => Err(error.pass_with("Send request error", err.to_string())),
                 }
             }
-            Err(err) => Err(StrErr(format!("{}.req | Serialize query error: {:#?}, \n\tquery: {:#?}", self.name, err, query))),
+            Err(err) => Err(error.pass_with(format!("Serialize query error in query: {:#?}", query), err.to_string())),
         }
     }
     ///
@@ -112,7 +112,8 @@ impl Link {
     /// - Callback receives `Point`
     /// - Callback returns `Some<Point>` - to be sent
     /// - Callback returns None - nothing to be sent
-    pub async fn listen(&mut self, op: impl Fn(Point) -> Option<Point> + Send + 'static) -> Result<JoinHandle<()>, StrErr> {
+    pub fn listen(&mut self, op: impl Fn(Point) -> Option<Point> + Send + 'static) -> Result<JoinHandle<()>, Error> {
+        let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
         let send = self.send.clone();
         let recv = self.recv.take().unwrap();
@@ -126,7 +127,7 @@ impl Link {
                         log::trace!("{}.listen | Received query: {:#?}", dbg, query);
                         match (op)(query) {
                             Some(reply) => if let Err(err) = send.send(reply) {
-                                let err = StrErr(format!("{}.listen | Send request error: {:#?}", dbg, err));
+                                let err = error.pass_with("Send request error", err.to_string());
                                 log::error!("{}", err);
                             }
                             None => {}
@@ -157,7 +158,8 @@ impl Link {
     /// - Returns Ok<T> if channel has query
     /// - Returns None if channel is empty for now
     /// - Returns Err if channel is closed
-    pub async fn recv_query<T: DeserializeOwned + Debug>(&self) -> CtxResult<T, StrErr> {
+    pub fn recv_query<T: DeserializeOwned + Debug>(&self) -> CtxResult<T, Error> {
+        let error = Error::new(&self.name, "recv_query");
         let h = tokio::task::block_in_place(move|| {
             match &self.recv {
                 Some(recv) => match recv.recv_timeout(self.timeout) {
@@ -169,9 +171,9 @@ impl Link {
                                 return CtxResult::Ok(query)
                             }
                             Err(err) => CtxResult::Err(
-                                StrErr(
-                                    format!("{}.recv_query | Deserialize error for {:?} in {}, \n\terror: {:#?}",
-                                    self.name, std::any::type_name::<T>(), quyru, err),
+                                error.pass_with(
+                                    format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), quyru),
+                                    err.to_string()
                                 ),
                             ),
                         }
@@ -180,7 +182,7 @@ impl Link {
                         match err {
                             std::sync::mpsc::RecvTimeoutError::Timeout => CtxResult::None,
                             std::sync::mpsc::RecvTimeoutError::Disconnected => CtxResult::Err(
-                                StrErr(format!("{}.recv_query | Recv error: {:#?}", self.name, err)),
+                                error.pass_with("Recv error", err.to_string()),
                             ),
                         }
                     }
@@ -195,7 +197,8 @@ impl Link {
     /// - Returns Ok<T> if channel has query
     /// - Returns None if channel is empty for now
     /// - Returns Err if channel is closed
-    pub async fn recv_query_from<T: DeserializeOwned + Debug>(&self) -> CtxResult<(String, T), StrErr> {
+    pub fn recv_query_from<T: DeserializeOwned + Debug>(&self) -> CtxResult<(String, T), Error> {
+        let error = Error::new(&self.name, "recv_query_from");
         let h = tokio::task::block_in_place(move|| {
             match &self.recv {
                 Some(recv) => match recv.recv_timeout(self.timeout) {
@@ -208,9 +211,9 @@ impl Link {
                                 return CtxResult::Ok((name, query))
                             }
                             Err(err) => CtxResult::Err(
-                                StrErr(
-                                    format!("{}.recv_query_from | Deserialize error for {:?} in {}, \n\terror: {:#?}",
-                                    self.name, std::any::type_name::<T>(), quyru, err),
+                                error.pass_with(
+                                    format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), quyru),
+                                    err.to_string()
                                 ),
                             ),
                         }
@@ -219,7 +222,7 @@ impl Link {
                         match err {
                             std::sync::mpsc::RecvTimeoutError::Timeout => CtxResult::None,
                             std::sync::mpsc::RecvTimeoutError::Disconnected => CtxResult::Err(
-                                StrErr(format!("{}.recv_query_from | Recv error: {:#?}", self.name, err)),
+                                error.pass_with("Recv error", err.to_string()),
                             ),
                         }
                     }
@@ -231,16 +234,17 @@ impl Link {
     }
     ///
     /// Sending event
-    pub fn send_reply(&self, reply: impl Serialize + Debug) -> Result<(), StrErr> {
+    pub fn send_reply(&self, reply: impl Serialize + Debug) -> Result<(), Error> {
+        let error = Error::new(&self.name, "send_reply");
         match serde_json::to_string(&reply) {
             Ok(reply) => {
                 let reply = Point::new(self.txid, &self.name.join(), reply);
                 match self.send.send(reply) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(StrErr(format!("{}.reply | Send request error: {:#?}", self.name, err))),
+                    Err(err) => Err(error.pass_with("Send request error", err.to_string())),
                 }
             }
-            Err(err) => Err(StrErr(format!("{}.reply | Serialize reply error: {:#?}, \n\tquery: {:#?}", self.name, err, reply))),
+            Err(err) => Err(error.pass_with(format!("Serialize reply error in: {:#?}", reply), err.to_string())),
         }
     }
     ///

@@ -52,9 +52,9 @@ mod link_listen {
                 "Query-4" => Point::new(0, "name", serde_json::to_string(&Message("Reply-4".into())).unwrap()),
                 _ => panic!("Link.remote.listen | Unknown event {:#?}", query),
             })
-        }).await.unwrap();
+        }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, StrErr> = local.req(query).await;
+            let result: Result<Message, StrErr> = local.req(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -63,7 +63,7 @@ mod link_listen {
             }
         }
         remote.exit();
-        remote_handle.await.unwrap();
+        remote_handle.unwrap();
         log::debug!("{} | All - Done", dbg);
         test_duration.exit();
     }

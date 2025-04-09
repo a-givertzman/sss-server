@@ -91,10 +91,10 @@ impl ShipModel {
         self.clients_tx.send((key, loc_send, loc_recv)).unwrap();
         let _ = tokio::task::spawn_blocking(async move || {
             while len == receivers.load(Ordering::SeqCst) {
-                tokio::time::sleep(Duration::from_millis(3)).await;
+                tokio::time::sleep(Duration::from_millis(3));
             }
         })
-        .await;
+        ;
         remote
     }
     ///

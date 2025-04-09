@@ -1,14 +1,11 @@
-use crate::algorithm::entities::{Bounds, Position};
+use crate::algorithm::entities::Bounds;
+use sal_core::error::Error;
 use sal_sync::services::entity::{
-    error::str_err::StrErr, name::Name, point::point_tx_id::PointTxId,
+ name::Name, point::point_tx_id::PointTxId,
 };
 use std::{
     fmt::Debug,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc::{Receiver, Sender},
-        Arc,
-    },
+    sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
 
@@ -56,13 +53,15 @@ impl ModelLink {
 }
 //
 impl IModelLink for ModelLink {
+    ///
     /// - Returns computed ship frames
-    async fn bounds(&self) -> Result<Bounds, StrErr> {
+    fn bounds(&self) -> Result<Bounds, Error> {
+        let error = Error::new(&self.name, "bounds");
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::Bounds) {
             Ok(_) => {
                 log::debug!("{}.bounds | Sent request: {:#?}", self.name, Query::Bounds);
-                tokio::task::block_in_place(move || match &self.recv {
+                match &self.recv {
                     Some(recv) => match recv.recv_timeout(timeout) {
                         Ok(reply) => {
                             log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
@@ -71,22 +70,18 @@ impl IModelLink for ModelLink {
                                 _ => panic!("{}.bounds | Wrong reply: {:#?}", self.name, reply),
                             }
                         }
-                        Err(_) => Err(StrErr(format!(
-                            "{}.req | Request timeout ({:?})",
-                            self.name, timeout
-                        ))),
+                        Err(_) => Err(error.err(format!("Request timeout ({:?})", timeout))),
                     },
                     None => todo!(),
-                })
+                }
             }
-            Err(err) => Err(StrErr(format!(
-                "{}.req | Send request error: {:#?}",
-                self.name, err
-            ))),
+            Err(err) => Err(error.pass_with("Send request error", err.to_string())),
         }
     }
+    ///
     /// - Returns areas by ship frames
-    async fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
+    fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error> {
+        let error = Error::new(&self.name, "bound_areas");
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::BoundAreas) {
             Ok(_) => {
@@ -95,7 +90,7 @@ impl IModelLink for ModelLink {
                     self.name,
                     Query::BoundAreas
                 );
-                tokio::task::block_in_place(move || match &self.recv {
+                match &self.recv {
                     Some(recv) => match recv.recv_timeout(timeout) {
                         Ok(reply) => {
                             log::debug!("{}.req | Received reply: {:#?}", self.name, reply);
@@ -104,22 +99,17 @@ impl IModelLink for ModelLink {
                                 _ => panic!("{}.areas | Wrong reply: {:#?}", self.name, reply),
                             }
                         }
-                        _ => Err(StrErr(format!(
-                            "{}.req | Request timeout ({:?})",
-                            self.name, timeout
-                        ))),
+                        _ => Err(error.err(format!("Request timeout ({:?})", timeout))),
                     },
                     None => todo!(),
-                })
+                }
             }
-            Err(err) => Err(StrErr(format!(
-                "{}.req | Send request error: {:#?}",
-                self.name, err
-            ))),
+            Err(err) => Err(error.pass_with("Send request error: {:#?}", err.to_string())),
         }
     }
     /// - Returns areas by ship frames
-    async fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, StrErr> {
+    fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, Error> {
+        let error = Error::new(&self.name, "bound_areas");
         let timeout = Duration::from_secs(300);
         match self.send.send(Query::ComputeBalance(data.clone())) {
             Ok(_) => {
@@ -173,7 +163,7 @@ impl Debug for ModelLink {
 }
 //
 pub trait IModelLink {
-    async fn bounds(&self) -> Result<Bounds, StrErr>;
-    async fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr>;
-    async fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, StrErr>;
+    fn bounds(&self) -> Result<Bounds, Error>;
+    fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error>;
+    fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, Error>;
 }

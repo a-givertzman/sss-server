@@ -41,11 +41,11 @@ mod switch {
         ];
         let (switch, remote) = Switch::split(dbg);
         let mut listener = Listener::new(dbg, remote);
-        let local = switch.link().await;
-        let switch_handler = switch.run().await.unwrap();
-        let listener_handle = listener.run().await.unwrap();
+        let local = switch.link();
+        let switch_handler = switch.run().unwrap();
+        let listener_handle = listener.run().unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, StrErr> = local.req(query).await;
+            let result: Result<Message, StrErr> = local.req(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => {
@@ -57,9 +57,9 @@ mod switch {
         }
         log::debug!("{} | Exiting...", dbg);
         switch.exit();
-        switch_handler.join_all().await;
+        switch_handler.join_all();
         listener.exit();
-        listener_handle.await.unwrap();
+        listener_handle.unwrap();
         log::debug!("{} | Exiting - Ok", dbg);
         test_duration.exit();
     }
@@ -103,12 +103,12 @@ mod switch {
                         };
                     }
                     'main: loop {
-                        match link.recv_query::<String>().await {
+                        match link.recv_query::<String>() {
                             CtxResult::Ok(query) => match query.as_str() {
-                                "Query-1" => send_reply(&dbg, &mut link, "Reply-1").await,
-                                "Query-2" => send_reply(&dbg, &mut link, "Reply-2").await,
-                                "Query-3" => send_reply(&dbg, &mut link, "Reply-3").await,
-                                "Query-4" => send_reply(&dbg, &mut link, "Reply-4").await,
+                                "Query-1" => send_reply(&dbg, &mut link, "Reply-1"),
+                                "Query-2" => send_reply(&dbg, &mut link, "Reply-2"),
+                                "Query-3" => send_reply(&dbg, &mut link, "Reply-3"),
+                                "Query-4" => send_reply(&dbg, &mut link, "Reply-4"),
                                 _ => panic!("Unknown Query: {:?}", query)
                             }
                             CtxResult::Err(err) => {
