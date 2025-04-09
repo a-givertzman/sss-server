@@ -1,18 +1,14 @@
 
 use crate::algorithm::entities::data::loads::*;
-use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::{Bounds, Position};
+use crate::algorithm::entities::Bounds;
 use crate::prelude::InitialCtx;
-use crate::ship_model::model_link::ModelLink;
 use crate::{
     algorithm::context::{
             context::Context,
             context_access::{ContextReadRef, ContextWrite},
-            ctx_result::CtxResult,
         },
     kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
 };
-use sal_sync::services::entity::error::str_err::StrErr;
 
 use super::data::*;
 
@@ -39,8 +35,6 @@ impl FakeInitial {
             ctx,
         }
     }
-    //
-    //
 }
 //
 impl Eval<(), EvalResult> for FakeInitial {
@@ -54,7 +48,7 @@ impl Eval<(), EvalResult> for FakeInitial {
             let ship_parameters = ship_parameters();
             let voyage = voyage();
             let icing = icing();
-            let load_constant = load_constant::load_constant();
+            let load_constant = load_constant();
             let bulk = Vec::<LoadBulkData>::new();
             let gaseous = gaseous(); 
             let unit = Vec::new();
