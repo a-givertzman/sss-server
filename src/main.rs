@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &dbg,   
                 IcingEval::new(
                     &dbg,
-                    StrengthAreaEval::new(
+                    StrengthAreaEval::new( 
                         &dbg,
                         ship_model.link(),
                         IcingTimberEval::new(
