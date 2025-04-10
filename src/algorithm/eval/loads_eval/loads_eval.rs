@@ -69,13 +69,13 @@ impl Eval<(), EvalResult> for LoadsEval {
                     }
                 };
                 let bulk: Vec<_> = match initial.bulk.clone() {
-                    Some(data) => data.data().iter().map(|v| v.data()).collect(),
+                    Some(data) => data.iter().map(|v| v.data()).collect(),
                     None => {
                         return CtxResult::Err(error.err("Read bulk error: no data!"))
                     }
                 };
                 let liquid: Vec<_> = match initial.liquid.clone() {
-                    Some(data) => data.data().iter().map(|v| v.data()).collect(),
+                    Some(data) => data.iter().map(|v| v.data()).collect(),
                     None => {
                         return CtxResult::Err(error.err("Read liquid error: no data!"))
                     }
@@ -83,7 +83,7 @@ impl Eval<(), EvalResult> for LoadsEval {
 
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {
-                        let unit = data.data();
+                        let unit = data;
                         let grain_bulkhead: Vec<_> = unit
                             .iter()
                             .filter(|v| {
@@ -116,7 +116,6 @@ impl Eval<(), EvalResult> for LoadsEval {
                 };
                 let (mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
                     Some(data) => data
-                        .data()
                         .iter()
                         .filter_map(|v| match v.mass_shift {
                             Some(mass_shift) => Some((v.mass, mass_shift)),

@@ -47,7 +47,7 @@ impl Eval<(), EvalResult> for WettingEval {
                     }
                 };
                 let unit = match initial.unit.as_ref() {
-                    Some(data) => &data.data(),
+                    Some(data) => data,
                     None => {
                         return CtxResult::Err(error.err("Read unit error: no data!"))
                     }

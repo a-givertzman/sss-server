@@ -1,6 +1,7 @@
 #[cfg(test)]
 
 mod tests {
+    use api_tools::debug::dbg_id::DbgId;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;

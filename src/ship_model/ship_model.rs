@@ -287,7 +287,7 @@ fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>)
                    .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?,
            )
            .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?;
-    */
+   
     let area_h_str: Vec<_> = area_h_str::area_h_str()
         .data()
         .into_iter()
@@ -311,7 +311,8 @@ fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>)
             )
         })
         .collect();
-    Ok((area_v_str, area_h_str))
+    Ok((area_v_str, area_h_str)) */
+    Ok((Vec::new(), Vec::new()))
 }
 //
 fn compute_balance(bounds: Bounds, src_data: BalanceSrcData, ship_id: usize) -> Result<BalanceResultData, Error> {
