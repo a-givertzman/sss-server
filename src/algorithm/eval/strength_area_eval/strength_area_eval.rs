@@ -46,7 +46,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
-                    Some(data) => data.data().into_iter().filter(|v| v.icing_area.is_some()).collect(),
+                    Some(data) => data.into_iter().filter(|v| v.icing_area.is_some()).collect(),
                     None => {
                         return CtxResult::Err(error.err("Read unit error: no data!"))
                     }
@@ -85,10 +85,10 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 // Границы грузов
                 let min_x = unit.iter()
                     .filter_map(|v| v.bound_x1)
-                    .min_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                    .min_by(|a, b| a.partial_cmp(&b).unwrap());
                 let max_x = unit.iter()
                     .filter_map(|v| v.bound_x2)
-                    .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                    .max_by(|a, b| a.partial_cmp(&b).unwrap());
                 // Если есть границы грузов ищем распределения площадей грузов
                 if let (Some(min_x), Some(max_x)) = (min_x, max_x) { 
                     // Диапазон грузов по оси Х
@@ -146,7 +146,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 let mut area_h_values = Vec::new();
                 for (i, bound_x) in bounds.iter().enumerate() { 
                     // Площадь парусности корпуса, попадающая в текущую шпацию
-                    let mut current_area = match const_area_h.get(i) {
+                    let current_area = match const_area_h.get(i) {
                         Some(&data) => data,
                         None => {
                             return CtxResult::Err(error.err(format!("area_h.get error: no value for bound {i}")));

@@ -50,13 +50,13 @@ impl Eval<(), EvalResult> for IcingEval {
                 let icing_stab: IcingStabCtx = ctx.read();
                 let mut mass_values = Vec::new();
             //    let mut mass_moment_x_sum = 0.;
-                for (i, bound) in bounds.iter().enumerate() { 
-                    let current_x = match bound.center() {
+                for (i, _) in bounds.iter().enumerate() { 
+                /*    let current_x = match bound.center() {
                         Some(data) => data,
                         None => {
                             return CtxResult::Err(error.err(format!("bound.center error: no center for bound {i}")));
                         }
-                    };
+                    };*/
                     let current_area_h = match area_strength.area_h_values.get(i) {
                         Some(&data) => data,
                         None => {

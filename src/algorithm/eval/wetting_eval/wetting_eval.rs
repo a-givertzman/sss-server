@@ -1,6 +1,6 @@
 //! Учет намокания груза
 use crate::algorithm::context::context_access::*;
-use crate::algorithm::entities::{bound, Bound, Moment, Position};
+use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -47,7 +47,7 @@ impl Eval<(), EvalResult> for WettingEval {
                     }
                 };
                 let unit = match initial.unit.as_ref() {
-                    Some(data) => &data.data(),
+                    Some(data) => data,
                     None => {
                         return CtxResult::Err(error.err("Read unit error: no data!"))
                     }

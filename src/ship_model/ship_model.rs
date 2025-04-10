@@ -266,26 +266,22 @@ fn get_bounds(
 }
 ///
 /// Type doc comment
-    fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<(Vec<f64>, Vec<f64>), Error> {
+fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<(Vec<f64>, Vec<f64>), Error> {
     let error = Error::new("ShipModel", "areas_strength");
     let area_h_str = HStrAreaArray::parse(
-               &api_client
-                   .fetch(&format!(
-               "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
-               ship_id
-           ))
-                   .map_err(|e| error.pass(e.to_string()))?,
-           )?;
-        //    .map_err(|e| error.pass(e))?;
-           let area_v_str = strength::VerticalAreaArray::parse(
-               &api_client
-                   .fetch(&format!(
-               "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
-               ship_id
-           ))
-                   .map_err(|e| error.pass(e.to_string()))?,
-           )?;
-        //    .map_err(|e| error.pass(e))?;
+        &api_client.fetch(&format!(
+            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
+            ship_id
+        ))
+        .map_err(|e| error.pass(e.to_string()))?,
+    )?;
+    let area_v_str = strength::VerticalAreaArray::parse(
+        &api_client.fetch(&format!(
+            "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
+            ship_id
+        ))
+        .map_err(|e| error.pass(e))?,
+    )?;
     let area_h_str: Vec<_> = area_h_str
         .data()
         .into_iter()

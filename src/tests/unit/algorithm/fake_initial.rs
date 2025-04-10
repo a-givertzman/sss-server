@@ -51,7 +51,7 @@ impl Eval<(), EvalResult> for FakeInitial {
         let voyage = voyage();
         let icing = icing();
         let load_constant = load_constant();
-        let bulk = Vec::<LoadBulkData>::new();
+        let bulk = Vec::new();
         let gaseous = gaseous(); 
         let unit = Vec::new();
         let liquid = liquid();            
