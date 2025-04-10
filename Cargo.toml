@@ -34,11 +34,6 @@ rustc-hash = "^2.1"
 coco = "^0.3"
 dashmap = "^6.1"
 #
-# Async runtime engin
-tokio = { version = "1", features = ["full"] }
-tokio-stream = "0.1"
-futures = "^0.3"
-#
 # Error
 thiserror = "^2.0"
 #

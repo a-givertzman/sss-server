@@ -2,11 +2,11 @@
 
 mod link_listen {
     use std::{sync::Once, time::Duration};
-    use sal_sync::services::entity::{error::str_err::StrErr, point::point::Point};
+    use sal_core::error::Error;
+    use sal_sync::services::entity::point::point::Point;
     use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-
     use crate::kernel::sync::link::Link;
     ///
     ///
@@ -24,8 +24,7 @@ mod link_listen {
     fn init_each() -> () {}
     ///
     /// Testing 'Request::fetch'
-    #[tokio::test(flavor = "multi_thread")]
-    async fn listen() {
+    fn listen() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
@@ -34,7 +33,7 @@ mod link_listen {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(dbg, Duration::from_secs(5));
         test_duration.run().unwrap();
-        let test_data: [(i32, Message, Result<Message, StrErr>); 4] = [
+        let test_data: [(i32, Message, Result<Message, Error>); 4] = [
             (1, Message("Query-1".into()), Ok(Message("Reply-1".into()))),
             (2, Message("Query-2".into()), Ok(Message("Reply-2".into()))),
             (3, Message("Query-3".into()), Ok(Message("Reply-3".into()))),
@@ -54,7 +53,7 @@ mod link_listen {
             })
         }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, StrErr> = local.req(query);
+            let result: Result<Message, Error> = local.req(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -63,7 +62,7 @@ mod link_listen {
             }
         }
         remote.exit();
-        remote_handle.unwrap();
+        remote_handle.join().unwrap();
         log::debug!("{} | All - Done", dbg);
         test_duration.exit();
     }

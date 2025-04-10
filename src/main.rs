@@ -23,8 +23,6 @@ use prelude::*;
 
 ///
 /// Application entry point
-// #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-// #[tokio::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     let dbg = DbgId("main".into());

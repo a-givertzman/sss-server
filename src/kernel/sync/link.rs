@@ -1,8 +1,7 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::JoinHandle, time::Duration};
 use sal_core::error::Error;
 use sal_sync::services::entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status};
 use serde::{de::DeserializeOwned, Serialize};
-use tokio::task::JoinHandle;
 use crate::algorithm::context::ctx_result::CtxResult;
 ///
 /// Contains local side `send` & `recv` of `channel`
@@ -120,7 +119,7 @@ impl Link {
         let timeout = self.timeout;
         let exit = self.exit.clone();
         log::debug!("{}.listen | Starting...", dbg);
-        let handle = tokio::task::spawn_blocking(move|| {
+        let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
             'main: loop {
                 match recv.recv_timeout(timeout) {
                     Ok(query) => {
@@ -150,8 +149,9 @@ impl Link {
             log::debug!("{}.listen | Exit", dbg);
         });
         let dbg = self.name.join();
+        let error = Error::new(&self.name, "listen");
         log::debug!("{}.listen | Starting - Ok", dbg);
-        Ok(handle)
+        handle.map_err(|err| error.pass(err.to_string()))
     }
     ///
     /// Receiving incomong events
@@ -160,37 +160,34 @@ impl Link {
     /// - Returns Err if channel is closed
     pub fn recv_query<T: DeserializeOwned + Debug>(&self) -> CtxResult<T, Error> {
         let error = Error::new(&self.name, "recv_query");
-        let h = tokio::task::block_in_place(move|| {
-            match &self.recv {
-                Some(recv) => match recv.recv_timeout(self.timeout) {
-                    Ok(query) => {
-                        log::trace!("{}.recv_query | Received query: {:#?}", self.name, query);
-                        let quyru = query.as_string().value;
-                        match serde_json::from_str::<T>(quyru.as_str()) {
-                            Ok(query) => {
-                                return CtxResult::Ok(query)
-                            }
-                            Err(err) => CtxResult::Err(
-                                error.pass_with(
-                                    format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), quyru),
-                                    err.to_string()
-                                ),
-                            ),
+        match &self.recv {
+            Some(recv) => match recv.recv_timeout(self.timeout) {
+                Ok(query) => {
+                    log::trace!("{}.recv_query | Received query: {:#?}", self.name, query);
+                    let quyru = query.as_string().value;
+                    match serde_json::from_str::<T>(quyru.as_str()) {
+                        Ok(query) => {
+                            return CtxResult::Ok(query)
                         }
-                    }
-                    Err(err) => {
-                        match err {
-                            std::sync::mpsc::RecvTimeoutError::Timeout => CtxResult::None,
-                            std::sync::mpsc::RecvTimeoutError::Disconnected => CtxResult::Err(
-                                error.pass_with("Recv error", err.to_string()),
+                        Err(err) => CtxResult::Err(
+                            error.pass_with(
+                                format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), quyru),
+                                err.to_string()
                             ),
-                        }
+                        ),
                     }
                 }
-                None => todo!(),
+                Err(err) => {
+                    match err {
+                        std::sync::mpsc::RecvTimeoutError::Timeout => CtxResult::None,
+                        std::sync::mpsc::RecvTimeoutError::Disconnected => CtxResult::Err(
+                            error.pass_with("Recv error", err.to_string()),
+                        ),
+                    }
+                }
             }
-        });
-        h
+            None => todo!(),
+        }
     }
     ///
     /// Receiving incomong events with sender name
@@ -199,38 +196,35 @@ impl Link {
     /// - Returns Err if channel is closed
     pub fn recv_query_from<T: DeserializeOwned + Debug>(&self) -> CtxResult<(String, T), Error> {
         let error = Error::new(&self.name, "recv_query_from");
-        let h = tokio::task::block_in_place(move|| {
-            match &self.recv {
-                Some(recv) => match recv.recv_timeout(self.timeout) {
-                    Ok(query) => {
-                        log::debug!("{}.recv_query_from | Received query: {:#?}", self.name, query);
-                        let name = query.name();
-                        let quyru = query.as_string().value;
-                        match serde_json::from_str::<T>(quyru.as_str()) {
-                            Ok(query) => {
-                                return CtxResult::Ok((name, query))
-                            }
-                            Err(err) => CtxResult::Err(
-                                error.pass_with(
-                                    format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), quyru),
-                                    err.to_string()
-                                ),
-                            ),
+        match &self.recv {
+            Some(recv) => match recv.recv_timeout(self.timeout) {
+                Ok(query) => {
+                    log::debug!("{}.recv_query_from | Received query: {:#?}", self.name, query);
+                    let name = query.name();
+                    let quyru = query.as_string().value;
+                    match serde_json::from_str::<T>(quyru.as_str()) {
+                        Ok(query) => {
+                            return CtxResult::Ok((name, query))
                         }
-                    }
-                    Err(err) => {
-                        match err {
-                            std::sync::mpsc::RecvTimeoutError::Timeout => CtxResult::None,
-                            std::sync::mpsc::RecvTimeoutError::Disconnected => CtxResult::Err(
-                                error.pass_with("Recv error", err.to_string()),
+                        Err(err) => CtxResult::Err(
+                            error.pass_with(
+                                format!("Deserialize error for {:?} in {}", std::any::type_name::<T>(), quyru),
+                                err.to_string()
                             ),
-                        }
+                        ),
                     }
                 }
-                None => todo!(),
+                Err(err) => {
+                    match err {
+                        std::sync::mpsc::RecvTimeoutError::Timeout => CtxResult::None,
+                        std::sync::mpsc::RecvTimeoutError::Disconnected => CtxResult::Err(
+                            error.pass_with("Recv error", err.to_string()),
+                        ),
+                    }
+                }
             }
-        });
-        h
+            None => todo!(),
+        }
     }
     ///
     /// Sending event

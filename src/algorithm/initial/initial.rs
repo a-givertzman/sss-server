@@ -2,6 +2,7 @@ use super::initial_ctx::InitialCtx;
 use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
+use crate::kernel::sync::link::Link;
 use crate::ship_model::model_link::*;
 use crate::{
     algorithm::context::{
@@ -21,7 +22,7 @@ trait TmpModelLink: IModelLink + std::fmt::Debug {}
 #[derive(Debug)]
 pub struct Initial {
     dbg: Dbg,
-    model: Box<dyn TmpModelLink>, 
+    model: Link,
     api_client: ApiClient,
     ctx: Context,
 }
@@ -32,14 +33,14 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: impl TmpModelLink + 'static, 
+        model: Link, 
         api_client: ApiClient,
         ctx: Context,
     ) -> Self {
         let dbg = Dbg::new(parent, "Initial");
         Self {
             dbg,
-            model: Box::new(model),
+            model,
             api_client,
             ctx,
         }

@@ -1,34 +1,47 @@
-use crate::{algorithm::context::context::Context, kernel::sync::link::Link};
+use coco::Stack;
+use crate::kernel::sync::link::Link;
 ///
 /// Used for declarative `Rrequest` implementation
 /// 
 /// Example:
 /// ```ignore
 /// let math = AlgoSecond::new(
-///     req: Request<T>::new(op: |ctx: &Context, link: &Link| -> T {
+///     req: Request<T>::new(op: |ctx: Context, link: Link| -> T {
 ///         // Query: Some Struct comtains all neccessary info and implements `Serialize`
 ///         let query = QueryStruct::new();
 ///         // Reply: Returns `T`, implements `Deserialize`
-///         link.req(query)
+///         let reply = link.req(query)
+///         // Returning received reply and link
+///         (reply, link)
 ///     }),
 ///     eval: AlgFirst::new(initial),
 /// )
 /// ```
-pub struct Request<T> {
-    op: Box<dyn Fn(&Context, Link) -> T>,
+pub struct Request<In, Out> {
+    link: Stack<Link>,
+    op: Box<dyn Fn(In, Link) -> (Out, Link)>,
 }
 //
 //
-impl<T> Request<T> {
+impl<In, Out> Request<In, Out> {
     ///
     /// Returns [Request] new instance
+    /// - `link` - `Link` - communication entity
     /// - `op` - the body of the request
-    pub fn new(op: impl Fn(&Context, Link) -> T + 'static) -> Self {
-        Self { op: Box::new(op) }
+    pub fn new(link: Link, op: impl Fn(In, Link) -> (Out, Link) + Send + Sync + 'static) -> Self {
+        let stack = Stack::new();
+        stack.push(link);
+        Self {
+            link: stack,
+            op: Box::new(op),
+        }
     }
     ///
     /// Performs the request defined in the `op`
-    pub fn fetch(&self, ctx: &Context, link: Link) -> T {
-        (self.op)(ctx, link)
+    pub fn fetch(&self, val: In) -> Out {
+        let link = self.link.pop().unwrap();
+        let (result, link) = (self.op)(val, link);
+        self.link.push(link);
+        result
     }
 }

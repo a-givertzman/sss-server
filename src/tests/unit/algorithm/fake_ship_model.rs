@@ -21,7 +21,6 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tokio::task::JoinHandle;
 ///
 ///
 pub struct FakeShipModel {
@@ -80,7 +79,7 @@ impl ShipModel {
 impl IShipModel for FakeShipModel {
     ///
     /// Returns connected `Link`
-    async fn link(&self) -> ModelLink {
+    fn link(&self) -> ModelLink {
         let (loc_send, rem_recv) = mpsc::channel();
         let (rem_send, loc_recv) = mpsc::channel();
         let receivers = self.clients.clone();
@@ -92,17 +91,14 @@ impl IShipModel for FakeShipModel {
         let key = remote.name().join();
         let len = receivers.load(Ordering::SeqCst);
         self.clients_tx.send((key, loc_send, loc_recv)).unwrap();
-        let _ = tokio::task::spawn_blocking(async move || {
-            while len == receivers.load(Ordering::SeqCst) {
-                tokio::time::sleep(Duration::from_millis(3));
-            }
-        })
-        ;
+        while len == receivers.load(Ordering::SeqCst) {
+            std::thread::sleep(Duration::from_millis(3));
+        }
         remote
     }
     ///
     /// Entry point
-    async fn run(&self) -> Result<JoinHandle<()>, StrErr> {
+    fn run(&self) -> Result<JoinHandle<()>, StrErr> {
         let dbg = self.name.join();
         log::info!("{}.run | Starting...", dbg);
         let timeout = self.timeout;
@@ -118,7 +114,7 @@ impl IShipModel for FakeShipModel {
             Ok(data) => data,
             Err(err) => return Err(StrErr(format!("ShipModel get_bounds error: {err}"))),
         };
-        let handle = tokio::task::spawn_blocking(move || {
+        let handle = thread::Builder::new().name(dbg.clone()).spawn(move || {
             log::debug!("{}.run | Locals | Start", dbg);
             let mut clients = FxIndexMap::default();
             'main: loop {
@@ -185,7 +181,7 @@ impl IShipModel for FakeShipModel {
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);
-        Ok(handle)
+        handle.map_err(|err|error.pass(err.to_string()))
     }
     ///
     /// Sends "exit" signal to the service's task

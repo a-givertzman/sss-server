@@ -19,7 +19,6 @@ mod rope_effort {
     fn init_each() -> () {}
     ///
     /// Testing 'eval'
-    #[tokio::test(flavor = "multi_thread")]
     fn eval() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();

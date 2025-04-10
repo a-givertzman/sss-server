@@ -1,7 +1,6 @@
 //! заглушка модели для тестирования
-use sal_sync::services::entity::{
-    error::str_err::StrErr, name::Name, 
-};
+use sal_core::error::Error;
+use sal_sync::services::entity::name::Name;
 use crate::{algorithm::entities::*, ship_model::{model_link::IModelLink, query::*, reply::*}};
 use super::data::*;
 //
@@ -15,12 +14,14 @@ pub struct FakeModelLink {
 //
 //
 impl IModelLink for FakeModelLink {
-    //
-    async fn bounds(&self) -> Result<Bounds, StrErr> {
+    ///
+    /// Type doc comment
+    fn bounds(&self) -> Result<Bounds, Error> {
         Ok(self.bounds.clone())
     }
+    ///
     /// - Returns areas by ship frames
-    async fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), StrErr> {
+    fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error> {
         let area_h_str: Vec<_> = area_h_str::area_h_str()
             .data()
             .into_iter()
@@ -46,8 +47,9 @@ impl IModelLink for FakeModelLink {
             .collect();
         Ok((area_v_str, area_h_str))
     }
+    ///
     /// - Returns areas by ship frames
-    async fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, StrErr> {
+    fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, Error> {
         todo!()
     }
 }

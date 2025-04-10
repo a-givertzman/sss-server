@@ -1,6 +1,6 @@
 ///
 /// Учет обледенения судна.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IcingCtx {
     /// Суммарная масса
     pub mass: f64,

@@ -2,7 +2,9 @@ use super::query::*;
 use super::reply::*;
 use super::{model_link::ModelLink, query::Query, reply::Reply};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
+use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
+use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::{
@@ -91,12 +93,9 @@ impl ShipModel {
         let key = remote.name().join();
         let len = receivers.load(Ordering::SeqCst);
         self.clients_tx.send((key, loc_send, loc_recv)).unwrap();
-        let _ = tokio::task::spawn_blocking(async move || {
-            while len == receivers.load(Ordering::SeqCst) {
-                tokio::time::sleep(Duration::from_millis(3));
-            }
-        })
-        ;
+        while len == receivers.load(Ordering::SeqCst) {
+            std::thread::sleep(Duration::from_millis(3));
+        }
         remote
     }
     ///
@@ -139,7 +138,7 @@ impl ShipModel {
                                     }
                                 }
                                 Query::BoundAreas => {
-                                    let result = areas_strength(bounds.clone(), ship_id);
+                                    let result = areas_strength(bounds.clone(), ship_id, &api_client);
                                     if let Err(err) = send.send(Reply::BoundAreas(result)) {
                                         log::warn!("{}.run | Send error: {:?}", dbg, err);
                                     }
@@ -267,33 +266,32 @@ fn get_bounds(
 }
 ///
 /// Type doc comment
-fn areas_strength(bounds: Bounds, ship_id: usize) -> Result<(Vec<f64>, Vec<f64>), Error> {
+    fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<(Vec<f64>, Vec<f64>), Error> {
     let error = Error::new("ShipModel", "areas_strength");
-    /*     let area_h_str = HStrAreaArray::parse(
+    let area_h_str = HStrAreaArray::parse(
                &api_client
                    .fetch(&format!(
                "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
                ship_id
            ))
-                   .map_err(|e| StrErr(format!("api_server get_data area_h_str error: {e}")))?,
-           )
-           .map_err(|e| StrErr(format!("api_server get_data area_h_str error: {e}")))?;
+                   .map_err(|e| error.pass(e.to_string()))?,
+           )?;
+        //    .map_err(|e| error.pass(e))?;
            let area_v_str = strength::VerticalAreaArray::parse(
                &api_client
                    .fetch(&format!(
                "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
                ship_id
            ))
-                   .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?,
-           )
-           .map_err(|e| StrErr(format!("api_server get_data area_v_str error: {e}")))?;
-    */
-    let area_h_str: Vec<_> = area_h_str::area_h_str()
+                   .map_err(|e| error.pass(e.to_string()))?,
+           )?;
+        //    .map_err(|e| error.pass(e))?;
+    let area_h_str: Vec<_> = area_h_str
         .data()
         .into_iter()
         .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
         .collect();
-    let area_v_str: Vec<_> = area_v_str::area_v_str()
+    let area_v_str: Vec<_> = area_v_str
         .data()
         .into_iter()
         .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))

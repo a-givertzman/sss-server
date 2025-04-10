@@ -24,8 +24,7 @@ mod request {
     fn init_each() -> () {}
     ///
     /// Testing 'Request::fetch'
-    #[tokio::test(flavor = "multi_thread")]
-    async fn basic() {
+    fn basic() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
@@ -49,7 +48,7 @@ mod request {
         let (link, _) = Link::split(dbg);
         let request = Request::new(
             link,
-            async |ctx: MokUserReplyTestCtx, link: Link| {
+            |ctx: MokUserReplyTestCtx, link: Link| {
                 let reply: MokUserReplyTestCtx = ctx;
                 (reply, link)
             },

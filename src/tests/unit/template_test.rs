@@ -20,7 +20,6 @@ mod tests {
     fn init_each() -> () {}
     ///
     /// Testing such functionality / behavior
-    #[tokio::test(flavor = "multi_thread")]
     fn test_task_cycle() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();

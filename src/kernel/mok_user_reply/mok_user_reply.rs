@@ -1,7 +1,6 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use sal_sync::services::entity::{cot::Cot, error::str_err::StrErr, name::Name, object::Object, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status};
 use serde::Serialize;
-use tokio::task::JoinHandle;
 use crate::{
     infrostructure::client::{
         change_hoisting_tackle::{ChangeHoistingTackleQuery, ChangeHoistingTackleReply},
@@ -42,7 +41,7 @@ impl MokUserReply {
     }
     ///
     /// Starts service's main loop in the individual task
-    pub async fn run(&mut self) -> Result<JoinHandle<()>, StrErr> {
+    pub fn run(&mut self) -> Result<JoinHandle<()>, StrErr> {
         let mut link = self.link.take().unwrap_or_else(|| panic!("{}.run | Link not found", self.name));
         let dbg = self.name.join().clone();
         let txid = self.txid;
