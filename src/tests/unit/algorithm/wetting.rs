@@ -4,17 +4,17 @@ mod tests {
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::{algorithm::{context::context_access::ContextRead, entities::Position, eval::{IcingCtx, IcingEval}}, kernel::{eval::Eval}, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
+    use crate::{algorithm::{context::context_access::ContextRead, entities::Position, eval::{WettingCtx, WettingEval}}, kernel::{dbgid::dbgid::DbgId, eval::Eval}, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
 
     #[test]
-    fn icing() {
+    fn wetting() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
-        let self_id = "test icing";
+        let self_id = "test wetting";
         println!("{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
 
-        let dbg = DbgId("icing".into());
+        let dbg = DbgId("wetting".into());
         let ctx = FakeInitial::new(
             dbg,
             Context::new(
@@ -25,11 +25,11 @@ mod tests {
             )
         );
 
-        let result: IcingCtx = IcingEval::new(&dbg, ctx).eval(()).read();
+        let result: WettingCtx = WettingEval::new(&dbg, ctx).eval(()).read();
 
-        let target =  IcingCtx {
-            mass: 67.460925,
-            mass_shift_x:1.2989097,
+        let target =  WettingCtx {
+            mass: 0.,
+            mass_shift: Position::zero(),
             mass_values: Vec::new(),
         };
 
@@ -41,10 +41,10 @@ mod tests {
         );
 
         assert!(
-            result.mass_shift_x == target.mass_shift_x,
+            result.mass_shift == target.mass_shift,
             "\nresult: {:?}\ntarget: {:?}",
-            result.mass_shift_x,
-            target.mass_shift_x
+            result.mass_shift,
+            target.mass_shift
         );
 
         test_duration.exit();

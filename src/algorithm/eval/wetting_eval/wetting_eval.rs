@@ -1,6 +1,6 @@
 //! Учет намокания груза
 use crate::algorithm::context::context_access::*;
-use crate::algorithm::entities::{bound, Bound, Moment, Position};
+use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
