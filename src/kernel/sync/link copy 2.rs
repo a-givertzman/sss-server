@@ -1,9 +1,9 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread::JoinHandle, time::Duration};
-use bincode::{Decode, Encode};
+use std::{any::Any, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread::JoinHandle, time::Duration};
 use sal_core::error::Error;
 use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
 use crate::{algorithm::context::ctx_result::CtxResult, kernel::types::channel::{Receiver, RecvTimeoutError, Sender}};
 
+use super::link_event::LinkEvent;
 ///
 /// Contains local side `send` & `recv` of `channel`
 /// - provides simple direct to `send` & `recv`
@@ -11,10 +11,9 @@ use crate::{algorithm::context::ctx_result::CtxResult, kernel::types::channel::{
 pub struct Link {
     txid: usize,
     name: Name,
-    send: Sender<Vec<u8>>,
-    recv: Option<Receiver<Vec<u8>>>,
+    send: Sender<Box<dyn Any + Send>>,
+    recv: Option<Receiver<Box<dyn Any + Send>>>,
     timeout: Duration,
-    bincode_config: bincode::config::Configuration,
     exit: Arc<AtomicBool>,
 }
 //
@@ -28,7 +27,7 @@ impl Link {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>, send: Sender<Vec<u8>>, recv: Receiver<Vec<u8>>) -> Self {
+    pub fn new(parent: impl Into<String>, send: Sender<Box<dyn Any + Send>>, recv: Receiver<Box<dyn Any + Send>>) -> Self {
         let name = Name::new(parent, "Link");
         Self {
             txid: PointTxId::from_str(&name.join()),
@@ -36,7 +35,6 @@ impl Link {
             send, 
             recv: Some(recv),
             timeout: Self::DEFAULT_TIMEOUT,
-            bincode_config: bincode::config::standard(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -47,25 +45,23 @@ impl Link {
     }
     ///
     /// Returns `local: [Link] remote: [Link]` new instance
-    pub fn split(parent: impl Into<String>) -> (Self, Self) {
+    pub fn split(parent: impl Into<String>) -> (Link, Link) {
         let name = Name::new(parent, "Link");
         let (loc_send, rem_recv) = kanal::unbounded();
         let (rem_send, loc_recv) = kanal::unbounded();
         (
-            Self { 
+            Link { 
                 txid: PointTxId::from_str(&name.join()),
                 name: name.clone(),
                 send: loc_send, recv: Some(loc_recv),
                 timeout: Self::DEFAULT_TIMEOUT,
-                bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
             },
-            Self { 
+            Link { 
                 txid: PointTxId::from_str(&name.join()),
                 name,
                 send: rem_send, recv: Some(rem_recv),
                 timeout: Self::DEFAULT_TIMEOUT,
-                bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
             },
         )
@@ -74,32 +70,25 @@ impl Link {
     /// - Sends a request,
     /// - Await reply,
     /// - Returns parsed reply
-    pub fn call<T: Debug + Decode<()>>(&self, query: impl Encode + Debug + Clone) -> Result<T, Error> {
+    pub fn call<'a, T: Debug + 'static>(&self, query: impl Any + Debug + Clone + Send) -> Result<T, Error> {
         let error = Error::new(&self.name, "call");
         let q = format!("{:#?}", query);
-        match bincode::encode_to_vec(query, self.bincode_config) {
-            Ok(query) => match self.send.send(query) {
-                Ok(_) => {
-                    log::trace!("{}.req | Sent request: {q}", self.name);
-                    match &self.recv {
-                        Some(recv) => match recv.recv() {
-                            Ok(reply) => {
-                                match bincode::decode_from_slice(&reply, self.bincode_config) {
-                                    Ok((reply, _)) => {
-                                        log::trace!("{}.req | Reply received: {:#?}", self.name, reply);
-                                        Ok(reply)
-                                    }
-                                    Err(err) => Err(error.pass_with(format!("Reply {:#?} decode error", reply), err.to_string())),
-                                }
-                            }
-                            Err(err) => Err(error.pass(err.to_string())),
+        match self.send.send(Box::new(query.clone())) {
+            Ok(_) => {
+                log::trace!("{}.req | Sent request: {q}", self.name);
+                match &self.recv {
+                    Some(recv) => match recv.recv() {
+                        Ok(reply) => {
+                            let reply = reply.downcast::<T>().unwrap();
+                            log::trace!("{}.req | Reply received: {:#?}", self.name, *reply);
+                            Ok(*reply)
                         }
-                        None => Err(error.err("Recv - not found")),
+                        Err(err) => Err(error.pass(err.to_string())),
                     }
-                },
-                Err(err) => Err(error.pass_with("Send request error", err.to_string())),
-            }
-            Err(err) => Err(error.pass_with(format!("Query encode {:?} error", q), err.to_string())),
+                    None => todo!(),
+                }
+            },
+            Err(err) => Err(error.pass_with("Send request error", err.to_string())),
         }
     }
     ///
@@ -156,12 +145,12 @@ impl Link {
     /// - Returns Ok<T> if channel has query
     /// - Returns None if channel is empty for now
     /// - Returns Err if channel is closed
-    pub fn recv_query<T: Debug + Clone + 'static>(&self) -> CtxResult<T, Error> {
+    pub fn recv_query<T: Debug + 'static>(&self) -> CtxResult<T, Error> {
         let error = Error::new(&self.name, "recv_query");
         match &self.recv {
             Some(recv) => match recv.recv_timeout(self.timeout) {
                 Ok(query) => {
-                    let query: T = query.query();
+                    let query: T = *query.downcast().unwrap();
                     log::trace!("{}.recv_query | Received query: {:#?}", self.name, query);
                     return CtxResult::Ok(query)
                 }
@@ -179,9 +168,9 @@ impl Link {
     }
     ///
     /// Sending event
-    pub fn send_reply(&self, reply: Event) -> Result<(), Error> {
+    pub fn send_reply(&self, reply: impl Any + Send) -> Result<(), Error> {
         let error = Error::new(&self.name, "send_reply");
-        match self.send.send(reply) {
+        match self.send.send(Box::new(reply)) {
             Ok(_) => Ok(()),
             Err(err) => Err(error.pass(err.to_string())),
         }

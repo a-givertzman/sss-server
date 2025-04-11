@@ -3,7 +3,7 @@ use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::sync::link::Link;
-use crate::ship_model::model_link::*;
+use crate::ship_model::{model_link::*, query};
 use crate::{
     algorithm::context::{
             context::Context,
@@ -55,7 +55,12 @@ impl Eval<(), EvalResult> for Initial {
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
         // Расчет баланса в модели
-        let bounds = match self.model.bounds() {
+        let bounds = match self.model.req(query::Query::Bounds) {
+            Ok(_) => todo!(),
+            Err(_) => todo!(),
+        }
+        
+        let bounds = match self.model.req(query::Query::Bounds) {
             Ok(data) => data,
             Err(err) => {
                 return CtxResult::Err(error.pass_with("model.bounds error", err));

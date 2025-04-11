@@ -1,8 +1,8 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, time::{Duration, Instant}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}};
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_tx_id::PointTxId}}, service::service_handles::ServiceHandles};
-use crate::kernel::types::fx_map::{FxDashMap, FxIndexMap};
+use crate::kernel::types::{channel::{Receiver, Sender}, fx_map::{FxDashMap, FxIndexMap}};
 use super::link::Link;
 ///
 /// 
@@ -33,7 +33,7 @@ impl Switch {
         let name = Name::new(parent, "Switch");
         let stack = Stack::new();
         stack.push(recv);
-        let (receivers_tx, receivers_rx) = mpsc::channel();
+        let (receivers_tx, receivers_rx) = kanal::unbounded();
         let receivers_rx_stack = Stack::new();
         receivers_rx_stack.push(receivers_rx);
         Self {
@@ -53,12 +53,12 @@ impl Switch {
     /// Returns Self and `remote: [Link]` new instances
     pub fn split(parent: impl Into<String>) -> (Self, Link) {
         let name = Name::new(parent, "Switch");
-        let (loc_send, rem_recv) = mpsc::channel();
-        let (rem_send, loc_recv) = mpsc::channel();
+        let (loc_send, rem_recv) = kanal::unbounded();
+        let (rem_send, loc_recv) = kanal::unbounded();
         let remote = Link::new(name.join(), rem_send, rem_recv);
         let stack = Stack::new();
         stack.push(loc_recv);
-        let (receivers_tx, receivers_rx) = mpsc::channel();
+        let (receivers_tx, receivers_rx) = kanal::unbounded();
         let receivers_rx_stack = Stack::new();
         receivers_rx_stack.push(receivers_rx);
         (
@@ -79,8 +79,8 @@ impl Switch {
     ///
     /// Returns connected `Link`
     pub fn link(&self) -> Link {
-        let (loc_send, rem_recv) = mpsc::channel();
-        let (rem_send, loc_recv) = mpsc::channel();
+        let (loc_send, rem_recv) = kanal::unbounded();
+        let (rem_send, loc_recv) = kanal::unbounded();
         let remote = Link::new(&format!("{}:{}", self.name, self.subscribers.len()), rem_send, rem_recv);
         let key = remote.name().join();
         self.subscribers.insert(key.clone(), loc_send);

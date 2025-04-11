@@ -39,8 +39,8 @@ impl Link {
     /// Returns `local: [Link] remote: [Link]` new instance
     pub fn split(parent: impl Into<String>) -> (Self, Self) {
         let name = Name::new(parent, "Link");
-        let (loc_send, rem_recv) = mpsc::channel();
-        let (rem_send, loc_recv) = mpsc::channel();
+        let (loc_send, rem_recv) = kanal::unbounded();
+        let (rem_send, loc_recv) = kanal::unbounded();
         (
             Self { 
                 txid: PointTxId::from_str(&name.join()),

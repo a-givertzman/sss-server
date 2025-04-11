@@ -60,7 +60,7 @@ impl ShipModel {
         api_client: ApiClient,
     ) -> Self {
         let name = Name::new(parent, "ShipModel");
-        let (receivers_tx, receivers_rx) = mpsc::channel();
+        let (receivers_tx, receivers_rx) = kanal::unbounded();
         let receivers_rx_stack = Stack::new();
         receivers_rx_stack.push(receivers_rx);
         let client = Stack::new();
@@ -82,8 +82,8 @@ impl ShipModel {
     ///
     /// Returns connected `Link`
     pub fn link(&self) -> ModelLink {
-        let (loc_send, rem_recv) = mpsc::channel();
-        let (rem_send, loc_recv) = mpsc::channel();
+        let (loc_send, rem_recv) = kanal::unbounded();
+        let (rem_send, loc_recv) = kanal::unbounded();
         let receivers = self.clients.clone();
         let remote = ModelLink::new(
             &format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)),
