@@ -6,8 +6,8 @@ use crate::{
         entities::Moment,
         eval::{IcingCtx, LoadsCtx, WettingCtx},
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
-    ship_model::{model_link::*, query::BalanceSrcData},
+    kernel::{eval::Eval, sync::link::Link, types::eval_result::EvalResult},
+    ship_model::query::{BalanceQuery, Query},
     ContextWrite, CtxResult,
 };
 use super::balance_ctx::BalanceCtx;
@@ -16,7 +16,7 @@ use super::balance_ctx::BalanceCtx;
 /// Расчет равновесного положения судна
 pub struct BalanceEval {
     dbg: Dbg,
-    model: ModelLink,
+    model: Link,
     value: Option<BalanceCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
@@ -26,7 +26,7 @@ impl BalanceEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: ModelLink,
+        model: Link,
         ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "BalanceEval");
@@ -62,7 +62,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     Moment::new(icing.mass*icing.mass_shift_x, 0., 0.) + 
                     Moment::from_pos(wetting.mass_shift, wetting.mass);    
                 // Структура для передачи в модель
-                let balance_src_data = BalanceSrcData {
+                let balance_query = BalanceQuery {
                     mass_sum,
                     moment_const,
                     bulk: loads.bulk.clone(),
@@ -70,17 +70,20 @@ impl Eval<(), EvalResult> for BalanceEval {
                     grain_bulkhead: loads.grain_bulkhead,
                 };
                 // Расчет баланса в модели
-                let result = match self.model.compute_balance(balance_src_data) {
+                let result: BalanceCtx = match self.model.call(Query::ComputeBalance(balance_query)) {
                     Ok(data) => data,
                     Err(err) => {
                         return CtxResult::Err(error.pass_with("model.compute_balance error", err));
                     }
-                };                    
-                let result = BalanceCtx {
-                    parameters: result.parameters,
-                    bulk: result.bulk,
-                    liquid: result.liquid,
                 };
+                //
+                // TODO Propably additional BalanceResult is not required, sorry if not
+                //
+                // let result = BalanceCtx {
+                //     parameters: result.parameters,
+                //     bulk: result.bulk,
+                //     liquid: result.liquid,
+                // };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }

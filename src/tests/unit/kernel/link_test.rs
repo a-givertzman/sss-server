@@ -2,9 +2,9 @@
 
 mod link {
     use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc, Once}, thread::JoinHandle, time::Duration};
+    use bincode::{Decode, Encode};
     use sal_core::error::Error;
     use sal_sync::services::entity::name::Name;
-    use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{algorithm::context::ctx_result::CtxResult, kernel::sync::link::Link};
@@ -43,7 +43,7 @@ mod link {
         let mut listener = Listener::new(dbg, remote);
         let listener_handle = listener.run().unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, Error> = local.req(query);
+            let result: Result<Message, Error> = local.call(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => {
@@ -59,7 +59,7 @@ mod link {
     }
     ///
     /// Message container
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Encode, Decode, PartialEq)]
     struct Message(pub String);
     ///
     /// Receives Query, send associated Reply
@@ -90,7 +90,7 @@ mod link {
             let exit = self.exit.clone();
             let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
                 log::info!("{}.run | Start", dbg);
-                fn send_reply(dbg: &str, link: &mut Link, reply: impl Serialize + Debug) {
+                fn send_reply(dbg: &str, link: &mut Link, reply: impl Encode + Debug) {
                     if let Err(err) = link.send_reply(reply) {
                         log::debug!("{}.run | Send reply error: {:?}", dbg, err);
                     };

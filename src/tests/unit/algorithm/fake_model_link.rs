@@ -1,7 +1,7 @@
 //! заглушка модели для тестирования
 use sal_core::error::Error;
 use sal_sync::services::entity::name::Name;
-use crate::{algorithm::entities::*, ship_model::{model_link::IModelLink, query::*, reply::*}};
+use crate::{algorithm::entities::*, ship_model::{query::*, reply::*}};
 use super::data::*;
 //
 //

@@ -2,9 +2,8 @@
 
 mod link_listen {
     use std::{sync::Once, time::Duration};
+    use bincode::{config, Decode, Encode};
     use sal_core::error::Error;
-    use sal_sync::services::entity::point::point::Point;
-    use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::kernel::sync::link::Link;
@@ -40,20 +39,18 @@ mod link_listen {
             (4, Message("Query-4".into()), Ok(Message("Reply-4".into()))),
         ];
         let (local, mut remote) = Link::split(dbg);
-        let remote_handle = remote.listen(|query| {
+        let remote_handle = remote.listen(|query: String| {
             log::debug!("Link.remote.listen | Query {:#?}", query);
-            let query = query.as_string().value;
-            let query: String = serde_json::from_str(&query).unwrap();
             Some(match query.as_str() {
-                "Query-1" => Point::new(0, "name", serde_json::to_string(&Message("Reply-1".into())).unwrap()),
-                "Query-2" => Point::new(0, "name", serde_json::to_string(&Message("Reply-2".into())).unwrap()),
-                "Query-3" => Point::new(0, "name", serde_json::to_string(&Message("Reply-3".into())).unwrap()),
-                "Query-4" => Point::new(0, "name", serde_json::to_string(&Message("Reply-4".into())).unwrap()),
+                "Query-1" => bincode::encode_to_vec(&Message("Reply-1".into()), config::standard()).unwrap(),
+                "Query-2" => bincode::encode_to_vec(&Message("Reply-2".into()), config::standard()).unwrap(),
+                "Query-3" => bincode::encode_to_vec(&Message("Reply-3".into()), config::standard()).unwrap(),
+                "Query-4" => bincode::encode_to_vec(&Message("Reply-4".into()), config::standard()).unwrap(),
                 _ => panic!("Link.remote.listen | Unknown event {:#?}", query),
             })
         }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, Error> = local.req(query);
+            let result: Result<Message, Error> = local.call(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -68,6 +65,6 @@ mod link_listen {
     }
     ///
     /// Message container
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Encode, Decode, PartialEq)]
     struct Message(pub String);
 }

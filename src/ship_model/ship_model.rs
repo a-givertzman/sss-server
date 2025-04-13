@@ -1,12 +1,14 @@
 use super::query::*;
 use super::reply::*;
-use super::{model_link::ModelLink, query::Query, reply::Reply};
+use super::{query::Query, reply::Reply};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
 use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::{Bound, Bounds};
+use crate::algorithm::eval::BalanceCtx;
+use crate::kernel::sync::link::Link;
 use crate::{
     infrostructure::api::client::api_client::ApiClient, kernel::types::fx_map::FxIndexMap,
 };
@@ -81,11 +83,11 @@ impl ShipModel {
     }
     ///
     /// Returns connected `Link`
-    pub fn link(&self) -> ModelLink {
+    pub fn link(&self) -> Link {
         let (loc_send, rem_recv) = kanal::unbounded();
         let (rem_send, loc_recv) = kanal::unbounded();
         let receivers = self.clients.clone();
-        let remote = ModelLink::new(
+        let remote = Link::new(
             &format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)),
             rem_send,
             rem_recv,
@@ -308,6 +310,6 @@ fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Res
     Ok((area_v_str, area_h_str))
 }
 //
-fn compute_balance(bounds: Bounds, src_data: BalanceSrcData, ship_id: usize) -> Result<BalanceResultData, Error> {
+fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize) -> Result<BalanceCtx, Error> {
     todo!()
 }

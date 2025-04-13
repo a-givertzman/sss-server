@@ -1,10 +1,11 @@
 //! Непрерывный набор диапазонов значений
 
+use bincode::{Decode, Encode};
 use sal_core::error::Error;
 
 use super::Bound;
 /// Непрерывный набор диапазонов значений
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Decode, Encode)]
 pub struct Bounds {
     // Непрерывный вектор диапазонов
     values: Vec<Bound>,

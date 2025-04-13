@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, 
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_tx_id::PointTxId}}, service::service_handles::ServiceHandles};
-use crate::kernel::types::{channel::{Receiver, Sender}, fx_map::{FxDashMap, FxIndexMap}};
+use crate::kernel::types::{channel::{Receiver, RecvTimeoutError, Sender}, fx_map::{FxDashMap, FxIndexMap}};
 use super::link::Link;
 ///
 /// 
@@ -178,10 +178,10 @@ impl Switch {
                             }
                         }
                         Err(err) => match err {
-                            mpsc::RecvTimeoutError::Timeout => {
+                            RecvTimeoutError::Timeout => {
                                 log::trace!("{}.run | Locals | Listening...", dbg);
                             }
-                            mpsc::RecvTimeoutError::Disconnected => {
+                            RecvTimeoutError::Disconnected => {
                                 if log::max_level() >= log::LevelFilter::Trace {
                                     log::warn!("{}.run | Receive error, all senders has been closed", dbg);
                                 }
