@@ -26,6 +26,9 @@ pub struct Context {
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
     pub(super) balance: Option<BalanceCtx>,
+    /// Площади горизонтальных поверхностей и
+    /// площади парусности судна для расчета остойчивости
+    pub(super) stability_area: Option<StabilityAreaCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

@@ -116,6 +116,20 @@ impl ContextRead<BalanceCtx> for Context {
         self.balance.clone().unwrap()
     }
 }
+//
+impl ContextWrite<StabilityAreaCtx> for Context {
+    fn write(mut self, value: StabilityAreaCtx) -> CtxResult<Self, Error> {
+        self.stability_area = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<StabilityAreaCtx> for Context {
+    fn read(&self) -> StabilityAreaCtx {
+        self.stability_area.clone().unwrap()
+    }
+}
+
+
 
 
 

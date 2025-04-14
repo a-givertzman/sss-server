@@ -1,4 +1,4 @@
-use crate::algorithm::entities::Bounds;
+use crate::algorithm::entities::{Bounds, Position};
 use sal_core::error::Error;
 use sal_sync::services::entity::{
  name::Name, point::point_tx_id::PointTxId,
@@ -79,7 +79,7 @@ impl IModelLink for ModelLink {
         }
     }
     ///
-    /// - Returns areas by ship frames
+    /// - Returns areas by ship frames with minimal draught and zero trim
     fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error> {
         let error = Error::new(&self.name, "bound_areas");
         let timeout = Duration::from_secs(300);
@@ -107,7 +107,7 @@ impl IModelLink for ModelLink {
             Err(err) => Err(error.pass_with("Send request error: {:#?}", err.to_string())),
         }
     }
-    /// - Returns areas by ship frames
+    /// - Returns balance result 
     fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, Error> {
         let error = Error::new(&self.name, "bound_areas");
         let timeout = Duration::from_secs(300);
@@ -157,7 +157,12 @@ impl Debug for ModelLink {
 }
 //
 pub trait IModelLink {
+    /// - Returns computed ship frames
     fn bounds(&self) -> Result<Bounds, Error>;
-    fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error>;
+    /// - Returns areas by ship frames with minimal draught and zero trim
+    fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error>; // (area_v, area_h)
+    /// - Returns areas and shift with current draught and trim
+    fn current_areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), Error>; // (area_v, area_h)
+    /// - Returns balance result 
     fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, Error>;
 }
