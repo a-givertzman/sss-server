@@ -8,7 +8,7 @@ use super::stability_area_ctx::StabilityAreaCtx;
 pub struct StabilityAreaEval {
     dbg: DbgId,
     model: ModelLink,
-    value: Option<AreaCtx>,
+    value: Option<StabilityAreaCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -24,10 +24,10 @@ impl StabilityAreaEval {
             ctx: Box::new(ctx),
         }
     }
-    //
-    //
 }
-impl Eval<(), EvalResult> for AreaEval {
+//
+//
+impl Eval<(), EvalResult> for StabilityAreaEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
