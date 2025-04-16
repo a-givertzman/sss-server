@@ -55,7 +55,7 @@ impl Eval<(), EvalResult> for Initial {
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
         // Расчет баланса в модели
-        let bounds = match self.model.bounds() {
+        let bounds = match self.model.req() {
             Ok(data) => data,
             Err(err) => {
                 return CtxResult::Err(error.pass_with("model.bounds error", err));

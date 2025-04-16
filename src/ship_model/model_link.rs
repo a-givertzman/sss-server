@@ -138,6 +138,10 @@ impl IModelLink for ModelLink {
             Err(err) => Err(error.pass_with("Send request error: {:#?}", err.to_string())),
         }
     }
+    
+    fn current_areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), Error> {
+        todo!()
+    }
 }
 //
 //
