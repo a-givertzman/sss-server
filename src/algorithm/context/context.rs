@@ -29,6 +29,10 @@ pub struct Context {
     /// Площади горизонтальных поверхностей и
     /// площади парусности судна для расчета остойчивости
     pub(super) stability_area: Option<StabilityAreaCtx>,
+    /// Исправленная метацентрическая высота
+    pub(super) metacentric_height: Option<MetacentricHeightCtx>,   
+    /// Диаграмма плеч статической и динамической остойчивости
+    pub(super) lever_diagram: Option<LeverDiagramCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

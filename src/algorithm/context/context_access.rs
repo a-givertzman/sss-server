@@ -128,8 +128,30 @@ impl ContextRead<StabilityAreaCtx> for Context {
         self.stability_area.clone().unwrap()
     }
 }
-
-
+//
+impl ContextWrite<MetacentricHeightCtx> for Context {
+    fn write(mut self, value: MetacentricHeightCtx) -> CtxResult<Self, Error> {
+        self.lever_diagram = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<MetacentricHeightCtx> for Context {
+    fn read(&self) -> MetacentricHeightCtx {
+        self.metacentric_height.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<LeverDiagramCtx> for Context {
+    fn write(mut self, value: LeverDiagramCtx) -> CtxResult<Self, Error> {
+        self.metacentric_height = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<LeverDiagramCtx> for Context {
+    fn read(&self) -> LeverDiagramCtx {
+        self.lever_diagram.clone().unwrap()
+    }
+}
 
 
 

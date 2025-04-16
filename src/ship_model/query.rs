@@ -39,4 +39,5 @@ pub enum Query {
     Bounds,
     BoundAreas,
     ComputeBalance(BalanceSrcData),
+    BoundAreas,
 }
