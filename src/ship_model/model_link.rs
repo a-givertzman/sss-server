@@ -138,8 +138,12 @@ impl IModelLink for ModelLink {
             Err(err) => Err(error.pass_with("Send request error: {:#?}", err.to_string())),
         }
     }
-    
-    fn current_areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), Error> {
+    //
+    fn stability_areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), Error> {
+        todo!()
+    }
+    //
+    fn pantocaren(&self) -> Result<Vec<(f64, f64)>, Error> // (angle, lever) {
         todo!()
     }
 }
@@ -165,8 +169,10 @@ pub trait IModelLink {
     fn bounds(&self) -> Result<Bounds, Error>;
     /// - Returns areas by ship frames with minimal draught and zero trim
     fn bound_areas(&self) -> Result<(Vec<f64>, Vec<f64>), Error>; // (area_v, area_h)
-    /// - Returns areas and shift with current draught and trim
-    fn current_areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), Error>; // (area_v, area_h)
     /// - Returns balance result 
     fn compute_balance(&self, data: BalanceSrcData) -> Result<BalanceResultData, Error>;
+    /// - Returns areas and shift with current draught and trim
+    fn stability_areas(&self) -> Result<(Vec<(f64, Position)>, Vec<(f64, Position)>), Error>; // (area_v, area_h)
+    /// - Returns pantocaren for current draught and trim
+    fn pantocaren(&self) -> Result<Vec<(f64, f64)>, Error>; // (angle, lever)
 }

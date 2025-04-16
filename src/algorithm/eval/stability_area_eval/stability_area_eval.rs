@@ -56,7 +56,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return CtxResult::Err(error.err("Read bounds error: no data!")),
                 };
-                let (const_area_v, const_area_h) = match self.model.current_areas() {
+                let (const_area_v, const_area_h) = match self.model.stability_areas() {
                     Ok((area_v, area_h)) => (area_v, area_h),
                     Err(err) => {
                         return CtxResult::Err(error.pass_with("Read areas error", err));
