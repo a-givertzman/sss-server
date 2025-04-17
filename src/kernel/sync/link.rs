@@ -127,7 +127,7 @@ impl Link {
         log::debug!("{}.listen | Starting...", dbg);
         let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
             'main: loop {
-                match recv.recv_timeout(timeout) {
+                match recv.recv_timeout(Duration::from_micros(100)) {
                     Ok(query) => {
                         log::trace!("{}.listen | Received query: {:#?}", dbg, query);
                         match bincode::decode_from_slice(&query, config) {
@@ -136,7 +136,7 @@ impl Link {
                                     Some(reply) => {
                                         match bincode::encode_to_vec(&reply, config) {
                                             Ok(reply) => if let Err(err) = send.send(reply) {
-                                                let err = error.pass_with("Send request error", err.to_string());
+                                                let err = error.pass_with("Send reply error", err.to_string());
                                                 log::error!("{}", err);
                                             }
                                             Err(err) => log::warn!("{}.listen | Encode error: {:#?}", dbg, err),
@@ -169,7 +169,76 @@ impl Link {
         handle.map_err(|err| error.pass(err.to_string()))
     }
     ///
-    /// Receiving incomong events
+    /// Tries receiving incoming `event` without waiting.
+    /// - Returns Ok<Some<T>> if `Link` has `event`
+    /// - Returns Ok<None> if `Link` is empty for now
+    /// - Returns Err if `Link` is closed
+    /// 
+    /// **Important note**: this function is not lock-free as it acquires a mutex guard of the channel internal for a short time.
+    pub fn try_recv<T: Decode<()> + Debug>(&self) -> Result<Option<T>, Error> {
+        let error = Error::new(&self.name, "recv_query");
+        match self.recv.pop() {
+            Some(recv) => match recv.try_recv() {
+                Ok(query) => {
+                    self.recv.push(recv);
+                    match query {
+                        Some(query) => {
+                            match bincode::decode_from_slice(&query, self.bincode_config) {
+                                Ok((query, _)) => {
+                                    log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
+                                    return Ok(query)
+                                }
+                                Err(err) => Err(
+                                    error.pass_with("Decode error", err.to_string()),
+                                ),
+                            }
+                        }
+                        None => Ok(None),
+                    }
+                }
+                Err(err) => {
+                    self.recv.push(recv);
+                    Err(error.pass_with("Recv error", err.to_string()))
+                }
+            }
+            None => Err(error.err("Recv - not found")),
+        }
+    }
+    ///
+    /// Tries receiving incoming `event` within a duration
+    /// - Returns Ok<Some<T>> if `Link` has `event`
+    /// - Returns Ok<None> if `Link` is empty within a duration
+    /// - Returns Err if `Link` is closed
+    /// 
+    pub fn recv_timeout<T: Decode<()> + Debug>(&self, duration: Duration) -> Result<Option<T>, Error> {
+        let error = Error::new(&self.name, "recv_query");
+        match self.recv.pop() {
+            Some(recv) => match recv.recv_timeout(duration) {
+                Ok(query) => {
+                    self.recv.push(recv);
+                    match bincode::decode_from_slice(&query, self.bincode_config) {
+                        Ok((query, _)) => {
+                            log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
+                            return Ok(query)
+                        }
+                        Err(err) => Err(
+                            error.pass_with("Decode error", err.to_string()),
+                        ),
+                    }
+                }
+                Err(err) => {
+                    self.recv.push(recv);
+                    match err {
+                        kanal::ReceiveErrorTimeout::Timeout => Ok(None),
+                        _ => Err(error.pass_with("Recv error", err.to_string()))
+                    }
+                }
+            }
+            None => Err(error.err("Recv - not found")),
+        }
+    }
+    ///
+    /// Receiving incomong events, bloking with `self.timeout`
     /// - Returns Ok<T> if channel has query
     /// - Returns None if channel is empty for now
     /// - Returns Err if channel is closed
@@ -204,8 +273,8 @@ impl Link {
     }
     ///
     /// Sending event
-    pub fn send_reply(&self, reply: impl Encode + Debug) -> Result<(), Error> {
-        let error = Error::new(&self.name, "send_reply");
+    pub fn send(&self, reply: impl Encode + Debug) -> Result<(), Error> {
+        let error = Error::new(&self.name, "send");
         match bincode::encode_to_vec(reply, self.bincode_config) {
             Ok(reply) => match self.send.send(reply) {
                 Ok(_) => Ok(()),

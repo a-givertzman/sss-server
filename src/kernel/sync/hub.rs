@@ -1,8 +1,7 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}};
-use coco::Stack;
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle, time::Duration};
+use bincode::{Decode, Encode};
 use sal_core::error::Error;
-use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_tx_id::PointTxId}}, service::service_handles::ServiceHandles};
-use crate::kernel::types::{channel::{Receiver, RecvTimeoutError, Sender}, fx_map::{FxDashMap, FxIndexMap}};
+use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
 use super::{link::Link, DEFAULT_TIMEOUT};
 ///
 /// Combines multiple links
@@ -12,13 +11,7 @@ use super::{link::Link, DEFAULT_TIMEOUT};
 pub struct Hub {
     txid: usize,
     name: Name,
-    links: Sender<Point>,
-    send: Sender<Point>,
-    recv: Stack<Receiver<Point>>,
-    subscribers: Arc<FxDashMap<String, Sender<Point>>>,
-    receivers_tx: Sender<(String, Receiver<Point>)>,
-    receivers_rx: Stack<Receiver<(String, Receiver<Point>)>>,
-    receivers: Arc<AtomicUsize>,
+    links: Arc<papaya::HashMap<String, Link>>,
     timeout: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -32,200 +25,79 @@ impl Hub {
     /// - `exit` - exit signal for `recv_query` method
     pub fn new(parent: impl Into<String>) -> Self {
         let name = Name::new(parent, "Hub");
-        let stack = Stack::new();
-        stack.push(recv);
-        let (receivers_tx, receivers_rx) = kanal::unbounded();
-        let receivers_rx_stack = Stack::new();
-        receivers_rx_stack.push(receivers_rx);
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
-            send, 
-            recv: stack,
-            subscribers: Arc::new(FxDashMap::default()),
-            receivers: Arc::new(AtomicUsize::new(0)),
-            receivers_tx,
-            receivers_rx: receivers_rx_stack,
+            links: Arc::new(papaya::HashMap::new()),
             timeout: DEFAULT_TIMEOUT,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
-    /// Returns Self and `remote: [Link]` new instances
-    pub fn split(parent: impl Into<String>) -> (Self, Link) {
-        let name = Name::new(parent, "Hub");
-        let (loc_send, rem_recv) = kanal::unbounded();
-        let (rem_send, loc_recv) = kanal::unbounded();
-        let remote = Link::new(name.join(), rem_send, rem_recv);
-        let stack = Stack::new();
-        stack.push(loc_recv);
-        let (receivers_tx, receivers_rx) = kanal::unbounded();
-        let receivers_rx_stack = Stack::new();
-        receivers_rx_stack.push(receivers_rx);
-        (
-            Self { 
-                txid: PointTxId::from_str(&name.join()),
-                name: name.clone(),
-                send: loc_send, recv: stack,
-                subscribers: Arc::new(FxDashMap::default()),
-                receivers: Arc::new(AtomicUsize::new(0)),
-                receivers_tx,
-                receivers_rx: receivers_rx_stack,
-                timeout: Self::DEFAULT_TIMEOUT,
-                exit: Arc::new(AtomicBool::new(false)),
-            },
-            remote,
-        )
-    }
-    ///
-    /// Returns connected `Link`
+    /// Returns new connected `Link`
     pub fn link(&self) -> Link {
-        let (loc_send, rem_recv) = kanal::unbounded();
-        let (rem_send, loc_recv) = kanal::unbounded();
-        let remote = Link::new(&format!("{}:{}", self.name, self.subscribers.len()), rem_send, rem_recv);
+        let (local, remote) = Link::split(&format!("{}:{}", self.name, self.links.len()));
         let key = remote.name().join();
-        self.subscribers.insert(key.clone(), loc_send);
-        let receivers = self.receivers.clone();
-        let len = receivers.load(Ordering::SeqCst);
-        self.receivers_tx.send((key, loc_recv)).unwrap();
-        while len == receivers.load(Ordering::SeqCst) {
-            std::thread::sleep(Duration::from_millis(3));
-        }
+        self.links.pin().insert(key, local);
         remote
     }
     ///
     /// Entry point
-    pub fn run(&self) -> Result<ServiceHandles<()>, Error> {
+    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&mut self, op: impl Fn(In) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
+        let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
-        log::info!("{}.run | Remote | Starting...", dbg);
-        let subscribers = self.subscribers.clone();
-        let exit = self.exit.clone();
-        let recv = self.recv.pop().unwrap();
+        let links = self.links.clone();
         let timeout = self.timeout;
-        let handle1 = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
-            log::debug!("{}.run | Remote | Start", dbg);
+        let exit = self.exit.clone();
+        log::debug!("{}.listen | Starting...", dbg);
+        let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
             'main: loop {
-                log::trace!("{}.run | Remote | Subscriber: {}", dbg, subscribers.len());
-                match recv.recv_timeout(timeout) {
-                    Ok(event) => {
-                        log::trace!("{}.run | Request: {:?}", dbg, event);
-                        match event.cot() {
-                            Cot::Inf | Cot::Act | Cot::Req => {
-                                for item in subscribers.iter() {
-                                    let (_key, subscriber) = item.pair();
-                                    if let Err(err) = subscriber.send(event.clone()) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                let links_pin = links.pin();
+                let links_iter = links_pin.iter();
+                for (id, link) in links_iter {
+                    match link.recv_timeout(Duration::from_micros(100)) {
+                        Ok(event) => {
+                            match event {
+                                Some(event) => {
+                                    log::trace!("{}.listen | Received event: {:#?}", dbg, event);
+                                    match (op)(event) {
+                                        Some(reply) => {
+                                            if let Err(err) = link.send(reply) {
+                                                let err = error.pass_with("Send reply error", err.to_string());
+                                                log::error!("{}", err);
+                                            }
+                                        }
+                                        None => {}
                                     }
                                 }
-                            }
-                            Cot::ReqCon | Cot::ReqErr => {
-                                let key = event.name();
-                                match subscribers.get(&key) {
-                                    Some(subscriber) => {
-                                        if let Err(err) = subscriber.send(event.clone()) {
-                                            log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                        }
-                                    },
-                                    None => {
-                                        log::warn!("{}.run | Subscriber not found: {:?}", dbg, key);
-                                    },
-                                }
-                            }
-                            _ => log::warn!("{}.run | Uncnown message received: {:?}", dbg, event),
-                        }
-                    },
-                    Err(err) => match err {
-                        std::sync::mpsc::RecvTimeoutError::Timeout => {
-                            log::trace!("{}.run | Remote | Listening...", dbg);
-                        },
-                        std::sync::mpsc::RecvTimeoutError::Disconnected => {
-                            if log::max_level() >= log::LevelFilter::Trace {
-                                log::warn!("{}.run | Receive error, all receivers has been closed", dbg);
+                                None => {}
                             }
                         }
-                    },
+                        Err(err) => log::warn!("{}.listen | Error: {:#?}", dbg, err),
+                    }
                 }
+                // match recv.recv_timeout(timeout) {
+                //     Ok(query) => {
+                //     }
+                //     Err(err) => match err {
+                //         RecvTimeoutError::Timeout => {}
+                //         _ => {
+                //             if log::max_level() >= log::LevelFilter::Trace {
+                //                 log::warn!("{}.listen | Recv error: {:#?}", dbg, err);
+                //             }
+                //         }
+                //     }
+                // }
                 if exit.load(Ordering::SeqCst) {
                     break 'main;
                 }
             }
-            log::info!("{}.run | Remote | Exit", dbg);
+            log::debug!("{}.listen | Exit", dbg);
         });
         let dbg = self.name.join();
-        log::info!("{}.run | Remote | Starting - Ok", dbg);
-        log::info!("{}.run | Locals | Starting...", dbg);
-        let send = self.send.clone();
-        let timeout = self.timeout;
-        let interval = self.timeout;    //Duration::from_millis(1000);
-        let self_receivers = self.receivers.clone();
-        let receivers_rx = self.receivers_rx.pop().unwrap();
-        let exit = self.exit.clone();
-        let handle2 = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
-            log::debug!("{}.run | Locals | Start", dbg);
-            let mut receivers = FxIndexMap::default();
-            'main: loop {
-                for (key, receiver) in receivers_rx.try_iter() {
-                    receivers.insert(key, receiver);
-                    self_receivers.fetch_add(1, Ordering::SeqCst);
-                }
-                log::debug!("{}.run | Locals | Receivers: {}", dbg, receivers.len());
-                let cycle = Instant::now();
-                for (_key, receiver) in &receivers {
-                    match receiver.recv_timeout(timeout) {
-                        Ok(event) => {
-                            log::trace!("{}.run | Received from locals: {:?}", dbg, event);
-                            if let Err(err) = send.send(event) {
-                                log::warn!("{}.run | Send error: {:?}", dbg, err);
-                            }
-                        }
-                        Err(err) => match err {
-                            RecvTimeoutError::Timeout => {
-                                log::trace!("{}.run | Locals | Listening...", dbg);
-                            }
-                            RecvTimeoutError::Disconnected => {
-                                if log::max_level() >= log::LevelFilter::Trace {
-                                    log::warn!("{}.run | Receive error, all senders has been closed", dbg);
-                                }
-                            }
-                        }
-                    }
-                    if exit.load(Ordering::SeqCst) {
-                        break 'main;
-                    }
-                }
-                if exit.load(Ordering::SeqCst) {
-                    break 'main;
-                }
-                if receivers.len() == 0 {
-                    let elapsed = cycle.elapsed();
-                    if elapsed < interval {
-                        std::thread::sleep(interval - elapsed);
-                    }
-                }
-            }
-            log::info!("{}.run | Locals | Exit", dbg);
-        });
-        let dbg = self.name.join();
-        let error = Error::new(&dbg, "run");
-        log::info!("{}.run | Locals | Starting - Ok", dbg);
-        match (handle1, handle2) {
-            (Ok(h1), Ok(h2)) => Ok(ServiceHandles::new(vec![
-                (format!("{dbg}/Remote"), h1),
-                (format!("{dbg}/Locals"), h2),
-            ])),
-            (Ok(_), Err(err)) => {
-                self.exit.store(true, Ordering::SeqCst);
-                Err(error.pass_with("Failed to start 'Locals'", err.to_string()))
-            }
-            (Err(err), Ok(_)) => {
-                self.exit.store(true, Ordering::SeqCst);
-                Err(error.pass_with("Failed to start 'Remote'", err.to_string()))
-            }
-            (Err(err1), Err(err2)) => {
-                self.exit.store(true, Ordering::SeqCst);
-                Err(error.pass(format!("Failed to start \n\tRemote: {err1} \n\tLocals: {err2}")))
-            }
-        }
+        let error = Error::new(&self.name, "listen");
+        log::debug!("{}.listen | Starting - Ok", dbg);
+        handle.map_err(|err| error.pass(err.to_string()))
     }
     ///
     /// Sends "exit" signal to the service's task

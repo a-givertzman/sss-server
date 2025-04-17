@@ -91,7 +91,7 @@ mod link {
             let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
                 log::info!("{}.run | Start", dbg);
                 fn send_reply(dbg: &str, link: &mut Link, reply: impl Encode + Debug) {
-                    if let Err(err) = link.send_reply(reply) {
+                    if let Err(err) = link.send(reply) {
                         log::debug!("{}.run | Send reply error: {:?}", dbg, err);
                     };
                 }
