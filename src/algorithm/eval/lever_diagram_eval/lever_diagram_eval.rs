@@ -42,13 +42,13 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let parameters: Parameters = ctx.read();                 
                 let pantocaren = match self.model.pantocaren() {
                     Ok(data) => data,
                     Err(err) => {
                         return CtxResult::Err(error.pass_with( "Read pantocaren error", err));
                     }
                 };
-                let parameters: Parameters = ctx.read(); 
                 let z_g_fix = parameters.get(ParameterID::CenterMassZFix).ok_or(CtxResult::Err(error.err("calculate z_g_fix error: no CenterMassZFix in parameters")))?;
                 let y_g = parameters.get(ParameterID::CenterMassY).ok_or(CtxResult::Err(error.err("calculate y_g error: no CenterMassY in parameters")))?;
                 let y_c = parameters.get(ParameterID::CenterVolumeY).ok_or(CtxResult::Err(error.err("calculate y_c error: no CenterVolumeY in parameters")))?;

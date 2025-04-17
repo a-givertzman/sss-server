@@ -163,6 +163,18 @@ impl ContextRead<LeverDiagramCtx> for Context {
         self.lever_diagram.clone().unwrap()
     }
 }
+//
+impl ContextWrite<WindCtx> for Context {
+    fn write(mut self, value: WindCtx) -> CtxResult<Self, Error> {
+        self.wind = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WindCtx> for Context {
+    fn read(&self) -> WindCtx {
+        self.wind.clone().unwrap()
+    }
+}
 
 
 

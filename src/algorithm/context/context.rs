@@ -36,6 +36,8 @@ pub struct Context {
     pub(super) metacentric_height: Option<MetacentricHeightCtx>,   
     /// Диаграмма плеч статической и динамической остойчивости
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
+    /// Расчет плеча кренящего момента от давления ветра
+    pub(super) wind: Option<WindCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
