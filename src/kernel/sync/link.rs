@@ -4,7 +4,7 @@ use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
 use crate::kernel::types::channel::{Receiver, RecvTimeoutError, Sender};
-use super::DEFAULT_TIMEOUT;
+use super::{LinkSend, DEFAULT_TIMEOUT};
 
 ///
 /// Contains local side `send` & `recv` of `channel`
@@ -73,6 +73,15 @@ impl Link {
                 bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
             },
+        )
+    }
+    ///
+    /// Returns Sender
+    pub fn sender(&self) -> LinkSend {
+        LinkSend::new(
+            self.name.join(),
+            self.send.clone(),
+            self.bincode_config,
         )
     }
     ///
@@ -209,7 +218,6 @@ impl Link {
     /// - Returns Ok<Some<T>> if `Link` has `event`
     /// - Returns Ok<None> if `Link` is empty within a duration
     /// - Returns Err if `Link` is closed
-    /// 
     pub fn recv_timeout<T: Decode<()> + Debug>(&self, duration: Duration) -> Result<Option<T>, Error> {
         let error = Error::new(&self.name, "recv_timeout");
         match self.recv.pop() {
@@ -268,9 +276,9 @@ impl Link {
     }
     ///
     /// Sending event
-    pub fn send(&self, reply: impl Encode + Debug) -> Result<(), Error> {
+    pub fn send(&self, event: impl Encode + Debug) -> Result<(), Error> {
         let error = Error::new(&self.name, "send");
-        match bincode::encode_to_vec(reply, self.bincode_config) {
+        match bincode::encode_to_vec(event, self.bincode_config) {
             Ok(reply) => match self.send.send(reply) {
                 Ok(_) => Ok(()),
                 Err(err) => Err(error.pass(err.to_string())),

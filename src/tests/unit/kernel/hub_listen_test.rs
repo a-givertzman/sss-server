@@ -41,7 +41,7 @@ mod hub_listen {
         ];
         let hub = Hub::new(dbg);
         let link = hub.link();
-        let hub_handle = hub.listen(|query: Query| {
+        let hub_handle = hub.listen(|query: Query, _| {
             log::debug!("Hub.listen | Query {:#?}", query);
             Some(match query.0.as_str() {
                 "Query-1" => Reply("Reply-1".into()),

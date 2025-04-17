@@ -97,64 +97,32 @@ impl ShipModel {
             Ok(data) => data,
             Err(err) => return Err(error.pass_with("get_bounds error", err)),
         };
-        let handle = thread::Builder::new().name(dbg.clone()).spawn(move || {
-            log::debug!("{}.run | Locals | Start", dbg);
-            'main: loop {
-                // let cycle = Instant::now();
-                // for (_key, (send, recv)) in &clients {
-                    // match recv.recv_timeout(timeout) {
-                    //     Ok(query) => {
-                    //         log::trace!("{}.run | Received query: {:?}", dbg, query);
-                    //         match query {
-                    //             Query::Bounds => {
-                    //                 if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-                    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
-                    //                 }
-                    //             }
-                    //             Query::BoundAreas => {
-                    //                 let result = areas_strength(bounds.clone(), ship_id, &api_client);
-                    //                 if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
-                    //                 }
-                    //             }
-                    //             Query::ComputeBalance(balance_src_data) => {
-                    //                 let result =
-                    //                     compute_balance(bounds.clone(), balance_src_data, ship_id);
-                    //                 if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
-                    //                 }
-                    //             }
-                    //         }
-                    //     }
-                    //     Err(err) => match err {
-                    //         mpsc::RecvTimeoutError::Timeout => {
-                    //             log::trace!("{}.run | Listening...", dbg);
-                    //         }
-                    //         mpsc::RecvTimeoutError::Disconnected => {
-                    //             if log::max_level() >= log::LevelFilter::Trace {
-                    //                 log::warn!(
-                    //                     "{}.run | Receive error, all senders has been closed",
-                    //                     dbg
-                    //                 );
-                    //             }
-                    //         }
-                    //     },
-                    // }
-                    // if exit.load(Ordering::SeqCst) {
-                    //     break 'main;
-                    // }
-                // }
-                // if exit.load(Ordering::SeqCst) {
-                //     break 'main;
-                // }
-                // if clients.len() == 0 {
-                //     let elapsed = cycle.elapsed();
-                //     if elapsed < interval {
-                //         std::thread::sleep(interval - elapsed);
-                //     }
-                // }
+        let handle = self.hub.listen(|query, send| {
+            log::trace!("{}.run | Received query: {:?}", dbg, query);
+            match query {
+                Query::Bounds => {
+                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    }
+                }
+                Query::BoundAreas => {
+                    match areas_strength(bounds.clone(), ship_id, &api_client) {
+                        Ok(reply) => if let Err(err) = send.send(Reply::BoundAreas(reply)) {
+                            log::warn!("{}.run | Send error: {:?}", dbg, err);
+                        }
+                        Err(_) => todo!(),
+                    };
+                    
+                }
+                Query::ComputeBalance(balance_src_data) => {
+                    let result =
+                        compute_balance(bounds.clone(), balance_src_data, ship_id);
+                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    }
+                }
             }
-            log::info!("{}.run | Exit", dbg);
+            None
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);
@@ -164,6 +132,7 @@ impl ShipModel {
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
+        self.hub.exit();
     }
 }
 //
@@ -240,7 +209,7 @@ fn get_bounds(
 }
 ///
 /// Type doc comment
-fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<(Vec<f64>, Vec<f64>), Error> {
+fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<BoundAreaReply, Error> {
     let error = Error::new("ShipModel", "areas_strength");
     let area_h_str = HStrAreaArray::parse(
         &api_client.fetch(&format!(
@@ -279,7 +248,7 @@ fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Res
             )
         })
         .collect();
-    Ok((area_v_str, area_h_str))
+    Ok(BoundAreaReply {v: area_v_str, h: area_h_str })
 }
 //
 fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize) -> Result<BalanceCtx, Error> {

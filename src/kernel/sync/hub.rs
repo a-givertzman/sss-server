@@ -2,7 +2,9 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinH
 use bincode::{Decode, Encode};
 use sal_core::error::Error;
 use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
-use super::{link::Link, DEFAULT_TIMEOUT};
+use crate::kernel::types::channel::Sender;
+
+use super::{link::Link, LinkSend, DEFAULT_TIMEOUT};
 ///
 /// Combines multiple links
 /// - Receives incomming events (requests) in the `listen` closure
@@ -42,8 +44,12 @@ impl Hub {
         remote
     }
     ///
-    /// Entry point
-    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&self, op: impl Fn(In) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
+    /// Listenning incomong events in the closure
+    /// - Closure provides incoming event's
+    /// - Returned from closure
+    ///     - `Some<Event>` - will be sent as reply
+    ///     - `None` - nothing will be sent
+    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&self, op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
         let links = self.links.clone();
@@ -60,7 +66,7 @@ impl Hub {
                             match event {
                                 Some(event) => {
                                     log::trace!("{}.listen | Link({id}) Received event: {:#?}", dbg, event);
-                                    match (op)(event) {
+                                    match (op)(event, link.sender()) {
                                         Some(reply) => {
                                             log::debug!("{}.listen | Link({id}) Reply event: {:#?}", dbg, reply);
                                             if let Err(err) = link.send(reply) {
