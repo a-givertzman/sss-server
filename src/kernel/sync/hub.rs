@@ -95,6 +95,10 @@ impl Hub {
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
+        let links = self.links.pin();
+        for (_, link) in links.iter() {
+            link.exit();
+        }
     }
 }
 //

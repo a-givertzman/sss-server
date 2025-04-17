@@ -186,7 +186,7 @@ impl Link {
                             match bincode::decode_from_slice(&query, self.bincode_config) {
                                 Ok((query, _)) => {
                                     log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
-                                    return Ok(query)
+                                    return Ok(Some(query))
                                 }
                                 Err(err) => Err(
                                     error.pass_with("Decode error", err.to_string()),
@@ -219,7 +219,7 @@ impl Link {
                     match bincode::decode_from_slice(&query, self.bincode_config) {
                         Ok((query, _)) => {
                             log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
-                            return Ok(query)
+                            return Ok(Some(query))
                         }
                         Err(err) => Err(
                             error.pass_with("Decode error", err.to_string()),
@@ -263,7 +263,7 @@ impl Link {
                     Err(error.pass_with("Recv error", err.to_string()))
                 }
             }
-            None => todo!(),
+            None => Err(error.err("Recv - not found")),
         }
     }
     ///
@@ -287,6 +287,9 @@ impl Link {
     /// Sends "exit" signal to the `listen` task
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
+        if let Err(err) = self.send.close() {
+            log::trace!("{}.exit | Error: {:#?}", self.name, err);
+        }
     }
 }
 //

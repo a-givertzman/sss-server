@@ -2,7 +2,7 @@
 
 mod hub_listen {
     use std::{sync::Once, time::Duration};
-    use bincode::{config, Decode, Encode};
+    use bincode::{Decode, Encode};
     use sal_core::error::Error;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -31,28 +31,28 @@ mod hub_listen {
         log::debug!("");
         let dbg = "hub_listen";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(5));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
-        let test_data: [(i32, Message, Result<Message, Error>); 4] = [
-            (1, Message("Query-1".into()), Ok(Message("Reply-1".into()))),
-            (2, Message("Query-2".into()), Ok(Message("Reply-2".into()))),
-            (3, Message("Query-3".into()), Ok(Message("Reply-3".into()))),
-            (4, Message("Query-4".into()), Ok(Message("Reply-4".into()))),
+        let test_data: [(i32, Query, Result<Reply, Error>); 4] = [
+            (1, Query("Query-1".into()), Ok(Reply("Reply-1".into()))),
+            (2, Query("Query-2".into()), Ok(Reply("Reply-2".into()))),
+            (3, Query("Query-3".into()), Ok(Reply("Reply-3".into()))),
+            (4, Query("Query-4".into()), Ok(Reply("Reply-4".into()))),
         ];
         let hub = Hub::new(dbg);
         let link = hub.link();
-        let hub_handle = hub.listen(|query: Message| {
+        let hub_handle = hub.listen(|query: Query| {
             log::debug!("Hub.listen | Query {:#?}", query);
             Some(match query.0.as_str() {
-                "Query-1" => Message("Reply-1".into()),
-                "Query-2" => Message("Reply-2".into()),
-                "Query-3" => Message("Reply-3".into()),
-                "Query-4" => Message("Reply-4".into()),
+                "Query-1" => Reply("Reply-1".into()),
+                "Query-2" => Reply("Reply-2".into()),
+                "Query-3" => Reply("Reply-3".into()),
+                "Query-4" => Reply("Reply-4".into()),
                 _ => panic!("Hub.listen | Unknown event {:#?}", query),
             })
         }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, Error> = link.call(query);
+            let result: Result<Reply, Error> = link.call(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -66,7 +66,11 @@ mod hub_listen {
         test_duration.exit();
     }
     ///
-    /// Message container
+    /// Query container
     #[derive(Debug, Encode, Decode, PartialEq)]
-    struct Message(pub String);
+    struct Query(pub String);
+    ///
+    /// Reply container
+    #[derive(Debug, Encode, Decode, PartialEq)]
+    struct Reply(pub String);
 }

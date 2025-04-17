@@ -33,25 +33,25 @@ mod link_listen {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(dbg, Duration::from_secs(5));
         test_duration.run().unwrap();
-        let test_data: [(i32, Message, Result<Message, Error>); 4] = [
-            (1, Message("Query-1".into()), Ok(Message("Reply-1".into()))),
-            (2, Message("Query-2".into()), Ok(Message("Reply-2".into()))),
-            (3, Message("Query-3".into()), Ok(Message("Reply-3".into()))),
-            (4, Message("Query-4".into()), Ok(Message("Reply-4".into()))),
+        let test_data: [(i32, Query, Result<Reply, Error>); 4] = [
+            (1, Query("Query-1".into()), Ok(Reply("Reply-1".into()))),
+            (2, Query("Query-2".into()), Ok(Reply("Reply-2".into()))),
+            (3, Query("Query-3".into()), Ok(Reply("Reply-3".into()))),
+            (4, Query("Query-4".into()), Ok(Reply("Reply-4".into()))),
         ];
         let (local, mut remote) = Link::split(dbg);
         let remote_handle = remote.listen(|query: String| {
             log::debug!("Link.remote.listen | Query {:#?}", query);
             Some(match query.as_str() {
-                "Query-1" => bincode::encode_to_vec(&Message("Reply-1".into()), config::standard()).unwrap(),
-                "Query-2" => bincode::encode_to_vec(&Message("Reply-2".into()), config::standard()).unwrap(),
-                "Query-3" => bincode::encode_to_vec(&Message("Reply-3".into()), config::standard()).unwrap(),
-                "Query-4" => bincode::encode_to_vec(&Message("Reply-4".into()), config::standard()).unwrap(),
+                "Query-1" => Reply("Reply-1".into()),
+                "Query-2" => Reply("Reply-2".into()),
+                "Query-3" => Reply("Reply-3".into()),
+                "Query-4" => Reply("Reply-4".into()),
                 _ => panic!("Link.remote.listen | Unknown event {:#?}", query),
             })
         }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, Error> = local.call(query);
+            let result: Result<Reply, Error> = local.call(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -65,7 +65,11 @@ mod link_listen {
         test_duration.exit();
     }
     ///
-    /// Message container
+    /// Query container
     #[derive(Debug, Encode, Decode, PartialEq)]
-    struct Message(pub String);
+    struct Query(pub String);
+    ///
+    /// Reply container
+    #[derive(Debug, Encode, Decode, PartialEq)]
+    struct Reply(pub String);
 }
