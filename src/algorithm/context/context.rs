@@ -38,6 +38,8 @@ pub struct Context {
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
     /// Расчет плеча кренящего момента от давления ветра
     pub(super) wind: Option<WindCtx>,
+    /// Парусность судна
+    pub(super) windage: Option<WindageCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

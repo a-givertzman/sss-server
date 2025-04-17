@@ -11,6 +11,7 @@ pub mod stability_area_eval;
 pub mod metacentric_height_eval;
 pub mod lever_diagram_eval;
 pub mod wind_eval;
+pub mod windage_eval;
 
 pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
 pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx; 
@@ -45,8 +46,8 @@ pub use lever_diagram_eval::lever_diagram_ctx::LeverDiagramCtx;
 pub use wind_eval::wind_eval::WindEval;
 pub use wind_eval::wind_ctx::WindCtx;
 
-//pub use windage_eval::windage_eval::WindageEval;
-//pub use windage_eval::windage_ctx::WindageCtx;
+pub use windage_eval::windage_eval::WindageEval;
+pub use windage_eval::windage_ctx::WindageCtx;
 
 
 
