@@ -175,6 +175,18 @@ impl ContextRead<WindCtx> for Context {
         self.wind.clone().unwrap()
     }
 }
+//
+impl ContextWrite<WindageCtx> for Context {
+    fn write(mut self, value: WindageCtx) -> CtxResult<Self, Error> {
+        self.windage = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WindageCtx> for Context {
+    fn read(&self) -> WindageCtx {
+        self.windage.clone().unwrap()
+    }
+}
 
 
 
