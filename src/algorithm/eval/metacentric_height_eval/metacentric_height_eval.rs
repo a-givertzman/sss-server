@@ -133,7 +133,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                     delta_m_h,
                 };
                 self.value = Some(result.clone());
-                ctx.write(parameters);
+                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
