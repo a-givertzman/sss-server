@@ -4,6 +4,7 @@ use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
 use crate::{algorithm::context::ctx_result::CtxResult, kernel::types::channel::{Receiver, RecvTimeoutError, Sender}};
+use super::DEFAULT_TIMEOUT;
 
 ///
 /// Contains local side `send` & `recv` of `channel`
@@ -22,9 +23,6 @@ pub struct Link {
 //
 impl Link {
     ///
-    /// Default timeout to await `recv`` operation, 300 ms
-    const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
-    ///
     /// Returns [Link] new instance
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
@@ -38,7 +36,7 @@ impl Link {
             name,
             send, 
             recv: loc_recv_st,
-            timeout: Self::DEFAULT_TIMEOUT,
+            timeout: DEFAULT_TIMEOUT,
             bincode_config: bincode::config::standard(),
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -63,7 +61,7 @@ impl Link {
                 txid: PointTxId::from_str(&name.join()),
                 name: name.clone(),
                 send: loc_send, recv: loc_recv_st,
-                timeout: Self::DEFAULT_TIMEOUT,
+                timeout: DEFAULT_TIMEOUT,
                 bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
             },
@@ -71,7 +69,7 @@ impl Link {
                 txid: PointTxId::from_str(&name.join()),
                 name,
                 send: rem_send, recv: rem_recv_st,
-                timeout: Self::DEFAULT_TIMEOUT,
+                timeout: DEFAULT_TIMEOUT,
                 bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
             },

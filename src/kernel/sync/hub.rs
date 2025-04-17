@@ -3,12 +3,16 @@ use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_tx_id::PointTxId}}, service::service_handles::ServiceHandles};
 use crate::kernel::types::{channel::{Receiver, RecvTimeoutError, Sender}, fx_map::{FxDashMap, FxIndexMap}};
-use super::link::Link;
+use super::{link::Link, DEFAULT_TIMEOUT};
 ///
-/// 
+/// Combines multiple links
+/// - Receives incomming events (requests) in the `listen` closure
+/// - Provider `Sender` in the `listem` closure for sending reply
+/// - Sends back the reply if returned from `listen` closure 
 pub struct Hub {
     txid: usize,
     name: Name,
+    links: Sender<Point>,
     send: Sender<Point>,
     recv: Stack<Receiver<Point>>,
     subscribers: Arc<FxDashMap<String, Sender<Point>>>,
@@ -21,9 +25,6 @@ pub struct Hub {
 //
 //
 impl Hub {
-    ///
-    /// Default timeout to await `recv`` operation, 300 ms
-    const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
     ///
     /// Returns [Hub] new instance
     /// - `send` - local side of channel.send
@@ -45,7 +46,7 @@ impl Hub {
             receivers: Arc::new(AtomicUsize::new(0)),
             receivers_tx,
             receivers_rx: receivers_rx_stack,
-            timeout: Self::DEFAULT_TIMEOUT,
+            timeout: DEFAULT_TIMEOUT,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
