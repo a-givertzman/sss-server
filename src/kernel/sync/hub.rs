@@ -2,9 +2,7 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinH
 use bincode::{Decode, Encode};
 use sal_core::error::Error;
 use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
-use crate::kernel::types::channel::Sender;
-
-use super::{link::Link, LinkSend, DEFAULT_TIMEOUT};
+use super::{link::Link, LinkSend};
 ///
 /// Combines multiple links
 /// - Receives incomming events (requests) in the `listen` closure

@@ -3,7 +3,7 @@ use crate::algorithm::entities::data::loads::*;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::algorithm::entities::Bounds;
-use crate::kernel::sync::link::Link;
+use crate::kernel::sync::Link;
 use crate::ship_model::query;
 use crate::{
     algorithm::context::{

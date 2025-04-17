@@ -8,7 +8,7 @@ use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
-use crate::kernel::sync::link::Link;
+use crate::kernel::sync::Link;
 use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
 use coco::Stack;
@@ -94,16 +94,16 @@ impl ShipModel {
             Ok(data) => data,
             Err(err) => return Err(error.pass_with("get_bounds error", err)),
         };
-        let handle = self.hub.listen(|query, send| {
+        let handle = self.hub.listen(move |query, send| {
             log::trace!("{}.run | Received query: {:?}", dbg, query);
             match query {
                 Query::Bounds => {
-                    if let Err(err) = send.send(Reply::Bounds(bounds)) {
+                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
                         log::warn!("{}.run | Send error: {:?}", dbg, err);
                     }
                 }
                 Query::BoundAreas => {
-                    match areas_strength(bounds, ship_id, &api_client) {
+                    match areas_strength(bounds.clone(), ship_id, &api_client) {
                         Ok(reply) => if let Err(err) = send.send(Reply::BoundAreas(reply)) {
                             log::warn!("{}.run | Send error: {:?}", dbg, err);
                         }
@@ -112,14 +112,15 @@ impl ShipModel {
                     
                 }
                 Query::ComputeBalance(balance_src_data) => {
-                    let result =
-                        compute_balance(bounds, balance_src_data, ship_id);
-                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                    }
+                    match compute_balance(bounds.clone(), balance_src_data, ship_id) {
+                        Ok(result) => if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                            log::warn!("{}.run | Send error: {:?}", dbg, err);
+                        }
+                        Err(_) => todo!(),
+                    };
                 }
-            }
-            None
+            };
+            None::<()>
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);

@@ -6,7 +6,7 @@ use crate::{
         entities::Moment,
         eval::{IcingCtx, LoadsCtx, WettingCtx},
     },
-    kernel::{eval::Eval, sync::link::Link, types::eval_result::EvalResult},
+    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult},
     ship_model::query::{BalanceQuery, Query},
     ContextWrite, CtxResult,
 };

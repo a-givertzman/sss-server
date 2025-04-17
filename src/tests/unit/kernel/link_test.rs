@@ -7,7 +7,7 @@ mod link {
     use sal_sync::services::entity::name::Name;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::kernel::sync::link::Link;
+    use crate::kernel::sync::Link;
     ///
     ///
     static INIT: Once = Once::new();

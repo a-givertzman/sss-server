@@ -6,7 +6,7 @@ mod request {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         algorithm::{context::{context::Context, testing_ctx::{MokUserReplyTestCtx, TestingCtx}}, initial::initial_ctx::InitialCtx},
-        kernel::{request::Request, sync::link::Link},
+        kernel::{request::Request, sync::Link},
     };
     ///
     ///
