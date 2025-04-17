@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, parameters::{IParameters, Parameters}, Bound, Moment, Position},
-        eval::IcingTimberCtx,
+        eval::{IcingTimberCtx, StabilityAreaCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -40,13 +40,20 @@ impl Eval<(), EvalResult> for WindageEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let parameters: Parameters = ctx.read(); 
-
+                let volume_shift_z = parameters.get(ParameterID::CenterVolumeZ).ok_or(CtxResult::Err(error.err("eval volume_shift_z error: no CenterVolumeY in parameters")))?;
+                let stability_area: StabilityAreaCtx = ctx.read();
+                let icing_stab: IcingStabCtx = ctx.read();
+                let area_v = stability_area.area_v;
+                let coef = 1. + icing_stab.coef_v_area;
+                let a_v = area_v * coef;              
+                let m_vz = stability_area.moment_v.z();
+                let z_v_bp = m_vz / a_v;
+                let z_v = z_v_bp - volume_shift_z;
                 let result = WindageCtx {
-                    a_v: todo!(),
+                    a_v,
                     z_v: todo!(),
                 };
                 self.value = Some(result.clone());
-                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
