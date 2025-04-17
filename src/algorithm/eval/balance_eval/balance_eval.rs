@@ -70,18 +70,25 @@ impl Eval<(), EvalResult> for BalanceEval {
                     grain_bulkhead: loads.grain_bulkhead,
                 };
                 // Расчет баланса в модели
-                let result = match self.model.compute_balance(balance_src_data) {
+                let result_data = match self.model.compute_balance(balance_src_data) {
                     Ok(data) => data,
                     Err(err) => {
                         return CtxResult::Err(error.pass_with("model.compute_balance error", err));
                     }
                 };                    
                 let result = BalanceCtx {
-                    parameters: result.parameters,
-                    bulk: result.bulk,
-                    liquid: result.liquid,
+                    bulk: result_data.bulk,
+                    liquid: result_data.liquid,
+                    area_wl: result_data.area_wl, 
+                    mean_draught: result_data.mean_draught, 
+                    length_wl: result_data.length_wl, 
+                    breadth_wl: result_data.breadth_wl, 
+                    volume_shift_z: result_data.volume_shift_z, 
+                    entry_angle: result_data.entry_angle, 
+                    flooding_angle: result_data.flooding_angle, 
                 };
                 self.value = Some(result.clone());
+                 // TODO ctx.write(result_data.parameters);
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),

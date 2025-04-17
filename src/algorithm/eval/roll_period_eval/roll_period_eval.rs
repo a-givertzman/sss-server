@@ -1,7 +1,7 @@
 use super::roll_period_ctx::RollingPeriodCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
+        context::context_access::{ContextRead, ContextReadRef}, eval::MetacentricHeightCtx,
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -36,32 +36,29 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let parameters: Parameters = ctx.read(); 
-                let windage: WindageCtx = ctx.read(); 
-                let gravity_g = 9.81;
-                let p_v = initial.ship.expect("WindEval eval error: no ship!").p_v;
-                let m = initial.ship.expect("WindEval eval error: no ship!").m;
-                let a_v = windage.a_v;
-                let z_v = windage.z_v;
-                let mass = parameters.get(ParameterID::Displacement).ok_or(CtxResult::Err(error.err("calculate mass error: no Displacement in parameters")))?;
-                let arm_wind_static = (p_v * a_v * z_v) / (1000. * gravity_g * mass);
-                let arm_wind_dynamic = (1. + m) * arm_wind_static;          
-                log::trace!("\t Wind arm_wind_static mass_sum:{mass} p_v:{p_v} a_v:{a_v} z_v:{z_v} arm_wind_static:{arm_wind_static} arm_wind_dynamic:{arm_wind_dynamic}");
-                parameters.add(ParameterID::DynamicWindageHeelingLever, arm_wind_dynamic);
-                parameters.add(ParameterID::WindPressure, p_v);
-                parameters
-                    .add(ParameterID::WindageArea, a_v);
-                if let Some(draught_mean) = parameters.get(ParameterID::DraughtMean) {
-                    parameters
-                        .add(ParameterID::WindageAreaLever, z_v - draught_mean/2.);
-                }
-                parameters.add(ParameterID::StaticWindageHeelingLever, arm_wind_static);
-                let result = WindCtx {
-                    arm_wind_static,
-                    arm_wind_dynamic,
+                let metacentric_height: MetacentricHeightCtx = ctx.read();
+                let balance_ctx: BalanceCtx = ctx.read();
+                let length_wl = balance_ctx.length_wl;
+                let breadth_wl = balance_ctx.breadth_wl;
+                let mean_draught = balance_ctx.mean_draught;
+                /// Коэффициент для расчета периода
+                let c = 0.373 + 0.023 * breadth_wl / mean_draught - 0.043 * length_wl / 100.0;
+                let roll_period = if metacentric_height.h_trans_fix > 0. {
+                    let h_sqrt = metacentric_height.h_trans_fix.sqrt();
+                    let res = 2. * c * breadth_wl / h_sqrt;
+                    log::trace!(
+                        "\t RollingPeriod calculate length_wl:{length_wl} breadth_wl:{breadth_wl} mean_draught:{mean_draught} c:{c} h_sqrt: {h_sqrt} T:{res}",
+                    );
+                    res
+                } else {
+                    log::trace!("\t RollingPeriod calculate error: h_trans_fix is negative!");
+                    0.
+                };
+                let result = RollingPeriodCtx {
+                    c,
+                    roll_period,
                 }; 
                 self.value = Some(result.clone());
-                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
