@@ -9,6 +9,7 @@ use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
 use crate::kernel::sync::link::Link;
+use crate::kernel::sync::Hub;
 use crate::{
     infrostructure::api::client::api_client::ApiClient, kernel::types::fx_map::FxIndexMap,
 };
@@ -23,7 +24,6 @@ use std::{
     fmt::Debug,
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
-        mpsc::{self, Receiver, Sender},
         Arc,
     },
     time::{Duration, Instant},
@@ -36,9 +36,7 @@ pub struct ShipModel {
     ship_id: usize,
     project_id: String,
     n_parts: usize,
-    clients_tx: Sender<(String, Sender<Reply>, Receiver<Query>)>,
-    clients_rx: Stack<Receiver<(String, Sender<Reply>, Receiver<Query>)>>,
-    clients: Arc<AtomicUsize>,
+    hub: Hub,
     timeout: Duration,
     api_client: Stack<ApiClient>,
     exit: Arc<AtomicBool>,
@@ -62,9 +60,7 @@ impl ShipModel {
         api_client: ApiClient,
     ) -> Self {
         let name = Name::new(parent, "ShipModel");
-        let (receivers_tx, receivers_rx) = kanal::unbounded();
-        let receivers_rx_stack = Stack::new();
-        receivers_rx_stack.push(receivers_rx);
+        let hub = Hub::new(&name);
         let client = Stack::new();
         client.push(api_client);
         Self {
@@ -73,9 +69,7 @@ impl ShipModel {
             ship_id,
             project_id,
             n_parts,
-            clients: Arc::new(AtomicUsize::new(0)),
-            clients_tx: receivers_tx,
-            clients_rx: receivers_rx_stack,
+            hub,
             timeout: Self::DEFAULT_TIMEOUT,
             api_client: client,
             exit: Arc::new(AtomicBool::new(false)),
@@ -84,21 +78,7 @@ impl ShipModel {
     ///
     /// Returns connected `Link`
     pub fn link(&self) -> Link {
-        let (loc_send, rem_recv) = kanal::unbounded();
-        let (rem_send, loc_recv) = kanal::unbounded();
-        let receivers = self.clients.clone();
-        let remote = Link::new(
-            &format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)),
-            rem_send,
-            rem_recv,
-        );
-        let key = remote.name().join();
-        let len = receivers.load(Ordering::SeqCst);
-        self.clients_tx.send((key, loc_send, loc_recv)).unwrap();
-        while len == receivers.load(Ordering::SeqCst) {
-            std::thread::sleep(Duration::from_millis(3));
-        }
-        remote
+        self.hub.link()
     }
     ///
     /// Entry point
@@ -108,8 +88,6 @@ impl ShipModel {
         log::info!("{}.run | Starting...", dbg);
         let timeout = self.timeout;
         let interval = self.timeout; //Duration::from_millis(1000);
-        let self_receivers = self.clients.clone();
-        let clients_rx = self.clients_rx.pop().unwrap();
         let api_client = self.api_client.pop().unwrap();
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
@@ -121,66 +99,60 @@ impl ShipModel {
         };
         let handle = thread::Builder::new().name(dbg.clone()).spawn(move || {
             log::debug!("{}.run | Locals | Start", dbg);
-            let mut clients = FxIndexMap::default();
             'main: loop {
-                for (key, sender, receiver) in clients_rx.try_iter() {
-                    clients.insert(key, (sender, receiver));
-                    self_receivers.fetch_add(1, Ordering::SeqCst);
-                }
-                log::debug!("{}.run | Locals | Receivers: {}", dbg, clients.len());
-                let cycle = Instant::now();
-                for (_key, (send, recv)) in &clients {
-                    match recv.recv_timeout(timeout) {
-                        Ok(query) => {
-                            log::trace!("{}.run | Received query: {:?}", dbg, query);
-                            match query {
-                                Query::Bounds => {
-                                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                    }
-                                }
-                                Query::BoundAreas => {
-                                    let result = areas_strength(bounds.clone(), ship_id, &api_client);
-                                    if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                    }
-                                }
-                                Query::ComputeBalance(balance_src_data) => {
-                                    let result =
-                                        compute_balance(bounds.clone(), balance_src_data, ship_id);
-                                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                    }
-                                }
-                            }
-                        }
-                        Err(err) => match err {
-                            mpsc::RecvTimeoutError::Timeout => {
-                                log::trace!("{}.run | Listening...", dbg);
-                            }
-                            mpsc::RecvTimeoutError::Disconnected => {
-                                if log::max_level() >= log::LevelFilter::Trace {
-                                    log::warn!(
-                                        "{}.run | Receive error, all senders has been closed",
-                                        dbg
-                                    );
-                                }
-                            }
-                        },
-                    }
-                    if exit.load(Ordering::SeqCst) {
-                        break 'main;
-                    }
-                }
-                if exit.load(Ordering::SeqCst) {
-                    break 'main;
-                }
-                if clients.len() == 0 {
-                    let elapsed = cycle.elapsed();
-                    if elapsed < interval {
-                        std::thread::sleep(interval - elapsed);
-                    }
-                }
+                // let cycle = Instant::now();
+                // for (_key, (send, recv)) in &clients {
+                    // match recv.recv_timeout(timeout) {
+                    //     Ok(query) => {
+                    //         log::trace!("{}.run | Received query: {:?}", dbg, query);
+                    //         match query {
+                    //             Query::Bounds => {
+                    //                 if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+                    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    //                 }
+                    //             }
+                    //             Query::BoundAreas => {
+                    //                 let result = areas_strength(bounds.clone(), ship_id, &api_client);
+                    //                 if let Err(err) = send.send(Reply::BoundAreas(result)) {
+                    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    //                 }
+                    //             }
+                    //             Query::ComputeBalance(balance_src_data) => {
+                    //                 let result =
+                    //                     compute_balance(bounds.clone(), balance_src_data, ship_id);
+                    //                 if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    //                 }
+                    //             }
+                    //         }
+                    //     }
+                    //     Err(err) => match err {
+                    //         mpsc::RecvTimeoutError::Timeout => {
+                    //             log::trace!("{}.run | Listening...", dbg);
+                    //         }
+                    //         mpsc::RecvTimeoutError::Disconnected => {
+                    //             if log::max_level() >= log::LevelFilter::Trace {
+                    //                 log::warn!(
+                    //                     "{}.run | Receive error, all senders has been closed",
+                    //                     dbg
+                    //                 );
+                    //             }
+                    //         }
+                    //     },
+                    // }
+                    // if exit.load(Ordering::SeqCst) {
+                    //     break 'main;
+                    // }
+                // }
+                // if exit.load(Ordering::SeqCst) {
+                //     break 'main;
+                // }
+                // if clients.len() == 0 {
+                //     let elapsed = cycle.elapsed();
+                //     if elapsed < interval {
+                //         std::thread::sleep(interval - elapsed);
+                //     }
+                // }
             }
             log::info!("{}.run | Exit", dbg);
         });
