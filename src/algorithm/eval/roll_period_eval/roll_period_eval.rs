@@ -1,27 +1,26 @@
-use super::wind_ctx::WindCtx;
+use super::roll_period_ctx::RollingPeriodCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        eval::{IcingTimberCtx, WindageCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Расчет плеча кренящего момента от давления ветра
-pub struct WindEval {
+/// Расчет периода качки судна 
+pub struct RollingPeriodEval {
     dbg: Dbg,
-    value: Option<WindCtx>,
+    value: Option<RollingPeriodCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
-impl WindEval {
+impl RollingPeriodEval {
     ///
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
-        let dbg = Dbg::new(parent, "WindEval");
+        let dbg = Dbg::new(parent, "RollingPeriodEval");
         Self {
             dbg,
             value: None,
@@ -31,7 +30,7 @@ impl WindEval {
 }
 //
 //
-impl Eval<(), EvalResult> for WindEval {
+impl Eval<(), EvalResult> for RollingPeriodEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {

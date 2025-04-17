@@ -187,6 +187,19 @@ impl ContextRead<WindageCtx> for Context {
         self.windage.clone().unwrap()
     }
 }
+//
+impl ContextWrite<RollingPeriodCtx> for Context {
+    fn write(mut self, value: RollingPeriodCtx) -> CtxResult<Self, Error> {
+        self.roll_period = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<RollingPeriodCtx> for Context {
+    fn read(&self) -> RollingPeriodCtx {
+        self.roll_period.clone().unwrap()
+    }
+}
+
 
 
 

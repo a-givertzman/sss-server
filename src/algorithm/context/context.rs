@@ -40,6 +40,8 @@ pub struct Context {
     pub(super) wind: Option<WindCtx>,
     /// Парусность судна
     pub(super) windage: Option<WindageCtx>,
+    /// Период качки судна  
+    pub(super) roll_period: Option<RollingPeriodCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
