@@ -23,6 +23,7 @@ mod link_listen {
     fn init_each() -> () {}
     ///
     /// Testing 'Request::fetch'
+    #[test]
     fn listen() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();

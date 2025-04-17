@@ -62,6 +62,7 @@ impl Hub {
                                     log::trace!("{}.listen | Link({id}) Received event: {:#?}", dbg, event);
                                     match (op)(event) {
                                         Some(reply) => {
+                                            log::debug!("{}.listen | Link({id}) Reply event: {:#?}", dbg, reply);
                                             if let Err(err) = link.send(reply) {
                                                 let err = error.pass_with(format!("Link({id}) Send reply error"), err.to_string());
                                                 log::error!("{}", err);
@@ -73,7 +74,10 @@ impl Hub {
                                 None => {}
                             }
                         }
-                        Err(err) => log::warn!("{}.listen | Link({id}) Error: {:#?}", dbg, err),
+                        Err(err) => {
+                            let err = error.pass_with(format!("Link({id}) Recv error"), err.to_string());
+                            log::warn!("{}", err);
+                        }
                     }
                 }
                 if exit.load(Ordering::SeqCst) {

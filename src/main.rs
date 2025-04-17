@@ -4,9 +4,9 @@ mod infrostructure;
 mod kernel;
 mod conf;
 mod ship_model;
+mod prelude;
 #[cfg(test)]
 mod tests;
-mod prelude;
 
 use algorithm::eval::*;
 //

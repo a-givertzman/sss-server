@@ -24,6 +24,7 @@ mod link {
     fn init_each() -> () {}
     ///
     /// Testing 'Request::fetch'
+    #[test]
     fn req() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
@@ -96,19 +97,18 @@ mod link {
                     };
                 }
                 'main: loop {
-                    match link.recv_query::<String>() {
-                        CtxResult::Ok(query) => match query.as_str() {
+                    match link.recv::<String>() {
+                        Ok(query) => match query.as_str() {
                             "Query-1" => send_reply(&dbg, &mut link, "Reply-1"),
                             "Query-2" => send_reply(&dbg, &mut link, "Reply-2"),
                             "Query-3" => send_reply(&dbg, &mut link, "Reply-3"),
                             "Query-4" => send_reply(&dbg, &mut link, "Reply-4"),
                             _ => panic!("Unknown Query: {:?}", query)
                         }
-                        CtxResult::Err(err) => {
+                        Err(err) => {
                             log::warn!("{}.run | Error: {:?}", dbg, err);
                             break;
                         }
-                        CtxResult::None => {},
                     }
                     if exit.load(Ordering::SeqCst) {
                         break 'main;

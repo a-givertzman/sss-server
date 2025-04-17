@@ -23,12 +23,13 @@ mod hub_listen {
     fn init_each() -> () {}
     ///
     /// Testing 'Request::fetch'
+    #[test]
     fn listen() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
         log::debug!("");
-        let dbg = "link_listen";
+        let dbg = "hub_listen";
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(dbg, Duration::from_secs(5));
         test_duration.run().unwrap();
@@ -39,19 +40,19 @@ mod hub_listen {
             (4, Message("Query-4".into()), Ok(Message("Reply-4".into()))),
         ];
         let hub = Hub::new(dbg);
-        let local = hub.link();
-        let remote_handle = hub.listen(|query: String| {
-            log::debug!("Link.remote.listen | Query {:#?}", query);
-            Some(match query.as_str() {
-                "Query-1" => bincode::encode_to_vec(&Message("Reply-1".into()), config::standard()).unwrap(),
-                "Query-2" => bincode::encode_to_vec(&Message("Reply-2".into()), config::standard()).unwrap(),
-                "Query-3" => bincode::encode_to_vec(&Message("Reply-3".into()), config::standard()).unwrap(),
-                "Query-4" => bincode::encode_to_vec(&Message("Reply-4".into()), config::standard()).unwrap(),
-                _ => panic!("Link.remote.listen | Unknown event {:#?}", query),
+        let link = hub.link();
+        let hub_handle = hub.listen(|query: Message| {
+            log::debug!("Hub.listen | Query {:#?}", query);
+            Some(match query.0.as_str() {
+                "Query-1" => Message("Reply-1".into()),
+                "Query-2" => Message("Reply-2".into()),
+                "Query-3" => Message("Reply-3".into()),
+                "Query-4" => Message("Reply-4".into()),
+                _ => panic!("Hub.listen | Unknown event {:#?}", query),
             })
         }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Message, Error> = local.call(query);
+            let result: Result<Message, Error> = link.call(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -59,7 +60,8 @@ mod hub_listen {
                 _ => panic!("Error in step {} \nresult: {:?}\ntarget: {:?}", step, result, target)
             }
         }
-        remote_handle.join().unwrap();
+        hub.exit();
+        hub_handle.join().unwrap();
         log::debug!("{} | All - Done", dbg);
         test_duration.exit();
     }

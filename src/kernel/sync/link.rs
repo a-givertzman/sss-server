@@ -3,7 +3,7 @@ use bincode::{Decode, Encode};
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
-use crate::{algorithm::context::ctx_result::CtxResult, kernel::types::channel::{Receiver, RecvTimeoutError, Sender}};
+use crate::kernel::types::channel::{Receiver, RecvTimeoutError, Sender};
 use super::DEFAULT_TIMEOUT;
 
 ///
@@ -26,7 +26,7 @@ impl Link {
     /// Returns [Link] new instance
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
-    /// - `exit` - exit signal for `recv_query` method
+    /// - `exit` - exit signal for `listen` method
     pub fn new(parent: impl Into<String>, send: Sender<Vec<u8>>, recv: Receiver<Vec<u8>>) -> Self {
         let name = Name::new(parent, "Link");
         let loc_recv_st = Stack::new();
@@ -176,7 +176,7 @@ impl Link {
     /// 
     /// **Important note**: this function is not lock-free as it acquires a mutex guard of the channel internal for a short time.
     pub fn try_recv<T: Decode<()> + Debug>(&self) -> Result<Option<T>, Error> {
-        let error = Error::new(&self.name, "recv_query");
+        let error = Error::new(&self.name, "try_recv");
         match self.recv.pop() {
             Some(recv) => match recv.try_recv() {
                 Ok(query) => {
@@ -211,7 +211,7 @@ impl Link {
     /// - Returns Err if `Link` is closed
     /// 
     pub fn recv_timeout<T: Decode<()> + Debug>(&self, duration: Duration) -> Result<Option<T>, Error> {
-        let error = Error::new(&self.name, "recv_query");
+        let error = Error::new(&self.name, "recv_timeout");
         match self.recv.pop() {
             Some(recv) => match recv.recv_timeout(duration) {
                 Ok(query) => {
@@ -238,34 +238,29 @@ impl Link {
         }
     }
     ///
-    /// Receiving incomong events, bloking with `self.timeout`
+    /// Receiving incomong events, bloking method
     /// - Returns Ok<T> if channel has query
     /// - Returns None if channel is empty for now
     /// - Returns Err if channel is closed
-    pub fn recv_query<T: Decode<()> + Debug>(&self) -> CtxResult<T, Error> {
-        let error = Error::new(&self.name, "recv_query");
+    pub fn recv<T: Decode<()> + Debug>(&self) -> Result<T, Error> {
+        let error = Error::new(&self.name, "recv");
         match self.recv.pop() {
-            Some(recv) => match recv.recv_timeout(self.timeout) {
+            Some(recv) => match recv.recv() {
                 Ok(query) => {
                     self.recv.push(recv);
                     match bincode::decode_from_slice(&query, self.bincode_config) {
                         Ok((query, _)) => {
-                            log::trace!("{}.recv_query | Received query: {:#?}", self.name, query);
-                            return CtxResult::Ok(query)
+                            log::trace!("{}.recv | Received query: {:#?}", self.name, query);
+                            return Ok(query)
                         }
-                        Err(err) => CtxResult::Err(
+                        Err(err) => Err(
                             error.pass_with("Decode error", err.to_string()),
                         ),
                     }
                 }
                 Err(err) => {
                     self.recv.push(recv);
-                    match err {
-                        RecvTimeoutError::Timeout => CtxResult::None,
-                        _ => CtxResult::Err(
-                            error.pass_with("Recv error", err.to_string()),
-                        ),
-                    }
+                    Err(error.pass_with("Recv error", err.to_string()))
                 }
             }
             None => todo!(),
