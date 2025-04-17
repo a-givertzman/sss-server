@@ -29,7 +29,7 @@ impl Hub {
             txid: PointTxId::from_str(&name.join()),
             name,
             links: Arc::new(papaya::HashMap::new()),
-            timeout: DEFAULT_TIMEOUT,
+            timeout: Duration::from_micros(100),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -43,7 +43,7 @@ impl Hub {
     }
     ///
     /// Entry point
-    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&mut self, op: impl Fn(In) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
+    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&self, op: impl Fn(In) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
         let links = self.links.clone();
@@ -55,15 +55,15 @@ impl Hub {
                 let links_pin = links.pin();
                 let links_iter = links_pin.iter();
                 for (id, link) in links_iter {
-                    match link.recv_timeout(Duration::from_micros(100)) {
+                    match link.recv_timeout(timeout) {
                         Ok(event) => {
                             match event {
                                 Some(event) => {
-                                    log::trace!("{}.listen | Received event: {:#?}", dbg, event);
+                                    log::trace!("{}.listen | Link({id}) Received event: {:#?}", dbg, event);
                                     match (op)(event) {
                                         Some(reply) => {
                                             if let Err(err) = link.send(reply) {
-                                                let err = error.pass_with("Send reply error", err.to_string());
+                                                let err = error.pass_with(format!("Link({id}) Send reply error"), err.to_string());
                                                 log::error!("{}", err);
                                             }
                                         }
@@ -73,21 +73,9 @@ impl Hub {
                                 None => {}
                             }
                         }
-                        Err(err) => log::warn!("{}.listen | Error: {:#?}", dbg, err),
+                        Err(err) => log::warn!("{}.listen | Link({id}) Error: {:#?}", dbg, err),
                     }
                 }
-                // match recv.recv_timeout(timeout) {
-                //     Ok(query) => {
-                //     }
-                //     Err(err) => match err {
-                //         RecvTimeoutError::Timeout => {}
-                //         _ => {
-                //             if log::max_level() >= log::LevelFilter::Trace {
-                //                 log::warn!("{}.listen | Recv error: {:#?}", dbg, err);
-                //             }
-                //         }
-                //     }
-                // }
                 if exit.load(Ordering::SeqCst) {
                     break 'main;
                 }
