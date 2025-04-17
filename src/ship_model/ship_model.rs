@@ -10,23 +10,20 @@ use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
 use crate::kernel::sync::link::Link;
 use crate::kernel::sync::Hub;
-use crate::{
-    infrostructure::api::client::api_client::ApiClient, kernel::types::fx_map::FxIndexMap,
-};
+use crate::infrostructure::api::client::api_client::ApiClient;
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{
     name::Name, point::point_tx_id::PointTxId,
 };
-use std::thread;
 use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
 ///
 ///
@@ -86,8 +83,8 @@ impl ShipModel {
         let dbg = self.name.join();
         let error = Error::new(&dbg, "run");
         log::info!("{}.run | Starting...", dbg);
-        let timeout = self.timeout;
-        let interval = self.timeout; //Duration::from_millis(1000);
+        // let timeout = self.timeout;
+        // let interval = self.timeout; //Duration::from_millis(1000);
         let api_client = self.api_client.pop().unwrap();
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
