@@ -4,5 +4,5 @@ pub struct RollingPeriodCtx {
     /// Коэффициент для расчета периода
     pub c: f64,
     /// Период качки судна
-    pub roll_period: f64,
+    pub roll_period: f64, 
 }
