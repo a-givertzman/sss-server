@@ -98,12 +98,12 @@ impl ShipModel {
             log::trace!("{}.run | Received query: {:?}", dbg, query);
             match query {
                 Query::Bounds => {
-                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+                    if let Err(err) = send.send(Reply::Bounds(bounds)) {
                         log::warn!("{}.run | Send error: {:?}", dbg, err);
                     }
                 }
                 Query::BoundAreas => {
-                    match areas_strength(bounds.clone(), ship_id, &api_client) {
+                    match areas_strength(bounds, ship_id, &api_client) {
                         Ok(reply) => if let Err(err) = send.send(Reply::BoundAreas(reply)) {
                             log::warn!("{}.run | Send error: {:?}", dbg, err);
                         }
@@ -113,7 +113,7 @@ impl ShipModel {
                 }
                 Query::ComputeBalance(balance_src_data) => {
                     let result =
-                        compute_balance(bounds.clone(), balance_src_data, ship_id);
+                        compute_balance(bounds, balance_src_data, ship_id);
                     if let Err(err) = send.send(Reply::ComputeBalance(result)) {
                         log::warn!("{}.run | Send error: {:?}", dbg, err);
                     }
