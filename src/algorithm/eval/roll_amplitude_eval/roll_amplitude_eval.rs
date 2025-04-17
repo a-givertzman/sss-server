@@ -36,23 +36,59 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let parameters: Parameters = ctx.read();
-                let windage: WindageCtx = ctx.read();
-        // Коэффициент полноты судна
-        let c_b = self.volume / (self.l_wl * self.b_wl * self.d);
-        let k = if let Some(a_k) = self.a_k {
-            self.k.value(a_k * 100. / (self.l_wl * self.b))?
-        } else {
-            1.
-        };
-        let x_1 = self.x_1.value(self.b / self.d)?;
+                let balance: BalanceCtx = ctx.read();
+                let rolling_period: RollingPeriodCtx  = ctx.read();
+                let volume = balance.volume;
+                let length_wl = balance.length_wl;
+                let breadth_wl = balance.breadth_wl;
+                let mean_draught = balance.mean_draught;
+                let keel_area = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters").get("Keel area");
+                let width = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters").get("MouldedBreadth");
+                // Коэффициент полноты судна
+                let c_b = volume / (length_wl * breadth_wl * mean_draught);
+                let k = if let Some(a_k) = keel_area {
+                    self.k.value(a_k * 100. / (length_wl * width))?
+                } else {
+                    1.
+                };
+                let coefficient_k =
+                Rc::new(Curve::new_linear(&initial.coefficient_k.expect("RollingAmplitudeEval eval error: no coefficient_k").data()).map_err(|e| {
+                    Error::FromString(format!(
+                        "Computer calculate_stability coefficient_k error: {e}"
+                    ))
+                })?);
+                let multipler_x1 =
+                    Curve::new_linear(&initial.multipler_x1.expect("RollingAmplitudeEval eval error: no multipler_x1").data()).map_err(|e| {
+                        Error::FromString(format!(
+                            "Computer calculate_stability multipler_x1 error: {e}"
+                        ))
+                    })?;
+                let multipler_x2 = Curve::new_linear(&initial.multipler_x2.expect("RollingAmplitudeEval eval error: no multipler_x2").data())?;
+                let multipler_s = 
+                    Curve::new_linear(&initial.multipler_s.expect("RollingAmplitudeEval eval error: no multipler_s").get_area(&initial.ship.navigation_area)).map_err(
+                        |e| {
+                            Error::FromString(format!(
+                                "Computer calculate_stability multipler_s error: {e}"
+                            ))
+                        },
+                    )?;
+                let coefficient_k_theta: Rc<dyn ICurve<f64>> = Rc::new(
+                    Curve::new_linear(&initial.coefficient_k_theta.expect("RollingAmplitudeEval eval error: no coefficient_k_theta").data()).map_err(|e| {
+                        Error::FromString(format!(
+                            "Computer calculate_stability coefficient_k_theta error: {e}"
+                        ))
+                    })?,
+                );
+
+        let x_1 = self.x_1.value(width / mean_draught)?;
         let x_2 = self.x_2.value(c_b)?;
-        let r = (0.73 + 0.6 * (self.metacentric_height.z_g_fix()? - self.d) / self.d).min(1.);
-        let t = self.t.calculate()?;
+        let r = (0.73 + 0.6 * (self.metacentric_height.z_g_fix()? - mean_draught) / mean_draught).min(1.);
+        let t = rolling_period.roll_period;
         let s = self.s.value(t)?;
         // (2.1.5.1)
         let res = 109. * k * x_1 * x_2 * (r * s).sqrt();
         log::trace!("\t RollingAmplitude volume:{} l_wl:{} b:{} b_wl:{} d:{} z_g_fix:{} c_b:{} k:{k} x_1:{x_1} x_2:{x_2} r:{r} t:{t} s:{s} angle:{res}",
-            self.volume, self.l_wl, self.b, self.b_wl, self.d, self.metacentric_height.z_g_fix()?, c_b);
+            self.volume, self.l_wl, width, breadth_wl, mean_draught, self.metacentric_height.z_g_fix()?, c_b);
         Ok((t, res.round()))
                 self.value = Some(result.clone());
                 ctx.write(parameters)?;

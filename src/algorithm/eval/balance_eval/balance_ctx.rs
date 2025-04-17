@@ -7,6 +7,8 @@ pub struct BalanceCtx {
     /// объема и/или положения корпуса.
     pub bulk: Vec<BulkData>,
     pub liquid: Vec<LiquidData>,
+    /// Объемное водоизмещение
+    pub volume: f64,
     /// Площадь ватерлинии
     pub area_wl: f64, 
     /// Средняя осадка
