@@ -11,7 +11,6 @@ use crate::algorithm::eval::BalanceCtx;
 use crate::kernel::sync::Link;
 use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
-use crate::prelude::CtxResult;
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{
@@ -112,7 +111,6 @@ impl ShipModel {
                     }
                 }
                 Query::BoundAreas => {
-                    let dbg1 = dbg.clone();
                     let bounds = bounds.clone();
                     let api_client = api_client.clone();
                     let exit = exit.clone();
@@ -127,13 +125,13 @@ impl ShipModel {
                     }
                 }
                 Query::ComputeBalance(balance_src_data) => {
-                    let dbg1 = dbg.clone();
                     let bounds = bounds.clone();
                     let exit = exit.clone();
                     if let Err(err) = scheduler.spawn(move|| {
                         let result = compute_balance(bounds.clone(), balance_src_data, ship_id, exit);
                         if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                                log::warn!("{}.run | Send error: {:?}", dbg1, err);
+                            let err = error.pass_with("Send error", err);
+                                log::warn!("{}", err);
                         };
                     }) {
                         log::warn!("{}.run | Send error: {:?}", dbg, err);
