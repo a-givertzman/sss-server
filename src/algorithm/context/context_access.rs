@@ -223,7 +223,18 @@ impl ContextRead<CriterionStabilityCtx> for Context {
         self.criterion_stability.clone().unwrap()
     }
 }
-
+//
+impl ContextWrite<WheatherCtx> for Context {
+    fn write(mut self, value: WheatherCtx) -> CtxResult<Self, Error> {
+        self.wheather = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WheatherCtx> for Context {
+    fn read(&self) -> WheatherCtx {
+        self.wheather.clone().unwrap()
+    }
+}
 
 
 

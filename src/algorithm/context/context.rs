@@ -46,6 +46,8 @@ pub struct Context {
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
     /// Критерии проверки остойчивости судна 
     pub(super) criterion_stability: Option<CriterionStabilityCtx>,
+    /// Критерий погоды К
+    pub(super) wheather: Option<WheatherCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
