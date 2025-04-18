@@ -235,6 +235,19 @@ impl ContextRead<WheatherCtx> for Context {
         self.wheather.clone().unwrap()
     }
 }
+//
+impl ContextWrite<StaticAngleCtx> for Context {
+    fn write(mut self, value: StaticAngleCtx) -> CtxResult<Self, Error> {
+        self.static_angle = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<StaticAngleCtx> for Context {
+    fn read(&self) -> StaticAngleCtx {
+        self.static_angle.clone().unwrap()
+    }
+}
+
 
 
 
