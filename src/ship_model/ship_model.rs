@@ -103,6 +103,7 @@ impl ShipModel {
             Err(err) => return Err(error.pass_with("get_bounds error", err)),
         };
         let handle = self.hub.listen(move |query, send| {
+            let error = Error::new(&dbg, "hub.listen");
             log::trace!("{}.run | Received query: {:?}", dbg, query);
             match query {
                 Query::Bounds => {
@@ -118,8 +119,8 @@ impl ShipModel {
                     if let Err(err) = scheduler.spawn(move|| {
                         let result = areas_strength(bounds, ship_id, &api_client, exit);
                         if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                            log::warn!("{}.run | Send error: {:?}", dbg1, err);
-                            // return Some(())
+                            let err = error.pass_with("Send error", err);
+                            log::warn!("{}", err);
                         }
                     }) {
                         log::warn!("{}.run | Sedule error: {:?}", dbg, err);
@@ -130,11 +131,9 @@ impl ShipModel {
                     let bounds = bounds.clone();
                     let exit = exit.clone();
                     if let Err(err) = scheduler.spawn(move|| {
-                        match compute_balance(bounds.clone(), balance_src_data, ship_id, exit) {
-                            Ok(result) => if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                        let result = compute_balance(bounds.clone(), balance_src_data, ship_id, exit);
+                        if let Err(err) = send.send(Reply::ComputeBalance(result)) {
                                 log::warn!("{}.run | Send error: {:?}", dbg1, err);
-                            }
-                            Err(_) => todo!(),
                         };
                     }) {
                         log::warn!("{}.run | Send error: {:?}", dbg, err);

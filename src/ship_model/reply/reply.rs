@@ -11,5 +11,5 @@ use super::BoundArea;
 pub enum Reply {
     Bounds(Bounds),
     BoundAreas(Result<BoundArea, Error>),
-    ComputeBalance(BalanceCtx),
+    ComputeBalance(Result<BalanceCtx, Error>),
 }
