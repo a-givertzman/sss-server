@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, Bound, Position},
         eval::IcingTimberCtx,
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::BoundAreaReply}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::BoundArea}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -56,8 +56,12 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 };
                 let (const_area_v, const_area_h) = match self.model.call(Query::BoundAreas) {
                     Ok(area) => {
-                        let area: BoundAreaReply = area;
-                        (area.v, area.h)
+                        let area: CtxResult<BoundArea, Error> = area;
+                        match area {
+                            CtxResult::Ok(area) => (area.v, area.h),
+                            CtxResult::Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
+                            CtxResult::None => return CtxResult::Err(error.err("Read bound_areas returns `None`")),
+                        }
                     }
                     Err(err) => {
                         return CtxResult::Err(error.pass_with("Read bound_areas error", err));

@@ -11,11 +11,13 @@ use crate::algorithm::eval::BalanceCtx;
 use crate::kernel::sync::Link;
 use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
+use crate::prelude::CtxResult;
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{
     name::Name, point::point_tx_id::PointTxId,
 };
+use sal_sync::thread_pool::scheduler::Scheduler;
 use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
@@ -34,6 +36,7 @@ pub struct ShipModel {
     project_id: String,
     n_parts: usize,
     hub: Hub,
+    scheduler: Stack<Scheduler>,
     timeout: Duration,
     api_client: Stack<ApiClient>,
     exit: Arc<AtomicBool>,
@@ -55,9 +58,12 @@ impl ShipModel {
         project_id: String,
         n_parts: usize,
         api_client: ApiClient,
+        scheduler: Scheduler,
     ) -> Self {
         let name = Name::new(parent, "ShipModel");
         let hub = Hub::new(&name);
+        let sheduler_stk = Stack::new();
+        sheduler_stk.push(scheduler);
         let client = Stack::new();
         client.push(api_client);
         Self {
@@ -69,6 +75,7 @@ impl ShipModel {
             hub,
             timeout: Self::DEFAULT_TIMEOUT,
             api_client: client,
+            scheduler: sheduler_stk,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -90,6 +97,7 @@ impl ShipModel {
         let ship_id = self.ship_id;
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
+        let scheduler = self.scheduler.pop().unwrap();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
             Err(err) => return Err(error.pass_with("get_bounds error", err)),
@@ -103,21 +111,34 @@ impl ShipModel {
                     }
                 }
                 Query::BoundAreas => {
-                    match areas_strength(bounds.clone(), ship_id, &api_client) {
-                        Ok(reply) => if let Err(err) = send.send(Reply::BoundAreas(reply)) {
-                            log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    let dbg1 = dbg.clone();
+                    let bounds = bounds.clone();
+                    let api_client = api_client.clone();
+                    let exit = exit.clone();
+                    if let Err(err) = scheduler.spawn(move|| {
+                        let result = areas_strength(bounds, ship_id, &api_client, exit);
+                        if let Err(err) = send.send(Reply::BoundAreas(result)) {
+                            log::warn!("{}.run | Send error: {:?}", dbg1, err);
+                            // return Some(())
                         }
-                        Err(_) => todo!(),
-                    };
-                    
+                    }) {
+                        log::warn!("{}.run | Sedule error: {:?}", dbg, err);
+                    }
                 }
                 Query::ComputeBalance(balance_src_data) => {
-                    match compute_balance(bounds.clone(), balance_src_data, ship_id) {
-                        Ok(result) => if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                            log::warn!("{}.run | Send error: {:?}", dbg, err);
-                        }
-                        Err(_) => todo!(),
-                    };
+                    let dbg1 = dbg.clone();
+                    let bounds = bounds.clone();
+                    let exit = exit.clone();
+                    if let Err(err) = scheduler.spawn(move|| {
+                        match compute_balance(bounds.clone(), balance_src_data, ship_id, exit) {
+                            Ok(result) => if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                                log::warn!("{}.run | Send error: {:?}", dbg1, err);
+                            }
+                            Err(_) => todo!(),
+                        };
+                    }) {
+                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    }
                 }
             };
             None::<()>
@@ -206,23 +227,22 @@ fn get_bounds(
     Ok(bounds)
 }
 ///
-/// Type doc comment
-fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<BoundAreaReply, Error> {
-    let error = Error::new("ShipModel", "areas_strength");
+/// Computes ...
+/// - `exit` - used to breake long havy computation if possible
+fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc<AtomicBool>) -> Result<BoundArea, Error> {
+    let err = Error::new("ShipModel", "areas_strength");
     let area_h_str = HStrAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
-        ))
-        .map_err(|e| error.pass(e.to_string()))?,
-    )?;
+        )).map_err(|e| err.pass(e.to_string()))?
+    ).map_err(|e| err.pass(e.to_string()))?;
     let area_v_str = strength::VerticalAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
-        ))
-        .map_err(|e| error.pass(e))?,
-    )?;
+        )).map_err(|e| err.pass(e.to_string()))?
+    ).map_err(|e| err.pass(e.to_string()))?;
     let area_h_str: Vec<_> = area_h_str
         .data()
         .into_iter()
@@ -246,9 +266,12 @@ fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Res
             )
         })
         .collect();
-    Ok(BoundAreaReply {v: area_v_str, h: area_h_str })
+    Ok(BoundArea { v: area_v_str, h: area_h_str })
 }
-//
-fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize) -> Result<BalanceCtx, Error> {
-    todo!()
+///
+/// Computes ...
+/// - `exit` - used to breake long havy computation if possible
+fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
+    let err = Error::new("ShipModel", "compute_balance");
+    Err(err.err("Not implemented yet"))
 }

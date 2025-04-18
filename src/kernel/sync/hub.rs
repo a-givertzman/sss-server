@@ -44,9 +44,11 @@ impl Hub {
     ///
     /// Listenning incomong events in the closure
     /// - Closure provides incoming event's
-    /// - Returned from closure
-    ///     - `Some<Event>` - will be sent as reply
-    ///     - `None` - nothing will be sent
+    /// - Send reoly
+    ///     - Send it using [LinkSend] provided by closure
+    ///     - Retur it from closure
+    ///         - `Some<Event>` - will be sent as reply
+    ///         - `None` - nothing will be sent
     pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&self, op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
