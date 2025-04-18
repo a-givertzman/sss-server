@@ -1,9 +1,18 @@
 use super::static_angle_ctx::StaticAngleCtx;
-use crate::{
-    algorithm::{context::context_access::{ContextRead, ContextReadRef}, eval::{LeverDiagramCtx, MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx, WindCtx}}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
-};
+use crate::algorithm::entities::data::stability::{multipler_s::*, ship_type::*, *};
 use crate::algorithm::entities::math::curve::*;
-use crate::algorithm::entities::data::stability::{*, multipler_s::*, ship_type::*};
+use crate::{
+    ContextWrite, CtxResult,
+    algorithm::{
+        context::context_access::{ContextRead, ContextReadRef},
+        eval::{
+            LeverDiagramCtx, MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx, WindCtx,
+        },
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::InitialCtx,
+    ship_model::model_link::{IModelLink, ModelLink},
+};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Статический угол крена от действия постоянного ветра.
@@ -37,48 +46,57 @@ impl Eval<(), EvalResult> for StaticAngleEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let have_container = match initial.unit.as_ref() {
+                    Some(data) => data
+                        .into_iter()
+                        .any(|v| v.cargo_type == UnitCargoType::Container),
+                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
+                };
                 let parameters: Parameters = ctx.read();
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();
-                let rolling_period: RollingPeriodCtx = ctx.read();
-                let rolling_amplitude: RollingAmplitudeCtx = ctx.read();
-        // Для всех судов (кроме района плавания R3):
-        // статического угла крена θ𝑤1, вызванного постоянным ветром
-        let wind_lever = wind.arm_wind_static;
-        let angles = match lever_diagram.angle(wind_lever) {
-            Ok(angles) => angles,
-            Err(error) => {
-                let error = CtxResult::Err(error.pass_with("lever_diagram.angle", error));
-                log::error!("{error}");
-                return CriterionData::new_error(
-                CriterionID::WindStaticHeel,
-                "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
-            );
-            }
-        };
-        let angle = angles.first();
-        let ship_type = ShipType::from_str(&initial.ship.expect("static_angle eval error: no ship!").ship_type)?; 
-        let target_value = if ship_type == ShipType::TimberCarrier {
-            16.
-        } else if self.have_container {
-             16.0f64.min(0.5 * self.flooding_angle)
-        } else {
-            16.0f64.min(0.8 * self.flooding_angle)
-        };
-        if let Some(angle) = angle {
-            CriterionData::new_result(CriterionID::WindStaticHeel, *angle, target_value)
-        } else {
-            CriterionData::new_error(
-                CriterionID::WindStaticHeel,
-                "Нет угла крена судна для текущих погодных условий".to_owned(),
-            )
-        }
-                let result = StaticAngleCtx {
-                    data
+                let flooding_angle = balance.flooding_angle;
+                // Для всех судов (кроме района плавания R3):
+                // статического угла крена θ𝑤1, вызванного постоянным ветром
+                let wind_lever = wind.arm_wind_static;
+                let angles = match lever_diagram.angle(wind_lever) {
+                    Ok(angles) => angles,
+                    Err(error) => {
+                        let error = CtxResult::Err(error.pass_with("lever_diagram.angle", error));
+                        log::error!("{error}");
+                        return CriterionData::new_error(
+                            CriterionID::WindStaticHeel,
+                            "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
+                        );
+                    }
+                };
+                let angle = angles.first();
+                let ship_type = ShipType::from_str(
+                    &initial
+                        .ship
+                        .expect("static_angle eval error: no ship!")
+                        .ship_type,
+                )?;
+                let target_value = if ship_type == ShipType::TimberCarrier {
+                    16.
+                } else if have_container {
+                    16.0f64.min(0.5 * flooding_angle)
+                } else {
+                    16.0f64.min(0.8 * flooding_angle)
+                };
+                let data = if let Some(angle) = angle {
+                    CriterionData::new_result(CriterionID::WindStaticHeel, *angle, target_value)
+                } else {
+                    CriterionData::new_error(
+                        CriterionID::WindStaticHeel,
+                        "Нет угла крена судна для текущих погодных условий".to_owned(),
+                    )
+                };
+                let result = StaticAngleCtx { 
+                    data 
                 };
                 self.value = Some(result.clone());
-                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
