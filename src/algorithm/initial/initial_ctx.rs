@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::default;
 use crate::algorithm::entities::Bounds;
-use crate::algorithm::entities::data::{loads::*, IcingArray, Ship, Voyage};
+use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные

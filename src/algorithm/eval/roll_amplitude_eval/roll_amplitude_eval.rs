@@ -1,11 +1,9 @@
 use super::roll_amplitude_ctx::RollingAmplitudeCtx;
 use crate::{
-    ContextWrite, CtxResult,
-    algorithm::context::context_access::{ContextRead, ContextReadRef},
-    kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
-    ship_model::model_link::{IModelLink, ModelLink},
+    algorithm::{context::context_access::{ContextRead, ContextReadRef}, eval::MetacentricHeightCtx}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
 };
+use crate::algorithm::entities::math::curve::*;
+use crate::algorithm::entities::data::stability::{*, multipler_s::*};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет амплитуды качки судна
@@ -37,61 +35,59 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let parameters: Parameters = ctx.read();
                 let balance: BalanceCtx = ctx.read();
+                let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let rolling_period: RollingPeriodCtx  = ctx.read();
                 let volume = balance.volume;
                 let length_wl = balance.length_wl;
                 let breadth_wl = balance.breadth_wl;
                 let mean_draught = balance.mean_draught;
-                let keel_area = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters").get("Keel area");
-                let width = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters").get("MouldedBreadth");
+                let ship = initial.ship.ok_or(CtxResult::Err(error.err("No ship in initial")))?;
+                let navigation_area = NavigationArea::from_str(&ship.navigation_area)
+                    .map_err(|e| CtxResult::Err(error.pass_with("navigation_area", e)))?;
+                let ship_parameters = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters");
+                let keel_area = ship_parameters.get("Keel area");
+                let width = ship_parameters.get("MouldedBreadth").ok_or(CtxResult::Err(error.err("No MouldedBreadth in ship_parameters")))?;
+                let coefficient_k =
+                    Curve::new_linear(&initial.coefficient_k
+                        .ok_or(CtxResult::Err(error.err("No coefficient_k in initial")))?.data())
+                        .map_err(|e| CtxResult::Err(error.pass_with("coefficient_k", e)))?;
+                let multipler_x1 =
+                    Curve::new_linear(&initial.multipler_x1
+                        .ok_or(CtxResult::Err(error.err("No multipler_x1 in initial")))?.data())
+                        .map_err(|e| CtxResult::Err(error.pass_with("multipler_x1", e)))?;
+                let multipler_x2 = 
+                    Curve::new_linear(&initial.multipler_x2
+                        .ok_or(CtxResult::Err(error.err("No multipler_x2 in initial")))?.data())
+                        .map_err(|e| CtxResult::Err(error.pass_with("multipler_x2", e)))?;
+                let multipler_s = 
+                    Curve::new_linear(
+                        &initial.multipler_s
+                            .ok_or(CtxResult::Err(error.err("No multipler_s in initial")))?
+                            .get_area(&navigation_area))
+                            .map_err(|e| CtxResult::Err(error.pass_with("multipler_s", e)))?;
+                let coefficient_k_theta: Rc<dyn ICurve<f64>> = 
+                    Curve::new_linear(&initial.coefficient_k_theta.expect("RollingAmplitudeEval eval error: no coefficient_k_theta in initial").data())
+                        .map_err(|e| CtxResult::Err(error.pass_with("coefficient_k_theta", e)))?;
                 // Коэффициент полноты судна
                 let c_b = volume / (length_wl * breadth_wl * mean_draught);
                 let k = if let Some(a_k) = keel_area {
-                    self.k.value(a_k * 100. / (length_wl * width))?
+                    coefficient_k.value(a_k * 100. / (length_wl * width))?
                 } else {
                     1.
                 };
-                let coefficient_k =
-                Rc::new(Curve::new_linear(&initial.coefficient_k.expect("RollingAmplitudeEval eval error: no coefficient_k").data()).map_err(|e| {
-                    Error::FromString(format!(
-                        "Computer calculate_stability coefficient_k error: {e}"
-                    ))
-                })?);
-                let multipler_x1 =
-                    Curve::new_linear(&initial.multipler_x1.expect("RollingAmplitudeEval eval error: no multipler_x1").data()).map_err(|e| {
-                        Error::FromString(format!(
-                            "Computer calculate_stability multipler_x1 error: {e}"
-                        ))
-                    })?;
-                let multipler_x2 = Curve::new_linear(&initial.multipler_x2.expect("RollingAmplitudeEval eval error: no multipler_x2").data())?;
-                let multipler_s = 
-                    Curve::new_linear(&initial.multipler_s.expect("RollingAmplitudeEval eval error: no multipler_s").get_area(&initial.ship.navigation_area)).map_err(
-                        |e| {
-                            Error::FromString(format!(
-                                "Computer calculate_stability multipler_s error: {e}"
-                            ))
-                        },
-                    )?;
-                let coefficient_k_theta: Rc<dyn ICurve<f64>> = Rc::new(
-                    Curve::new_linear(&initial.coefficient_k_theta.expect("RollingAmplitudeEval eval error: no coefficient_k_theta").data()).map_err(|e| {
-                        Error::FromString(format!(
-                            "Computer calculate_stability coefficient_k_theta error: {e}"
-                        ))
-                    })?,
-                );
-
-        let x_1 = self.x_1.value(width / mean_draught)?;
-        let x_2 = self.x_2.value(c_b)?;
-        let r = (0.73 + 0.6 * (self.metacentric_height.z_g_fix()? - mean_draught) / mean_draught).min(1.);
-        let t = rolling_period.roll_period;
-        let s = self.s.value(t)?;
-        // (2.1.5.1)
-        let res = 109. * k * x_1 * x_2 * (r * s).sqrt();
-        log::trace!("\t RollingAmplitude volume:{} l_wl:{} b:{} b_wl:{} d:{} z_g_fix:{} c_b:{} k:{k} x_1:{x_1} x_2:{x_2} r:{r} t:{t} s:{s} angle:{res}",
-            self.volume, self.l_wl, width, breadth_wl, mean_draught, self.metacentric_height.z_g_fix()?, c_b);
-        Ok((t, res.round()))
+                let x_1 = multipler_x1.value(width / mean_draught)?;
+                let x_2 = multipler_x2.value(c_b)?;
+                let r = (0.73 + 0.6 * (metacentric_height.z_g_fix? - mean_draught) / mean_draught).min(1.);
+                let t = rolling_period.roll_period;
+                let s = multipler_s.value(t)?;
+                let amplitude = 109. * k * x_1 * x_2 * (r * s).sqrt();
+                log::trace!("\t RollingAmplitude volume:{volume} l_wl:{length_wl} b:{width} b_wl:{breadth_wl} d:{mean_draught} z_g_fix:{} c_b:{c_b} k:{k} x_1:{x_1} x_2:{x_2} r:{r} t:{t} s:{s} a:{amplitude}",
+                    metacentric_height.z_g_fix);
+                let amplitude = amplitude.round();
+                let result = RollingAmplitudeCtx {
+                    amplitude,
+                };
                 self.value = Some(result.clone());
-                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
