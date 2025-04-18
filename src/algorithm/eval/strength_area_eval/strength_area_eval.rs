@@ -60,17 +60,14 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 // может получится хотябы часть из низ вынести в метод,
                 // вроде бы действия однообразные все время должны быть
                 let (const_area_v, const_area_h) = match self.model.call(Query::BoundAreas) {
-                    Ok(areas) => {
-                        let areas: Result<Reply, Error> = areas;
-                        match areas {
-                            Ok(reply) => match reply {
-                                Reply::BoundAreas(areas) => match areas {
-                                    Ok(areas) => (areas.v, areas.h),
-                                    Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
-                                }
-                                _ => return CtxResult::Err(error.err(format!("Read bound_areas - Wrong reply: {:?}", reply))),
+                    Ok(reply) => {
+                        let reply: Reply = reply;
+                        match reply {
+                            Reply::BoundAreas(areas) => match areas {
+                                Ok(areas) => (areas.v, areas.h),
+                                Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
                             }
-                            Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
+                            _ => return CtxResult::Err(error.err(format!("Read bound_areas - Wrong reply: {:?}", reply))),
                         }
                     }
                     Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
