@@ -56,6 +56,8 @@ pub struct BalanceResultData {
     pub entry_angle: f64, 
     ///  Угол заливания отверстий
     pub flooding_angle: f64, 
+    /// Объемное водоизмещение
+    pub volume: f64,
 }
 ///
 /// Replies from the `ShipModel`
