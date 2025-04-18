@@ -211,7 +211,18 @@ impl ContextRead<RollingAmplitudeCtx> for Context {
         self.roll_amplitude.clone().unwrap()
     }
 }
-
+//
+impl ContextWrite<CriterionStabilityCtx> for Context {
+    fn write(mut self, value: CriterionStabilityCtx) -> CtxResult<Self, Error> {
+        self.criterion_stability = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<CriterionStabilityCtx> for Context {
+    fn read(&self) -> CriterionStabilityCtx {
+        self.criterion_stability.clone().unwrap()
+    }
+}
 
 
 

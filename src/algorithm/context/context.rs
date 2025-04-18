@@ -44,6 +44,8 @@ pub struct Context {
     pub(super) roll_period: Option<RollingPeriodCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
+    /// Критерии проверки остойчивости судна 
+    pub(super) criterion_stability: Option<CriterionStabilityCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
