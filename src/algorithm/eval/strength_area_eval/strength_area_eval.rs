@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, Bound, Position},
         eval::IcingTimberCtx,
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::BoundArea}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::{self, BoundArea, Reply}}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -54,18 +54,26 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         return CtxResult::Err(error.err("Read bounds error: no data!"))
                     }
                 };
+                // 
+                // Тут все вроде правильно раскрыл,
+                // Но так много действий и так сложно получается,
+                // может получится хотябы часть из низ вынести в метод,
+                // вроде бы действия однообразные все время должны быть
                 let (const_area_v, const_area_h) = match self.model.call(Query::BoundAreas) {
-                    Ok(area) => {
-                        let area: CtxResult<BoundArea, Error> = area;
-                        match area {
-                            CtxResult::Ok(area) => (area.v, area.h),
-                            CtxResult::Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
-                            CtxResult::None => return CtxResult::Err(error.err("Read bound_areas returns `None`")),
+                    Ok(areas) => {
+                        let areas: Result<Reply, Error> = areas;
+                        match areas {
+                            Ok(reply) => match reply {
+                                Reply::BoundAreas(areas) => match areas {
+                                    Ok(areas) => (areas.v, areas.h),
+                                    Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
+                                }
+                                _ => return CtxResult::Err(error.err(format!("Read bound_areas - Wrong reply: {:?}", reply))),
+                            }
+                            Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
                         }
                     }
-                    Err(err) => {
-                        return CtxResult::Err(error.pass_with("Read bound_areas error", err));
-                    }
+                    Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
                 };
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
