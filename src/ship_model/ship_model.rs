@@ -120,8 +120,9 @@ impl ShipModel {
                             let err = error.pass_with("Send error", err);
                             log::warn!("{}", err);
                         }
+                        Ok(())
                     }) {
-                        log::warn!("{}.run | Sedule error: {:?}", dbg, err);
+                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
                     }
                 }
                 Query::ComputeBalance(balance_src_data) => {
@@ -133,8 +134,9 @@ impl ShipModel {
                             let err = error.pass_with("Send error", err);
                                 log::warn!("{}", err);
                         };
+                        Ok(())
                     }) {
-                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
                     }
                 }
             };
