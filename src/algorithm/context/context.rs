@@ -1,5 +1,5 @@
 use crate::
-    algorithm::{eval::*, initial::initial_ctx::InitialCtx
+    algorithm::{entities::parameters::Parameters, eval::*, initial::initial_ctx::InitialCtx
     }
 ;
 use super::testing_ctx::TestingCtx;
@@ -11,6 +11,8 @@ use super::testing_ctx::TestingCtx;
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
+    /// Набор результатов расчетов для записи в БД
+    pub(super) parameters: Option<Parameters>,
     /// Распределение площади для расчета прочности
     pub(super) strength_area: Option<StrengthAreaCtx>,
     /// Коэффициенты для расчета обледенения судна

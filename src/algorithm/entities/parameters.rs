@@ -6,7 +6,7 @@ use strum_macros::FromRepr;
 use crate::kernel::error::error::Error;
 ///
 /// Doc comment required
-#[derive(Debug, Clone, Hash, Eq, PartialEq, FromRepr, Decode, Encode)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, FromRepr, Decode, Encode)]
 pub enum ParameterID {
     CenterMassZFix = 1,
     Displacement = 2,
@@ -118,6 +118,7 @@ impl ParameterID {
     }
 }
 /// Набор результатов расчетов для записи в БД
+#[derive(Debug, Clone)]
 pub struct Parameters {
     data: RefCell<HashMap<ParameterID, f64>>,
 }
