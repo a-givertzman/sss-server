@@ -46,6 +46,12 @@ pub struct Context {
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
     /// Критерии проверки остойчивости судна 
     pub(super) criterion_stability: Option<CriterionStabilityCtx>,
+    /// Критерий погоды К
+    pub(super) wheather: Option<WheatherCtx>,
+    /// Статический угол крена от действия постоянного ветра
+    pub(super) static_angle: Option<StaticAngleCtx>,
+    /// Критерий площади под диаграммой статической остойчивости
+    pub(super) dso_area: Option<DSOAreaCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
