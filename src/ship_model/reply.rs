@@ -38,16 +38,26 @@ pub struct BalanceResultData {
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub parameters: Vec<(ParameterID, f64)>, 
-    // area_wl Площадь ватерлинии
-    // length_wl Длинна по ватерлинии при текущей осадке
-    // breadth_wl Ширина по ватерлинии при текущей осадке
-    // volume_shift_z Отстояние по вертикали центра площади проекции подводной части корпуса
-    // entry_angle Угол входа в воду кромки палубы
-    // flooding_angle Угол заливания отверстий
     /// Груз, для которого центр массы и распределение зависит от 
     /// объема и/или положения корпуса.
     pub bulk: Vec<BulkData>,
     pub liquid: Vec<LiquidData>,
+    /// Площадь ватерлинии
+    pub area_wl: f64, 
+    /// Средняя осадка
+    pub mean_draught: f64,
+    /// Длинна по ватерлинии при текущей осадке
+    pub length_wl: f64, 
+    ///  Ширина по ватерлинии при текущей осадке
+    pub breadth_wl: f64, 
+    ///  Отстояние по вертикали центра площади проекции подводной части корпуса
+    pub volume_shift_z: f64, 
+    ///  Угол входа в воду кромки палубы
+    pub entry_angle: f64, 
+    ///  Угол заливания отверстий
+    pub flooding_angle: f64, 
+    /// Объемное водоизмещение
+    pub volume: f64,
 }
 ///
 /// Replies from the `ShipModel`

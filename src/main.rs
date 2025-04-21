@@ -47,48 +47,74 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let _result = 
-    RollingPeriodEval::new(
+    let _result = CriterionStabilityEval::new(
         &dbg,
-        WindEval::new(
+        DSOAreaEval::new(
             &dbg,
-            WindageEval::new(
+            StaticAngleEval::new(
                 &dbg,
-                LeverDiagramEval::new(
+                WheatherEval::new(
                     &dbg,
-                    ship_model.link(),
-                    MetacentricHeightEval::new(
+                    RollingAmplitudeEval::new(
                         &dbg,
-                        StabilityAreaEval::new(
+                        RollingPeriodEval::new(
                             &dbg,
-                            ship_model.link(),
-                            BalanceEval::new(
+                            WindEval::new(
                                 &dbg,
-                                ship_model.link(),
-                                LoadsEval::new(
+                                WindageEval::new(
                                     &dbg,
-                                    WettingEval::new(
+                                    LeverDiagramEval::new(
                                         &dbg,
-                                        IcingEval::new(
+                                        ship_model.link(),
+                                        MetacentricHeightEval::new(
                                             &dbg,
-                                            StrengthAreaEval::new(
+                                            StabilityAreaEval::new(
                                                 &dbg,
                                                 ship_model.link(),
-                                                IcingTimberEval::new(
+                                                BalanceEval::new(
                                                     &dbg,
-                                                    IcingStabEval::new(
+                                                    ship_model.link(),
+                                                    LoadsEval::new(
                                                         &dbg,
-                                                        Initial::new(
+                                                        WettingEval::new(
                                                             &dbg,
-                                                            ship_model.link(),
-                                                            ApiClient::new(
-                                                                conf.api.address.database.clone(),
-                                                                conf.api.address.host.clone(),
-                                                                conf.api.address.port.clone(),
+                                                            IcingEval::new(
+                                                                &dbg,
+                                                                StrengthAreaEval::new(
+                                                                    &dbg,
+                                                                    ship_model.link(),
+                                                                    IcingTimberEval::new(
+                                                                        &dbg,
+                                                                        IcingStabEval::new(
+                                                                            &dbg,
+                                                                            Initial::new(
+                                                                                &dbg,
+                                                                                ship_model.link(),
+                                                                                ApiClient::new(
+                                                                                    conf.api
+                                                                                        .address
+                                                                                        .database
+                                                                                        .clone(),
+                                                                                    conf.api
+                                                                                        .address
+                                                                                        .host
+                                                                                        .clone(),
+                                                                                    conf.api
+                                                                                        .address
+                                                                                        .port
+                                                                                        .clone(),
+                                                                                ),
+                                                                                Context::new(
+                                                                                    InitialCtx::new(
+                                                                                        ship_id,
+                                                                                        project_id,
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                ),
                                                             ),
-                                                            Context::new(InitialCtx::new(
-                                                                ship_id, project_id,
-                                                            )),
                                                         ),
                                                     ),
                                                 ),

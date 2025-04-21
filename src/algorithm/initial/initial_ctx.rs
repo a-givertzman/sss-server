@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::default;
 use crate::algorithm::entities::Bounds;
-use crate::algorithm::entities::data::{loads::*, IcingArray, Ship, Voyage};
+use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct InitialCtx {
     pub ship_id: String,
     pub project_id: String,
@@ -26,6 +27,17 @@ pub struct InitialCtx {
     pub liquid: Option<Vec::<LoadLiquidData>>,
     pub unit: Option<Vec::<LoadUnitData>>,
     pub gaseous: Option<Vec::<LoadGaseousData>>,
+    /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
+    pub multipler_x1: Option<MultiplerX1Array>,
+    /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
+    pub multipler_x2: Option<MultiplerX2Array>,
+    /// Безразмерный множитель S для расчета качки, Табл. 2.1.5.1-3
+    pub multipler_s: Option<MultiplerSArray>,
+    /// Коэффициент k для судов, имеющих скуловые кили или
+    /// брусковый киль для расчета качки, Табл. 2.1.5.2
+    pub coefficient_k: Option<CoefficientKArray>,
+    /// Коэффициент k_theta учитывающий особенности качки судов смешанного типа
+    pub coefficient_k_theta: Option<CoefficientKThetaArray>,
 }
 impl InitialCtx {
     ///
@@ -49,16 +61,7 @@ impl Default for InitialCtx {
         Self {
             ship_id: "NUll".to_owned(),
             project_id: "NUll".to_owned(),
-            bounds: None,
-            ship: None,
-            ship_parameters: None,
-            voyage: None,
-            icing: None,
-            load_constant: None,
-            bulk: None,
-            liquid: None,
-            unit: None,
-            gaseous: None,
+            ..Self::default()
         }
     }
 }
