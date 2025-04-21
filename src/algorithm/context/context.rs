@@ -28,6 +28,8 @@ pub struct Context {
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
     pub(super) balance: Option<BalanceCtx>,
+    /// Результаты для ZG
+    pub(super) zg: Option<ZgCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

@@ -35,7 +35,7 @@ impl WettingEval {
     //
 }
 impl Eval<(), EvalResult> for WettingEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&mut self, zg: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
