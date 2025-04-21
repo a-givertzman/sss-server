@@ -30,5 +30,6 @@ pub use balance_eval::balance_ctx::BalanceCtx;
 pub use icing_timber_eval::icing_timber_eval::IcingTimberEval;
 pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;
 
+pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;
 pub use zg_eval::zg::Zg;
