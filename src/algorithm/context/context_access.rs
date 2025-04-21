@@ -247,6 +247,19 @@ impl ContextRead<StaticAngleCtx> for Context {
         self.static_angle.clone().unwrap()
     }
 }
+//
+impl ContextWrite<DSOAreaCtx> for Context {
+    fn write(mut self, value: DSOAreaCtx) -> CtxResult<Self, Error> {
+        self.dso_area = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOAreaCtx> for Context {
+    fn read(&self) -> DSOAreaCtx {
+        self.dso_area.clone().unwrap()
+    }
+}
+
 
 
 
