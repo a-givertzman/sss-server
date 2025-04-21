@@ -1,8 +1,9 @@
 mod algorithm;
 mod app;
+mod conf;
 mod infrostructure;
 mod kernel;
-mod conf;
+mod prelude;
 mod ship_model;
 mod prelude;
 #[cfg(test)]
@@ -20,6 +21,7 @@ use kernel::{
 use sal_sync::thread_pool::tread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 use prelude::*;
+use ship_model::ship_model::ShipModel;
 
 ///
 /// Application entry point
@@ -42,37 +44,89 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ship_id,
         project_id.to_owned(),
         n_parts,
-        ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+        ApiClient::new(
+            conf.api.address.database.clone(),
+            conf.api.address.host.clone(),
+            conf.api.address.port.clone(),
+        ),
         thread_pool.scheduler(),
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
     let _result = ZgEval::new(
         &dbg,
-        BalanceEval::new(
-            &dbg,  
-            ship_model.link(),
-            LoadsEval::new(
-                &dbg,        
-                WettingEval::new(
-                    &dbg,   
-                    IcingEval::new(
+        CriterionStabilityEval::new(
+            &dbg,
+            DSOAreaEval::new(
+                &dbg,
+                StaticAngleEval::new(
+                    &dbg,
+                    WheatherEval::new(
                         &dbg,
-                        StrengthAreaEval::new(
+                        RollingAmplitudeEval::new(
                             &dbg,
-                            ship_model.link(),
-                            IcingTimberEval::new(
+                            RollingPeriodEval::new(
                                 &dbg,
-                                IcingStabEval::new(
+                                WindEval::new(
                                     &dbg,
-                                    Initial::new(
+                                    WindageEval::new(
                                         &dbg,
-                                        ship_model.link(),
-                                        ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
-                                        Context::new(
-                                            InitialCtx::new(
-                                                ship_id,
-                                                project_id,
+                                        LeverDiagramEval::new(
+                                            &dbg,
+                                            ship_model.link(),
+                                            MetacentricHeightEval::new(
+                                                &dbg,
+                                                StabilityAreaEval::new(
+                                                    &dbg,
+                                                    ship_model.link(),
+                                                    BalanceEval::new(
+                                                        &dbg,
+                                                        ship_model.link(),
+                                                        LoadsEval::new(
+                                                            &dbg,
+                                                            WettingEval::new(
+                                                                &dbg,
+                                                                IcingEval::new(
+                                                                    &dbg,
+                                                                    StrengthAreaEval::new(
+                                                                        &dbg,
+                                                                        ship_model.link(),
+                                                                        IcingTimberEval::new(
+                                                                            &dbg,
+                                                                            IcingStabEval::new(
+                                                                                &dbg,
+                                                                                Initial::new(
+                                                                                    &dbg,
+                                                                                    ship_model.link(),
+                                                                                    ApiClient::new(
+                                                                                        conf.api
+                                                                                            .address
+                                                                                            .database
+                                                                                            .clone(),
+                                                                                        conf.api
+                                                                                            .address
+                                                                                            .host
+                                                                                            .clone(),
+                                                                                        conf.api
+                                                                                            .address
+                                                                                            .port
+                                                                                            .clone(),
+                                                                                    ),
+                                                                                    Context::new(
+                                                                                        InitialCtx::new(
+                                                                                            ship_id,
+                                                                                            project_id,
+                                                                                        ),
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
                                             ),
                                         ),
                                     ),
@@ -84,8 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     )
-    .eval(())
-    ;
+    .eval(());
     ship_model.exit();
     ship_model_handle.join().unwrap();
     Ok(())

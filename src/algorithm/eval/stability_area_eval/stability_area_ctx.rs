@@ -1,16 +1,17 @@
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::Moment;
 
-/// Площади поверхностей и их центры
+/// Площади поверхностей для расчета остойчивости
 #[derive(Debug, Clone)]
 pub struct StabilityAreaCtx {
-    /// Площадь парусности корпуса
-    pub const_area_v: Vec<(f64, Position)>,
-    /// Площадь горизонтальных поверхностей открытых палуб
-    pub const_area_h: Vec<(f64, Position)>,
-    /// Площадь парусности палубного груза
-    pub unit_area_v: Vec<(f64, f64, Position)>,   // area, h, center of area
-    /// Площадь горизонтальных поверхностей палубного груза
-    pub unit_area_h: Vec<(f64, Position)>,        // area, h, center of area
-    /// Площадь горизонтальных поверхностей палубного лесного груза
-    pub unit_area_timber_h: Vec<(f64, Position)>,
+    /// Площадь парусности
+    pub area_v: f64, 
+    /// Момент площади парусности
+    pub moment_v: Moment,
+    /// Момент площади горизонтальных поверхностей
+    pub moment_h: Moment,
+    /// Момент площади горизонтальных поверхностей палубного груза - леса
+    pub moment_timber_h: Moment,
+    /// Изменение момента площади горизонтальных поверхностей палубного груза - леса
+    /// относительно палубы
+    pub delta_moment_timber_h: Moment, 
 }

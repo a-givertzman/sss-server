@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use super::{AssignmentType, UnitCargoType};
-use crate::algorithm::entities::{data::DataArray, Bound, Position};
+use crate::algorithm::entities::{data::DataArray, Bound, Moment, Position};
 use sal_core::error::Error;
 use serde::Deserialize;
 ///
@@ -48,21 +48,35 @@ impl LoadUnitData {
     pub fn mass(&self, bound_x: &Bound) -> Result<f64, Error> {
         Ok(self.mass * self.bound_x()?.part_ratio(bound_x)?)
     }
-    //
-    pub fn icing_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<f64, Error> {
-        let part_x =
+    /// Расчет площади обледенения по заданным ограничениям.
+    /// Возвращает площадь, попадающую в ограничение, момент плозади и дельту момента площади относительно палубы (bound_z1)
+    pub fn icing_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<(f64, Moment, Moment), Error> {
+        let self_bound_x =
             if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
-                Bound::new(self_bound_x1, self_bound_x2)?.part_ratio(bound_x)?
+                Bound::new(self_bound_x1, self_bound_x2)?
             } else {
-                0.
+                return Err(Error::new("LoadUnitData", "icing_area error: no _bound_x"));
             };
-        let part_y =
+        let self_bound_y =
             if let (Some(self_bound_y1), Some(self_bound_y2)) = (self.bound_y1, self.bound_y2) {
-                Bound::new(self_bound_y1, self_bound_y2)?.part_ratio(bound_y)?
+                Bound::new(self_bound_y1, self_bound_y2)?
             } else {
-                0.
+                return Err(Error::new("LoadUnitData", "icing_area error: no _bound_y"));
             };
-        Ok(part_x * part_y * self.icing_area.unwrap_or(0.))
+        let part_x = self_bound_x.part_ratio(bound_x)?;
+        let part_y = self_bound_y.part_ratio(bound_y)?;
+        let area = part_x * part_y * self.icing_area.unwrap_or(0.);
+        let (full_moment, delta_moment) = if area > 0. {
+            let center_x = self_bound_x.intersect(bound_x)?.center().unwrap_or(0.);
+            let center_y = self_bound_y.intersect(bound_y)?.center().unwrap_or(0.);
+            let center_z = self.centre_of_icing_area.unwrap_or(Position::zero()).z();
+            let delta_z = (self.bound_z2.unwrap_or(0.) - self.bound_z1.unwrap_or(0.)).max(0.);
+            (Moment::from_pos(Position::new(center_x, center_y, center_z), area),
+            Moment::from_pos(Position::new(center_x, center_y, delta_z), area))
+        } else {
+            (Moment::zero(), Moment::zero())
+        };
+        Ok((area, full_moment, delta_moment))
     }
     //
     pub fn windage_area(&self, bound_x: &Bound, bound_z: &Bound) -> Result<f64, Error> {

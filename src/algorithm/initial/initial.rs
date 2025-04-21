@@ -310,6 +310,66 @@ impl Eval<(), EvalResult> for Initial {
                 return CtxResult::Err(error.pass_with("Error unit", err))
             }
         };
+        let data = self.api_client.fetch(&format!("SELECT key, value FROM multipler_x1;"));
+        let multipler_x1 = match data {
+            Ok(data) => match MultiplerX1Array::parse(&data) {
+                Ok(data) => data,
+                Err(err) => {
+                    return CtxResult::Err(error.pass_with("Error multipler_x1", err))
+                }
+            },
+            Err(err) => {
+                return CtxResult::Err(error.pass_with("Error multipler_x1", err))
+            }
+        };
+        let data = self.api_client.fetch(&format!("SELECT key, value FROM multipler_x2;"));
+        let multipler_x2 = match data {
+            Ok(data) => match MultiplerX2Array::parse(&data) {
+                Ok(data) => data,
+                Err(err) => {
+                    return CtxResult::Err(error.pass_with("Error multipler_x2", err))
+                }
+            },
+            Err(err) => {
+                return CtxResult::Err(error.pass_with("Error multipler_x2", err))
+            }
+        };
+        let data = self.api_client.fetch(&format!("SELECT area, t, s FROM multipler_s;"));
+        let multipler_s = match data {
+            Ok(data) => match MultiplerSArray::parse(&data) {
+                Ok(data) => data,
+                Err(err) => {
+                    return CtxResult::Err(error.pass_with("Error multipler_s", err))
+                }
+            },
+            Err(err) => {
+                return CtxResult::Err(error.pass_with("Error multipler_s", err))
+            }
+        };
+        let data = self.api_client.fetch(&format!("SELECT key, value FROM coefficient_k;"));
+        let coefficient_k = match data {
+            Ok(data) => match CoefficientKArray::parse(&data) {
+                Ok(data) => data,
+                Err(err) => {
+                    return CtxResult::Err(error.pass_with("Error coefficient_k", err))
+                }
+            },
+            Err(err) => {
+                return CtxResult::Err(error.pass_with("Error coefficient_k", err))
+            }
+        };
+        let data = self.api_client.fetch(&format!("SELECT key, value FROM coefficient_k_theta;"));
+        let coefficient_k_theta = match data {
+            Ok(data) => match CoefficientKThetaArray::parse(&data) {
+                Ok(data) => data,
+                Err(err) => {
+                    return CtxResult::Err(error.pass_with("Error coefficient_k_theta", err))
+                }
+            },
+            Err(err) => {
+                return CtxResult::Err(error.pass_with("Error coefficient_k_theta", err))
+            }
+        };
         initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_parameters = Some(ship_parameters.data());
@@ -320,6 +380,11 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.liquid = Some(liquid.data());
         initial_ctx.unit = Some(unit.data());
         initial_ctx.gaseous = Some(gaseous.data());
+        initial_ctx.multipler_x1 = Some(multipler_x1.data());
+        initial_ctx.multipler_x2 = Some(multipler_x2.data());
+        initial_ctx.multipler_s = Some(multipler_s.data());
+        initial_ctx.coefficient_k = Some(coefficient_k.data());
+        initial_ctx.coefficient_k_theta = Some(coefficient_k_theta.data());
         self.ctx.clone().write(initial_ctx.to_owned())
     }
 }

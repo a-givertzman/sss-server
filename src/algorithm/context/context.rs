@@ -11,7 +11,8 @@ use super::testing_ctx::TestingCtx;
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
-    /// Набор результатов расчетов для записи в БД
+    // Результаты расчета в виде (id, value)
+    // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub(super) parameters: Option<Parameters>,
     /// Распределение площади для расчета прочности
     pub(super) strength_area: Option<StrengthAreaCtx>,
@@ -28,6 +29,29 @@ pub struct Context {
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
     pub(super) balance: Option<BalanceCtx>,
+    /// Площади горизонтальных поверхностей и
+    /// площади парусности судна для расчета остойчивости
+    pub(super) stability_area: Option<StabilityAreaCtx>,
+    /// Исправленная метацентрическая высота
+    pub(super) metacentric_height: Option<MetacentricHeightCtx>,   
+    /// Диаграмма плеч статической и динамической остойчивости
+    pub(super) lever_diagram: Option<LeverDiagramCtx>,
+    /// Расчет плеча кренящего момента от давления ветра
+    pub(super) wind: Option<WindCtx>,
+    /// Парусность судна
+    pub(super) windage: Option<WindageCtx>,
+    /// Период качки судна  
+    pub(super) roll_period: Option<RollingPeriodCtx>,
+    /// Амплитуда качки судна  
+    pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
+    /// Критерии проверки остойчивости судна 
+    pub(super) criterion_stability: Option<CriterionStabilityCtx>,
+    /// Критерий погоды К
+    pub(super) wheather: Option<WheatherCtx>,
+    /// Статический угол крена от действия постоянного ветра
+    pub(super) static_angle: Option<StaticAngleCtx>,
+    /// Критерий площади под диаграммой статической остойчивости
+    pub(super) dso_area: Option<DSOAreaCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

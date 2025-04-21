@@ -75,6 +75,18 @@ impl Eval<(), EvalResult> for BalanceEval {
                     Err(err) => {
                         return CtxResult::Err(error.pass_with("model.compute_balance error", err));
                     }
+                };                    
+                let result = BalanceCtx {
+                    bulk: result_data.bulk,
+                    liquid: result_data.liquid,
+                    area_wl: result_data.area_wl, 
+                    mean_draught: result_data.mean_draught, 
+                    length_wl: result_data.length_wl, 
+                    breadth_wl: result_data.breadth_wl, 
+                    volume_shift_z: result_data.volume_shift_z, 
+                    entry_angle: result_data.entry_angle, 
+                    flooding_angle: result_data.flooding_angle,
+                    volume: result_data.volume,
                 };
                 //
                 // TODO Propably additional BalanceResult is not required, sorry if not
@@ -85,6 +97,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                 //     liquid: result.liquid,
                 // };
                 self.value = Some(result.clone());
+                 // TODO ctx.write(result_data.parameters);
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
