@@ -39,11 +39,10 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let parameters: Parameters = ctx.read(); 
-                let initial: &InitialCtx = ctx.read_ref();
                 // суммарная масса судна
-                let mass = parameters.get(ParameterID::Displacement).unwrap();
+                let mass = parameters.get(ParameterID::Displacement).ok_or(CtxResult::Err(error.err("calculate mass error: no Displacement in parameters")))?;
                 // Смещение центра массы по оси Z
-                let mass_shift_z = parameters.get(ParameterID::CenterMassZ).unwrap();
+                let mass_shift_z = parameters.get(ParameterID::CenterMassZ).ok_or(CtxResult::Err(error.err("calculate mass_shift_z error: no CenterMassZ in parameters")))?;
                 // Продольный - метацентрические радиус
                 let rad_long = todo()!;
                 // Поперечный метацентрические радиус
@@ -133,7 +132,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                     delta_m_h,
                 };
                 self.value = Some(result.clone());
-                ctx.write(parameters);
+                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),

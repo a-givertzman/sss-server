@@ -163,6 +163,103 @@ impl ContextRead<LeverDiagramCtx> for Context {
         self.lever_diagram.clone().unwrap()
     }
 }
+//
+impl ContextWrite<WindCtx> for Context {
+    fn write(mut self, value: WindCtx) -> CtxResult<Self, Error> {
+        self.wind = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WindCtx> for Context {
+    fn read(&self) -> WindCtx {
+        self.wind.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<WindageCtx> for Context {
+    fn write(mut self, value: WindageCtx) -> CtxResult<Self, Error> {
+        self.windage = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WindageCtx> for Context {
+    fn read(&self) -> WindageCtx {
+        self.windage.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<RollingPeriodCtx> for Context {
+    fn write(mut self, value: RollingPeriodCtx) -> CtxResult<Self, Error> {
+        self.roll_period = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<RollingPeriodCtx> for Context {
+    fn read(&self) -> RollingPeriodCtx {
+        self.roll_period.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<RollingAmplitudeCtx> for Context {
+    fn write(mut self, value: RollingAmplitudeCtx) -> CtxResult<Self, Error> {
+        self.roll_amplitude = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<RollingAmplitudeCtx> for Context {
+    fn read(&self) -> RollingAmplitudeCtx {
+        self.roll_amplitude.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<CriterionStabilityCtx> for Context {
+    fn write(mut self, value: CriterionStabilityCtx) -> CtxResult<Self, Error> {
+        self.criterion_stability = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<CriterionStabilityCtx> for Context {
+    fn read(&self) -> CriterionStabilityCtx {
+        self.criterion_stability.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<WheatherCtx> for Context {
+    fn write(mut self, value: WheatherCtx) -> CtxResult<Self, Error> {
+        self.wheather = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<WheatherCtx> for Context {
+    fn read(&self) -> WheatherCtx {
+        self.wheather.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<StaticAngleCtx> for Context {
+    fn write(mut self, value: StaticAngleCtx) -> CtxResult<Self, Error> {
+        self.static_angle = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<StaticAngleCtx> for Context {
+    fn read(&self) -> StaticAngleCtx {
+        self.static_angle.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<DSOAreaCtx> for Context {
+    fn write(mut self, value: DSOAreaCtx) -> CtxResult<Self, Error> {
+        self.dso_area = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOAreaCtx> for Context {
+    fn read(&self) -> DSOAreaCtx {
+        self.dso_area.clone().unwrap()
+    }
+}
+
 
 
 
