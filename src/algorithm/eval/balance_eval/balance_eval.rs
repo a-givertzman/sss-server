@@ -85,7 +85,8 @@ impl Eval<(), EvalResult> for BalanceEval {
                     breadth_wl: result_data.breadth_wl, 
                     volume_shift_z: result_data.volume_shift_z, 
                     entry_angle: result_data.entry_angle, 
-                    flooding_angle: result_data.flooding_angle, 
+                    flooding_angle: result_data.flooding_angle,
+                    volume: result_data.volume,
                 };
                 self.value = Some(result.clone());
                  // TODO ctx.write(result_data.parameters);
