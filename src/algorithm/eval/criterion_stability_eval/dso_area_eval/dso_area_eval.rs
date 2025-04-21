@@ -1,0 +1,130 @@
+use super::dso_area_ctx::DSOAreaCtx;
+use crate::algorithm::entities::data::stability::{multipler_s::*, *};
+use crate::algorithm::entities::math::curve::*;
+use crate::{
+    ContextWrite, CtxResult,
+    algorithm::{
+        context::context_access::{ContextRead, ContextReadRef},
+        eval::{
+            LeverDiagramCtx, MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx, WindCtx,
+        },
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::InitialCtx,
+    ship_model::model_link::{IModelLink, ModelLink},
+};
+use sal_core::{dbg::Dbg, error::Error};
+///
+/// Расчет критерия площади под диаграммой статической остойчивости
+pub struct DSOAreaEval {
+    dbg: Dbg,
+    value: Option<DSOAreaCtx>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
+}
+//
+//
+impl DSOAreaEval {
+    ///
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+        let dbg = Dbg::new(parent, "DSOAreaEval");
+        Self {
+            dbg,
+            value: None,
+            ctx: Box::new(ctx),
+        }
+    }
+}
+//
+//
+impl Eval<(), EvalResult> for DSOAreaEval {
+    fn eval(&mut self, _: ()) -> EvalResult {
+        let error = Error::new(&self.dbg, "eval");
+        match self.ctx.eval(()) {
+            CtxResult::Ok(ctx) => {
+                let initial: &InitialCtx = ctx.read_ref();
+                let lever_diagram: LeverDiagramCtx = ctx.read();
+                let balance: BalanceCtx = ctx.read();
+                let flooding_angle = balance.flooding_angle;
+                let ship_type = ShipType::from_str(
+                    &initial
+                        .ship
+                        .expect("static_angle eval error: no ship!")
+                        .ship_type,
+                )?;
+                let mut data = Vec::new();
+                let theta = lever_diagram.angle(0.).unwrap_or(vec![0., 0.]);
+                let theta_0 = *theta.first().unwrap_or(&0.);
+                let theta_max = *theta.last().unwrap_or(&0.);
+                let second_angle_30 = theta_max.min(30.).min(flooding_angle);
+                match lever_diagram.dso_area(theta_0, second_angle_30) {
+                    Ok(result) => data.push(CriterionData::new_result(
+                        CriterionID::AreaLC0_30,
+                        result,
+                        0.055,
+                    )),
+                    Err(error) => {
+                        log::error!(format!("CriterionStability dso_area 0-30 error: {}", error));
+                        data.push(CriterionData::new_error(
+                        CriterionID::AreaLC0_30,
+                        "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-30 градусов: ".to_owned() + &error.to_string(),
+                    ))
+                    }
+                };
+                let second_angle_40 = theta_max.min(40.).min(flooding_angle);
+                let target_area = if ship_type != ShipType::TimberCarrier {
+                    0.09
+                } else {
+                    0.08
+                };
+                match lever_diagram.dso_area(theta_0, second_angle_40) {
+                    Ok(result) => data.push(CriterionData::new_result(
+                        CriterionID::AreaLC0_40,
+                        result,
+                        target_area,
+                    )),
+                    Err(error) => {
+                        log::error!(format!("CriterionStability dso_area 0-40 error: {}", error));
+                        data.push(CriterionData::new_error(
+                            CriterionID::AreaLC0_40,
+                            "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
+                        ))
+                    }
+                };
+                let first_angle_30 = theta_0.max(30.);
+                match lever_diagram.dso_area(first_angle_30, second_angle_40) {
+                    Ok(result) => data.push(CriterionData::new_result(
+                        CriterionID::AreaLC30_40,
+                        result,
+                        0.03,
+                    )),
+                    Err(error) => {
+                        log::error!(format!(
+                            "CriterionStability dso_area 30-40 error: {}",
+                            error
+                        ));
+                        data.push(CriterionData::new_error(
+                        CriterionID::AreaLC30_40,
+                        "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 30-40 градусов: ".to_owned() + &error.to_string(),
+                    ))
+                    }
+                };
+                //    log::info!("Criterion dso: zg:{} theta_0:{theta_0} theta_max:{theta_max} first_angle_30:{first_angle_30} second_angle_30:{second_angle_30} second_angle_40:{second_angle_40}", self.metacentric_height.z_g_fix().unwrap_or(-1.));
+                let result = DSOAreaCtx { data };
+                self.value = Some(result.clone());
+                ctx.write(result)
+            }
+            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
+            CtxResult::None => CtxResult::None,
+        }
+    }
+}
+//
+//
+impl std::fmt::Debug for WindEval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WindEval")
+            .field("dbg", &self.dbg)
+            .field("value", &self.value)
+            .finish()
+    }
+}
