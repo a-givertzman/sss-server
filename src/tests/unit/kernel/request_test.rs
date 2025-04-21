@@ -6,7 +6,7 @@ mod request {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         algorithm::{context::{context::Context, testing_ctx::{MokUserReplyTestCtx, TestingCtx}}, initial::initial_ctx::InitialCtx},
-        kernel::{request::Request, sync::link::Link},
+        kernel::{request::Request, sync::Link},
     };
     ///
     ///
@@ -24,8 +24,7 @@ mod request {
     fn init_each() -> () {}
     ///
     /// Testing 'Request::fetch'
-    #[tokio::test(flavor = "multi_thread")]
-    async fn basic() {
+    fn basic() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
@@ -49,7 +48,7 @@ mod request {
         let (link, _) = Link::split(dbg);
         let request = Request::new(
             link,
-            async |ctx: MokUserReplyTestCtx, link: Link| {
+            |ctx: MokUserReplyTestCtx, link: Link| {
                 let reply: MokUserReplyTestCtx = ctx;
                 (reply, link)
             },
@@ -59,7 +58,7 @@ mod request {
             let mut ctx = Context::new(initial.clone());
             ctx.testing = Some(TestingCtx { mok_user_reply: value });
             let ctx = ctx.testing.unwrap().mok_user_reply;
-            let result = request.fetch(ctx).await;
+            let result = request.fetch(ctx);
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
         test_duration.exit();

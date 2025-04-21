@@ -1,6 +1,8 @@
+use bincode::{Decode, Encode};
+
 ///
 /// Enum for structurizing types of result's
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Decode, Encode)]
 pub enum CtxResult<T, E> {
     /// positive type of result
     Ok(T),

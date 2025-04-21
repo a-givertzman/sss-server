@@ -1,7 +1,7 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use super::{AssignmentType, UnitCargoType};
 use crate::algorithm::entities::{data::DataArray, Bound, Position};
-use api_tools::error::str_err::StrErr;
+use sal_core::error::Error;
 use serde::Deserialize;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -11,7 +11,7 @@ pub struct LoadUnitData {
     /// ID assigned
     pub assigned_id: usize,
     /// ID помещения
-    pub space_id: usize,
+    pub space_id: String,
     /// Имя груза
     pub cargo_name: String,
     /// Тип назначения груза
@@ -45,11 +45,11 @@ pub struct LoadUnitData {
 //
 impl LoadUnitData {
     //
-    pub fn mass(&self, bound_x: &Bound) -> Result<f64, StrErr> {
+    pub fn mass(&self, bound_x: &Bound) -> Result<f64, Error> {
         Ok(self.mass * self.bound_x()?.part_ratio(bound_x)?)
     }
     //
-    pub fn icing_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<f64, StrErr> {
+    pub fn icing_area(&self, bound_x: &Bound, bound_y: &Bound) -> Result<f64, Error> {
         let part_x =
             if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
                 Bound::new(self_bound_x1, self_bound_x2)?.part_ratio(bound_x)?
@@ -65,31 +65,31 @@ impl LoadUnitData {
         Ok(part_x * part_y * self.icing_area.unwrap_or(0.))
     }
     //
-    pub fn windage_area(&self, bound_x: &Bound, bound_z: &Bound) -> Result<f64, StrErr> {
+    pub fn windage_area(&self, bound_x: &Bound, bound_z: &Bound) -> Result<f64, Error> {
         let part_x = self.bound_x()?.part_ratio(bound_x)?;
         let part_z =
             if let (Some(self_bound_z1), Some(self_bound_z2)) = (self.bound_z1, self.bound_z2) {
                 Bound::new(self_bound_z1, self_bound_z2)?.part_ratio(bound_z)?
             } else {
-                return Err(StrErr(format!(
-                    "LoadUnitData windage_area error: no bound_z"
-                )));
+                return Err(Error::from("LoadUnitData.windage_area | no bound_z"));
             };
         Ok(part_x * part_z * self.windage_area.unwrap_or(0.))
     }
     //
-    pub fn bound_x(&self) -> Result<Bound, StrErr> {
+    pub fn bound_x(&self) -> Result<Bound, Error> {
+        let error = Error::new("LoadUnitData", "bound_x");
         if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
             match Bound::new(self_bound_x1, self_bound_x2) {
                 Ok(data) => Ok(data),
-                Err(e) => return Err(StrErr(format!("LoadUnitData bound_x error: {e}"))),
+                Err(e) => return Err(error.pass(e)),
             }
         } else {
-            Err(StrErr(format!("LoadUnitData bound_x error: no bounds!")))
+            Err(error.err("no bounds!"))
         }
     }
     //
-    pub fn mass_shift(&self) -> Result<Position, StrErr> {
+    pub fn mass_shift(&self) -> Result<Position, Error> {
+        let error = Error::new("LoadUnitData", "mass_shift");
         if let Some(mass_shift) = self.mass_shift {
             Ok(mass_shift)
         } else {
@@ -101,7 +101,7 @@ impl LoadUnitData {
                     return Ok(Position::new(center_x, center_y, center_z));
                 } 
             }
-            Err(StrErr(format!("LoadUnitData mass_shift error: no mass_shift and bounds!")))
+            Err(error.err("no mass_shift and bounds!"))
         }   
     }
 }

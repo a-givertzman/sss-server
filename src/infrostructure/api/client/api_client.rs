@@ -1,6 +1,5 @@
 use api_tools::client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest};
-
-use crate::kernel::error::error::Error;
+use sal_core::error::Error;
 
 ///
 /// Provides access to the API Server
@@ -19,7 +18,8 @@ impl ApiClient {
             port,
         }
     }
-    //
+    ///
+    /// Performs an API request with the parameters specified in the constructor
     pub fn fetch(&self, sql: &str) -> Result<Vec<u8>, Error> {
         let mut request = ApiRequest::new(
             &api_tools::debug::dbg_id::DbgId("parent".to_owned()),
@@ -34,6 +34,6 @@ impl ApiClient {
         );
         request
             .fetch(true)
-            .map_err(|e| Error::FromString(format!("ApiServer fetch error: {e}")))
+            .map_err(|e| Error::new("ApiClient", "fetch").pass(e.to_string()))
     }
 }

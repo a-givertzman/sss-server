@@ -1,20 +1,20 @@
 use super::icing_ctx::IcingCtx;
-use crate::algorithm::context::context_access::*;
+use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::entities::Moment;
 use crate::algorithm::eval::{IcingStabCtx, StrengthAreaCtx};
 use crate::{
-    kernel::{dbgid::dbgid::DbgId, eval::Eval, types::eval_result::EvalResult},
+    kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
     ContextWrite, CtxResult,
 };
-use sal_sync::services::entity::error::str_err::StrErr;
+use sal_core::{dbg::Dbg, error::Error};
 
 ///
-/// Учет обледенения судна.
+/// Учет обледенения судна
 pub struct IcingEval {
-    dbg: DbgId,
+    dbg: Dbg,
     value: Option<IcingCtx>,
-    ctx: Box<dyn Eval<(), EvalResult> + Send>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -22,9 +22,9 @@ impl IcingEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + Send + 'static,
+        ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
-        let dbg = DbgId::with_parent(&DbgId(parent.into()), "IcingEval");
+        let dbg = Dbg::new(parent, "IcingEval");
         Self {
             dbg,
             value: None,
@@ -35,91 +35,76 @@ impl IcingEval {
 }
 //
 impl Eval<(), EvalResult> for IcingEval {
-    fn eval(&mut self, _: ()) -> futures::future::BoxFuture<'_, EvalResult> {
-        Box::pin(async move {
-            match self.ctx.eval(()).await {
-                CtxResult::Ok(ctx) => {
-                    let initial: &InitialCtx = ctx.read_ref();
-                    let bounds = match initial.bounds.clone() {
+    fn eval(&mut self, _: ()) -> EvalResult {
+        let error = Error::new(&self.dbg, "eval");
+        match self.ctx.eval(()) {
+            CtxResult::Ok(ctx) => {
+                let initial: &InitialCtx = ctx.read_ref();
+                let bounds = match initial.bounds.clone() {
+                    Some(data) => data,
+                    None => {
+                        return CtxResult::Err(error.err("Read bounds error: no data!"))
+                    }
+                };
+                let area_strength: StrengthAreaCtx = ctx.read();
+                let icing_stab: IcingStabCtx = ctx.read();
+                let mut mass_values = Vec::new();
+            //    let mut mass_moment_x_sum = 0.;
+                for (i, _) in bounds.iter().enumerate() { 
+                /*    let current_x = match bound.center() {
                         Some(data) => data,
                         None => {
-                            return CtxResult::Err(StrErr(format!(
-                                "{}.eval | Read bounds error: no data!",
-                                self.dbg
-                            )))
+                            return CtxResult::Err(error.err(format!("bound.center error: no center for bound {i}")));
+                        }
+                    };*/
+                    let current_area_h = match area_strength.area_h_values.get(i) {
+                        Some(&data) => data,
+                        None => {
+                            return CtxResult::Err(error.err(format!("area_strength.area_h.get error: no value for bound {i}")));
                         }
                     };
-                    let area_strength: StrengthAreaCtx = ctx.read();
-                    let icing_stab: IcingStabCtx = ctx.read();
-                    let mut mass_values = Vec::new();
-                //    let mut mass_moment_x_sum = 0.;
-                    for (i, bound) in bounds.iter().enumerate() { 
-                        let current_x = match bound.center() {
-                            Some(data) => data,
-                            None => {
-                                return CtxResult::Err(StrErr(format!(
-                                    "{}.eval | bound.center error: no center for bound {i}", self.dbg
-                                )));
-                            }
-                        };
-                        let current_area_h = match area_strength.area_h_values.get(i) {
-                            Some(&data) => data,
-                            None => {
-                                return CtxResult::Err(StrErr(format!(
-                                    "{}.eval | area_strength.area_h.get error: no value for bound {i}", self.dbg
-                                )));
-                            }
-                        };
-                        let current_area_v = match area_strength.area_v_values.get(i) {
-                            Some(&data) => data,
-                            None => {
-                                return CtxResult::Err(StrErr(format!(
-                                    "{}.eval | area_strength.area_v.get error: no value for bound {i}", self.dbg
-                                )));
-                            }
-                        };
-                        let current_area_timber_h = match area_strength.area_timber_h_values.get(i) {
-                            Some(&data) => data,
-                            None => {
-                                return CtxResult::Err(StrErr(format!(
-                                    "{}.eval | area_strength.area_timber_h.get error: no value for bound {i}", self.dbg
-                                )));
-                            }
-                        };
-                        let current_mass = current_area_h * icing_stab.mass_desc_h
-                            + current_area_timber_h
-                                * (icing_stab.mass_timber_h - icing_stab.mass_desc_h)
-                            + current_area_v
-                                * (1. + icing_stab.coef_v_ds_area)
-                                * icing_stab.mass_v;
-                    //    mass_moment_x_sum += current_mass * current_x;
-                        mass_values.push(current_mass);
-                    }
-                    let mass_v = area_strength.area_v * (1. + icing_stab.coef_v_ds_area) * icing_stab.mass_v;
-                    let mass_h = area_strength.area_h * icing_stab.mass_desc_h;
-                    let mass_timber_h = area_strength.area_timber_h * (icing_stab.mass_timber_h - icing_stab.mass_desc_h);                  
-                    let mass_sum = mass_v + mass_h + mass_timber_h;
-                    assert!(mass_sum == mass_values.iter().sum::<f64>());
-                    let moment_v = Moment::from_pos(area_strength.area_v_shift, mass_v);
-                    let moment_h = Moment::from_pos(area_strength.area_h_shift, mass_h);
-                    let moment_timber_h = Moment::from_pos(area_strength.area_timber_h_shift, mass_timber_h);            
-                    let moment_sum = moment_v + moment_h + moment_timber_h;
-                    let mass_shift_x = if mass_sum > 0. { moment_sum.x()/mass_sum } else { 0. };
-                    let result = IcingCtx {
-                        mass: mass_sum,
-                        mass_shift_x,
-                        mass_values,
+                    let current_area_v = match area_strength.area_v_values.get(i) {
+                        Some(&data) => data,
+                        None => {
+                            return CtxResult::Err(error.err(format!("area_strength.area_v.get error: no value for bound {i}")));
+                        }
                     };
-                    self.value = Some(result.clone());
-                    ctx.write(result)
+                    let current_area_timber_h = match area_strength.area_timber_h_values.get(i) {
+                        Some(&data) => data,
+                        None => {
+                            return CtxResult::Err(error.err(format!("area_strength.area_timber_h.get error: no value for bound {i}")));
+                        }
+                    };
+                    let current_mass = current_area_h * icing_stab.mass_desc_h
+                        + current_area_timber_h
+                            * (icing_stab.mass_timber_h - icing_stab.mass_desc_h)
+                        + current_area_v
+                            * (1. + icing_stab.coef_v_ds_area)
+                            * icing_stab.mass_v;
+                //    mass_moment_x_sum += current_mass * current_x;
+                    mass_values.push(current_mass);
                 }
-                CtxResult::Err(err) => CtxResult::Err(StrErr(format!(
-                    "{}.eval | Read context error: {:?}",
-                    self.dbg, err
-                ))),
-                CtxResult::None => CtxResult::None,
+                let mass_v = area_strength.area_v * (1. + icing_stab.coef_v_ds_area) * icing_stab.mass_v;
+                let mass_h = area_strength.area_h * icing_stab.mass_desc_h;
+                let mass_timber_h = area_strength.area_timber_h * (icing_stab.mass_timber_h - icing_stab.mass_desc_h);                  
+                let mass_sum = mass_v + mass_h + mass_timber_h;
+                assert!(mass_sum == mass_values.iter().sum::<f64>());
+                let moment_v = Moment::from_pos(area_strength.area_v_shift, mass_v);
+                let moment_h = Moment::from_pos(area_strength.area_h_shift, mass_h);
+                let moment_timber_h = Moment::from_pos(area_strength.area_timber_h_shift, mass_timber_h);            
+                let moment_sum = moment_v + moment_h + moment_timber_h;
+                let mass_shift_x = if mass_sum > 0. { moment_sum.x()/mass_sum } else { 0. };
+                let result = IcingCtx {
+                    mass: mass_sum,
+                    mass_shift_x,
+                    mass_values,
+                };
+                self.value = Some(result.clone());
+                ctx.write(result)
             }
-        })
+            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
+            CtxResult::None => CtxResult::None,
+        }
     }
 }
 //

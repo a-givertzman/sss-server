@@ -1,9 +1,11 @@
 //! Непрерывный набор диапазонов значений
-use api_tools::error::str_err::StrErr;
+
+use bincode::{Decode, Encode};
+use sal_core::error::Error;
 
 use super::Bound;
 /// Непрерывный набор диапазонов значений
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Decode, Encode)]
 pub struct Bounds {
     // Непрерывный вектор диапазонов
     values: Vec<Bound>,
@@ -11,18 +13,17 @@ pub struct Bounds {
 //
 impl Bounds {
     /// Основной конструктор
-    pub fn new(values: Vec<Bound>) -> Result<Self, StrErr> {
+    pub fn new(values: Vec<Bound>) -> Result<Self, Error> {
+        let error = Error::new("Bounds", "new");
         for v in &values {
             match v {
-                Bound::None => return Err(StrErr::from("Bounds new error: Bound::None in values".to_owned())),
-                Bound::Full => return Err(StrErr::from("Bounds new error: Bound::Full in values".to_owned())),
+                Bound::None => return Err(error.err("Bound::None in values")),
+                Bound::Full => return Err(error.err("Bound::Full in values")),
                 Bound::Value(_, _) => continue,
             }
         }
         if values.len() < 2 {
-            return Err(StrErr::from(
-                "Bounds::new error: values.len() < 2 ".to_string(),
-            ));
+            return Err(error.err("values.len() < 2 "));
         }
         Ok(Self { values })
     }
@@ -31,16 +32,13 @@ impl Bounds {
     /// * middle_x - X midship from Fr0
     /// * n - Number of Parts
     #[allow(unused)]
-    pub fn from_n(loa: f64, middle_x: f64, n: usize) -> Result<Self, StrErr> {
+    pub fn from_n(loa: f64, middle_x: f64, n: usize) -> Result<Self, Error> {
+        let error = Error::new("Bounds", "from_n");
         if loa <= 0. {
-            return Err(StrErr::from(format!(
-                "Bounds from_n error: loa {loa} <= 0."
-            )));
+            return Err(error.err(format!("loa {loa} <= 0.")));
         }
         if n <= 1 {
-            return Err(StrErr::from(format!(
-                "Bounds from_n error: n {n} <= 1"
-            )));
+            return Err(error.err(format!("n {n} <= 1")));
         }
         let n_parts = n as f64;
         let mut values = Vec::new();
@@ -52,16 +50,13 @@ impl Bounds {
     }
     /// Вспомогательный конструктор
     #[allow(unused)]
-    pub fn from_min_max(min: f64, max: f64, n: usize) -> Result<Self, StrErr> {
+    pub fn from_min_max(min: f64, max: f64, n: usize) -> Result<Self, Error> {
+        let error = Error::new("Bounds", "from_min_max");
         if min >= max {
-            return Err(StrErr::from(format!(
-                "Bounds from_min_max error: min {min} >= max {max}"
-            )));
+            return Err(error.err(format!("min {min} >= max {max}")));
         }
         if n <= 1 {
-            return Err(StrErr::from(format!(
-                "Bounds from_min_max error: n {n} <= 1"
-            )));
+            return Err(error.err(format!("n {n} <= 1")));
         }
         let n_parts = n as f64;
         let len = max - min;
@@ -73,17 +68,16 @@ impl Bounds {
         Self::new(values)
     }
     /// Вспомогательный конструктор
-    pub fn from_frames(frames: &[(f64, f64)]) -> Result<Self, StrErr> {
+    pub fn from_frames(frames: &[(f64, f64)]) -> Result<Self, Error> {
+        let error = Error::new("Bounds", "from_min_max");
         if frames.len() <= 1 {
-            return Err(StrErr::from(
-                "Bounds from_frames error: frames.len() <= 1".to_string(),
-            ));
+            return Err(error.err("frames.len() <= 1"));
         }
         let mut values = Vec::new();
         for frame in frames {
             values.push(Bound::new(frame.0, frame.1)?);
         }
-        log::trace!("\t Bounds from_frames: frames:{:?} values:{:?} ", frames, values);
+        log::trace!("Bounds.from_frames | frames:{:?} values:{:?} ", frames, values);
         Self::new(values)
     }
     /// Итератор по коллекции

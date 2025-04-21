@@ -4,9 +4,9 @@ mod infrostructure;
 mod kernel;
 mod conf;
 mod ship_model;
+mod prelude;
 #[cfg(test)]
 mod tests;
-mod prelude;
 
 use algorithm::eval::*;
 //
@@ -14,19 +14,17 @@ use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use infrostructure::{api::client::api_client::ApiClient, query::restart_eval::RestartEvalQuery};
+use infrostructure::api::client::api_client::ApiClient;
 use kernel::{
     eval::Eval, run::Run,
 };
+use sal_sync::thread_pool::tread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 use prelude::*;
 
 ///
 /// Application entry point
-// #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-// #[tokio::main]
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     let dbg = DbgId("main".into());
     let path = "config.yaml";
@@ -38,17 +36,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let ship_id = 2;
     let project_id = "NULL";
+    let n_parts = 200;
+    let thread_pool = ThreadPool::new(Some(conf.thread_pool.size));
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
+        project_id.to_owned(),
+        n_parts,
         ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+        thread_pool.scheduler(),
     );
-    let ship_model_handle = ship_model.run().await.unwrap();
+    let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
     let _result =     
     BalanceEval::new(
         &dbg,  
-        ship_model.link().await,
+        ship_model.link(),
         LoadsEval::new(
             &dbg,        
             WettingEval::new(
@@ -57,13 +60,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &dbg,
                     StrengthAreaEval::new(
                         &dbg,
-                        ship_model.link().await,
+                        ship_model.link(),
                         IcingTimberEval::new(
                             &dbg,
                             IcingStabEval::new(
                                 &dbg,
                                 Initial::new(
                                     &dbg,
+                                    ship_model.link(),
                                     ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
                                     Context::new(
                                         InitialCtx::new(
@@ -80,8 +84,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .eval(())
-    .await;
+    ;
     ship_model.exit();
-    ship_model_handle.await.unwrap();
+    ship_model_handle.join().unwrap();
     Ok(())
 }

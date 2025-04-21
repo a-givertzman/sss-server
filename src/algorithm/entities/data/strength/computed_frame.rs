@@ -2,14 +2,14 @@
 //! разбиения корпуса для расчете эпюров
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::data::DataArray;
-/// Данные по шпангоуту
+/// Данные по шпации
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComputedFrameData {
-    /// Индекс шпангоута
+    /// Индекс шпации
     pub index: i32,
-    /// Начало шпангоута
+    /// Начало шпации
     pub start_x: f64,
-    /// Конец шпангоута
+    /// Конец шпации
     pub end_x: f64,
 }
 //
