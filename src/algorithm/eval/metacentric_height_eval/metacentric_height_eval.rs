@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, parameters::{IParameters, Parameters}, Bound, Moment, Position},
         eval::IcingTimberCtx,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

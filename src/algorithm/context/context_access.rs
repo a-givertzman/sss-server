@@ -73,20 +73,6 @@ impl ContextReadRef<InitialCtx> for Context {
     }
 }
 //
-//
-//
-impl ContextWrite<Parameters> for Context {
-    fn write(mut self, value: Parameters) -> CtxResult<Self, Error> {
-        self.parameters = Some(value);
-        CtxResult::Ok(self)
-    }
-}
-impl ContextRead<Parameters> for Context {
-    fn read(&self) -> Parameters {
-        self.parameters.clone().unwrap()
-    }
-}
-//
 impl ContextWrite<StrengthAreaCtx> for Context {
     fn write(mut self, value: StrengthAreaCtx) -> CtxResult<Self, Error> {
         self.strength_area = Some(value);

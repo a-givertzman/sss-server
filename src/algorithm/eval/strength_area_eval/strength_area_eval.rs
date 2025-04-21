@@ -6,9 +6,7 @@ use crate::{
         entities::{Bound, Position, data::loads::UnitCargoType},
         eval::IcingTimberCtx,
     }, 
-    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::Reply}, ContextWrite, CtxResult
-    prelude::InitialCtx,
-    ship_model::model_link::*,
+    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::Reply},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

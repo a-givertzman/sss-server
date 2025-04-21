@@ -2,8 +2,8 @@
 //! Набор результатов расчетов для записи в БД
 use std::{cell::RefCell, collections::HashMap};
 use bincode::{Decode, Encode};
+use sal_core::error::Error;
 use strum_macros::FromRepr;
-use crate::kernel::error::error::Error;
 ///
 /// Doc comment required
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, FromRepr, Decode, Encode)]

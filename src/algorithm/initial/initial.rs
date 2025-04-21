@@ -1,5 +1,5 @@
 use super::initial_ctx::InitialCtx;
-use crate::algorithm::entities::data::loads::*;
+use crate::algorithm::entities::data::{loads::*, CoefficientKArray, CoefficientKThetaArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::algorithm::entities::Bounds;

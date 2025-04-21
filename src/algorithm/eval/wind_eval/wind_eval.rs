@@ -1,9 +1,8 @@
 use super::wind_ctx::WindCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::{IcingTimberCtx, WindageCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+        context::context_access::{ContextRead, ContextReadRef}, entities::parameters::{ParameterID, Parameters}, eval::WindageCtx
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -53,8 +52,7 @@ impl Eval<(), EvalResult> for WindEval {
                 parameters
                     .add(ParameterID::WindageArea, a_v);
                 if let Some(draught_mean) = parameters.get(ParameterID::DraughtMean) {
-                    parameters
-                        .add(ParameterID::WindageAreaLever, z_v - draught_mean/2.);
+                    parameters.add(ParameterID::WindageAreaLever, z_v - draught_mean/2.);
                 }
                 parameters.add(ParameterID::StaticWindageHeelingLever, arm_wind_static);
                 let result = WindCtx {

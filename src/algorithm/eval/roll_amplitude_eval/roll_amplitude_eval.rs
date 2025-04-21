@@ -1,6 +1,6 @@
 use super::roll_amplitude_ctx::RollingAmplitudeCtx;
 use crate::{
-    algorithm::{context::context_access::{ContextRead, ContextReadRef}, eval::MetacentricHeightCtx}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+    algorithm::{context::context_access::{ContextRead, ContextReadRef}, eval::MetacentricHeightCtx}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::entities::data::stability::{*, multipler_s::*};

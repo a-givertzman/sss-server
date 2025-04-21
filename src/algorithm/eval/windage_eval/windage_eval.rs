@@ -1,9 +1,8 @@
 use super::windage_ctx::WindageCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::{IcingTimberCtx, StabilityAreaCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+        context::context_access::{ContextRead, ContextReadRef}, entities::parameters::{IParameters, ParameterID, Parameters}, eval::{IcingStabCtx, StabilityAreaCtx}
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -50,7 +49,7 @@ impl Eval<(), EvalResult> for WindageEval {
                 let z_v = z_v_bp - volume_shift_z;
                 let result = WindageCtx {
                     a_v,
-                    z_v: todo!(),
+                    z_v,
                 };
                 self.value = Some(result.clone());
                 ctx.write(result)

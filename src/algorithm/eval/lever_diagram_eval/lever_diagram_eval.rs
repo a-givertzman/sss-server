@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, math::curve::*, Bound, Moment, Position},
         eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, IcingTimberCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -195,7 +195,6 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                     max_angles,
                 };
                 self.value = Some(result.clone());
-                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),

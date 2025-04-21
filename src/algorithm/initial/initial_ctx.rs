@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::default;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
 
@@ -28,14 +27,14 @@ pub struct InitialCtx {
     pub unit: Option<Vec::<LoadUnitData>>,
     pub gaseous: Option<Vec::<LoadGaseousData>>,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
-    pub multipler_x1: Option<MultiplerX1Array>,
+    pub multipler_x1: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
-    pub multipler_x2: Option<MultiplerX2Array>,
+    pub multipler_x2: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель S для расчета качки, Табл. 2.1.5.1-3
-    pub multipler_s: Option<MultiplerSArray>,
+    pub multipler_s: Option<Vec<(f64, f64)>>,
     /// Коэффициент k для судов, имеющих скуловые кили или
     /// брусковый киль для расчета качки, Табл. 2.1.5.2
-    pub coefficient_k: Option<CoefficientKArray>,
+    pub coefficient_k: Option<Vec<(f64, f64)>>,
     /// Коэффициент k_theta учитывающий особенности качки судов смешанного типа
     pub coefficient_k_theta: Option<CoefficientKThetaArray>,
 }
@@ -47,21 +46,21 @@ impl InitialCtx {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),
-            ..Self::default()
+            ..Default::default()
         }
     }
 }
-//
-//
-impl Default for InitialCtx {
-    ///
-    /// Struct constructor
-    /// - 'storage_initial_data' - [Storage] instance, where store initial data
-    fn default() -> Self {
-        Self {
-            ship_id: "NUll".to_owned(),
-            project_id: "NUll".to_owned(),
-            ..Self::default()
-        }
-    }
-}
+// //
+// //
+// impl std::default::Default for InitialCtx {
+//     ///
+//     /// Struct constructor
+//     /// - 'storage_initial_data' - [Storage] instance, where store initial data
+//     fn default() -> Self {
+//         Self {
+//             ship_id: "NUll".to_owned(),
+//             project_id: "NUll".to_owned(),
+//             ..Default::default()
+//         }
+//     }
+// }
