@@ -235,6 +235,32 @@ impl ContextRead<WheatherCtx> for Context {
         self.wheather.clone().unwrap()
     }
 }
+//
+impl ContextWrite<StaticAngleCtx> for Context {
+    fn write(mut self, value: StaticAngleCtx) -> CtxResult<Self, Error> {
+        self.static_angle = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<StaticAngleCtx> for Context {
+    fn read(&self) -> StaticAngleCtx {
+        self.static_angle.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<DSOAreaCtx> for Context {
+    fn write(mut self, value: DSOAreaCtx) -> CtxResult<Self, Error> {
+        self.dso_area = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOAreaCtx> for Context {
+    fn read(&self) -> DSOAreaCtx {
+        self.dso_area.clone().unwrap()
+    }
+}
+
+
 
 
 
