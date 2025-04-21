@@ -39,7 +39,6 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let parameters: Parameters = ctx.read(); 
-                let initial: &InitialCtx = ctx.read_ref();
                 // суммарная масса судна
                 let mass = parameters.get(ParameterID::Displacement).ok_or(CtxResult::Err(error.err("calculate mass error: no Displacement in parameters")))?;
                 // Смещение центра массы по оси Z
