@@ -259,6 +259,18 @@ impl ContextRead<DSOAreaCtx> for Context {
         self.dso_area.clone().unwrap()
     }
 }
+//
+impl ContextWrite<DSOMaxCtx> for Context {
+    fn write(mut self, value: DSOMaxCtx) -> CtxResult<Self, Error> {
+        self.dso_max = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOMaxCtx> for Context {
+    fn read(&self) -> DSOMaxCtx {
+        self.dso_max.clone().unwrap()
+    }
+}
 
 
 
