@@ -1,5 +1,5 @@
 use coco::Stack;
-use crate::kernel::sync::link::Link;
+use crate::kernel::sync::Link;
 ///
 /// Used for declarative `Rrequest` implementation
 /// 

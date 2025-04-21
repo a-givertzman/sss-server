@@ -3,8 +3,10 @@ use crate::algorithm::entities::parameters::ParameterID;
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
 ///
+/// To be moved to it's right place if it is a part of a `Context`
+/// Структура результатов расчета баланса судна
 #[derive(Debug, Clone, Decode, Encode)]
-pub struct BalanceCtx {
+pub struct BalanceResult {
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub parameters: Vec<(ParameterID, f64)>, 

@@ -1,8 +1,14 @@
-# ApiConf:
-address:
-  host: "0.0.0.0"
-  port: "8080"
-  database: sss-computing
-params:
-  ship_id: 2
-  project_id: NULL
+#
+# Thread-pool params
+thread-pool:
+    size: 250
+# 
+# API params
+api:
+    address:
+        host: "0.0.0.0"
+        port: "8080"
+        database: sss-computing
+    params:
+        ship_id: 2
+        project_id: NULL

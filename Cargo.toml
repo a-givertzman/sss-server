@@ -1,5 +1,5 @@
 [package]
-name = "cdt-math"
+name = "sss-server"
 version = "0.1.0"
 edition = "2024"
 
@@ -24,6 +24,7 @@ chrono = "^0.4"
 serde = { version = "^1.0", features = ["derive"] }
 serde_yaml = "^0.9"
 serde_json = "^1.0"
+bincode = "^2.0"
 #
 # Regex
 regex = "^1.10"
@@ -42,3 +43,7 @@ splines = "^4.4"
 #
 # Helpful macros for working with enums and strings
 strum_macros = "^0.27"
+#
+# Thread safe
+kanal = "^0.1"
+papaya = "^0.2"

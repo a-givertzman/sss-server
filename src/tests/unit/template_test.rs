@@ -20,6 +20,7 @@ mod tests {
     fn init_each() -> () {}
     ///
     /// Testing such functionality / behavior
+    #[test]
     fn test_task_cycle() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();

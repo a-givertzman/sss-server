@@ -1,12 +1,12 @@
 #[cfg(test)]
 
-mod link_listen {
+mod hub_listen {
     use std::{sync::Once, time::Duration};
     use bincode::{Decode, Encode};
     use sal_core::error::Error;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::kernel::sync::Link;
+    use crate::kernel::sync::Hub;
     ///
     ///
     static INIT: Once = Once::new();
@@ -29,9 +29,9 @@ mod link_listen {
         init_once();
         init_each();
         log::debug!("");
-        let dbg = "link_listen";
+        let dbg = "hub_listen";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(5));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
         let test_data: [(i32, Query, Result<Reply, Error>); 4] = [
             (1, Query("Query-1".into()), Ok(Reply("Reply-1".into()))),
@@ -39,19 +39,20 @@ mod link_listen {
             (3, Query("Query-3".into()), Ok(Reply("Reply-3".into()))),
             (4, Query("Query-4".into()), Ok(Reply("Reply-4".into()))),
         ];
-        let (local, mut remote) = Link::split(dbg);
-        let remote_handle = remote.listen(|query: String| {
-            log::debug!("Link.remote.listen | Query {:#?}", query);
-            Some(match query.as_str() {
+        let hub = Hub::new(dbg);
+        let link = hub.link();
+        let hub_handle = hub.listen(|query: Query, _| {
+            log::debug!("Hub.listen | Query {:#?}", query);
+            Some(match query.0.as_str() {
                 "Query-1" => Reply("Reply-1".into()),
                 "Query-2" => Reply("Reply-2".into()),
                 "Query-3" => Reply("Reply-3".into()),
                 "Query-4" => Reply("Reply-4".into()),
-                _ => panic!("Link.remote.listen | Unknown event {:#?}", query),
+                _ => panic!("Hub.listen | Unknown event {:#?}", query),
             })
         }).unwrap();
         for (step, query, target) in test_data {
-            let result: Result<Reply, Error> = local.call(query);
+            let result: Result<Reply, Error> = link.call(query);
             log::debug!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             match (&result, &target) {
                 (Ok(result), Ok(target)) => assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -59,8 +60,8 @@ mod link_listen {
                 _ => panic!("Error in step {} \nresult: {:?}\ntarget: {:?}", step, result, target)
             }
         }
-        remote.exit();
-        remote_handle.join().unwrap();
+        hub.exit();
+        hub_handle.join().unwrap();
         log::debug!("{} | All - Done", dbg);
         test_duration.exit();
     }

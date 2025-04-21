@@ -1,30 +1,30 @@
 use super::query::*;
 use super::reply::*;
-use super::{model_link::ModelLink, query::Query, reply::Reply};
+use super::{query::Query, reply::Reply};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
 use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::{Bound, Bounds};
-use crate::{
-    infrostructure::api::client::api_client::ApiClient, kernel::types::fx_map::FxIndexMap,
-};
+use crate::algorithm::eval::BalanceCtx;
+use crate::kernel::sync::Link;
+use crate::kernel::sync::Hub;
+use crate::infrostructure::api::client::api_client::ApiClient;
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::{
     name::Name, point::point_tx_id::PointTxId,
 };
-use std::thread;
+use sal_sync::thread_pool::scheduler::Scheduler;
 use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
-        mpsc::{self, Receiver, Sender},
+        atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
 ///
 ///
@@ -34,9 +34,8 @@ pub struct ShipModel {
     ship_id: usize,
     project_id: String,
     n_parts: usize,
-    clients_tx: Sender<(String, Sender<Reply>, Receiver<Query>)>,
-    clients_rx: Stack<Receiver<(String, Sender<Reply>, Receiver<Query>)>>,
-    clients: Arc<AtomicUsize>,
+    hub: Hub,
+    scheduler: Stack<Scheduler>,
     timeout: Duration,
     api_client: Stack<ApiClient>,
     exit: Arc<AtomicBool>,
@@ -58,11 +57,12 @@ impl ShipModel {
         project_id: String,
         n_parts: usize,
         api_client: ApiClient,
+        scheduler: Scheduler,
     ) -> Self {
         let name = Name::new(parent, "ShipModel");
-        let (receivers_tx, receivers_rx) = mpsc::channel();
-        let receivers_rx_stack = Stack::new();
-        receivers_rx_stack.push(receivers_rx);
+        let hub = Hub::new(&name);
+        let sheduler_stk = Stack::new();
+        sheduler_stk.push(scheduler);
         let client = Stack::new();
         client.push(api_client);
         Self {
@@ -71,32 +71,17 @@ impl ShipModel {
             ship_id,
             project_id,
             n_parts,
-            clients: Arc::new(AtomicUsize::new(0)),
-            clients_tx: receivers_tx,
-            clients_rx: receivers_rx_stack,
+            hub,
             timeout: Self::DEFAULT_TIMEOUT,
             api_client: client,
+            scheduler: sheduler_stk,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Returns connected `Link`
-    pub fn link(&self) -> ModelLink {
-        let (loc_send, rem_recv) = mpsc::channel();
-        let (rem_send, loc_recv) = mpsc::channel();
-        let receivers = self.clients.clone();
-        let remote = ModelLink::new(
-            &format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)),
-            rem_send,
-            rem_recv,
-        );
-        let key = remote.name().join();
-        let len = receivers.load(Ordering::SeqCst);
-        self.clients_tx.send((key, loc_send, loc_recv)).unwrap();
-        while len == receivers.load(Ordering::SeqCst) {
-            std::thread::sleep(Duration::from_millis(3));
-        }
-        remote
+    pub fn link(&self) -> Link {
+        self.hub.link()
     }
     ///
     /// Entry point
@@ -104,83 +89,58 @@ impl ShipModel {
         let dbg = self.name.join();
         let error = Error::new(&dbg, "run");
         log::info!("{}.run | Starting...", dbg);
-        let timeout = self.timeout;
-        let interval = self.timeout; //Duration::from_millis(1000);
-        let self_receivers = self.clients.clone();
-        let clients_rx = self.clients_rx.pop().unwrap();
+        // let timeout = self.timeout;
+        // let interval = self.timeout; //Duration::from_millis(1000);
         let api_client = self.api_client.pop().unwrap();
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
+        let scheduler = self.scheduler.pop().unwrap();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
             Err(err) => return Err(error.pass_with("get_bounds error", err)),
         };
-        let handle = thread::Builder::new().name(dbg.clone()).spawn(move || {
-            log::debug!("{}.run | Locals | Start", dbg);
-            let mut clients = FxIndexMap::default();
-            'main: loop {
-                for (key, sender, receiver) in clients_rx.try_iter() {
-                    clients.insert(key, (sender, receiver));
-                    self_receivers.fetch_add(1, Ordering::SeqCst);
+        let handle = self.hub.listen(move |query, send| {
+            let error = Error::new(&dbg, "hub.listen");
+            log::trace!("{}.run | Received query: {:?}", dbg, query);
+            match query {
+                Query::Bounds => {
+                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    }
                 }
-                log::debug!("{}.run | Locals | Receivers: {}", dbg, clients.len());
-                let cycle = Instant::now();
-                for (_key, (send, recv)) in &clients {
-                    match recv.recv_timeout(timeout) {
-                        Ok(query) => {
-                            log::trace!("{}.run | Received query: {:?}", dbg, query);
-                            match query {
-                                Query::Bounds => {
-                                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                    }
-                                }
-                                Query::BoundAreas => {
-                                    let result = areas_strength(bounds.clone(), ship_id, &api_client);
-                                    if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                    }
-                                }
-                                Query::ComputeBalance(balance_src_data) => {
-                                    let result =
-                                        compute_balance(bounds.clone(), balance_src_data, ship_id);
-                                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                    }
-                                }
-                            }
+                Query::BoundAreas => {
+                    let bounds = bounds.clone();
+                    let api_client = api_client.clone();
+                    let exit = exit.clone();
+                    if let Err(err) = scheduler.spawn(move|| {
+                        let result = areas_strength(bounds, ship_id, &api_client, exit);
+                        if let Err(err) = send.send(Reply::BoundAreas(result)) {
+                            let err = error.pass_with("Send error", err);
+                            log::warn!("{}", err);
                         }
-                        Err(err) => match err {
-                            mpsc::RecvTimeoutError::Timeout => {
-                                log::trace!("{}.run | Listening...", dbg);
-                            }
-                            mpsc::RecvTimeoutError::Disconnected => {
-                                if log::max_level() >= log::LevelFilter::Trace {
-                                    log::warn!(
-                                        "{}.run | Receive error, all senders has been closed",
-                                        dbg
-                                    );
-                                }
-                            }
-                        },
-                    }
-                    if exit.load(Ordering::SeqCst) {
-                        break 'main;
+                        Ok(())
+                    }) {
+                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
                     }
                 }
-                if exit.load(Ordering::SeqCst) {
-                    break 'main;
-                }
-                if clients.len() == 0 {
-                    let elapsed = cycle.elapsed();
-                    if elapsed < interval {
-                        std::thread::sleep(interval - elapsed);
+                Query::ComputeBalance(balance_src_data) => {
+                    let bounds = bounds.clone();
+                    let exit = exit.clone();
+                    if let Err(err) = scheduler.spawn(move|| {
+                        let result = compute_balance(bounds.clone(), balance_src_data, ship_id, exit);
+                        if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                            let err = error.pass_with("Send error", err);
+                                log::warn!("{}", err);
+                        };
+                        Ok(())
+                    }) {
+                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
                     }
                 }
-            }
-            log::info!("{}.run | Exit", dbg);
+            };
+            None::<()>
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);
@@ -190,6 +150,7 @@ impl ShipModel {
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
+        self.hub.exit();
     }
 }
 //
@@ -265,23 +226,22 @@ fn get_bounds(
     Ok(bounds)
 }
 ///
-/// Type doc comment
-fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Result<(Vec<f64>, Vec<f64>), Error> {
-    let error = Error::new("ShipModel", "areas_strength");
+/// Computes ...
+/// - `exit` - used to breake long havy computation if possible
+fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc<AtomicBool>) -> Result<BoundArea, Error> {
+    let err = Error::new("ShipModel", "areas_strength");
     let area_h_str = HStrAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
-        ))
-        .map_err(|e| error.pass(e.to_string()))?,
-    )?;
+        )).map_err(|e| err.pass(e.to_string()))?
+    ).map_err(|e| err.pass(e.to_string()))?;
     let area_v_str = strength::VerticalAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
-        ))
-        .map_err(|e| error.pass(e))?,
-    )?;
+        )).map_err(|e| err.pass(e.to_string()))?
+    ).map_err(|e| err.pass(e.to_string()))?;
     let area_h_str: Vec<_> = area_h_str
         .data()
         .into_iter()
@@ -305,9 +265,12 @@ fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient) -> Res
             )
         })
         .collect();
-    Ok((area_v_str, area_h_str))
+    Ok(BoundArea { v: area_v_str, h: area_h_str })
 }
-//
-fn compute_balance(bounds: Bounds, src_data: BalanceSrcData, ship_id: usize) -> Result<BalanceResultData, Error> {
-    todo!()
+///
+/// Computes ...
+/// - `exit` - used to breake long havy computation if possible
+fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
+    let err = Error::new("ShipModel", "compute_balance");
+    Err(err.err("Not implemented yet"))
 }

@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use super::{context::Context, ctx_result::CtxResult};
-use crate::algorithm::{eval::*, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{entities::parameters::{IParameters, ParameterID, Parameters}, eval::*, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -16,6 +16,17 @@ pub trait ContextReadRef<T> {
 pub trait ContextRead<T> {
     fn read(&self) -> T;
 }
+///
+/// Provides restricted write access to the [Context].[Parameters] members
+pub trait ContextParamsWrite<T> {
+    fn write(self, key: ParameterID, value: T) -> CtxResult<Context, Error>;
+}
+///
+/// Provides simple read access to the [Context].[Parameters] members
+pub trait ContextParamsRead<T> {
+    fn read(&self, key: ParameterID) -> T;
+}
+
 //
 //
 impl ContextWrite<InitialCtx> for Context {
@@ -114,6 +125,37 @@ impl ContextWrite<BalanceCtx> for Context {
 impl ContextRead<BalanceCtx> for Context {
     fn read(&self) -> BalanceCtx {
         self.balance.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<Parameters> for Context {
+    fn write(mut self, value: Parameters) -> CtxResult<Self, Error> {
+        self.parameters = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextReadRef<Parameters> for Context {
+    fn read_ref(&self) -> &Parameters {
+        self.parameters
+            .as_ref()
+            .unwrap()
+    }
+}
+impl ContextParamsWrite<f64> for Context {
+    fn write(mut self, id: ParameterID, value: f64) -> CtxResult<Self, Error> {
+        match &mut self.parameters {
+            Some(params) => {
+                params.add(id, value);
+            }
+            None => panic!("Context.write | Parameters - is not initialised yet, id: {:?}", id)
+        };
+        CtxResult::Ok(self)
+    }
+}
+impl ContextParamsRead<f64> for Context {
+    fn read(&self, id: ParameterID) -> f64 {
+        let params: &Parameters  = self.read_ref();
+        params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
     }
 }
 

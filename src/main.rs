@@ -4,12 +4,11 @@ mod infrostructure;
 mod kernel;
 mod conf;
 mod ship_model;
+mod prelude;
 #[cfg(test)]
 mod tests;
-mod prelude;
 
 use algorithm::eval::*;
-//
 use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
 use conf::conf::Conf;
@@ -18,6 +17,7 @@ use infrostructure::api::client::api_client::ApiClient;
 use kernel::{
     eval::Eval, run::Run,
 };
+use sal_sync::thread_pool::tread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 use prelude::*;
 
@@ -36,40 +36,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_id = 2;
     let project_id = "NULL";
     let n_parts = 200;
+    let thread_pool = ThreadPool::new(Some(conf.thread_pool.size));
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
         project_id.to_owned(),
         n_parts,
         ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+        thread_pool.scheduler(),
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let _result =     
-    BalanceEval::new(
-        &dbg,  
-        ship_model.link(),
-        LoadsEval::new(
-            &dbg,        
-            WettingEval::new(
-                &dbg,   
-                IcingEval::new(
-                    &dbg,
-                    StrengthAreaEval::new( 
+    let _result = ZgEval::new(
+        &dbg,
+        BalanceEval::new(
+            &dbg,  
+            ship_model.link(),
+            LoadsEval::new(
+                &dbg,        
+                WettingEval::new(
+                    &dbg,   
+                    IcingEval::new(
                         &dbg,
-                        ship_model.link(),
-                        IcingTimberEval::new(
+                        StrengthAreaEval::new(
                             &dbg,
-                            IcingStabEval::new(
+                            ship_model.link(),
+                            IcingTimberEval::new(
                                 &dbg,
-                                Initial::new(
+                                IcingStabEval::new(
                                     &dbg,
-                                    ship_model.link(),
-                                    ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
-                                    Context::new(
-                                        InitialCtx::new(
-                                            ship_id,
-                                            project_id,
+                                    Initial::new(
+                                        &dbg,
+                                        ship_model.link(),
+                                        ApiClient::new(conf.api.address.database.clone(), conf.api.address.host.clone(), conf.api.address.port.clone()),
+                                        Context::new(
+                                            InitialCtx::new(
+                                                ship_id,
+                                                project_id,
+                                            ),
                                         ),
                                     ),
                                 ),

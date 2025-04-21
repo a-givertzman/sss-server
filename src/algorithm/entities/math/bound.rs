@@ -1,10 +1,11 @@
 //!
 //! Диапазон значений
 
+use bincode::{Decode, Encode};
 use sal_core::error::Error;
 ///
 /// Диапазон значений между двумя заданными
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Decode, Encode)]
 pub enum Bound {
     None,
     Full,

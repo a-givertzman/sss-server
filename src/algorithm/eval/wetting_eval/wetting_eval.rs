@@ -1,5 +1,5 @@
 //! Учет намокания груза
-use crate::algorithm::context::context_access::*;
+use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
@@ -35,7 +35,7 @@ impl WettingEval {
     //
 }
 impl Eval<(), EvalResult> for WettingEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&mut self, zg: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
