@@ -1,6 +1,6 @@
 //! Район плавания судна
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::kernel::error::error::Error;
 
 /// Район плавания судна
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ impl NavigationArea {
             "R2-RSN" => NavigationArea::R2Rsn,
             "R2" => NavigationArea::R2,
             "R1" => NavigationArea::R1,
-            src => return Err(Error::FromString(format!("NavigationArea from_str error: no type {src}"))),
+            src => return Err(Error::new("NavigationArea", "from_str").err(format!(" no type {src}"))),
         })
     }
 }

@@ -47,6 +47,8 @@ impl Eval<(), EvalResult> for WindEval {
                 let arm_wind_static = (p_v * a_v * z_v) / (1000. * gravity_g * mass);
                 let arm_wind_dynamic = (1. + m) * arm_wind_static;          
                 log::trace!("\t Wind arm_wind_static mass_sum:{mass} p_v:{p_v} a_v:{a_v} z_v:{z_v} arm_wind_static:{arm_wind_static} arm_wind_dynamic:{arm_wind_dynamic}");
+
+                TODO: проверка на zg
                 parameters.add(ParameterID::DynamicWindageHeelingLever, arm_wind_dynamic);
                 parameters.add(ParameterID::WindPressure, p_v);
                 parameters

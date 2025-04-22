@@ -61,6 +61,7 @@ pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;
 
 pub use criterion_stability_eval::criterion_stability_eval::CriterionStabilityEval;
 pub use criterion_stability_eval::criterion_stability_ctx::CriterionStabilityCtx;
+pub use criterion_stability_eval::*;
 
 pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;

@@ -37,7 +37,6 @@ impl Eval<(), EvalResult> for WindageEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let parameters: Parameters = ctx.read(); 
                 let volume_shift_z = parameters.get(ParameterID::CenterVolumeZ).ok_or(CtxResult::Err(error.err("eval volume_shift_z error: no CenterVolumeY in parameters")))?;
                 let stability_area: StabilityAreaCtx = ctx.read();
                 let icing_stab: IcingStabCtx = ctx.read();

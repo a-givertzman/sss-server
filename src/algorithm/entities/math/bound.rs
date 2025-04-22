@@ -31,14 +31,19 @@ impl Bound {
     }
     /// Отношение общей части пересечения к длине диапазона
     pub fn part_ratio(&self, other: &Bound) -> Result<f64, Error> {
-        Ok(match self.intersect(other)? {
-            Bound::None => 0.,
-            Bound::Full => 1.,
-            r @ Bound::Value(_, _) => {
-                r.length().expect("Bound part_ratio error")
-                    / self.length().expect("Bound part_ratio error")
-            }
-        })
+        Ok(
+            match self
+                .intersect(other)
+                .map_err(|e| Error::new("Bound", "part_ratio").pass_with("Bound::new", e))?
+            {
+                Bound::None => 0.,
+                Bound::Full => 1.,
+                r @ Bound::Value(_, _) => {
+                    r.length().expect("Bound part_ratio error")
+                        / self.length().expect("Bound part_ratio error")
+                }
+            },
+        )
     }
     /// Пересечение c другим диапазоном, возвращает общий диапазон
     pub fn intersect(&self, other: &Bound) -> Result<Bound, Error> {
@@ -58,7 +63,8 @@ impl Bound {
                     if other_start <= self_start && other_end >= self_end {
                         return Ok(*self);
                     }
-                    Bound::new(other_start.max(*self_start), other_end.min(*self_end))?
+                    Bound::new(other_start.max(*self_start), other_end.min(*self_end))
+                        .map_err(|e| Error::new("Bound", "intersect").pass_with("Bound::new", e))?
                 }
             },
         })
@@ -101,7 +107,7 @@ impl Bound {
     pub fn is_some(&self) -> bool {
         !self.is_none()
     }
-    /// Если true, то ограниченный диапазон с ненулевой длинной 
+    /// Если true, то ограниченный диапазон с ненулевой длинной
     pub fn is_value(&self) -> bool {
         *self != Bound::None && *self != Bound::Full
     }

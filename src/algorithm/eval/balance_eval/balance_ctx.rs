@@ -1,5 +1,4 @@
 use bincode::{Decode, Encode};
-use crate::algorithm::entities::parameters::ParameterID;
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
 ///

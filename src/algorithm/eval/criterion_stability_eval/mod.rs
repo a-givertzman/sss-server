@@ -1,9 +1,12 @@
 //! Критерии проверки остойчивости судна
+
 use strum_macros::FromRepr;
+use sal_core::error::Error;
+use std::fmt::Debug;
 
 pub mod criterion_stability_ctx;
 pub mod criterion_stability_eval;
-
+pub mod parameters;
 pub mod wheather_eval;
 pub mod static_angle_eval;
 pub mod dso_area_eval;
@@ -78,9 +81,51 @@ pub enum CriterionID {
 impl CriterionID {
     pub fn from(id: i32) -> Result<Self, crate::Error> {
         let id = id as usize;
-        CriterionID::from_repr(id).ok_or(Error::FromString(format!(
-            "CriterionID from_usize error: {}",
-            id
-        )))
+        CriterionID::from_repr(id)
+            .ok_or(Error::new("CriterionID", "from").err(format!("id:{id}")))
+    }
+}
+/// Результат проверки критерия
+#[derive(Clone)]
+pub struct CriterionData {
+    /// id критерия
+    pub criterion_id: usize,
+    /// Результат расчета
+    pub result: f64,
+    /// Пороговое значение критерия
+    pub target: f64,
+    /// Текст ошибки
+    pub error_message: Option<String>,
+}
+//
+impl CriterionData {
+    /// Конструктор при наличии результата
+    pub fn new_result(criterion_id: CriterionID, result: f64, target: f64) -> Self {
+        Self {
+            criterion_id: criterion_id as usize,
+            result,
+            target,
+            error_message: None,
+        }
+    }
+    /// Конструктор при ошибке расчета
+    pub fn new_error(criterion_id: CriterionID, error_message: String) -> Self {
+        Self {
+            criterion_id: criterion_id as usize,
+            result: 0.,
+            target: 0.,
+            error_message: Some(error_message),
+        }
+    }
+}
+//
+impl Debug for CriterionData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CriterionData")
+            .field("criterion_id", &self.criterion_id)
+            .field("result", &self.result)
+            .field("target", &self.target)
+            .field("error_message", &self.error_message)
+            .finish()
     }
 }

@@ -1,5 +1,7 @@
 use super::static_angle_ctx::StaticAngleCtx;
+use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::data::stability::ship_type::*;
+use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
 use crate::{
     ContextWrite, CtxResult,
     algorithm::{
@@ -44,13 +46,10 @@ impl Eval<(), EvalResult> for StaticAngleEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let have_container = match initial.unit.as_ref() {
-                    Some(data) => data
-                        .into_iter()
-                        .any(|v| v.cargo_type == UnitCargoType::Container),
-                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
-                };
-                let parameters: Parameters = ctx.read();
+                let have_container = initial.unit.as_ref()
+                    .ok_or(error.err("initial.unit no data"))?
+                    .into_iter()
+                    .any(|v| v.cargo_type == UnitCargoType::Container);
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();
@@ -61,21 +60,40 @@ impl Eval<(), EvalResult> for StaticAngleEval {
                 let angles = match lever_diagram.angle(wind_lever) {
                     Ok(angles) => angles,
                     Err(error) => {
-                        let error = CtxResult::Err(error.pass_with("lever_diagram.angle", error));
-                        log::error!("{error}");
-                        return CriterionData::new_error(
-                            CriterionID::WindStaticHeel,
-                            "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
-                        );
+                        let error = error.pass_with("lever_diagram.angle", error.clone());
+                        log::error!("{}", error);      
+                        let result = StaticAngleCtx { 
+                            data: CriterionData::new_error(
+                                CriterionID::WindStaticHeel,
+                                "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
+                            )
+                        };
+                        self.value = Some(result.clone());
+                        return ctx.write(result);
                     }
                 };
                 let angle = angles.first();
-                let ship_type = ShipType::from_str(
+                let ship_type = match ShipType::from_str(
                     &initial
                         .ship
+                        .as_ref()
                         .expect("static_angle eval error: no ship!")
                         .ship_type,
-                )?;
+                ) {
+                    Ok(ship_type) => ship_type,
+                    Err(err) => {
+                        let error = error.pass_with("ship_type", err);
+                        log::error!("{}", error);      
+                        let result = StaticAngleCtx { 
+                            data: CriterionData::new_error(
+                                CriterionID::WindStaticHeel,
+                                "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
+                            )
+                        };
+                        self.value = Some(result.clone());
+                        return ctx.write(result);
+                    },
+                }; 
                 let target_value = if ship_type == ShipType::TimberCarrier {
                     16.
                 } else if have_container {
@@ -104,9 +122,9 @@ impl Eval<(), EvalResult> for StaticAngleEval {
 }
 //
 //
-impl std::fmt::Debug for WindEval {
+impl std::fmt::Debug for StaticAngleEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WindEval")
+        f.debug_struct("StaticAngleEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

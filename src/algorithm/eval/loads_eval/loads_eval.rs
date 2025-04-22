@@ -3,9 +3,9 @@ use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{Moment, Position};
 use crate::{
+    ContextWrite, CtxResult,
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -37,58 +37,41 @@ impl Eval<(), EvalResult> for LoadsEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let shift_const = if let Some(ship_parameters) =
-                    initial.ship_parameters.as_ref()
-                {
-                    let const_mass_shift_x = *match ship_parameters.get("LCG from middle") {
-                        Some(data) => data,
-                        None => {
-                            return CtxResult::Err(error.err("Read const_mass_shift_x error: no data!"))
-                        }
-                    };
-                    let const_mass_shift_y = *match ship_parameters.get("TCG from CL") {
-                        Some(data) => data,
-                        None => {
-                            return CtxResult::Err(error.err("Read const_mass_shift_y error: no data!"))
-                        }
-                    };
-                    let const_mass_shift_z = *match ship_parameters.get("VCG from BL") {
-                        Some(data) => data,
-                        None => {
-                            return CtxResult::Err(error.err("Read const_mass_shift_z error: no data!"))
-                        }
-                    };
+                let shift_const = if let Some(ship_parameters) = initial.ship_parameters.as_ref() {
+                    let const_mass_shift_x = *ship_parameters
+                        .get("LCG from middle")
+                        .ok_or(error.err("Read const_mass_shift_x error: no data!"))?;
+                    let const_mass_shift_y = *ship_parameters
+                        .get("TCG from CL")
+                        .ok_or(error.err("Read const_mass_shift_y error: no data!"))?;
+                    let const_mass_shift_z = *ship_parameters
+                        .get("VCG from BL")
+                        .ok_or(error.err("Read const_mass_shift_z error: no data!"))?;
                     Position::new(const_mass_shift_x, const_mass_shift_y, const_mass_shift_z)
                 } else {
-                    return CtxResult::Err(error.err("Read const_mass_shift_z error: no ship_parameters!"));
+                    return CtxResult::Err(
+                        error.err("Read const_mass_shift_z error: no ship_parameters!"),
+                    );
                 };
                 let mass_const = match initial.load_constant.clone() {
                     Some(data) => data.data().iter().map(|v| v.mass).sum(),
-                    None => {
-                        return CtxResult::Err(error.err("Read load_constant error: no data!"))
-                    }
+                    None => return CtxResult::Err(error.err("Read load_constant error: no data!")),
                 };
                 let bulk: Vec<_> = match initial.bulk.clone() {
                     Some(data) => data.iter().map(|v| v.data()).collect(),
-                    None => {
-                        return CtxResult::Err(error.err("Read bulk error: no data!"))
-                    }
+                    None => return CtxResult::Err(error.err("Read bulk error: no data!")),
                 };
                 let liquid: Vec<_> = match initial.liquid.clone() {
                     Some(data) => data.iter().map(|v| v.data()).collect(),
-                    None => {
-                        return CtxResult::Err(error.err("Read liquid error: no data!"))
-                    }
+                    None => return CtxResult::Err(error.err("Read liquid error: no data!")),
                 };
-
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {
                         let unit = data;
                         let grain_bulkhead: Vec<_> = unit
                             .iter()
                             .filter(|v| {
-                                v.cargo_type == UnitCargoType::GrainBulkhead
-                                    && v.bound_x().is_ok()
+                                v.cargo_type == UnitCargoType::GrainBulkhead && v.bound_x().is_ok()
                             })
                             .map(|v| v.bound_x().unwrap().center())
                             .flatten()
@@ -110,9 +93,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                             );
                         (mass_unit, shift_unit, grain_bulkhead)
                     }
-                    None => {
-                        return CtxResult::Err(error.err("Read unit error: no data!"))
-                    }
+                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
                 };
                 let (mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
                     Some(data) => data
@@ -130,9 +111,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                                 )
                             },
                         ),
-                    None => {
-                        return CtxResult::Err(error.err("Read gaseous error: no data!"))
-                    }
+                    None => return CtxResult::Err(error.err("Read gaseous error: no data!")),
                 };
                 let result = LoadsCtx {
                     mass_const,

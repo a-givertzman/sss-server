@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных судна
-use crate::kernel::error::error::Error;
 use super::{DataArray, NavigationArea, NavigationAreaData};
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 
 /// Общие по судну и расчету

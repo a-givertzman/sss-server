@@ -70,12 +70,8 @@ impl Eval<(), EvalResult> for BalanceEval {
                     grain_bulkhead: loads.grain_bulkhead,
                 };
                 // Расчет баланса в модели
-                let result: BalanceCtx = match self.model.call(Query::ComputeBalance(balance_query)) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(error.pass_with("model.compute_balance error", err));
-                    }
-                };                    
+                let result_data: BalanceCtx = self.model.call(Query::ComputeBalance(balance_query))
+                    .map_err(|err| error.pass_with("result_data model.call", err))?;                  
                 let result = BalanceCtx {
                     bulk: result_data.bulk,
                     liquid: result_data.liquid,

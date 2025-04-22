@@ -1,11 +1,8 @@
 //! Кривая, позволяет получать интерполированные значения
-use std::ops::{Add, Sub};
-
-use splines::{Interpolation, Key, Spline};
-
-use crate::kernel::error::error::Error;
-
 use super::Value;
+use sal_core::error::Error;
+use splines::{Interpolation, Key, Spline};
+use std::ops::{Add, Sub};
 
 /// Представление кривой в виде массива пар значений
 /// - Обеспечивает получение промежуточных значений с помощью простой линейной интерполяции
@@ -25,9 +22,7 @@ where
     /// from vector of the key - value pairs
     pub fn new_linear(src: &[(f64, T)]) -> Result<Curve<T>, Error> {
         if src.len() <= 1 {
-            return Err(Error::FromString(
-                "Curve new_linear error: src.len() <= 1".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_linear").err("src.len() <= 1"));
         }
         let src: Vec<_> = src
             .iter()
@@ -42,9 +37,7 @@ where
     /// Values must be sorted by key
     pub fn new_catmull_rom(src: &[(f64, T)]) -> Result<Curve<T>, Error> {
         if src.len() <= 2 {
-            return Err(Error::FromString(
-                "Curve new_catmull_rom error: src.len() <= 2".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_catmull_rom").err("src.len() <= 2"));
         }
         let mut res = Vec::new();
         let mut src = Vec::from(src);
@@ -56,13 +49,11 @@ where
         let delta_key1 = src[1].0 - src[0].0;
         let delta_key2 = src[2].0 - src[1].0;
         if delta_key1 <= 0. || delta_key2 <= 0. {
-            return Err(Error::FromString(
-                "Curve new_catmull_rom error: delta_key <= 0.".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_catmull_rom").err("delta_key <= 0."));
         }
-        let delta_value1 = (src[1].1 - src[0].1).multiple(1./ delta_key1);
-        let delta_value2 = (src[2].1 - src[1].1).multiple(1./ delta_key2);
-        let delta = (delta_value1 - delta_value2).multiple(1./ delta_key1);
+        let delta_value1 = (src[1].1 - src[0].1).multiple(1. / delta_key1);
+        let delta_value2 = (src[2].1 - src[1].1).multiple(1. / delta_key2);
+        let delta = (delta_value1 - delta_value2).multiple(1. / delta_key1);
         let mut add_value = |i: f64| {
             let delta_key = delta_key1 * i;
             res.push(Key::new(
@@ -83,18 +74,17 @@ where
         let delta_key1 = src[src.len() - 1].0 - src[src.len() - 2].0;
         let delta_key2: f64 = src[src.len() - 2].0 - src[src.len() - 3].0;
         if delta_key1 <= 0. || delta_key2 <= 0. {
-            return Err(Error::FromString(
-                "Curve new_catmull_rom error: delta_key <= 0.".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_catmull_rom").err("delta_key <= 0."));
         }
-        let delta_value1 = (src[src.len() - 1].1 - src[src.len() - 2].1).multiple(1./ delta_key1);
-        let delta_value2 = (src[src.len() - 2].1 - src[src.len() - 3].1).multiple(1./ delta_key2);
-        let delta = (delta_value1 - delta_value2).multiple(1./ delta_key1);
+        let delta_value1 = (src[src.len() - 1].1 - src[src.len() - 2].1).multiple(1. / delta_key1);
+        let delta_value2 = (src[src.len() - 2].1 - src[src.len() - 3].1).multiple(1. / delta_key2);
+        let delta = (delta_value1 - delta_value2).multiple(1. / delta_key1);
         let mut add_value = |i: f64| {
             let delta_key = delta_key1 * i;
             res.push(Key::new(
                 src.last().unwrap().0 + delta_key,
-                src.last().unwrap().1 + (delta_value1 + delta.multiple(delta_key)).multiple(delta_key),
+                src.last().unwrap().1
+                    + (delta_value1 + delta.multiple(delta_key)).multiple(delta_key),
                 Interpolation::CatmullRom,
             ));
         };
@@ -110,9 +100,7 @@ where
     /// Values must be sorted by key
     pub fn new_cosine(src: &[(f64, T)]) -> Result<Curve<T>, Error> {
         if src.len() <= 2 {
-            return Err(Error::FromString(
-                "Curve new_cosine error: src.len() <= 2".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_cosine").err("src.len() <= 2"));
         }
         let mut res = Vec::new();
         let mut src = Vec::from(src);
@@ -123,9 +111,7 @@ where
         // Для метода CatmullRom добавляем по 3 значения вначало и конец вектора
         let delta_key = src[1].0 - src[0].0;
         if delta_key <= 0. {
-            return Err(Error::FromString(
-                "Curve new_cosine error: delta_key <= 0.".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_cosine error").err("delta_key <= 0."));
         }
         let delta_value = src[1].1 - src[0].1;
         res.push(Key::new(
@@ -140,9 +126,7 @@ where
         res.append(&mut values.clone());
         let delta_key = src[src.len() - 1].0 - src[src.len() - 2].0;
         if delta_key <= 0. {
-            return Err(Error::FromString(
-                "Curve new_cosine error: delta_key <= 0".to_string(),
-            ));
+            return Err(Error::new("Curve", "new_cosine").err("delta_key <= 0"));
         }
         let delta_value = src[src.len() - 1].1 - src[src.len() - 2].1;
         res.push(Key::new(
@@ -175,9 +159,7 @@ where
     /// Численное интегрирование методом трапеций
     fn integral(&self, start: f64, end: f64) -> Result<T, Error> {
         if start > end {
-            return Err(Error::FromString(
-                "Curve integral error: start > end".to_string(),
-            ));
+            return Err(Error::new("Curve", "integral").err("start > end"));
         }
         if start == end {
             return Ok(T::zero());
@@ -187,12 +169,12 @@ where
         let delta = (end - start) / n as f64;
         let mut last_value = self
             .value(start)
-            .map_err(|e| Error::FromString(format!("Curve integral last_value error: {}", e)))?;
+            .map_err(|e| Error::new("Curve", "integral").err(format!("last_value error: {}", e)))?;
         let mut key = start;
         for _ in 0..n {
             key += delta;
             let next_value = self.value(key).map_err(|e| {
-                Error::FromString(format!("Curve integral next_value error: {}", e))
+                Error::new("Curve", "integral").err(format!("next_value error: {}", e))
             })?;
             sum += (last_value + next_value).multiple(delta / 2.);
             last_value = next_value;

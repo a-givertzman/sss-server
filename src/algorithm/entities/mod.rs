@@ -3,7 +3,7 @@ pub mod icing_stab;
 //pub mod loads;
 //pub mod strength;
 //pub mod stability;
-pub mod parameters;
+//pub mod parameters;
 //pub mod results;
 pub mod math;
 //pub mod area;

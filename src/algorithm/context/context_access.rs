@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use super::{context::Context, ctx_result::CtxResult};
-use crate::algorithm::{entities::parameters::{IParameters, ParameterID, Parameters}, eval::*, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -18,13 +18,13 @@ pub trait ContextRead<T> {
 }
 ///
 /// Provides restricted write access to the [Context].[Parameters] members
-pub trait ContextParamsWrite<T> {
-    fn write(self, key: ParameterID, value: T) -> CtxResult<Context, Error>;
+pub trait ContextParamsWrite {
+    fn write_params(self, key: ParameterID, value: f64) -> CtxResult<Context, Error>;
 }
 ///
 /// Provides simple read access to the [Context].[Parameters] members
-pub trait ContextParamsRead<T> {
-    fn read(&self, key: ParameterID) -> T;
+pub trait ContextParamsRead {
+    fn read_params(&self, key: ParameterID) -> f64;
 }
 
 //
@@ -41,19 +41,19 @@ impl ContextReadRef<Parameters> for Context {
             .unwrap()
     }
 }
-impl ContextParamsWrite<f64> for Context {
-    fn write(mut self, id: ParameterID, value: f64) -> CtxResult<Self, Error> {
+impl ContextParamsWrite for Context {
+    fn write_params(mut self, id: ParameterID, value: &f64) -> CtxResult<Self, Error> {
         match &mut self.parameters {
             Some(params) => {
-                params.add(id, value);
+                params.add(id, *value);
             }
             None => panic!("Context.write | Parameters - is not initialised yet, id: {:?}", id)
         };
         CtxResult::Ok(self)
     }
 }
-impl ContextParamsRead<f64> for Context {
-    fn read(&self, id: ParameterID) -> f64 {
+impl ContextParamsRead for Context {
+    fn read_params(&self, id: ParameterID) -> f64 {
         let params: &Parameters  = self.read_ref();
         params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
     }

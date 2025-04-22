@@ -3,9 +3,8 @@ use crate::{
     ContextWrite, CtxResult,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        eval::
-            LeverDiagramCtx
-        ,
+        entities::data::ship_type::ShipType,
+        eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -42,12 +41,6 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
-                let ship_type = ShipType::from_str(
-                    &initial
-                        .ship
-                        .expect("static_angle eval error: no ship!")
-                        .ship_type,
-                )?;
                 let mut data = Vec::new();
                 let theta = lever_diagram.angle(0.).unwrap_or(vec![0., 0.]);
                 let theta_0 = *theta.first().unwrap_or(&0.);
@@ -60,33 +53,50 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                         0.055,
                     )),
                     Err(error) => {
-                        log::error!(format!("CriterionStability dso_area 0-30 error: {}", error));
+                        log::error!("CriterionStability dso_area 0-30 error: {}", error);
                         data.push(CriterionData::new_error(
                         CriterionID::AreaLC0_30,
                         "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-30 градусов: ".to_owned() + &error.to_string(),
                     ))
                     }
-                };
-                let second_angle_40 = theta_max.min(40.).min(flooding_angle);
-                let target_area = if ship_type != ShipType::TimberCarrier {
-                    0.09
-                } else {
-                    0.08
-                };
-                match lever_diagram.dso_area(theta_0, second_angle_40) {
-                    Ok(result) => data.push(CriterionData::new_result(
-                        CriterionID::AreaLC0_40,
-                        result,
-                        target_area,
-                    )),
-                    Err(error) => {
-                        log::error!(format!("CriterionStability dso_area 0-40 error: {}", error));
+                };    
+                let second_angle_40 = theta_max.min(40.).min(flooding_angle);            
+                match ShipType::from_str(
+                    &initial
+                        .ship
+                        .as_ref()
+                        .expect("static_angle eval error: no ship!")
+                        .ship_type,
+                ) {
+                    Ok(ship_type) => {
+                        let target_area = if ship_type != ShipType::TimberCarrier {
+                            0.09
+                        } else {
+                            0.08
+                        };
+                        match lever_diagram.dso_area(theta_0, second_angle_40) {
+                            Ok(result) => data.push(CriterionData::new_result(
+                                CriterionID::AreaLC0_40,
+                                result,
+                                target_area,
+                            )),
+                            Err(error) => {
+                                log::error!("CriterionStability dso_area 0-40 error: {}", error);
+                                data.push(CriterionData::new_error(
+                                    CriterionID::AreaLC0_40,
+                                    "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
+                                ))
+                            }
+                        };
+                    },
+                    Err(err) => {
+                        log::error!("{}", err);
                         data.push(CriterionData::new_error(
                             CriterionID::AreaLC0_40,
                             "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
-                        ))
-                    }
-                };
+                        ))    
+                    },
+                }
                 let first_angle_30 = theta_0.max(30.);
                 match lever_diagram.dso_area(first_angle_30, second_angle_40) {
                     Ok(result) => data.push(CriterionData::new_result(
@@ -95,10 +105,7 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                         0.03,
                     )),
                     Err(error) => {
-                        log::error!(format!(
-                            "CriterionStability dso_area 30-40 error: {}",
-                            error
-                        ));
+                        log::error!("CriterionStability dso_area 30-40 error: {}", error);
                         data.push(CriterionData::new_error(
                         CriterionID::AreaLC30_40,
                         "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 30-40 градусов: ".to_owned() + &error.to_string(),
@@ -117,9 +124,9 @@ impl Eval<(), EvalResult> for DSOAreaEval {
 }
 //
 //
-impl std::fmt::Debug for WindEval {
+impl std::fmt::Debug for DSOAreaEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WindEval")
+        f.debug_struct("DSOAreaEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

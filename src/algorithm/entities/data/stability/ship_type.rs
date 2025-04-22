@@ -1,6 +1,7 @@
 //! Типы судов
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::Error;
+
 /// Типы судов
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ShipType {
@@ -50,7 +51,7 @@ impl ShipType {
             "gas carrier" => ShipType::GasCarrier,
             "ro-ro ship" => ShipType::RoRo,
             "other" => ShipType::Other,
-            src => return Err(Error::FromString(format!("ShipType from_str error: no type {src}"))),
+            src => return Err(Error::new("ShipType", "from_str").err(format!("no type {src}"))),
         })
     }
 }

@@ -35,7 +35,7 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
-                CtxResult::Err(error.pass_with("Not implemented yet", err))
+                CtxResult::Err(error.pass_with("Not implemented yet"))
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
             CtxResult::None => CtxResult::None,

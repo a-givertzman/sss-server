@@ -31,7 +31,7 @@ pub struct InitialCtx {
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
     pub multipler_x2: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель S для расчета качки, Табл. 2.1.5.1-3
-    pub multipler_s: Option<Vec<(f64, f64)>>,
+    pub multipler_s: Option<MultiplerSArray>,
     /// Коэффициент k для судов, имеющих скуловые кили или
     /// брусковый киль для расчета качки, Табл. 2.1.5.2
     pub coefficient_k: Option<Vec<(f64, f64)>>,
