@@ -13,9 +13,8 @@ env_logger = "^0.11"
 testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.0" }
-sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.4" }
-# sal-sync = { path = "../sal-sync" }
+sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.8" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.1.1" }
 #
 # Time
 chrono = "^0.4"
