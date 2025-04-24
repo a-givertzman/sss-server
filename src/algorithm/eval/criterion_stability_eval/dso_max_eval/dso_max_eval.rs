@@ -43,13 +43,12 @@ impl Eval<(), EvalResult> for DSOMaxEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
+                let ship_parameters = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters");
+                let ship_length = *ship_parameters.get("LBP").ok_or(CtxResult::Err(error.err("No LBP in ship_parameters")))?;
                 let curve = match Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
                     Ok(curve) => curve,
-                    Err(error) => {
-                        let error = Error::FromString(format!(
-                            "CriterionStability dso_lever curve error: {}",
-                            error
-                        ));
+                    Err(err) => {
+                        let error = error.pass_with("Curve::new_linear", err);
                         log::error!("{error}");
                         return CriterionData::new_error(
                         CriterionID::MaximumLC,
@@ -59,13 +58,10 @@ impl Eval<(), EvalResult> for DSOMaxEval {
                     );
                     }
                 };
-                let target = match curve.value(self.ship_length) {
+                let target = match curve.value(ship_length) {
                     Ok(value) => value,
-                    Err(error) => {
-                        let error = Error::FromString(format!(
-                            "CriterionStability dso_lever curve.value error: {}",
-                            error
-                        ));
+                    Err(err) => {
+                        let error = error.pass_with("curve.value", err);
                         log::error!("{error}");
                         return CriterionData::new_error(
                         CriterionID::MaximumLC,
@@ -73,13 +69,10 @@ impl Eval<(), EvalResult> for DSOMaxEval {
                     );
                     }
                 };
-                let result = match self.lever_diagram.dso_lever_max(30., 90.) {
+                let result = match lever_diagram.dso_lever_max(30., 90.) {
                     Ok(value) => value,
-                    Err(error) => {
-                        let error = Error::FromString(format!(
-                            "CriterionStability dso_lever dso_lever_max 30-90 error: {}",
-                            error
-                        ));
+                    Err(err) => {
+                        let error = error.pass_with("lever_diagram.dso_lever_max", err);
                         log::error!("{error}");
                         return CriterionData::new_error(
                         CriterionID::MaximumLC,
@@ -99,9 +92,9 @@ impl Eval<(), EvalResult> for DSOMaxEval {
 }
 //
 //
-impl std::fmt::Debug for WindEval {
+impl std::fmt::Debug for DSOMaxEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WindEval")
+        f.debug_struct("DSOMaxEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()
