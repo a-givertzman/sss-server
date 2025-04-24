@@ -1,7 +1,7 @@
 use super::windage_ctx::WindageCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef}, entities::parameters::{IParameters, ParameterID, Parameters}, eval::{IcingStabCtx, StabilityAreaCtx}
+        context::context_access::{ContextParamsRead, ContextRead, ContextReadRef}, eval::{IcingStabCtx, StabilityAreaCtx}
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for WindageEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let volume_shift_z = parameters.get(ParameterID::CenterVolumeZ).ok_or(CtxResult::Err(error.err("eval volume_shift_z error: no CenterVolumeY in parameters")))?;
+                let volume_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);
                 let stability_area: StabilityAreaCtx = ctx.read();
                 let icing_stab: IcingStabCtx = ctx.read();
                 let area_v = stability_area.area_v;

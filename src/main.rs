@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_id = 2;
     let project_id = "NULL";
     let n_parts = 200;
-    let thread_pool = ThreadPool::new(Some(conf.thread_pool.size));
+    let thread_pool = ThreadPool::new(dbg, Some(conf.thread_pool.size));
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
@@ -53,9 +53,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let _result = ZgEval::new(
+
+    let ctx_before = 
+    MetacentricHeightEval::new(
         &dbg,
-    DSOMaxEval::new(
+        StabilityAreaEval::new(
+            &dbg,
+            ship_model.link(),
+            BalanceEval::new(
+                &dbg,
+                ship_model.link(),
+                LoadsEval::new(
+                    &dbg,
+                    WettingEval::new(
+                        &dbg,
+                        IcingEval::new(
+                            &dbg,
+                            StrengthAreaEval::new(
+                                &dbg,
+                                ship_model.link(),
+                                IcingTimberEval::new(
+                                    &dbg,
+                                    IcingStabEval::new(
+                                        &dbg,
+                                        Initial::new(
+                                            &dbg,
+                                            ship_model.link(),
+                                            ApiClient::new(
+                                                conf.api
+                                                    .address
+                                                    .database
+                                                    .clone(),
+                                                conf.api
+                                                    .address
+                                                    .host
+                                                    .clone(),
+                                                conf.api
+                                                    .address
+                                                    .port
+                                                    .clone(),
+                                            ),
+                                            Context::new(
+                                                InitialCtx::new(
+                                                    ship_id,
+                                                    project_id,
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    );
+    let ctx_after = |ctx: Context| DSOMaxEval::new(
+        &dbg,
         CriterionStabilityEval::new(
             &dbg,
             DSOAreaEval::new(
@@ -74,61 +129,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         &dbg,
                                         LeverDiagramEval::new(
                                             &dbg,
-                                            ship_model.link(),
-                                            MetacentricHeightEval::new(
-                                                &dbg,
-                                                StabilityAreaEval::new(
-                                                    &dbg,
-                                                    ship_model.link(),
-                                                    BalanceEval::new(
-                                                        &dbg,
-                                                        ship_model.link(),
-                                                        LoadsEval::new(
-                                                            &dbg,
-                                                            WettingEval::new(
-                                                                &dbg,
-                                                                IcingEval::new(
-                                                                    &dbg,
-                                                                    StrengthAreaEval::new(
-                                                                        &dbg,
-                                                                        ship_model.link(),
-                                                                        IcingTimberEval::new(
-                                                                            &dbg,
-                                                                            IcingStabEval::new(
-                                                                                &dbg,
-                                                                                Initial::new(
-                                                                                    &dbg,
-                                                                                    ship_model.link(),
-                                                                                    ApiClient::new(
-                                                                                        conf.api
-                                                                                            .address
-                                                                                            .database
-                                                                                            .clone(),
-                                                                                        conf.api
-                                                                                            .address
-                                                                                            .host
-                                                                                            .clone(),
-                                                                                        conf.api
-                                                                                            .address
-                                                                                            .port
-                                                                                            .clone(),
-                                                                                    ),
-                                                                                    Context::new(
-                                                                                        InitialCtx::new(
-                                                                                            ship_id,
-                                                                                            project_id,
-                                                                                        ),
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
+                                            ship_model.link(),                                               
+                                            ctx
                                         ),
                                     ),
                                 ),
@@ -138,6 +140,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
+    );
+    let _result = 
+    ZgEval::new(
+        thread_pool.scheduler(),
+        &dbg,
+        ship_model.link(),
+        ctx_before,
+        ctx_after,
     )
     .eval(());
     ship_model.exit();

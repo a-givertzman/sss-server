@@ -1,7 +1,7 @@
 use super::lever_diagram_ctx::LeverDiagramCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, math::curve::*, Bound, Moment, Position},
         eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, IcingTimberCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
@@ -41,13 +41,12 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
-                let initial: &InitialCtx = ctx.read_ref();
-                let parameters: Parameters = ctx.read();                 
-                let pantocaren = self.model.call(pantocaren()
+                let initial: &InitialCtx = ctx.read_ref();           
+                let pantocaren = self.model.call(pantocaren())
                     .map_err(|e| error.pass_with("pantocaren", e))?;
-                let z_g_fix = parameters.get(ParameterID::CenterMassZFix).ok_or(CtxResult::Err(error.err("calculate z_g_fix error: no CenterMassZFix in parameters")))?;
-                let y_g = parameters.get(ParameterID::CenterMassY).ok_or(CtxResult::Err(error.err("calculate y_g error: no CenterMassY in parameters")))?;
-                let y_c = parameters.get(ParameterID::CenterVolumeY).ok_or(CtxResult::Err(error.err("calculate y_c error: no CenterVolumeY in parameters")))?;
+                let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
+                let y_g = ctx.read_params(ParameterID::CenterMassY);
+                let y_c = ctx.read_params(ParameterID::CenterVolumeY);
                 let delta_y = y_g - y_c;
                 log::info!(
                     "LeverDiagram calculate z_g_fix:{z_g_fix} y_g:{y_g} y_c:{y_c} delta_y:{delta_y}"
@@ -146,10 +145,11 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                     ));
                 }
                 //
-                let angle_zero = crate::algorithm::eval::lever_diagram_eval::lever_diagram_ctx::angle(theta_max, &dso_curve,  0.);
-                let angle_zero = angle_zero.map_err(|e| CtxResult::Err(error.pass_with("calculate angle_zero", e)))?;
-         
-
+                let angle_zero = crate::algorithm::eval::lever_diagram_eval::lever_diagram_ctx::angle(theta_max, &dso_curve,  0.;
+                let angle_zero = *angle_zero
+                    .map_err(|e| CtxResult::Err(error.pass_with("calculate angle_zero", e)))?
+                    .first()
+                    .ok_or(|e| CtxResult::Err(error.err("calculate angle_zero no angles")))?;         
                 let mut ddo = Vec::new();
                 for &(angle_deg, _) in dso.iter().filter(|(a, _)| a.fract().abs() < 0.001) {
                     let value = if angle_deg < angle_zero {
@@ -181,7 +181,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 for &(angle, dso, ddo) in diagram.iter() {
                     log::trace!("{angle} {dso} {ddo};");
                 }
-                parameters.add(ParameterID::Roll, angle_zero * angle_zero_signum);
+                ctx.write_params(ParameterID::Roll, angle_zero * angle_zero_signum);
                 let result = LeverDiagramCtx {
                     dso,
                     dso_curve,
