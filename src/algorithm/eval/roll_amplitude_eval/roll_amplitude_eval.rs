@@ -1,6 +1,6 @@
 use super::roll_amplitude_ctx::RollingAmplitudeCtx;
 use crate::{
-    algorithm::{context::context_access::{ContextRead, ContextReadRef}, eval::MetacentricHeightCtx}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+    algorithm::{context::context_access::{ContextParamsWrite, ContextRead, ContextReadRef}, eval::{parameters::ParameterID, MetacentricHeightCtx}}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::entities::data::stability::{*, multipler_s::*};
@@ -49,25 +49,25 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                 let width = ship_parameters.get("MouldedBreadth").ok_or(CtxResult::Err(error.err("No MouldedBreadth in ship_parameters")))?;
                 let coefficient_k =
                     Curve::new_linear(&initial.coefficient_k
-                        .ok_or(CtxResult::Err(error.err("No coefficient_k in initial")))?.data())
-                        .map_err(|e| CtxResult::Err(error.pass_with("coefficient_k", e)))?;
+                        .ok_or(error.err("No coefficient_k in initial"))?)
+                        .map_err(|e| error.pass_with("coefficient_k", e))?;
                 let multipler_x1 =
                     Curve::new_linear(&initial.multipler_x1
-                        .ok_or(CtxResult::Err(error.err("No multipler_x1 in initial")))?.data())
-                        .map_err(|e| CtxResult::Err(error.pass_with("multipler_x1", e)))?;
+                        .ok_or(error.err("No multipler_x1 in initial"))?)
+                        .map_err(|e| error.pass_with("multipler_x1", e))?;
                 let multipler_x2 = 
                     Curve::new_linear(&initial.multipler_x2
-                        .ok_or(CtxResult::Err(error.err("No multipler_x2 in initial")))?.data())
-                        .map_err(|e| CtxResult::Err(error.pass_with("multipler_x2", e)))?;
+                        .ok_or(error.err("No multipler_x2 in initial"))?)
+                        .map_err(|e| error.pass_with("multipler_x2", e))?;
                 let multipler_s = 
                     Curve::new_linear(
                         &initial.multipler_s
-                            .ok_or(CtxResult::Err(error.err("No multipler_s in initial")))?
+                            .ok_or(error.err("No multipler_s in initial"))?
                             .get_area(&navigation_area))
-                            .map_err(|e| CtxResult::Err(error.pass_with("multipler_s", e)))?;
+                            .map_err(|e| CtxResult::Err(error.pass_with("multipler_s Curve::new_linear", e)))?;
                 let coefficient_k_theta: Rc<dyn ICurve<f64>> = 
                     Curve::new_linear(&initial.coefficient_k_theta.expect("RollingAmplitudeEval eval error: no coefficient_k_theta in initial").data())
-                        .map_err(|e| CtxResult::Err(error.pass_with("coefficient_k_theta", e)))?;
+                        .map_err(|e| error.pass_with("coefficient_k_theta", e))?;
                 // Коэффициент полноты судна
                 let c_b = volume / (length_wl * breadth_wl * mean_draught);
                 let k = if let Some(a_k) = keel_area {
@@ -88,6 +88,9 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                     amplitude,
                 };
                 self.value = Some(result.clone());
+                TODO: проверка на zg
+                ctx.write_params(ParameterID::RollAmplitude, amplitude);
+                ctx.write_params(ParameterID::RollPeriod, t);
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
@@ -97,9 +100,9 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
 }
 //
 //
-impl std::fmt::Debug for WindEval {
+impl std::fmt::Debug for RollingAmplitudeEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WindEval")
+        f.debug_struct("RollingAmplitudeEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

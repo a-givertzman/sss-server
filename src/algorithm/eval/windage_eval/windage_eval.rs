@@ -1,9 +1,8 @@
 use super::windage_ctx::WindageCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::{IcingTimberCtx, StabilityAreaCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+        context::context_access::{ContextRead, ContextReadRef}, entities::parameters::{IParameters, ParameterID, Parameters}, eval::{IcingStabCtx, StabilityAreaCtx}
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -38,7 +37,6 @@ impl Eval<(), EvalResult> for WindageEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let parameters: Parameters = ctx.read(); 
                 let volume_shift_z = parameters.get(ParameterID::CenterVolumeZ).ok_or(CtxResult::Err(error.err("eval volume_shift_z error: no CenterVolumeY in parameters")))?;
                 let stability_area: StabilityAreaCtx = ctx.read();
                 let icing_stab: IcingStabCtx = ctx.read();
@@ -50,7 +48,7 @@ impl Eval<(), EvalResult> for WindageEval {
                 let z_v = z_v_bp - volume_shift_z;
                 let result = WindageCtx {
                     a_v,
-                    z_v: todo!(),
+                    z_v,
                 };
                 self.value = Some(result.clone());
                 ctx.write(result)

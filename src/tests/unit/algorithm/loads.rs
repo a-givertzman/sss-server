@@ -1,11 +1,11 @@
 #[cfg(test)]
 
 mod tests {
-    use api_tools::debug::dbg_id::DbgId;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::{algorithm::{context::context_access::ContextRead, entities::Position, eval::{LoadsCtx, LoadsEval}}, kernel::{dbgid::dbgid::DbgId, eval::Eval}, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
+    use crate::{algorithm::{entities::Position, eval::{LoadsCtx, LoadsEval}}, kernel::eval::Eval, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
 
     #[test]
     fn loads() {
@@ -15,7 +15,7 @@ mod tests {
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
 
-        let dbg = DbgId("loads".into());
+        let dbg = Dbg::own("loads");
         let ctx = FakeInitial::new(
             dbg,
             Context::new(

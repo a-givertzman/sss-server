@@ -1,9 +1,10 @@
 use super::initial_ctx::InitialCtx;
-use crate::algorithm::entities::data::loads::*;
+use crate::algorithm::entities::data::{loads::*, CoefficientKArray, CoefficientKThetaArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
-use crate::kernel::sync::link::Link;
-use crate::ship_model::model_link::*;
+use crate::algorithm::entities::Bounds;
+use crate::kernel::sync::Link;
+use crate::ship_model::query;
 use crate::{
     algorithm::context::{
             context::Context,
@@ -15,7 +16,6 @@ use crate::{
 };
 use sal_core::{dbg::Dbg, error::Error};
 
-trait TmpModelLink: IModelLink + std::fmt::Debug {}
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
@@ -45,8 +45,6 @@ impl Initial {
             ctx,
         }
     }
-    //
-    //
 }
 //
 impl Eval<(), EvalResult> for Initial {
@@ -55,12 +53,11 @@ impl Eval<(), EvalResult> for Initial {
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
         // Расчет баланса в модели
-        let bounds = match self.model.req() {
-            Ok(data) => data,
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("model.bounds error", err));
-            }
+        let bounds: Bounds = match self.model.call(query::Query::Bounds) {
+            Ok(bounds) => bounds,
+            Err(err) => return CtxResult::Err(error.pass_with("model.bounds error", err)),
         };
+        
         /*
                     let bounds = self.api_client.fetch(&format!(
                         "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={};",

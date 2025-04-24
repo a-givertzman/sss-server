@@ -1,8 +1,8 @@
-use crate::
-    algorithm::{eval::*, initial::initial_ctx::InitialCtx
-    }
-;
 use super::testing_ctx::TestingCtx;
+use crate::algorithm::{
+    eval::{parameters::Parameters, *},
+    initial::initial_ctx::InitialCtx,
+};
 ///
 /// # Calculation context
 /// - Provides read/write access to initial
@@ -13,7 +13,7 @@ pub struct Context {
     pub(super) initial: InitialCtx,
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
-    pub(super) parameters: Parameters, 
+    pub(super) parameters: Option<Parameters>,
     /// Распределение площади для расчета прочности
     pub(super) strength_area: Option<StrengthAreaCtx>,
     /// Коэффициенты для расчета обледенения судна
@@ -33,7 +33,7 @@ pub struct Context {
     /// площади парусности судна для расчета остойчивости
     pub(super) stability_area: Option<StabilityAreaCtx>,
     /// Исправленная метацентрическая высота
-    pub(super) metacentric_height: Option<MetacentricHeightCtx>,   
+    pub(super) metacentric_height: Option<MetacentricHeightCtx>,
     /// Диаграмма плеч статической и динамической остойчивости
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
     /// Расчет плеча кренящего момента от давления ветра
@@ -44,7 +44,7 @@ pub struct Context {
     pub(super) roll_period: Option<RollingPeriodCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
-    /// Критерии проверки остойчивости судна 
+    /// Критерии проверки остойчивости судна
     pub(super) criterion_stability: Option<CriterionStabilityCtx>,
     /// Критерий погоды К
     pub(super) wheather: Option<WheatherCtx>,
@@ -54,6 +54,8 @@ pub struct Context {
     pub(super) dso_area: Option<DSOAreaCtx>,
     /// Критерий максимум диаграммы статической остойчивости
     pub(super) dso_max: Option<DSOMaxCtx>,
+    /// Результаты для ZG
+    pub(super) zg: Option<ZgCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

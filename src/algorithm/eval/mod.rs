@@ -1,20 +1,21 @@
 //! Entities implemented the Eval trate
 //pub mod area_eval;
-pub mod strength_area_eval;
-pub mod icing_stab_eval;
-pub mod icing_eval;
-pub mod wetting_eval;
-pub mod loads_eval;
-pub mod balance_eval;
-pub mod icing_timber_eval;
-pub mod stability_area_eval;
-pub mod metacentric_height_eval;
-pub mod lever_diagram_eval;
-pub mod wind_eval;
-pub mod windage_eval;
-pub mod roll_period_eval;
-pub mod roll_amplitude_eval;
-pub mod criterion_stability_eval;
+mod strength_area_eval;
+mod icing_stab_eval;
+mod icing_eval;
+mod wetting_eval;
+mod loads_eval;
+mod balance_eval;
+mod icing_timber_eval;
+mod stability_area_eval;
+mod metacentric_height_eval;
+mod lever_diagram_eval;
+mod wind_eval;
+mod windage_eval;
+mod roll_period_eval;
+mod roll_amplitude_eval;
+mod criterion_stability_eval;
+mod zg_eval;
 
 pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
 pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx; 
@@ -60,8 +61,8 @@ pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;
 
 pub use criterion_stability_eval::criterion_stability_eval::CriterionStabilityEval;
 pub use criterion_stability_eval::criterion_stability_ctx::CriterionStabilityCtx;
+pub use criterion_stability_eval::*;
 
-
-
-
-
+pub use zg_eval::zg_ctx::ZgCtx;
+pub use zg_eval::zg_eval::ZgEval;
+pub use zg_eval::zg::Zg;

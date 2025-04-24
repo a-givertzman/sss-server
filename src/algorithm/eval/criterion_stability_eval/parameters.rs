@@ -1,10 +1,12 @@
+//!
 //! Набор результатов расчетов для записи в БД
+use bincode::{Decode, Encode};
+use sal_core::error::Error;
 use std::{cell::RefCell, collections::HashMap};
 use strum_macros::FromRepr;
-
-use crate::kernel::error::error::Error;
-//
-#[derive(Clone, Hash, Eq, PartialEq, FromRepr, Debug)]
+///
+/// Doc comment required
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, FromRepr, Decode, Encode)]
 pub enum ParameterID {
     CenterMassZFix = 1,
     Displacement = 2,
@@ -104,18 +106,26 @@ pub enum ParameterID {
     CenterMassDeadweightZ = 96,
     CenterMassDeadweightY = 97,
     CenterMassDeadweightX = 98,
+    HeelingLeverDueToTheTransverseShiftOfGrainWithZeroDifference = 99,
+    HeelingLeverOfCurveWithMaximumDifference = 100,
+    HeelingAngleDueToTheTransverseShiftOfGrain = 101,
+    HeelingLeverOfDSOWithMaximumDifference = 102,
+    HeelingLeverDueToTheTransverseShiftOfGrain = 103,
+    MinimumOfFludingAngleSecondIntersectionAnd50Degrees = 104,
+    HeelingLeverOfDSOCorrespondingToTheMinimumAngle = 105,
+    HeelingLeverOfDSOCorrespondingToTheRollToTheWindwardSide = 106,
+    RollToTheWindwardSide = 107,
+    GrainArea = 108,
 }
 //
 impl ParameterID {
     pub fn from(id: i32) -> Result<Self, Error> {
         let id = id as usize;
-        ParameterID::from_repr(id).ok_or(Error::FromString(format!(
-            "ParameterID from_usize error: {}",
-            id
-        )))
+        ParameterID::from_repr(id).ok_or(Error::new("ParameterID", "from").err(format!("id:{id}")))
     }
 }
 /// Набор результатов расчетов для записи в БД
+#[derive(Debug, Clone)]
 pub struct Parameters {
     data: RefCell<HashMap<ParameterID, f64>>,
 }

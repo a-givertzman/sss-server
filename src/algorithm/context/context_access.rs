@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use super::{context::Context, ctx_result::CtxResult};
-use crate::algorithm::{eval::*, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -16,6 +16,49 @@ pub trait ContextReadRef<T> {
 pub trait ContextRead<T> {
     fn read(&self) -> T;
 }
+///
+/// Provides restricted write access to the [Context].[Parameters] members
+pub trait ContextParamsWrite {
+    fn write_params(self, key: ParameterID, value: f64) -> CtxResult<Context, Error>;
+}
+///
+/// Provides simple read access to the [Context].[Parameters] members
+pub trait ContextParamsRead {
+    fn read_params(&self, key: ParameterID) -> f64;
+}
+
+//
+impl ContextWrite<Parameters> for Context {
+    fn write(mut self, value: Parameters) -> CtxResult<Self, Error> {
+        self.parameters = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextReadRef<Parameters> for Context {
+    fn read_ref(&self) -> &Parameters {
+        self.parameters
+            .as_ref()
+            .unwrap()
+    }
+}
+impl ContextParamsWrite for Context {
+    fn write_params(mut self, id: ParameterID, value: &f64) -> CtxResult<Self, Error> {
+        match &mut self.parameters {
+            Some(params) => {
+                params.add(id, *value);
+            }
+            None => panic!("Context.write | Parameters - is not initialised yet, id: {:?}", id)
+        };
+        CtxResult::Ok(self)
+    }
+}
+impl ContextParamsRead for Context {
+    fn read_params(&self, id: ParameterID) -> f64 {
+        let params: &Parameters  = self.read_ref();
+        params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
+    }
+}
+
 //
 //
 impl ContextWrite<InitialCtx> for Context {
@@ -27,20 +70,6 @@ impl ContextWrite<InitialCtx> for Context {
 impl ContextReadRef<InitialCtx> for Context {
     fn read_ref(&self) -> &InitialCtx {
         &self.initial
-    }
-}
-//
-//
-//
-impl ContextWrite<Parameters> for Context {
-    fn write(mut self, value: Parameters) -> CtxResult<Self, Error> {
-        self.parameters = Some(value);
-        CtxResult::Ok(self)
-    }
-}
-impl ContextRead<Parameters> for Context {
-    fn read(&self) -> Parameters {
-        self.parameters.clone().unwrap()
     }
 }
 //
@@ -271,10 +300,6 @@ impl ContextRead<DSOMaxCtx> for Context {
         self.dso_max.clone().unwrap()
     }
 }
-
-
-
-
 
 
 

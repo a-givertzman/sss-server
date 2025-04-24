@@ -81,7 +81,7 @@ impl LeverDiagramCtx {
             .last()
             .ok_or(Error::new(
                 "LeverDiagram",
-                format!("dso_lever_max segment error: no values!".to_string(),),
+                format!("dso_lever_max segment error: no values!"),
             ))?
             .1)
     }

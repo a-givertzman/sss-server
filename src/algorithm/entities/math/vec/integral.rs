@@ -1,6 +1,7 @@
 //! Численное интегрирование
 
-use crate::kernel::error::error::Error;
+use sal_core::error::Error;
+
 /// Численное интегрирование методом трапеций
 /// Количество значений должно быть не меньше 2х
 /// Вектор должен быть отсортирован по увеличению значений точек.
@@ -21,7 +22,7 @@ pub trait Integral {
 impl Integral for Vec<(f64, f64)>  {
     fn integral(&self) -> Result<f64, Error> {
         if self.len() < 2 {
-            return Err(Error::FromString("Integral error: self.len() < 2".to_string()));
+            return Err(Error::new("Integral", "integral").err("self.len() < 2"));
         } 
         let mut sum = 0.;
         for i in 0..self.len()-1 {

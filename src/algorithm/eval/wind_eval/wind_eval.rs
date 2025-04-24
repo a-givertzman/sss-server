@@ -1,9 +1,8 @@
 use super::wind_ctx::WindCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::{IcingTimberCtx, WindageCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+        context::context_access::{ContextRead, ContextReadRef}, entities::parameters::{ParameterID, Parameters}, eval::WindageCtx
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -48,13 +47,14 @@ impl Eval<(), EvalResult> for WindEval {
                 let arm_wind_static = (p_v * a_v * z_v) / (1000. * gravity_g * mass);
                 let arm_wind_dynamic = (1. + m) * arm_wind_static;          
                 log::trace!("\t Wind arm_wind_static mass_sum:{mass} p_v:{p_v} a_v:{a_v} z_v:{z_v} arm_wind_static:{arm_wind_static} arm_wind_dynamic:{arm_wind_dynamic}");
+
+                TODO: проверка на zg
                 parameters.add(ParameterID::DynamicWindageHeelingLever, arm_wind_dynamic);
                 parameters.add(ParameterID::WindPressure, p_v);
                 parameters
                     .add(ParameterID::WindageArea, a_v);
                 if let Some(draught_mean) = parameters.get(ParameterID::DraughtMean) {
-                    parameters
-                        .add(ParameterID::WindageAreaLever, z_v - draught_mean/2.);
+                    parameters.add(ParameterID::WindageAreaLever, z_v - draught_mean/2.);
                 }
                 parameters.add(ParameterID::StaticWindageHeelingLever, arm_wind_static);
                 let result = WindCtx {

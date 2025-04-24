@@ -5,17 +5,21 @@ mod infrostructure;
 mod kernel;
 mod prelude;
 mod ship_model;
+mod prelude;
 #[cfg(test)]
 mod tests;
 
 use algorithm::eval::*;
-//
 use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{eval::Eval, run::Run};
+use kernel::{
+    eval::Eval, run::Run,
+};
+use sal_sync::thread_pool::tread_pool::ThreadPool;
+use ship_model::ship_model::ShipModel;
 use prelude::*;
 use ship_model::ship_model::ShipModel;
 
@@ -34,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_id = 2;
     let project_id = "NULL";
     let n_parts = 200;
+    let thread_pool = ThreadPool::new(Some(conf.thread_pool.size));
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
@@ -44,12 +49,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             conf.api.address.host.clone(),
             conf.api.address.port.clone(),
         ),
+        thread_pool.scheduler(),
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let _result = CriterionStabilityEval::new(
+    let _result = ZgEval::new(
         &dbg,
     DSOMaxEval::new(
+        CriterionStabilityEval::new(
             &dbg,
             DSOAreaEval::new(
                 &dbg,

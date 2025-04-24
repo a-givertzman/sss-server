@@ -1,12 +1,13 @@
-use crate::{algorithm::entities::parameters::ParameterID, ship_model::reply::{BulkData, LiquidData}};
+use bincode::{Decode, Encode};
+use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Decode, Encode)]
 pub struct BalanceCtx {
     /// Груз, для которого центр массы и распределение зависит от 
     /// объема и/или положения корпуса.
-    pub bulk: Vec<BulkData>,
-    pub liquid: Vec<LiquidData>,
+    pub bulk: Vec<BulkResult>,
+    pub liquid: Vec<LiquidResult>,
     /// Объемное водоизмещение
     pub volume: f64,
     /// Площадь ватерлинии

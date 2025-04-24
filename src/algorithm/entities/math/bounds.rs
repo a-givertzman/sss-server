@@ -1,10 +1,11 @@
 //! Непрерывный набор диапазонов значений
 
+use bincode::{Decode, Encode};
 use sal_core::error::Error;
 
 use super::Bound;
 /// Непрерывный набор диапазонов значений
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Decode, Encode)]
 pub struct Bounds {
     // Непрерывный вектор диапазонов
     values: Vec<Bound>,
@@ -43,7 +44,13 @@ impl Bounds {
         let mut values = Vec::new();
         for i in 0..n {
             let i = i as f64;
-            values.push(Bound::new(loa*i/n_parts - middle_x, loa*(i+1.)/n_parts - middle_x)?);
+            values.push(
+                Bound::new(
+                    loa * i / n_parts - middle_x,
+                    loa * (i + 1.) / n_parts - middle_x,
+                )
+                .map_err(|e| error.pass_with("Bound::new", e))?,
+            );
         }
         Self::new(values)
     }
@@ -62,7 +69,10 @@ impl Bounds {
         let mut values = Vec::new();
         for i in 0..n {
             let i = i as f64;
-            values.push(Bound::new(len*i/n_parts + min, len*(i+1.)/n_parts + min)?);
+            values.push(
+                Bound::new(len * i / n_parts + min, len * (i + 1.) / n_parts + min)
+                    .map_err(|e| error.pass_with("Bound::new", e))?,
+            );
         }
         Self::new(values)
     }
@@ -74,9 +84,14 @@ impl Bounds {
         }
         let mut values = Vec::new();
         for frame in frames {
-            values.push(Bound::new(frame.0, frame.1)?);
+            values
+                .push(Bound::new(frame.0, frame.1).map_err(|e| error.pass_with("Bound::new", e))?);
         }
-        log::trace!("Bounds.from_frames | frames:{:?} values:{:?} ", frames, values);
+        log::trace!(
+            "Bounds.from_frames | frames:{:?} values:{:?} ",
+            frames,
+            values
+        );
         Self::new(values)
     }
     /// Итератор по коллекции

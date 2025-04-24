@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, parameters::{IParameters, Parameters}, Bound, Moment, Position},
         eval::IcingTimberCtx,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -57,7 +57,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                     None => return CtxResult::Err(error.err("Read liquid error: no data!")),
                 };
                 // Аппликата продольного метацентра (2)
-                let Z_m = center_draught_shift_z + rad_long;
+                let z_m = center_draught_shift_z + rad_long;
                 // Поправка к продольной метацентрической высоте на влияние
                 // свободной поверхности жидкости в цистернах балласта и запасов (2)
                 let delta_m_h_ballast = DeltaMH::from_moment(
@@ -79,7 +79,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 let delta_m_h = delta_m_h_ballast + delta_m_h_store;
                 // Продольная метацентрическая высота без учета влияния
                 // поправки на влияние свободной поверхности (3)
-                let h_long_0 = Z_m - mass_shift_z;
+                let h_long_0 = z_m - mass_shift_z;
                 // Продольная исправленная метацентрическая высота (3)
                 let h_long_fix = h_long_0 - delta_m_h.long();
                 // Аппликата поперечного метацентра (8)
@@ -94,7 +94,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
        //             log::info!("\t MetacentricHeight mass:{} shift_z:{} center_draught:{} rad_trans:{} rad_long:{} delta_m_h_ballast:{} delta_m_h_store:{} Z_m:{Z_m} H_0:{h_long_0} H:{h_long_fix} z_m:{z_m} h_0:{h_trans_0} h:{h_trans_fix} z_g_fix:{z_g_fix}", 
        //                 self.mass.sum()?, self.moment.shift()?.z(), self.center_draught_shift, self.rad_trans, self.rad_long, delta_m_h_ballast.trans, delta_m_h_store.trans() );
                 parameters.add(ParameterID::CenterMassZFix, z_g_fix);
-                parameters.add(ParameterID::MetacentricLongRadZ, Z_m);
+                parameters.add(ParameterID::MetacentricLongRadZ, z_m);
                 parameters.add(ParameterID::MetacentricTransRadZ, z_m);
                 parameters.add(
                         ParameterID::MetacentricTransBallast,

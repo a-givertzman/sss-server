@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, math::curve::*, Bound, Moment, Position},
         eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, IcingTimberCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::model_link::{IModelLink, ModelLink}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -43,12 +43,8 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let parameters: Parameters = ctx.read();                 
-                let pantocaren = match self.model.pantocaren() {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(error.pass_with( "Read pantocaren error", err));
-                    }
-                };
+                let pantocaren = self.model.call(pantocaren()
+                    .map_err(|e| error.pass_with("pantocaren", e))?;
                 let z_g_fix = parameters.get(ParameterID::CenterMassZFix).ok_or(CtxResult::Err(error.err("calculate z_g_fix error: no CenterMassZFix in parameters")))?;
                 let y_g = parameters.get(ParameterID::CenterMassY).ok_or(CtxResult::Err(error.err("calculate y_g error: no CenterMassY in parameters")))?;
                 let y_c = parameters.get(ParameterID::CenterVolumeY).ok_or(CtxResult::Err(error.err("calculate y_c error: no CenterVolumeY in parameters")))?;
@@ -195,7 +191,6 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                     max_angles,
                 };
                 self.value = Some(result.clone());
-                ctx.write(parameters)?;
                 ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
