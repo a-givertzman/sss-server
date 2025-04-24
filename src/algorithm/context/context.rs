@@ -52,6 +52,8 @@ pub struct Context {
     pub(super) static_angle: Option<StaticAngleCtx>,
     /// Критерий площади под диаграммой статической остойчивости
     pub(super) dso_area: Option<DSOAreaCtx>,
+    /// Критерий максимум диаграммы статической остойчивости
+    pub(super) dso_max: Option<DSOMaxCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

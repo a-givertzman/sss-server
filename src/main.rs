@@ -55,6 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::debug!("main | Calculations...");
     let _result = ZgEval::new(
         &dbg,
+    DSOMaxEval::new(
         CriterionStabilityEval::new(
             &dbg,
             DSOAreaEval::new(
