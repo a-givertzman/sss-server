@@ -11,7 +11,6 @@ use crate::{
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ship_model::model_link::{IModelLink, ModelLink},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
