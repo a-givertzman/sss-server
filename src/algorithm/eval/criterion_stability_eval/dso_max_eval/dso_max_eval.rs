@@ -1,14 +1,11 @@
 use super::dso_max_ctx::DSOMaxCtx;
-use crate::algorithm::entities::data::stability::{multipler_s::*, *};
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     ContextWrite, CtxResult,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        eval::{
-            LeverDiagramCtx, MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx, WindCtx,
-        },
+        eval::LeverDiagramCtx,
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -45,46 +42,25 @@ impl Eval<(), EvalResult> for DSOMaxEval {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let ship_parameters = initial
                     .ship_parameters
+                    .as_ref()
                     .expect("RollingAmplitudeEval eval error: no ship_parameters");
                 let ship_length = *ship_parameters
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
-                let curve = match Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
-                    Ok(curve) => curve,
-                    Err(err) => {
-                        let error = error.pass_with("Curve::new_linear", err);
-                        log::error!("{error}");
-                        return CriterionData::new_error(
-                        CriterionID::MaximumLC,
-                        "Ошибка создания кривой в расчете максимума диаграммы статической остойчивости: "
-                            .to_owned()
-                            + &error.to_string(),
-                    );
+                let data = if let Ok(curve) = Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
+                    match (lever_diagram.dso_lever_max(30., 90.), curve.value(ship_length)) {
+                        (Ok(result), Ok(target)) => CriterionData::new_result(CriterionID::MaximumLC, result, target),
+                        _ => CriterionData::new_error(
+                            CriterionID::MaximumLC,
+                            "Ошибка вычисления значения кривой в расчете максимума диаграммы статической остойчивости".to_owned(),
+                        )
                     }
-                };
-                let target = match curve.value(ship_length) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        let error = error.pass_with("curve.value", err);
-                        log::error!("{error}");
-                        return CriterionData::new_error(
+                } else {
+                    CriterionData::new_error(
                         CriterionID::MaximumLC,
-                        "Ошибка вычисления значения кривой в расчете максимума диаграммы статической остойчивости: ".to_owned() + &error.to_string(),
-                    );
-                    }
+                        "Ошибка создания кривой в расчете максимума диаграммы статической остойчивости".to_owned(),
+                    )
                 };
-                let result = match lever_diagram.dso_lever_max(30., 90.) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        let error = error.pass_with("lever_diagram.dso_lever_max", err);
-                        log::error!("{error}");
-                        return CriterionData::new_error(
-                        CriterionID::MaximumLC,
-                        "Ошибка вычисления максимального плеча диаграммы статической остойчивости в расчете максимума диаграммы статической остойчивости: ".to_owned() + &error.to_string(),
-                    );
-                    }
-                };
-                let data = CriterionData::new_result(CriterionID::MaximumLC, result, target);
                 let result = DSOMaxCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)

@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextParamsRead, ContextParamsWrite, ContextReadRef},
         entities::math::curve::*,
         eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, parameters::ParameterID},
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::Query, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{Context, InitialCtx}, ship_model::query::Query, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -14,7 +14,7 @@ pub struct LeverDiagramEval {
     dbg: Dbg,
     model: Link,
     value: Option<LeverDiagramCtx>,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Context,//Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -23,14 +23,14 @@ impl LeverDiagramEval {
     pub fn new(
         parent: impl Into<String>,
         model: Link,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: Context,//impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
         Self {
             dbg,
             model,
             value: None,
-            ctx: Box::new(ctx),
+            ctx//: Box::new(ctx),
         }
     }
 }
@@ -39,8 +39,9 @@ impl LeverDiagramEval {
 impl Eval<(), EvalResult> for LeverDiagramEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+     //   match self.ctx.eval(()) {
+       //     CtxResult::Ok(ctx) => {
+                let ctx = self.ctx;
                 let initial: &InitialCtx = ctx.read_ref();     
                 // Расчет пантокарен в модели
                 let pantocaren: Vec<(f64, f64)> = self.model.call(Query::ComputePantocaren)
@@ -193,10 +194,10 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 };
                 self.value = Some(result.clone());
                 ctx.write(result)
-            }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
-        }
+         //   }
+          //  CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
+         //   CtxResult::None => CtxResult::None,
+       // }
     }
 }
 //

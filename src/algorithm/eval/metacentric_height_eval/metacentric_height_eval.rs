@@ -2,14 +2,16 @@ use super::metacentric_height_ctx::MetacentricHeightCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextParamsWrite, ContextReadRef},
-        eval::parameters::ParameterID,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, CtxResult,
+        eval::{parameters::ParameterID, Zg},
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx}, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
+use crate::algorithm::entities::math::liquid::*;
 ///
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct MetacentricHeightEval {
     dbg: Dbg,
+    z_g_fix: Option<f64>,
     value: Option<MetacentricHeightCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
@@ -19,11 +21,13 @@ impl MetacentricHeightEval {
     ///
     pub fn new(
         parent: impl Into<String>,
+        z_g_fix: Option<f64>,
         ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "MetacentricHeightEval");
         Self {
             dbg,
+            z_g_fix,
             value: None,
             ctx: Box::new(ctx),
         }
@@ -58,7 +62,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 let Z_m = center_draught_shift_z + rad_long;
                 // Поправка к продольной метацентрической высоте на влияние
                 // свободной поверхности жидкости в цистернах балласта и запасов (2)
-                let delta_m_h_ballast = DeltaMH::from_moment(
+                let delta_m_h_ballast: DeltaMH = DeltaMH::from_moment(
                     liquid
                         .iter()
                         .filter(|v| v.assigment_type == AssignmentType::Ballast)
@@ -66,7 +70,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                         .sum::<FreeSurfaceMoment>(),
                     mass,
                 );
-                let delta_m_h_store = DeltaMH::from_moment(
+                let delta_m_h_store: DeltaMH = DeltaMH::from_moment(
                     liquid
                         .iter()
                         .filter(|v| v.assigment_type != AssignmentType::Ballast)
@@ -84,11 +88,23 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 let z_m = center_draught_shift_z + rad_trans; //
                 // Поперечная метацентрическая высота без учета влияния
                 // поправки на влияние свободной поверхности (9)
-                let h_trans_0 = z_m - mass_shift_z;
+                let (h_trans_0, h_trans_fix, z_g_fix) =  if let Some(z_g_fix) = self.z_g_fix {
+                    let h_trans_fix = z_m - z_g_fix;
+                    let h_trans_0 = h_trans_fix + delta_m_h.trans();
+                    (h_trans_0, h_trans_fix, z_g_fix)
+                } else {
+                    let h_trans_0 = z_m - mass_shift_z;
+                    // Поперечная исправленная метацентрическая высота (9)
+                    let h_trans_fix = h_trans_0 - delta_m_h.trans();
+                    // Исправленное отстояние центра масс судна по высоте (10)
+                    let z_g_fix: f64 = mass_shift_z + delta_m_h.trans();
+                    (h_trans_0, h_trans_fix, z_g_fix)
+                };
+      /*          let h_trans_0 = z_m - mass_shift_z;
                 // Поперечная исправленная метацентрическая высота (9)
                 let h_trans_fix = h_trans_0 - delta_m_h.trans();
                 // Исправленное отстояние центра масс судна по высоте (10)
-                let z_g_fix: f64 = mass_shift_z + delta_m_h.trans();
+                let z_g_fix: f64 = mass_shift_z + delta_m_h.trans();*/
        //             log::info!("\t MetacentricHeight mass:{} shift_z:{} center_draught:{} rad_trans:{} rad_long:{} delta_m_h_ballast:{} delta_m_h_store:{} Z_m:{Z_m} H_0:{h_long_0} H:{h_long_fix} z_m:{z_m} h_0:{h_trans_0} h:{h_trans_fix} z_g_fix:{z_g_fix}", 
        //                 self.mass.sum()?, self.moment.shift()?.z(), self.center_draught_shift, self.rad_trans, self.rad_long, delta_m_h_ballast.trans, delta_m_h_store.trans() );
                 ctx.write_params(ParameterID::CenterMassZFix, z_g_fix);
