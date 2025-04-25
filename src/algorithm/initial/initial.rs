@@ -382,9 +382,9 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.gaseous = Some(gaseous.data());
         initial_ctx.multipler_x1 = Some(multipler_x1.data());
         initial_ctx.multipler_x2 = Some(multipler_x2.data());
-        initial_ctx.multipler_s = Some(multipler_s.data());
+        initial_ctx.multipler_s = Some(multipler_s);
         initial_ctx.coefficient_k = Some(coefficient_k.data());
-        initial_ctx.coefficient_k_theta = Some(coefficient_k_theta.data());
+        initial_ctx.coefficient_k_theta = Some(coefficient_k_theta);
         self.ctx.clone().write(initial_ctx.to_owned())
     }
 }

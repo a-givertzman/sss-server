@@ -6,14 +6,14 @@ use super::data::*;
 //
 //
 #[derive(Debug)]
-pub struct FakeModelLink {
+pub struct FakeLink {
     txid: usize,
     name: Name,
     bounds: Bounds, // Bounds::from_min_max(-3.6, 135.5, 200).unwrap()
 }
 //
 //
-impl IModelLink for FakeModelLink {
+impl ILink for FakeLink {
     ///
     /// Type doc comment
     fn bounds(&self) -> Result<Bounds, Error> {

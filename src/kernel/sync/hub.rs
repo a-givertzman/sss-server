@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle, time::Duration};
 use bincode::{Decode, Encode};
 use sal_core::error::Error;
-use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
+use sal_sync::services::entity::{Name, PointTxId};
 use super::{link::Link, LinkSend};
 ///
 /// Combines multiple links

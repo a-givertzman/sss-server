@@ -1,3 +1,4 @@
+#![feature(try_trait_v2)]
 mod algorithm;
 mod app;
 mod conf;
@@ -5,7 +6,6 @@ mod infrostructure;
 mod kernel;
 mod prelude;
 mod ship_model;
-mod prelude;
 #[cfg(test)]
 mod tests;
 
@@ -15,12 +15,9 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{
-    eval::Eval, run::Run,
-};
-use sal_sync::thread_pool::tread_pool::ThreadPool;
-use ship_model::ship_model::ShipModel;
+use kernel::{eval::Eval, run::Run};
 use prelude::*;
+use sal_sync::thread_pool::tread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 
 ///
@@ -28,6 +25,7 @@ use ship_model::ship_model::ShipModel;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     let dbg = DbgId("main".into());
+    let tmp_dbg = dbg.clone();
     let path = "config.yaml";
     let mut app = App::new(path);
     if let Err(err) = app.run() {
@@ -38,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_id = 2;
     let project_id = "NULL";
     let n_parts = 200;
-    let thread_pool = ThreadPool::new(dbg, Some(conf.thread_pool.size));
+    let thread_pool = ThreadPool::new(&dbg, Some(conf.thread_pool.size));
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
@@ -53,9 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-
-    let ctx_before = 
-    MetacentricHeightEval::new(
+    let ctx_before = MetacentricHeightEval::new(
         &dbg,
         StabilityAreaEval::new(
             &dbg,
@@ -80,25 +76,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             &dbg,
                                             ship_model.link(),
                                             ApiClient::new(
-                                                conf.api
-                                                    .address
-                                                    .database
-                                                    .clone(),
-                                                conf.api
-                                                    .address
-                                                    .host
-                                                    .clone(),
-                                                conf.api
-                                                    .address
-                                                    .port
-                                                    .clone(),
+                                                conf.api.address.database.clone(),
+                                                conf.api.address.host.clone(),
+                                                conf.api.address.port.clone(),
                                             ),
-                                            Context::new(
-                                                InitialCtx::new(
-                                                    ship_id,
-                                                    project_id,
-                                                ),
-                                            ),
+                                            Context::new(InitialCtx::new(ship_id, project_id)),
                                         ),
                                     ),
                                 ),
@@ -109,28 +91,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
-    let ctx_after = |ctx: Context| DSOMaxEval::new(
-        &dbg,
-        CriterionStabilityEval::new(
+    let ctx_after = move |ctx: MetacentricHeightEval| {
+        DSOMaxEval::new(
             &dbg,
-            DSOAreaEval::new(
+            CriterionStabilityEval::new(
                 &dbg,
-                StaticAngleEval::new(
+                DSOAreaEval::new(
                     &dbg,
-                    WheatherEval::new(
+                    StaticAngleEval::new(
                         &dbg,
-                        RollingAmplitudeEval::new(
+                        WheatherEval::new(
                             &dbg,
-                            RollingPeriodEval::new(
+                            RollingAmplitudeEval::new(
                                 &dbg,
-                                WindEval::new(
+                                RollingPeriodEval::new(
                                     &dbg,
-                                    WindageEval::new(
+                                    WindEval::new(
                                         &dbg,
-                                        LeverDiagramEval::new(
+                                        WindageEval::new(
                                             &dbg,
-                                            ship_model.link(),                                               
-                                            ctx
+                                            LeverDiagramEval::new(&dbg, ship_model.link(), ctx),
                                         ),
                                     ),
                                 ),
@@ -139,17 +119,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
             ),
-        ),
-    );
-    let _result = 
-    ZgEval::new(
-        thread_pool.scheduler(),
-        &dbg,
-        ship_model.link(),
-        ctx_before,
-        ctx_after,
-    )
-    .eval(());
+        )
+        .eval(())
+    };
+    let _result = ZgEval::new(thread_pool.scheduler(), &tmp_dbg, ctx_before, ctx_after).eval(());
     ship_model.exit();
     ship_model_handle.join().unwrap();
     Ok(())

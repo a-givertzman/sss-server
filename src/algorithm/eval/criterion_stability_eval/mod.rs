@@ -82,7 +82,7 @@ pub enum CriterionID {
 }
 //
 impl CriterionID {
-    pub fn from(id: i32) -> Result<Self, crate::Error> {
+    pub fn from(id: i32) -> Result<Self, Error> {
         let id = id as usize;
         CriterionID::from_repr(id)
             .ok_or(Error::new("CriterionID", "from").err(format!("id:{id}")))

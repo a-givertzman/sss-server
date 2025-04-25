@@ -19,7 +19,7 @@ pub trait ContextRead<T> {
 ///
 /// Provides restricted write access to the [Context].[Parameters] members
 pub trait ContextParamsWrite {
-    fn write_params(self, key: ParameterID, value: f64) -> CtxResult<Context, Error>;
+    fn write_params(&self, key: ParameterID, value: f64);
 }
 ///
 /// Provides simple read access to the [Context].[Parameters] members
@@ -42,14 +42,13 @@ impl ContextReadRef<Parameters> for Context {
     }
 }
 impl ContextParamsWrite for Context {
-    fn write_params(mut self, id: ParameterID, value: &f64) -> CtxResult<Self, Error> {
-        match &mut self.parameters {
+    fn write_params(&self, id: ParameterID, value: f64) {
+        match &self.parameters {
             Some(params) => {
-                params.add(id, *value);
+                params.add(id, value);
             }
             None => panic!("Context.write | Parameters - is not initialised yet, id: {:?}", id)
         };
-        CtxResult::Ok(self)
     }
 }
 impl ContextParamsRead for Context {
@@ -300,6 +299,19 @@ impl ContextRead<DSOMaxCtx> for Context {
         self.dso_max.clone().unwrap()
     }
 }
+//
+impl ContextWrite<ZgCtx> for Context {
+    fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
+        self.zg = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<ZgCtx> for Context {
+    fn read(&self) -> ZgCtx {
+        self.zg.clone().unwrap()
+    }
+}
+
 
 
 

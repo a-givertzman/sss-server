@@ -35,13 +35,12 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
-                let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let balance_ctx: BalanceCtx = ctx.read();
                 let length_wl = balance_ctx.length_wl;
                 let breadth_wl = balance_ctx.breadth_wl;
                 let mean_draught = balance_ctx.mean_draught;
-                /// Коэффициент для расчета периода
+                // Коэффициент для расчета периода
                 let c = 0.373 + 0.023 * breadth_wl / mean_draught - 0.043 * length_wl / 100.0;
                 let roll_period = if metacentric_height.h_trans_fix > 0. {
                     let h_sqrt = metacentric_height.h_trans_fix.sqrt();
@@ -68,9 +67,9 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
 }
 //
 //
-impl std::fmt::Debug for WindEval {
+impl std::fmt::Debug for RollingPeriodEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WindEval")
+        f.debug_struct("RollingPeriodEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

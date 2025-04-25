@@ -12,4 +12,5 @@ pub enum Reply {
     Bounds(Bounds),
     BoundAreas(Result<BoundArea, Error>),
     ComputeBalance(Result<BalanceCtx, Error>),
+    ComputePantocaren(Result<Vec<(f64, f64)>, Error>),
 }

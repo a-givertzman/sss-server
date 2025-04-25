@@ -1,6 +1,6 @@
 use super::query::*;
 use super::reply::*;
-use super::{model_link::ModelLink, query::Query, reply::Reply};
+use super::{model_link::Link, query::Query, reply::Reply};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
@@ -79,11 +79,11 @@ impl ShipModel {
 impl IShipModel for FakeShipModel {
     ///
     /// Returns connected `Link`
-    fn link(&self) -> ModelLink {
+    fn link(&self) -> Link {
         let (loc_send, rem_recv) = kanal::unbounded();
         let (rem_send, loc_recv) = kanal::unbounded();
         let receivers = self.clients.clone();
-        let remote = ModelLink::new(
+        let remote = Link::new(
             &format!("{}:{}", self.name, receivers.load(Ordering::SeqCst)),
             rem_send,
             rem_recv,

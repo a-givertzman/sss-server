@@ -2,7 +2,7 @@ use crate::{
     algorithm::{context::context_access::ContextReadRef, entities::data::loads::{AssignmentType, UnitCargoType}},
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ship_model::model_link::ModelLink,
+    ship_model::model_link::Link,
     ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};

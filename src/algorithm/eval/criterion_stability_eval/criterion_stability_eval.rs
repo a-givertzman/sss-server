@@ -44,9 +44,9 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
 }
 //
 //
-impl std::fmt::Debug for WindEval {
+impl std::fmt::Debug for CriterionStabilityEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WindEval")
+        f.debug_struct("CriterionStabilityEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

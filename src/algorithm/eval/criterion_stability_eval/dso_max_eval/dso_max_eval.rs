@@ -1,6 +1,7 @@
 use super::dso_max_ctx::DSOMaxCtx;
 use crate::algorithm::entities::data::stability::{multipler_s::*, *};
 use crate::algorithm::entities::math::curve::*;
+use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     ContextWrite, CtxResult,
     algorithm::{
@@ -42,8 +43,12 @@ impl Eval<(), EvalResult> for DSOMaxEval {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let ship_parameters = initial.ship_parameters.expect("RollingAmplitudeEval eval error: no ship_parameters");
-                let ship_length = *ship_parameters.get("LBP").ok_or(CtxResult::Err(error.err("No LBP in ship_parameters")))?;
+                let ship_parameters = initial
+                    .ship_parameters
+                    .expect("RollingAmplitudeEval eval error: no ship_parameters");
+                let ship_length = *ship_parameters
+                    .get("LBP")
+                    .ok_or(error.err("No LBP in ship_parameters"))?;
                 let curve = match Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
                     Ok(curve) => curve,
                     Err(err) => {
