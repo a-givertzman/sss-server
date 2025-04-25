@@ -1,7 +1,7 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::scheduler::Scheduler;
 use crate::{
-    algorithm::{context::context_access::{ContextParamsRead, ContextRead}, eval::{metacentric_height_eval::metacentric_height_ctx, MetacentricHeightCtx}}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite}, CtxResult
+    algorithm::{context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, entities::data::criterion, eval::{metacentric_height_eval::metacentric_height_ctx, CriterionStabilityCtx, MetacentricHeightCtx}}, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite}, CtxResult
 };
 
 use super::{zg::Zg, zg_ctx::ZgCtx};
@@ -40,75 +40,101 @@ impl ZgEval {
 impl Eval<(), EvalResult> for ZgEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        let ctx = match self.ctx_before.eval(()) {
+        match self.ctx_before.eval(()) {
             CtxResult::Ok(ctx_before) => {
                 let mut tasks: Vec<JoinHandle<Context>> = vec![];
                 let mut criterions = vec![];
-
-                let mut base_ctx = Arc::<Context>::new_uninit(); 
+                let initial: &InitialCtx = ctx_before.read_ref();
+                let ship_parameters = initial.ship_parameters.expect("ZgEval eval error: no ship_parameters");
+                let overall_height = *ship_parameters.get("Overall height up to non-removable parts").ok_or(CtxResult::Err(error.err("No LBP in ship_parameters")))?;
+                let z_m = ctx_before.read_params(ParameterID::MetacentricTransRadZ);
+                let delta_m_h = ctx_before.read_params(ParameterID::MetacentricTransSum);
+                // рассчитанное значение z_g_fix
+                let mut base_ctx = Arc::<CriterionStabilityCtx>::new_uninit(); 
                 let base_task = self.scheduler.spawn(|| {
-                    let ctx = self.ctx_after(ctx_before).eval()?;
-                    Arc::get_mut(&mut base_ctx).unwrap().write(ctx);
+                    *base_ctx = *(self.ctx_after)(ctx_before).eval()?;
                     Ok(())
-                });
-
-                let mut zg_ctx = Vec::new();
-                for zg in vec![0.0f64] {
-                    let mut current_ctx = Arc::<Context>::new_uninit(); 
-                    ctx_before.write_params(ParameterID::CenterMassZFix, );
+                }).map_err(|err| error.pass_with("base_task", err))?;
+                // перебор значений z_g_fix
+                let mut zg_criterion: Vec<(f64, CriterionStabilityCtx)> = Vec::new();
+                let delta = 0.1;
+                let max_index = (overall_height / delta).floor() as i32;
+                for index in 0..max_index {
+                    let z_g_fix = index as f64 * delta;
+                    let h = z_m - z_g_fix;
+                    let h_0 = h + delta_m_h;      
+                    let ctx_before = ctx_before.clone();              
+                    ctx_before.write_params(ParameterID::CenterMassZFix, z_g_fix);
+                    ctx_before.write_params(ParameterID::MetacentricTransHeight, h_0);
+                    let mut criterion = Arc::<CriterionStabilityCtx>::new_uninit(); 
                     let task = self.scheduler.spawn(|| {
-                        let ctx = self.ctx_after.eval(())?;
-                        Arc::get_mut(&mut current_ctx).unwrap().write(ctx);
+                        let ctx = *(self.ctx_after)(ctx_before).eval()?;
+                        *criterion = ctx.read::<CriterionStabilityCtx>();
                         Ok(())
-                    });
-                    zg_ctx.push((zg, current_ctx));
+                    }).map_err(|err| error.pass_with(format!("task {}", z_g_fix), err))?;
+                    zg_criterion.push((z_g_fix, criterion));
                     tasks.push(task);
                 }
-
-                *Arc::try_unwrap(x).unwrap_err()
-                
-
-       /*       
-                let base_task = self.scheduler.spawn(|| {
-                    match self.ctx_zg.eval(Some((Zg(zg), ctx.clone()))) {
-                        CtxResult::Ok(ctx) => {
-                            CtxResult::Ok(ctx)
-                        }
-                        CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-                        CtxResult::None => CtxResult::None,
-                    }
-                });
-                for zg in vec![0.0f64] {
-                    let task = self.scheduler.spawn(|| {
-                        match self.ctx_zg.eval(Some((Zg(zg), ctx.clone()))) {
-                            CtxResult::Ok(ctx) => {
-                                CtxResult::Ok(ctx)
-                            }
-                            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-                            CtxResult::None => CtxResult::None,
-                        }
+                // получаем базовый контекст
+                base_task.join()?;
+                let base_ctx = base_ctx.deref();
+                // получаем массив рассчитанных критериев для разных zg
+                for task in tasks {                    
+                    task.join();
+                }                
+                let mut results = Vec::new(); //<(f64, Vec<(usize, Option<f64>)>)>'
+                for (z_g_fix, tmp) in zg_criterion {                    
+                    // отбрасываем ошибки, оставляем только значения, считаем дельту с целевым значением
+                    let tmp: Vec<(usize, Option<(f64, f64)>)> = tmp.criterion
+                        .iter()
+                        .map(|v| {
+                            let delta = if v.error_message.is_none() {
+                                Some((v.result, v.target))
+                            } else {
+                                None
+                            };
+                            (v.criterion_id, delta)
+                        })
+                        .collect();
+                    results.push((z_g_fix, tmp));
+                }
+                // создаем коллекцию векторов, сортируем значения по id
+                #[allow(clippy::type_complexity)]
+                let mut values: HashMap<usize, Vec<(f64, (f64, f64))>> = HashMap::new();
+                for (z_g_fix, tmp) in results.into_iter() {
+                    tmp.into_iter()
+                        .filter(|(_, value)| value.is_some())
+                        .for_each(|(id, value)| {
+                            values
+                                .entry(id)
+                                .and_modify(|v| v.push((z_g_fix, value.unwrap())))
+                                .or_insert(vec![(z_g_fix, value.unwrap())]);
+                        });
+                }
+                let mut result = HashMap::new();
+                for (id, mut values) in values.into_iter() {
+                    // сортируем значения по увеличению дельты с целевым
+                    values.sort_by(|&(_, v1), &(_, v2)| {
+                        (v1.0 - v1.1)
+                            .abs()
+                            .partial_cmp(&(v2.0 - v2.1).abs())
+                            .expect("CriterionComputer calculate error: sort values!")
                     });
-                    tasks.push(task);
+                    // берем первое значение как ближайшее значение к целевому
+                    let closest_value = values
+                        .first()
+                        .expect("CriterionComputer calculate error, no values!");
+                    result.insert(id, closest_value.0);
                 }
-                let ctx = base_task.join();
-                for task in tasks {
-                    let ctx_zg: Context = task.join();
-                    let criterion_ctx: CriterionCtx = ctx_zg.read();
-                    criterions.push(criterion_ctx);
-                }
-                
-                */
-
-                let five = unsafe { five.assume_init() };
 
                 let result = ZgCtx {
-
+                    zg: result,
                 };
-                ctx_before.write(result)
+                base_ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
             CtxResult::None => CtxResult::None,
-        };
+        }
     }
 }
 //
