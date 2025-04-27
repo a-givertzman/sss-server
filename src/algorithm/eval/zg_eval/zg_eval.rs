@@ -1,24 +1,24 @@
-use std::{collections::HashMap, sync::Arc};
-
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 use crate::{
+    CtxResult,
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef},
+        context::context_access::{ContextRead, ContextReadRef},
         eval::*,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, ship_model::ship_model::ShipModel, CtxResult
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::{Context, ContextWrite, InitialCtx},
+    ship_model::ship_model::ShipModel,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, scheduler::Scheduler};
 
 use super::zg_ctx::ZgCtx;
 
-type Before = StabilityAreaEval;
-//type After = Fn(Context, Option<f64>) -> EvalResult + 'static;
-
-unsafe impl Send for Before {}
-unsafe impl Sync for Before {} 
-
-//unsafe impl Send for after {}
-//unsafe impl Sync for after {} 
+unsafe impl Send for StabilityAreaEval {}
+unsafe impl Sync for StabilityAreaEval {}
 
 ///
 /// Расчет равновесного положения судна
@@ -26,8 +26,7 @@ pub struct ZgEval<'a> {
     dbg: Dbg,
     scheduler: Scheduler,
     ship_model: &'a ShipModel,
-    ctx_before: Before,
-  //  ctx_after: Box<dyn After>,
+    ctx_before: StabilityAreaEval,
 }
 //
 //
@@ -37,8 +36,7 @@ impl<'a> ZgEval<'a> {
         scheduler: Scheduler,
         parent: impl Into<String>,
         ship_model: &'a ShipModel,
-        ctx_before: Before,
-   //     ctx_after: impl After,
+        ctx_before: StabilityAreaEval,
     ) -> Self {
         let dbg = Dbg::new(parent, "ZgEval");
         Self {
@@ -46,7 +44,6 @@ impl<'a> ZgEval<'a> {
             scheduler,
             ship_model,
             ctx_before,
-     //       ctx_after: Box::new(ctx_after),
         }
     }
 }
@@ -64,17 +61,15 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 let overall_height = *ship_parameters
                     .get("Overall height up to non-removable parts")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
-              //  let z_m = ctx_before.read_params(ParameterID::MetacentricTransRadZ);
-              //  let delta_m_h = ctx_before.read_params(ParameterID::MetacentricTransSum);
                 // базовый контекст
-                let mut base_ctx = Arc::<Context>::new_uninit();
+                let base_ctx = Arc::new(Mutex::new(Option::<Context>::None));
                 let base_task = {
                     let dbg = self.dbg.clone();
-                    let link= self.ship_model.link();
+                    let link = self.ship_model.link();
                     let ctx = ctx_before.clone();
-                    self
-                    .scheduler
-                    .spawn(move || {
+                    let base_ctx = base_ctx.clone();
+                    self.scheduler
+                        .spawn(move || {
                             let ctx = MetacentricHeightEval::new(
                                 &dbg,
                                 None,
@@ -96,7 +91,9 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                                                                 &dbg,
                                                                 WindageEval::new(
                                                                     &dbg,
-                                                                    LeverDiagramEval::new(&dbg, link, ctx),
+                                                                    LeverDiagramEval::new(
+                                                                        &dbg, link, ctx,
+                                                                    ),
                                                                 ),
                                                             ),
                                                         ),
@@ -106,12 +103,13 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                                         ),
                                     ),
                                 ),
-                            ).eval(())?;                    
-                        base_ctx.write(ctx);
-                    //   base_ctx.write((self.ctx_after)(ctx_before, None)?);
-                        Ok(())
-                    })
-                    .map_err(|err| error.pass_with(format!("base_task"), err))?
+                            )
+                            .eval(())?;
+                            let mut base_ctx = base_ctx.lock().unwrap();
+                            *base_ctx = Some(ctx);
+                            Ok(())
+                        })
+                        .map_err(|err| error.pass_with(format!("base_task"), err))?
                 };
                 // перебор значений z_g_fix, вычисление контекста для zg
                 let mut tasks: Vec<JoinHandle<()>> = vec![];
@@ -121,12 +119,13 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 for index in 0..max_index {
                     let z_g_fix = index as f64 * delta;
                     let dbg = self.dbg.clone();
-                    let link= self.ship_model.link();
-                    let ctx = ctx_before.clone();               
-                    let mut criterion = Arc::<CriterionStabilityCtx>::new_uninit();
+                    let link = self.ship_model.link();
+                    let ctx = ctx_before.clone();
+                    let criterion = Arc::new(Mutex::new(Option::<CriterionStabilityCtx>::None));
+                    let moved_criterion = criterion.clone();
                     let task = self
                         .scheduler
-                        .spawn( move || {
+                        .spawn(move || {
                             let ctx = MetacentricHeightEval::new(
                                 &dbg,
                                 Some(z_g_fix),
@@ -148,7 +147,9 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                                                                 &dbg,
                                                                 WindageEval::new(
                                                                     &dbg,
-                                                                    LeverDiagramEval::new(&dbg, link, ctx),
+                                                                    LeverDiagramEval::new(
+                                                                        &dbg, link, ctx,
+                                                                    ),
                                                                 ),
                                                             ),
                                                         ),
@@ -158,8 +159,11 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                                         ),
                                     ),
                                 ),
-                            ).eval(())?;       
-                            *criterion.write(ctx.read());
+                            )
+                            .eval(())?;
+                            let mut criterion = moved_criterion.lock().unwrap();
+                            *criterion = Some(ctx.read());
+                            // criterion.clone().write(ctx.read());
                             Ok(())
                         })
                         .map_err(|err| error.pass_with(format!("task {}", z_g_fix), err))?;
@@ -168,7 +172,7 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 }
                 // получаем базовый контекст
                 base_task.join()?;
-                let base_ctx = unsafe { &*base_ctx.assume_init_mut() };
+                let base_ctx = base_ctx.lock().unwrap().clone().unwrap();
                 // получаем массив рассчитанных критериев для разных zg
                 for task in tasks {
                     task.join();
@@ -176,7 +180,8 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 let mut results = Vec::new(); //<(f64, Vec<(usize, Option<f64>)>)>'
                 for (z_g_fix, criterion) in zg_criterion {
                     // отбрасываем ошибки, оставляем только значения, считаем дельту с целевым значением
-                    let criterion = unsafe { &*criterion.assume_init() };
+                    //    let criterion = unsafe { &*criterion.assume_init() };
+                    let criterion = criterion.lock().unwrap().clone().unwrap();
                     let tmp: Vec<(usize, Option<(f64, f64)>)> = criterion
                         .data
                         .iter()
@@ -219,9 +224,8 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                         .expect("CriterionComputer calculate error, no values!");
                     result.insert(id, closest_value.0);
                 }
-
                 let result = ZgCtx { zg: result };
-                base_ctx.clone().write(result)
+                base_ctx.write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
             CtxResult::None => CtxResult::None,
