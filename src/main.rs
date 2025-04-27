@@ -88,6 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
+    // Переехало в zg_eval, возможно еще вернется
    /* let ctx_after = move |ctx: Context, z_g_fix: Option<f64>| {
         MetacentricHeightEval::new(
             &dbg,
