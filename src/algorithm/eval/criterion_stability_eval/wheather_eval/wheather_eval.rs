@@ -4,7 +4,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead},
         eval::{
-            BalanceCtx, LeverDiagramCtx, RollingAmplitudeCtx, RollingPeriodCtx, WindCtx,
+            BalanceCtx, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx,
             parameters::ParameterID,
         },
     },
@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for WheatherEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            CtxResult::Ok(mut ctx) => {
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();

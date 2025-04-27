@@ -3,43 +3,55 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef},
-        eval::{parameters::ParameterID, CriterionStabilityCtx, StabilityAreaEval},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, CtxResult
+        eval::*,
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, ship_model::ship_model::ShipModel, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, scheduler::Scheduler};
 
 use super::zg_ctx::ZgCtx;
 
+type Before = StabilityAreaEval;
+//type After = Fn(Context, Option<f64>) -> EvalResult + 'static;
+
+unsafe impl Send for Before {}
+unsafe impl Sync for Before {} 
+
+//unsafe impl Send for after {}
+//unsafe impl Sync for after {} 
+
 ///
 /// Расчет равновесного положения судна
-pub struct ZgEval {
+pub struct ZgEval<'a> {
     dbg: Dbg,
     scheduler: Scheduler,
-    ctx_before: StabilityAreaEval,
-    ctx_after: Box<dyn Fn(Context, Option<f64>) -> EvalResult + 'static>,
+    ship_model: &'a ShipModel,
+    ctx_before: Before,
+  //  ctx_after: Box<dyn After>,
 }
 //
 //
-impl ZgEval {
+impl<'a> ZgEval<'a> {
     ///
     pub fn new(
         scheduler: Scheduler,
         parent: impl Into<String>,
-        ctx_before: StabilityAreaEval,
-        ctx_after: impl Fn(Context, Option<f64>) -> EvalResult + 'static,
+        ship_model: &'a ShipModel,
+        ctx_before: Before,
+   //     ctx_after: impl After,
     ) -> Self {
         let dbg = Dbg::new(parent, "ZgEval");
         Self {
             dbg,
             scheduler,
+            ship_model,
             ctx_before,
-            ctx_after: Box::new(ctx_after),
+     //       ctx_after: Box::new(ctx_after),
         }
     }
 }
 //
-impl Eval<(), EvalResult> for ZgEval {
+impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx_before.eval(()) {
@@ -56,29 +68,98 @@ impl Eval<(), EvalResult> for ZgEval {
               //  let delta_m_h = ctx_before.read_params(ParameterID::MetacentricTransSum);
                 // базовый контекст
                 let mut base_ctx = Arc::<Context>::new_uninit();
-                let base_task = self
-                .scheduler
-                .spawn(|| {
-                    base_ctx.write((self.ctx_after)(ctx_before, None)?);
-                    Ok(())
-                })
-                .map_err(|err| error.pass_with(format!("base_task"), err))?;
-                // перебор значений z_g_fix
+                let base_task = {
+                    let dbg = self.dbg.clone();
+                    let link= self.ship_model.link();
+                    let ctx = ctx_before.clone();
+                    self
+                    .scheduler
+                    .spawn(move || {
+                            let ctx = MetacentricHeightEval::new(
+                                &dbg,
+                                None,
+                                DSOMaxEval::new(
+                                    &dbg,
+                                    CriterionStabilityEval::new(
+                                        &dbg,
+                                        DSOAreaEval::new(
+                                            &dbg,
+                                            StaticAngleEval::new(
+                                                &dbg,
+                                                WheatherEval::new(
+                                                    &dbg,
+                                                    RollingAmplitudeEval::new(
+                                                        &dbg,
+                                                        RollingPeriodEval::new(
+                                                            &dbg,
+                                                            WindEval::new(
+                                                                &dbg,
+                                                                WindageEval::new(
+                                                                    &dbg,
+                                                                    LeverDiagramEval::new(&dbg, link, ctx),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ).eval(())?;                    
+                        base_ctx.write(ctx);
+                    //   base_ctx.write((self.ctx_after)(ctx_before, None)?);
+                        Ok(())
+                    })
+                    .map_err(|err| error.pass_with(format!("base_task"), err))?
+                };
+                // перебор значений z_g_fix, вычисление контекста для zg
                 let mut tasks: Vec<JoinHandle<()>> = vec![];
-                let mut criterions = vec![];
                 let mut zg_criterion: Vec<(f64, _)> = Vec::new();
                 let delta = 0.1;
                 let max_index = (overall_height / delta).floor() as i32;
                 for index in 0..max_index {
                     let z_g_fix = index as f64 * delta;
-                 //   let ctx_before = self.ctx_before.clone();
-                  //  let ctx_after = self.ctx_after.clone();                    
+                    let dbg = self.dbg.clone();
+                    let link= self.ship_model.link();
+                    let ctx = ctx_before.clone();               
                     let mut criterion = Arc::<CriterionStabilityCtx>::new_uninit();
                     let task = self
                         .scheduler
-                        .spawn(|| {
-                            let ctx = (self.ctx_after)(ctx_before,  Some(z_g_fix))?;
-                            criterion.write(ctx.read());
+                        .spawn( move || {
+                            let ctx = MetacentricHeightEval::new(
+                                &dbg,
+                                Some(z_g_fix),
+                                DSOMaxEval::new(
+                                    &dbg,
+                                    CriterionStabilityEval::new(
+                                        &dbg,
+                                        DSOAreaEval::new(
+                                            &dbg,
+                                            StaticAngleEval::new(
+                                                &dbg,
+                                                WheatherEval::new(
+                                                    &dbg,
+                                                    RollingAmplitudeEval::new(
+                                                        &dbg,
+                                                        RollingPeriodEval::new(
+                                                            &dbg,
+                                                            WindEval::new(
+                                                                &dbg,
+                                                                WindageEval::new(
+                                                                    &dbg,
+                                                                    LeverDiagramEval::new(&dbg, link, ctx),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ).eval(())?;       
+                            *criterion.write(ctx.read());
                             Ok(())
                         })
                         .map_err(|err| error.pass_with(format!("task {}", z_g_fix), err))?;
@@ -140,7 +221,7 @@ impl Eval<(), EvalResult> for ZgEval {
                 }
 
                 let result = ZgCtx { zg: result };
-                base_ctx.write(result)
+                base_ctx.clone().write(result)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
             CtxResult::None => CtxResult::None,
@@ -149,7 +230,7 @@ impl Eval<(), EvalResult> for ZgEval {
 }
 //
 //
-impl std::fmt::Debug for ZgEval {
+impl<'a> std::fmt::Debug for ZgEval<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ZgEval").field("dbg", &self.dbg).finish()
     }

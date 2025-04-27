@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
-    let ctx_after = move |ctx: Context, z_g_fix: Option<f64>| {
+   /* let ctx_after = move |ctx: Context, z_g_fix: Option<f64>| {
         MetacentricHeightEval::new(
             &dbg,
             z_g_fix,
@@ -121,8 +121,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ).eval(())
-    };
-    let _result = ZgEval::new(thread_pool.scheduler(), &tmp_dbg, ctx_before, ctx_after).eval(());
+    };*/
+    let _result = ZgEval::new(
+        thread_pool.scheduler(), 
+        &tmp_dbg, 
+        &ship_model,
+        ctx_before, 
+ //       ctx_after
+    ).eval(());
     ship_model.exit();
     ship_model_handle.join().unwrap();
     Ok(())

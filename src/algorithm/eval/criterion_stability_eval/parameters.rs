@@ -2,7 +2,7 @@
 //! Набор результатов расчетов для записи в БД
 use bincode::{Decode, Encode};
 use sal_core::error::Error;
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 use strum_macros::FromRepr;
 ///
 /// Doc comment required
@@ -127,31 +127,30 @@ impl ParameterID {
 /// Набор результатов расчетов для записи в БД
 #[derive(Debug, Clone)]
 pub struct Parameters {
-    data: RefCell<HashMap<ParameterID, f64>>,
+    data: HashMap<ParameterID, f64>,
 }
 //
 impl Parameters {
     /// Главный конструктор
     pub fn new() -> Self {
         Self {
-            data: RefCell::new(HashMap::new()),
+            data: HashMap::new(),
         }
     }
 }
 //
 impl IParameters for Parameters {
     /// Добавление нового параметра
-    fn add(&self, id: ParameterID, value: f64) {
-        self.data.borrow_mut().insert(id, value);
+    fn add(&mut self, id: ParameterID, value: f64) {
+        self.data.insert(id, value);
     }
     /// Геттер, возвращает значение параметра или None если данных нет
     fn get(&self, id: ParameterID) -> Option<f64> {
-        self.data.borrow().get(&id).copied()
+        self.data.get(&id).copied()
     }
     /// Все данные в виде пар значений id/value
-    fn take_data(&self) -> Vec<(usize, f64)> {
+    fn take_data(self) -> Vec<(usize, f64)> {
         self.data
-            .take()
             .into_iter()
             .map(|(k, v)| (k as usize, v))
             .collect()
@@ -161,11 +160,11 @@ impl IParameters for Parameters {
 #[doc(hidden)]
 pub trait IParameters {
     /// Добавление нового параметра
-    fn add(&self, id: ParameterID, value: f64);
+    fn add(&mut self, id: ParameterID, value: f64);
     /// Геттер, возвращает значение параметра или None если данных нет
     fn get(&self, id: ParameterID) -> Option<f64>;
     /// Все данные в виде пар значений id/value
-    fn take_data(&self) -> Vec<(usize, f64)>;
+    fn take_data(self) -> Vec<(usize, f64)>;
 }
 // заглушка для тестирования
 #[doc(hidden)]
@@ -173,11 +172,11 @@ pub struct FakeParameters;
 #[doc(hidden)]
 #[allow(dead_code)]
 impl IParameters for FakeParameters {
-    fn add(&self, _: ParameterID, _: f64) {}
+    fn add(&mut self, _: ParameterID, _: f64) {}
     fn get(&self, _: ParameterID) -> Option<f64> {
         None
     }
-    fn take_data(&self) -> Vec<(usize, f64)> {
+    fn take_data(self) -> Vec<(usize, f64)> {
         Vec::new()
     }
 }

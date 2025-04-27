@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            CtxResult::Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let balance: BalanceCtx = ctx.read();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();

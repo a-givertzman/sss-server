@@ -14,7 +14,7 @@ pub struct LeverDiagramEval {
     dbg: Dbg,
     model: Link,
     value: Option<LeverDiagramCtx>,
-    ctx: Context,//Box<dyn Eval<(), EvalResult>>,
+    ctx: Option<Context>,//Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -30,7 +30,7 @@ impl LeverDiagramEval {
             dbg,
             model,
             value: None,
-            ctx//: Box::new(ctx),
+            ctx: Some(ctx),
         }
     }
 }
@@ -41,8 +41,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
         let error = Error::new(&self.dbg, "eval");
      //   match self.ctx.eval(()) {
        //     CtxResult::Ok(ctx) => {
-                let ctx = self.ctx;
-                let initial: &InitialCtx = ctx.read_ref();     
+                let ctx = self.ctx.take().unwrap();
                 // Расчет пантокарен в модели
                 let pantocaren: Vec<(f64, f64)> = self.model.call(Query::ComputePantocaren)
                     .map_err(|err| error.pass_with("pantocaren model.call", err))?;  
@@ -55,7 +54,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 );
                 let max = (MAX_LEVER_ANGLE_CALC * 10.) as i32;
                 let min = -max;
-                let roll = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>();
+                let roll = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>() TODO: пантокарен
                 let mut dso = pantocaren
                     .into_iter()
                     .filter_map(|(angle_deg, lever)| {

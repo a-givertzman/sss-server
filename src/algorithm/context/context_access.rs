@@ -19,7 +19,7 @@ pub trait ContextRead<T> {
 ///
 /// Provides restricted write access to the [Context].[Parameters] members
 pub trait ContextParamsWrite {
-    fn write_params(&self, key: ParameterID, value: f64);
+    fn write_params(&mut self, key: ParameterID, value: f64);
 }
 ///
 /// Provides simple read access to the [Context].[Parameters] members
@@ -42,8 +42,8 @@ impl ContextReadRef<Parameters> for Context {
     }
 }
 impl ContextParamsWrite for Context {
-    fn write_params(&self, id: ParameterID, value: f64) {
-        match &self.parameters {
+    fn write_params(&mut self, id: ParameterID, value: f64) {
+        match &mut self.parameters {
             Some(params) => {
                 params.add(id, value);
             }
