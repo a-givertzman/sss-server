@@ -52,8 +52,9 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                         result,
                         0.055,
                     )),
-                    Err(error) => {
-                        log::error!("CriterionStability dso_area 0-30 error: {}", error);
+                    Err(err) => {
+                        let error = error.pass_with("lever_diagram.dso_area", err);
+                        log::error!("DSOAreaEval eval 0-30 error: {}", error);
                         data.push(CriterionData::new_error(
                         CriterionID::AreaLC0_30,
                         "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-30 градусов: ".to_owned() + &error.to_string(),
@@ -65,7 +66,7 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                     &initial
                         .ship
                         .as_ref()
-                        .expect("static_angle eval error: no ship!")
+                        .expect("DSOAreaEval eval error: no ship!")
                         .ship_type,
                 ) {
                     Ok(ship_type) => {
@@ -80,8 +81,9 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                                 result,
                                 target_area,
                             )),
-                            Err(error) => {
-                                log::error!("CriterionStability dso_area 0-40 error: {}", error);
+                            Err(err) => {
+                                let error = error.pass_with("ship_type lever_diagram.dso_area", err);
+                                log::error!("DSOAreaEval 0-40 error: {}", error);
                                 data.push(CriterionData::new_error(
                                     CriterionID::AreaLC0_40,
                                     "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
@@ -90,7 +92,8 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                         };
                     },
                     Err(err) => {
-                        log::error!("{}", err);
+                        let error = error.pass_with("ShipType::from_str", err);
+                        log::error!("{}", error);
                         data.push(CriterionData::new_error(
                             CriterionID::AreaLC0_40,
                             "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
@@ -105,7 +108,7 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                         0.03,
                     )),
                     Err(error) => {
-                        log::error!("CriterionStability dso_area 30-40 error: {}", error);
+                        log::error!("DSOAreaEval 30-40 error: {}", error);
                         data.push(CriterionData::new_error(
                         CriterionID::AreaLC30_40,
                         "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 30-40 градусов: ".to_owned() + &error.to_string(),

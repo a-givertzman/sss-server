@@ -95,6 +95,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         link: Link,
         ctx: Context,
     | -> MetacentricHeightEval {
+
+        dso_timber_max
+        
         MetacentricHeightEval::new(
             &dbg,
             z_g_fix,

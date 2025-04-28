@@ -1,5 +1,7 @@
 //! Расчет критерия погоды К
+
+use crate::algorithm::eval::CriterionData;
 #[derive(Debug, Clone)]
 pub struct WheatherCtx {
-    pub k: f64, 
+    pub data: CriterionData, 
 }

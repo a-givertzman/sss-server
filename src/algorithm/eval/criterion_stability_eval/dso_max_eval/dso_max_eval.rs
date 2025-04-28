@@ -43,23 +43,30 @@ impl Eval<(), EvalResult> for DSOMaxEval {
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
-                    .expect("RollingAmplitudeEval eval error: no ship_parameters");
+                    .expect("DSOMaxEval eval error: no ship_parameters");
                 let ship_length = *ship_parameters
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
-                let data = if let Ok(curve) = Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
-                    match (lever_diagram.dso_lever_max(30., 90.), curve.value(ship_length)) {
+                let data = match Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
+                    Ok(curve) => match (lever_diagram.dso_lever_max(30., 90.), curve.value(ship_length)) {
                         (Ok(result), Ok(target)) => CriterionData::new_result(CriterionID::MaximumLC, result, target),
-                        _ => CriterionData::new_error(
+                        _ => { 
+                            let error = error.err("lever_diagram.dso_lever_max + curve.value");
+                            log::error!("DSOMaxEval eval error: {}", error);
+                            CriterionData::new_error(
+                                CriterionID::MaximumLC,
+                                "Ошибка вычисления значения кривой в расчете максимума диаграммы статической остойчивости: ".to_owned() + &error.to_string(),
+                            )
+                        }
+                    },
+                    Err(err) => {
+                        let error = error.pass_with("Curve::new_linear", err);
+                        log::error!("DSOMaxEval eval error: {}", error);
+                        CriterionData::new_error(
                             CriterionID::MaximumLC,
-                            "Ошибка вычисления значения кривой в расчете максимума диаграммы статической остойчивости".to_owned(),
+                            "Ошибка создания кривой в расчете максимума диаграммы статической остойчивости: ".to_owned() + &error.to_string(),
                         )
                     }
-                } else {
-                    CriterionData::new_error(
-                        CriterionID::MaximumLC,
-                        "Ошибка создания кривой в расчете максимума диаграммы статической остойчивости".to_owned(),
-                    )
                 };
                 let result = DSOMaxCtx { data };
                 self.value = Some(result.clone());
