@@ -14,6 +14,7 @@ pub mod dso_max_eval;
 pub mod dso_timber_max_eval;
 pub mod dso_icing_max_eval;
 pub mod dso_angle_max_eval;
+pub mod metacentric_height_eval;
 
 pub use wheather_eval::wheather_eval::WheatherEval;
 pub use wheather_eval::wheather_ctx::WheatherCtx;
@@ -35,6 +36,10 @@ pub use dso_icing_max_eval::dso_icing_max_ctx::DSOIcingMaxCtx;
 
 pub use dso_angle_max_eval::dso_angle_max_eval::DSOAngleMaxEval;
 pub use dso_angle_max_eval::dso_angle_max_ctx::DSOAngleMaxCtx;
+
+pub use metacentric_height_eval::metacentric_height_eval::MetacentricHeightEval as CriterionMetacentricHeightEval;
+pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx as CriterionMetacentricHeightCtx;
+
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]
 pub enum CriterionID {
