@@ -58,6 +58,8 @@ pub struct Context {
     pub(super) dso_timber_max: Option<DSOTimberMaxCtx>,
     /// Критерий максимум диаграммы статической остойчивости с учетом обледенения
     pub(super) dso_icing_max: Option<DSOIcingMaxCtx>,
+    /// Угол, соответствующий максимуму диаграммы статической остойчивости
+    pub(super) dso_angle_max: Option<DSOAngleMaxCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

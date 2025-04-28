@@ -324,6 +324,18 @@ impl ContextRead<DSOIcingMaxCtx> for Context {
     }
 }
 //
+impl ContextWrite<DSOAngleMaxCtx> for Context {
+    fn write(mut self, value: DSOAngleMaxCtx) -> CtxResult<Self, Error> {
+        self.dso_angle_max = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOAngleMaxCtx> for Context {
+    fn read(&self) -> DSOAngleMaxCtx {
+        self.dso_angle_max.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);

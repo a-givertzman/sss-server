@@ -35,36 +35,12 @@ impl Eval<(), EvalResult> for IcingTimberEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let voyage = match initial.voyage.clone() {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read voyage error: no data!"))
-                    }
-                };
-                let icing_timber_stab = match IcingTimberType::from_str(&voyage.icing_timber_type) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(error.pass_with("Read icing_timber_stab error", err))
-                    }
-                };
-                let ship_parameters = match initial.ship_parameters.as_ref() {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read voyage error: no data!"))
-                    }
-                };
-                let length_loa = match ship_parameters.get("L.O.A") {
-                    Some(data) => *data,
-                    None => {
-                        return CtxResult::Err(error.err("Read length_loa error: no data!"))
-                    }
-                };
-                let width = match ship_parameters.get("MouldedBreadth") {
-                    Some(data) => *data,
-                    None => {
-                        return CtxResult::Err(error.err("Read width error: no data!"))
-                    }
-                };                 
+                let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
+                let icing_timber_stab = IcingTimberType::from_str(&voyage.icing_timber_type)
+                    .map_err(|err| error.pass_with("icing_timber_stab", err))?;
+                let ship_parameters = initial.ship_parameters.as_ref().ok_or(error.err("ship_parameters error: no data!"))?; 
+                let length_loa = *ship_parameters.get("L.O.A").ok_or(error.err("length_loa error: no data!"))?; 
+                let width = *ship_parameters.get("MouldedBreadth").ok_or(error.err("width error: no data!"))?;                
                 let result = IcingTimberCtx::new(width, length_loa, icing_timber_stab);
                 self.value = Some(result.clone());
                 ctx.write(result)

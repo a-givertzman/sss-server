@@ -35,90 +35,21 @@ impl Eval<(), EvalResult> for IcingStabEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let voyage = match initial.voyage.clone() {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read voyage error: no data!"))
-                    }
-                };
-                let icing = match initial.icing.clone() {
-                    Some(data) => data.data(),
-                    None => {
-                        return CtxResult::Err(error.err("Read icing error: no data!"))
-                    }
-                };
-                let icing_stab = match IcingStabType::from_str(&voyage.icing_type) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        return CtxResult::Err(error.pass_with("Read icing_stab error", err))
-                    }
-                };
-                let icing_m_timber = *match icing.get("icing_m_timber") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_m_timber error: no data!"))
-                    }
-                };
-                let icing_m_v_full = *match icing.get("icing_m_v_full") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_m_v_full error: no data!"))
-                    }
-                };
-                let icing_m_v_half = *match icing.get("icing_m_v_half") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_m_v_half error: no data!"))
-                    }
-                };
-                let icing_m_h_full = *match icing.get("icing_m_h_full") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_m_h_full error: no data!"))
-                    }
-                };
-                let icing_m_h_half = *match icing.get("icing_m_h_half") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_m_h_half error: no data!"))
-                    }
-                };
-                let icing_coef_v_area_full = *match icing.get("icing_coef_v_area_full") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_coef_v_area_full error: no data!"))
-                    }
-                };
-                let icing_coef_v_area_half = *match icing.get("icing_coef_v_area_half") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_coef_v_area_half error: no data!"))
-                    }
-                };
-                let icing_coef_v_area_zero = *match icing.get("icing_coef_v_area_zero") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_coef_v_area_zero error: no data!"))
-                    }
-                };
-                let icing_coef_v_moment_full = *match icing.get("icing_coef_v_moment_full") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_coef_v_moment_full error: no data!"))
-                    }
-                };
-                let icing_coef_v_moment_half = *match icing.get("icing_coef_v_moment_half") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_coef_v_moment_half error: no data!"))
-                    }
-                };
-                let icing_coef_v_moment_zero = *match icing.get("icing_coef_v_moment_zero") {
-                    Some(data) => data,
-                    None => {
-                        return CtxResult::Err(error.err("Read icing_coef_v_moment_zero error: no data!"))
-                    }
-                };
+                let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
+                let icing = initial.icing.clone().ok_or(error.err("icing error: no data!"))?.data(); 
+                let icing_stab = IcingStabType::from_str(&voyage.icing_type)
+                    .map_err(|err| error.pass_with("icing_stab", err))?;
+                let icing_m_timber = *icing.get("icing_m_timber").ok_or(error.err("icing_m_timber error: no data!"))?; 
+                let icing_m_v_full = *icing.get("icing_m_v_full").ok_or(error.err("icing_m_v_full error: no data!"))?; 
+                let icing_m_v_half = *icing.get("icing_m_v_half").ok_or(error.err("icing_m_v_half error: no data!"))?;
+                let icing_m_h_full = *icing.get("icing_m_h_full").ok_or(error.err("icing_m_h_full error: no data!"))?;
+                let icing_m_h_half = *icing.get("icing_m_h_half").ok_or(error.err("icing_m_h_half error: no data!"))?;
+                let icing_coef_v_area_full = *icing.get("icing_coef_v_area_full").ok_or(error.err("icing_coef_v_area_full error: no data!"))?;
+                let icing_coef_v_area_half = *icing.get("icing_coef_v_area_half").ok_or(error.err("icing_coef_v_area_half error: no data!"))?;
+                let icing_coef_v_area_zero = *icing.get("icing_coef_v_area_zero").ok_or(error.err("icing_coef_v_area_zero error: no data!"))?;
+                let icing_coef_v_moment_full = *icing.get("icing_coef_v_moment_full").ok_or(error.err("icing_coef_v_moment_full error: no data!"))?;
+                let icing_coef_v_moment_half = *icing.get("icing_coef_v_moment_half").ok_or(error.err("icing_coef_v_moment_half error: no data!"))?;
+                let icing_coef_v_moment_zero = *icing.get("icing_coef_v_moment_zero").ok_or(error.err("icing_coef_v_moment_zero error: no data!"))?;
                 let mass_desc_h = match icing_stab {
                     IcingStabType::Full => icing_m_h_full,
                     IcingStabType::Half => icing_m_h_half,
