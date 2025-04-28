@@ -3,9 +3,8 @@ use crate::{
     ContextWrite, CtxResult,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        eval::{
-            CriterionData, CriterionID, LeverDiagramCtx, WheatherCtx,
-        },
+        entities::data::{loads::UnitCargoType, ship_type::ShipType},
+        eval::{CriterionData, CriterionID, LoadsCtx},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -38,77 +37,53 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
-                let mut results = Vec::new();
-                let lever_diagram: LeverDiagramCtx = ctx.read();
                 let initial: &InitialCtx = ctx.read_ref();
-                let ship_parameters = initial
-                    .ship_parameters
+                let metacentric_height: crate::algorithm::eval::metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx = ctx.read();
+                let loads: LoadsCtx = ctx.read();
+                let ship = initial
+                    .ship
                     .as_ref()
-                    .ok_or(error.err("ship_parameters error: no data!"))?;
-                let breadth = *ship_parameters
-                    .get("MouldedBreadth")
-                    .ok_or(error.err("breadth error: no data!"))?;
-                let moulded_depth = *ship_parameters
-                    .get("Moulded depth")
-                    .ok_or(error.err("moulded_depth error: no data!"))?;
-                let wheather: WheatherCtx = ctx.read();
-                let metacentric_height: MetacentricHeightCtx = ctx.read();
-                let k = if let Some(error_message) = wheather.data.error_message {
-                    let error = error.pass_with("no wheather k: {}", error_message);
-                    log::error!("{error}");
-                    results.push(CriterionData::new_error(
-                        CriterionID::HeelMaximumLC,
-                        error.to_string(),
-                    ));
-                    let result: MetacentricHeightCtx = MetacentricHeightCtx { data: results };
-                    self.value = Some(result.clone());
-                    return ctx.write(result);
-                } else {
-                    wheather.data.result
+                    .expect("MetacentricHeightEval eval error: no ship!");
+                let have_grain = !loads.bulk.is_empty();
+                let unit: Vec<_> = match initial.unit.as_ref() {
+                    Some(data) => data
+                        .into_iter()
+                        .filter(|v| v.icing_area.is_some())
+                        .collect(),
+                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
                 };
-                let angles = lever_diagram.max_angles();
-                let b_div_d = breadth / moulded_depth;
-                let mut target = 30.;
-                if b_div_d > 2. {
-                    target -= (40. * (b_div_d.min(2.5) - 2.) * (k.min(1.5) - 1.) * 0.5).round();
-                }
-                if let Some(angle) = angles.first() {
-                    if b_div_d > 2.5 {
-                        target = 15.;
-                        let src_area = metacentric_height.h_trans_fix;
-                        let target_area = if angle.0 <= 15.0 {
-                            0.07
-                        } else if angle.0 >= 30.0 {
-                            0.055
-                        } else {
-                            0.05 + 0.001 * (30.0 - angle.0)
-                        };
-                        results.push(CriterionData::new_result(
-                            CriterionID::AreaLc0Thetalmax,
-                            src_area,
-                            target_area,
-                        ));
-                    } else if angles.len() > 1 {
-                        results.push(CriterionData::new_result(
-                            CriterionID::HeelFirstMaximumLC,
-                            angle.0,
-                            25.,
-                        ));
+                let have_timber = unit.iter().any(|v| v.cargo_type == UnitCargoType::Timber);
+                let ship_type = match ShipType::from_str(&ship.ship_type) {
+                    Ok(ship_type) => ship_type,
+                    Err(err) => {
+                        let error = error.pass_with("ShipType::from_str", err);
+                        log::error!("{}", error);
+                        let result = CriterionData::new_error(
+                            CriterionID::MinMetacentricHight,
+                            "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
+                        );
+                        let result = MetacentricHeightCtx { data: result };
+                        self.value = Some(result.clone());
+                        return ctx.write(result);
                     }
-                    results.push(CriterionData::new_result(
-                        CriterionID::HeelMaximumLC,
-                        angle.0,
-                        target,
-                    ));
+                };
+                // Все суда
+                let target = if have_grain {
+                    0.3
+                } else if ship_type == ShipType::RoRo {
+                    0.2
+                } else if have_timber {
+                    0.1
                 } else {
-                    let error = error.err("no angle for first maximum lever of DSO!");
-                    log::error!("{error}");
-                    results.push(CriterionData::new_error(
-                        CriterionID::HeelMaximumLC,
-                        "Нет угла соответствующего максимуму DSO для текущих условий".to_owned(),
-                    ));
-                }
-                let result: MetacentricHeightCtx = MetacentricHeightCtx { data: results };
+                    0.15
+                };
+                let result = MetacentricHeightCtx {
+                    data: CriterionData::new_result(
+                        CriterionID::MinMetacentricHight,
+                        metacentric_height.h_trans_fix,
+                        target,
+                    ),
+                };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }

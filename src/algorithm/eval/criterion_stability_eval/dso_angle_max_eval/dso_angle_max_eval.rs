@@ -61,7 +61,7 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                         CriterionID::HeelMaximumLC,
                         error.to_string(),
                     ));
-                    let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data: results };
+                    let result = DSOAngleMaxCtx { data: results };
                     self.value = Some(result.clone());
                     return ctx.write(result);
                 } else {
