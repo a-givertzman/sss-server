@@ -109,7 +109,7 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                         "Нет угла соответствующего максимуму DSO для текущих условий".to_owned(),
                     ));
                 }
-                let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data: results };
+                let result = DSOAngleMaxCtx { data: results };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
