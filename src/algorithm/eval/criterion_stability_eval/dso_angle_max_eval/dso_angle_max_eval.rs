@@ -1,11 +1,15 @@
 use super::dso_angle_max_ctx::DSOAngleMaxCtx;
 use crate::{
+    ContextWrite, CtxResult,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::{
-            CriterionData, CriterionID, LeverDiagramCtx
+            CriterionData, CriterionID, LeverDiagramCtx, MetacentricHeightCtx, WheatherCtx,
+            metacentric_height_eval::metacentric_height_ctx, wheather_eval::wheather_ctx,
         },
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::InitialCtx,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -35,64 +39,56 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
+                let mut results = Vec::new();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let initial: &InitialCtx = ctx.read_ref();
-                let ship_parameters = initial.ship_parameters.as_ref().ok_or(error.err("ship_parameters error: no data!"))?; 
-                let breadth = *ship_parameters.get("MouldedBreadth").ok_or(error.err("breadth error: no data!"))?;  
-
-                let mut results = Vec::new();
-
+                let ship_parameters = initial
+                    .ship_parameters
+                    .as_ref()
+                    .ok_or(error.err("ship_parameters error: no data!"))?;
+                let breadth = *ship_parameters
+                    .get("MouldedBreadth")
+                    .ok_or(error.err("breadth error: no data!"))?;
+                let moulded_depth = *ship_parameters
+                    .get("Moulded depth")
+                    .ok_or(error.err("moulded_depth error: no data!"))?;
+                let wheather: WheatherCtx = ctx.read();
+                let metacentric_height: MetacentricHeightCtx = ctx.read();
+                let k = if let Some(error_message) = wheather.data.error_message {
+                    let error = error.pass_with("no wheather k: {}", error_message);
+                    log::error!("{error}");
+                    results.push(CriterionData::new_error(
+                        CriterionID::HeelMaximumLC,
+                        error.to_string(),
+                    ));
+                    let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data: results };
+                    self.value = Some(result.clone());
+                    return ctx.write(result);
+                } else {
+                    wheather.data.result
+                };
                 let angles = lever_diagram.max_angles();
-                let b_div_d = breadth / self.moulded_depth;
+                let b_div_d = breadth / moulded_depth;
                 let mut target = 30.;
                 if b_div_d > 2. {
-                    let k = match self.stability.k() {
-                        Ok(k) => k,
-                        Err(error) => {
-                            let error = Error::FromString(format!(
-                                "CriterionStability dso_lever_max_angle stability.k() error: {}",
-                                error
-                            ));
-                            log::error!("{error}");
-                            results.push(CriterionData::new_error(
-                                CriterionID::HeelMaximumLC,
-                                error.to_string(),
-                            ));
-                            return results;
-                        }
-                    };
                     target -= (40. * (b_div_d.min(2.5) - 2.) * (k.min(1.5) - 1.) * 0.5).round();
                 }
                 if let Some(angle) = angles.first() {
                     if b_div_d > 2.5 {
                         target = 15.;
-                        match self.metacentric_height.h_trans_fix() {
-                            Ok(src_area) => {
-                                let target_area = if angle.0 <= 15.0 {
-                                    0.07
-                                } else if angle.0 >= 30.0 {
-                                    0.055
-                                } else {
-                                    0.05 + 0.001 * (30.0 - angle.0)
-                                };
-                                results.push(CriterionData::new_result(
-                                    CriterionID::AreaLc0Thetalmax,
-                                    src_area,
-                                    target_area,
-                                ));
-                            }
-                            Err(error) => {
-                                let error = Error::FromString(format!(
-                                    "CriterionStability dso_lever_max_angle h_trans_fix error: {}",
-                                    error
-                                ));
-                                log::error!("{error}");
-                                results.push(CriterionData::new_error(
-                                CriterionID::AreaLc0Thetalmax,
-                                "Ошибка вычисления поперечной исправленной метацентрической высоты в расчете угла, соответствующего максимуму диаграммы статической остойчивости: ".to_owned() + &error.to_string(),
-                            ))
-                            }
+                        let src_area = metacentric_height.h_trans_fix;
+                        let target_area = if angle.0 <= 15.0 {
+                            0.07
+                        } else if angle.0 >= 30.0 {
+                            0.055
+                        } else {
+                            0.05 + 0.001 * (30.0 - angle.0)
                         };
+                        results.push(CriterionData::new_result(
+                            CriterionID::AreaLc0Thetalmax,
+                            src_area,
+                            target_area,
+                        ));
                     } else if angles.len() > 1 {
                         results.push(CriterionData::new_result(
                             CriterionID::HeelFirstMaximumLC,
@@ -106,26 +102,14 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                         target,
                     ));
                 } else {
+                    let error = error.err("no angle for first maximum lever of DSO!");
+                    log::error!("{error}");
                     results.push(CriterionData::new_error(
                         CriterionID::HeelMaximumLC,
                         "Нет угла соответствующего максимуму DSO для текущих условий".to_owned(),
                     ));
                 }
-
-
-                let target = 0.20;
-                let data  = match lever_diagram.dso_lever_max(25., 90.) {
-                    Ok(result) => CriterionData::new_result(CriterionID::MaximumLcIcing, result, target),
-                    Err(err) => {
-                            let error = error.pass_with("lever_diagram.dso_lever_max", err);
-                            log::error!("DSOAngleMaxEval eval error: {}", error);
-                            CriterionData::new_error(
-                            CriterionID::MaximumLcIcing,
-                            "Ошибка вычисления максимального плеча диаграммы статической остойчивости в расчете максимума диаграммы статической остойчивости с учетом обледенения: ".to_owned() + &error.to_string(),
-                        )
-                    }
-                };
-                let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data };
+                let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data: results };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
