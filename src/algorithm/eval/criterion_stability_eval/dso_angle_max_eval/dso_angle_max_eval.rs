@@ -5,7 +5,6 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::{
             CriterionData, CriterionID, LeverDiagramCtx, MetacentricHeightCtx, WheatherCtx,
-            metacentric_height_eval::metacentric_height_ctx, wheather_eval::wheather_ctx,
         },
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},

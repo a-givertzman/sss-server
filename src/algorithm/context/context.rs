@@ -60,8 +60,10 @@ pub struct Context {
     pub(super) dso_icing_max: Option<DSOIcingMaxCtx>,
     /// Угол, соответствующий максимуму диаграммы статической остойчивости
     pub(super) dso_angle_max: Option<DSOAngleMaxCtx>,
-    /// Критерий метацентрической высоты
-    pub(super) criterion_metacentric_height: Option<CriterionMetacentricHeightCtx>,
+    /// Критерий минимальной метацентрической высоты
+    pub(super) min_metacentric_height: Option<MinMetacentricHeightCtx>,
+    /// Критерий ускорения 𝐾∗
+    pub(super) acceleration: Option<AccelerationCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

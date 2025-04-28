@@ -1,28 +1,25 @@
-use super::metacentric_height_ctx::MetacentricHeightCtx;
+use super::min_metacentric_height_ctx::MinMetacentricHeightCtx;
 use crate::{
-    ContextWrite, CtxResult,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::data::{loads::UnitCargoType, ship_type::ShipType},
-        eval::{CriterionData, CriterionID, LoadsCtx},
-    },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
+        eval::{CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx},
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Расчет критерия метацентрической высоты
-pub struct MetacentricHeightEval {
+/// Расчет критерия минимальной метацентрической высоты
+pub struct MinMetacentricHeightEval {
     dbg: Dbg,
-    value: Option<MetacentricHeightCtx>,
+    value: Option<MinMetacentricHeightCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
-impl MetacentricHeightEval {
+impl MinMetacentricHeightEval {
     ///
     pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
-        let dbg = Dbg::new(parent, "MetacentricHeightEval");
+        let dbg = Dbg::new(parent, "MinMetacentricHeightEval");
         Self {
             dbg,
             value: None,
@@ -32,25 +29,35 @@ impl MetacentricHeightEval {
 }
 //
 //
-impl Eval<(), EvalResult> for MetacentricHeightEval {
+impl Eval<(), EvalResult> for MinMetacentricHeightEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let metacentric_height: crate::algorithm::eval::metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx = ctx.read();
+                let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let loads: LoadsCtx = ctx.read();
                 let ship = initial
                     .ship
                     .as_ref()
-                    .expect("MetacentricHeightEval eval error: no ship!");
+                    .expect("MinMetacentricHeightEval eval error: no ship!");
                 let have_grain = !loads.bulk.is_empty();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
                         .into_iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
-                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
+                    None => {
+                        let error = error.err("Read unit error: no data!");
+                        log::error!("{}", error);
+                        let result = CriterionData::new_error(
+                            CriterionID::MinMetacentricHight,
+                            "Ошибка расчета критерия минимальной метацентрической высоты: ".to_owned() + &error.to_string(),
+                        );
+                        let result = MinMetacentricHeightCtx { data: result };
+                        self.value = Some(result.clone());
+                        return ctx.write(result);
+                    }
                 };
                 let have_timber = unit.iter().any(|v| v.cargo_type == UnitCargoType::Timber);
                 let ship_type = match ShipType::from_str(&ship.ship_type) {
@@ -60,9 +67,9 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                         log::error!("{}", error);
                         let result = CriterionData::new_error(
                             CriterionID::MinMetacentricHight,
-                            "Ошибка расчета площади под положительной частью диаграммы статической остойчивости 0-40 градусов: ".to_owned() + &error.to_string(),
+                            "Ошибка расчета критерия минимальной метацентрической высоты: ".to_owned() + &error.to_string(),
                         );
-                        let result = MetacentricHeightCtx { data: result };
+                        let result = MinMetacentricHeightCtx { data: result };
                         self.value = Some(result.clone());
                         return ctx.write(result);
                     }
@@ -77,7 +84,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 } else {
                     0.15
                 };
-                let result = MetacentricHeightCtx {
+                let result = MinMetacentricHeightCtx {
                     data: CriterionData::new_result(
                         CriterionID::MinMetacentricHight,
                         metacentric_height.h_trans_fix,
@@ -94,9 +101,9 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
 }
 //
 //
-impl std::fmt::Debug for MetacentricHeightEval {
+impl std::fmt::Debug for MinMetacentricHeightEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MetacentricHeightEval")
+        f.debug_struct("MinMetacentricHeightEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

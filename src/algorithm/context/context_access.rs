@@ -336,15 +336,27 @@ impl ContextRead<DSOAngleMaxCtx> for Context {
     }
 }
 //
-impl ContextWrite<CriterionMetacentricHeightCtx> for Context {
-    fn write(mut self, value: CriterionMetacentricHeightCtx) -> CtxResult<Self, Error> {
-        self.criterion_metacentric_height = Some(value);
+impl ContextWrite<MinMetacentricHeightCtx> for Context {
+    fn write(mut self, value: MinMetacentricHeightCtx) -> CtxResult<Self, Error> {
+        self.min_metacentric_height = Some(value);
         CtxResult::Ok(self)
     }
 }
-impl ContextRead<CriterionMetacentricHeightCtx> for Context {
-    fn read(&self) -> CriterionMetacentricHeightCtx {
-        self.criterion_metacentric_height.clone().unwrap()
+impl ContextRead<MinMetacentricHeightCtx> for Context {
+    fn read(&self) -> MinMetacentricHeightCtx {
+        self.min_metacentric_height.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<AccelerationCtx> for Context {
+    fn write(mut self, value: AccelerationCtx) -> CtxResult<Self, Error> {
+        self.acceleration = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<AccelerationCtx> for Context {
+    fn read(&self) -> AccelerationCtx {
+        self.acceleration.clone().unwrap()
     }
 }
 //
