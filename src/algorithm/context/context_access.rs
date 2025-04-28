@@ -312,6 +312,18 @@ impl ContextRead<DSOTimberMaxCtx> for Context {
     }
 }
 //
+impl ContextWrite<DSOIcingMaxCtx> for Context {
+    fn write(mut self, value: DSOIcingMaxCtx) -> CtxResult<Self, Error> {
+        self.dso_icing_max = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOIcingMaxCtx> for Context {
+    fn read(&self) -> DSOIcingMaxCtx {
+        self.dso_icing_max.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
@@ -323,6 +335,9 @@ impl ContextRead<ZgCtx> for Context {
         self.zg.clone().unwrap()
     }
 }
+
+
+
 
 
 

@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for WindEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            CtxResult::Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let windage: WindageCtx = ctx.read(); 
                 let gravity_g = 9.81;
