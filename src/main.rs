@@ -15,8 +15,9 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{eval::Eval, run::Run, types::eval_result::EvalResult};
+use kernel::{eval::Eval, run::Run, sync::Link, types::eval_result::EvalResult};
 use prelude::*;
+use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::tread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 
@@ -88,8 +89,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
-    // Переехало в zg_eval, возможно еще вернется
-   /* let ctx_after = move |ctx: Context, z_g_fix: Option<f64>| {
+    let ctx_after = |
+        dbg: Dbg,
+        z_g_fix: Option<f64>,
+        link: Link,
+        ctx: Context,
+    | -> MetacentricHeightEval {
         MetacentricHeightEval::new(
             &dbg,
             z_g_fix,
@@ -111,7 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             &dbg,
                                             WindageEval::new(
                                                 &dbg,
-                                                LeverDiagramEval::new(&dbg, ship_model.link(), ctx),
+                                                LeverDiagramEval::new(&dbg, link, ctx),
                                             ),
                                         ),
                                     ),
@@ -121,15 +126,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
             ),
-        ).eval(())
-    };*/
+        )
+    };
     let _result = ZgEval::new(
-        thread_pool.scheduler(), 
-        &tmp_dbg, 
+        thread_pool.scheduler(),
+        &tmp_dbg,
         &ship_model,
-        ctx_before, 
- //       ctx_after
-    ).eval(());
+        ctx_before,
+        ctx_after,
+    )
+    .eval(());
     ship_model.exit();
     ship_model_handle.join().unwrap();
     Ok(())

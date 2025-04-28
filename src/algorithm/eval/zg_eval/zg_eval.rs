@@ -3,14 +3,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 use crate::{
-    CtxResult,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::*,
-    },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::{Context, ContextWrite, InitialCtx},
-    ship_model::ship_model::ShipModel,
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, ship_model::ship_model::ShipModel, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, scheduler::Scheduler};
@@ -27,6 +23,7 @@ pub struct ZgEval<'a> {
     scheduler: Scheduler,
     ship_model: &'a ShipModel,
     ctx_before: StabilityAreaEval,
+    ctx_after: fn(Dbg, Option<f64>, Link, Context) -> MetacentricHeightEval,
 }
 //
 //
@@ -37,6 +34,7 @@ impl<'a> ZgEval<'a> {
         parent: impl Into<String>,
         ship_model: &'a ShipModel,
         ctx_before: StabilityAreaEval,
+        ctx_after: fn(Dbg, Option<f64>, Link, Context) -> MetacentricHeightEval,
     ) -> Self {
         let dbg = Dbg::new(parent, "ZgEval");
         Self {
@@ -44,6 +42,7 @@ impl<'a> ZgEval<'a> {
             scheduler,
             ship_model,
             ctx_before,
+            ctx_after,
         }
     }
 }
@@ -64,47 +63,15 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 // базовый контекст
                 let base_ctx = Arc::new(Mutex::new(Option::<Context>::None));
                 let base_task = {
+                //    let temp_fn: fn(Dbg, Option<f64>, Link, Context) -> MetacentricHeightEval = create_after_ctx;
                     let dbg = self.dbg.clone();
                     let link = self.ship_model.link();
                     let ctx = ctx_before.clone();
                     let base_ctx = base_ctx.clone();
+                    let ctx_after = self.ctx_after.clone();
                     self.scheduler
                         .spawn(move || {
-                            let ctx = MetacentricHeightEval::new(
-                                &dbg,
-                                None,
-                                DSOMaxEval::new(
-                                    &dbg,
-                                    CriterionStabilityEval::new(
-                                        &dbg,
-                                        DSOAreaEval::new(
-                                            &dbg,
-                                            StaticAngleEval::new(
-                                                &dbg,
-                                                WheatherEval::new(
-                                                    &dbg,
-                                                    RollingAmplitudeEval::new(
-                                                        &dbg,
-                                                        RollingPeriodEval::new(
-                                                            &dbg,
-                                                            WindEval::new(
-                                                                &dbg,
-                                                                WindageEval::new(
-                                                                    &dbg,
-                                                                    LeverDiagramEval::new(
-                                                                        &dbg, link, ctx,
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            )
-                            .eval(())?;
+                            let ctx = (ctx_after)(dbg, None, link, ctx).eval(())?;
                             let mut base_ctx = base_ctx.lock().unwrap();
                             *base_ctx = Some(ctx);
                             Ok(())
@@ -123,44 +90,11 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                     let ctx = ctx_before.clone();
                     let criterion = Arc::new(Mutex::new(Option::<CriterionStabilityCtx>::None));
                     let moved_criterion = criterion.clone();
+                    let ctx_after = self.ctx_after.clone();
                     let task = self
                         .scheduler
                         .spawn(move || {
-                            let ctx = MetacentricHeightEval::new(
-                                &dbg,
-                                Some(z_g_fix),
-                                DSOMaxEval::new(
-                                    &dbg,
-                                    CriterionStabilityEval::new(
-                                        &dbg,
-                                        DSOAreaEval::new(
-                                            &dbg,
-                                            StaticAngleEval::new(
-                                                &dbg,
-                                                WheatherEval::new(
-                                                    &dbg,
-                                                    RollingAmplitudeEval::new(
-                                                        &dbg,
-                                                        RollingPeriodEval::new(
-                                                            &dbg,
-                                                            WindEval::new(
-                                                                &dbg,
-                                                                WindageEval::new(
-                                                                    &dbg,
-                                                                    LeverDiagramEval::new(
-                                                                        &dbg, link, ctx,
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            )
-                            .eval(())?;
+                            let ctx = (ctx_after)(dbg, Some(z_g_fix), link, ctx).eval(())?;
                             let mut criterion = moved_criterion.lock().unwrap();
                             *criterion = Some(ctx.read());
                             // criterion.clone().write(ctx.read());
@@ -239,3 +173,4 @@ impl<'a> std::fmt::Debug for ZgEval<'a> {
         f.debug_struct("ZgEval").field("dbg", &self.dbg).finish()
     }
 }
+
