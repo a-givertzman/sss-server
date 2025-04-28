@@ -300,6 +300,18 @@ impl ContextRead<DSOMaxCtx> for Context {
     }
 }
 //
+impl ContextWrite<DSOTimberMaxCtx> for Context {
+    fn write(mut self, value: DSOTimberMaxCtx) -> CtxResult<Self, Error> {
+        self.dso_timber_max = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DSOTimberMaxCtx> for Context {
+    fn read(&self) -> DSOTimberMaxCtx {
+        self.dso_timber_max.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
