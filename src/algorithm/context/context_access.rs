@@ -360,6 +360,18 @@ impl ContextRead<AccelerationCtx> for Context {
     }
 }
 //
+impl ContextWrite<CirculationCtx> for Context {
+    fn write(mut self, value: CirculationCtx) -> CtxResult<Self, Error> {
+        self.circulation = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<CirculationCtx> for Context {
+    fn read(&self) -> CirculationCtx {
+        self.circulation.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
