@@ -37,10 +37,7 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let loads: LoadsCtx = ctx.read();
-                let ship = initial
-                    .ship
-                    .as_ref()
-                    .expect("MinMetacentricHeightEval eval error: no ship!");
+                let ship_type = initial.ship_type();
                 let have_grain = !loads.bulk.is_empty();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
@@ -60,7 +57,7 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                     }
                 };
                 let have_timber = unit.iter().any(|v| v.cargo_type == UnitCargoType::Timber);
-                let ship_type = match ShipType::from_str(&ship.ship_type) {
+                let ship_type = match ship_type {
                     Ok(ship_type) => ship_type,
                     Err(err) => {
                         let error = error.pass_with("ShipType::from_str", err);

@@ -1,5 +1,6 @@
 use super::initial_ctx::InitialCtx;
-use crate::algorithm::entities::data::{loads::*, CoefficientKArray, CoefficientKThetaArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array};
+use crate::algorithm::entities::data::ship_type::ShipType;
+use crate::algorithm::entities::data::{loads::*, CoefficientKArray, CoefficientKThetaArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::algorithm::entities::Bounds;
@@ -370,6 +371,14 @@ impl Eval<(), EvalResult> for Initial {
                 return CtxResult::Err(error.pass_with("Error coefficient_k_theta", err))
             }
         };
+
+
+        let navigation_area = NavigationArea::from_str(&ship.navigation_area)
+            .map_err(|e| error.pass_with("navigation_area", e))?;
+        let ship_type = ShipType::from_str(&ship.ship_type)
+            .map_err(|e| error.pass_with("ship_type", e))?;
+
+
         initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_parameters = Some(ship_parameters.data());

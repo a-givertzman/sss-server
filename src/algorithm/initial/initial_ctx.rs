@@ -1,6 +1,10 @@
 use std::collections::HashMap;
+use sal_core::error::Error;
+
+use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
+use crate::kernel::types::eval_result::EvalResult;
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
@@ -48,6 +52,26 @@ impl InitialCtx {
             project_id: project_id.to_owned(),
             ..Default::default()
         }
+    }
+    ///
+    pub fn ship(&self) -> Result<Ship, Error> {
+        let error = Error::new("InitialCtx", "ship");
+        self
+            .ship
+            .as_ref()
+            .ok_or(error.err("No ship")).cloned()
+    }
+    ///
+    pub fn ship_type(&self) -> Result<ShipType, Error> {
+        let error = Error::new("InitialCtx", "ship_type");
+        ShipType::from_str(&self.ship()?.ship_type)
+            .map_err(|e| error.pass_with("ship_type", e))
+    }
+    ///
+    pub fn navigation_area(&self) -> Result<NavigationArea, Error> {
+        let error = Error::new("InitialCtx", "navigation_area");
+        NavigationArea::from_str(&self.ship()?.navigation_area)
+            .map_err(|e| error.pass_with("navigation_area", e))
     }
 }
 // //
