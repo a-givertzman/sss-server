@@ -64,6 +64,8 @@ pub struct Context {
     pub(super) min_metacentric_height: Option<MinMetacentricHeightCtx>,
     /// Критерий ускорения 𝐾∗
     pub(super) acceleration: Option<AccelerationCtx>,
+    /// Критерий крена на циркуляции
+    pub(super) circulation: Option<CirculationCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///
