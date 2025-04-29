@@ -17,6 +17,7 @@ pub mod dso_angle_max_eval;
 pub mod min_metacentric_height_eval;
 pub mod acceleration_eval;
 pub mod circulation_eval;
+pub mod grain_eval;
 
 pub use wheather_eval::wheather_eval::WheatherEval;
 pub use wheather_eval::wheather_ctx::WheatherCtx;
@@ -48,6 +49,8 @@ pub use acceleration_eval::acceleration_ctx::AccelerationCtx;
 pub use circulation_eval::circulation_eval::CirculationEval;
 pub use circulation_eval::circulation_ctx::CirculationCtx;
 
+pub use grain_eval::grain_eval::GrainEval;
+pub use grain_eval::grain_ctx::GrainCtx;
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]
 pub enum CriterionID {

@@ -1,0 +1,160 @@
+use super::grain_ctx::GrainCtx;
+use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
+use crate::algorithm::entities::{Curve, ICurve};
+use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, LoadsCtx};
+use crate::{
+    BalanceCtx, ContextWrite, CtxResult, MetacentricHeightCtx, RollingAmplitudeCtx,
+    RollingPeriodCtx,
+    algorithm::context::context_access::{ContextRead, ContextReadRef},
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::InitialCtx,
+};
+use sal_core::{dbg::Dbg, error::Error};
+///
+/// Расчет критерия при перевозки навалочных смещаемых грузов
+pub struct GrainEval {
+    dbg: Dbg,
+    value: Option<GrainCtx>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
+}
+//
+//
+impl GrainEval {
+    ///
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+        let dbg = Dbg::new(parent, "GrainEval");
+        Self {
+            dbg,
+            value: None,
+            ctx: Box::new(ctx),
+        }
+    }
+}
+//
+//
+impl Eval<(), EvalResult> for GrainEval {
+    fn eval(&mut self, _: ()) -> EvalResult {
+        let error = Error::new(&self.dbg, "eval");
+        match self.ctx.eval(()) {
+            CtxResult::Ok(ctx) => {
+                let initial: &InitialCtx = ctx.read_ref();
+                let ship_parameters = initial
+                    .ship_parameters
+                    .as_ref()
+                    .ok_or(error.err("ship_parameters error: no data!"))?;
+                let lever_diagram: LeverDiagramCtx = ctx.read();
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                // Эксплуатационная скорость судна, m/s
+                let v_0 = voyage.operational_speed;
+                let b = *ship_parameters
+                    .get("MouldedBreadth")
+                    .ok_or(error.err("breadth error: no data!"))?;
+                let balance: BalanceCtx = ctx.read();
+                let d = balance.mean_draught;
+                let l_wl = balance.length_wl;
+                let moment_shift_z = ctx.read_params(ParameterID::CenterMassZ);
+                let balance: BalanceCtx = ctx.read();
+                let flooding_angle = balance.flooding_angle;
+                // суммарная масса судна
+                let mass = ctx.read_params(ParameterID::Displacement);
+                // Плечо кренящего момента на циркуляции при скорости v, m/s
+                let heel_lever = |v: f64| -> f64 {
+                    // Кренящий момент на циркуляции
+                    let m_r = 0.2 * (v * v * mass / l_wl) * (moment_shift_z - d / 2.).abs();
+                    // Плечо кренящего момента на циркуляции
+                    let l_r = m_r / mass;
+                    log::trace!("Grain angle v:{v} m_r:{m_r} l_r:{l_r}");
+                    l_r
+                };
+                /// Максимальная скорость при заданном угле крена
+                let calculate_velocity = |target_angle: f64| -> Result<f64, Error> {
+                    let mut current_vel = 10.; // m/s
+                    let mut delta_vel = current_vel / 2.;
+                    for _i in 0..20 {
+                        let delta_angle = target_angle
+                            - lever_diagram
+                                .angle(heel_lever(current_vel))
+                                .map_err(|err| error.pass_with("delta_angle", err))?
+                                .first()
+                                .copied()
+                                .unwrap_or(90.);
+                        if delta_angle.abs() < 0.001 {
+                            break;
+                        }
+                        log::trace!(
+                            "Grain velocity src_angle:{target_angle} current_vel:{current_vel} delta_vel:{delta_vel} delta_angle:{delta_angle}"
+                        );
+                        current_vel = delta_vel * delta_angle.signum();
+                        delta_vel /= 2.;
+                    }
+                    Ok(current_vel)
+                };
+                // Угла крена на циркуляции при скорости v_0, m/s
+                let angle = match lever_diagram.angle(heel_lever(v_0)) {
+                    Ok(angles) => angles.first().copied(),
+                    Err(err) => {
+                        let error = error.pass_with("angles", err);
+                        log::error!("{error}");
+                        let result = GrainCtx {
+                            data: CriterionData::new_error(
+                                CriterionID::HeelTurning,
+                                "Ошибка вычисления крена на циркуляции: ".to_owned()
+                                    + &error.to_string(),
+                            ),
+                        };
+                        self.value = Some(result.clone());
+                        return ctx.write(result);
+                    }
+                };
+                let target = 16.0f64.min(flooding_angle / 2.);
+                let result = if let Some(angle) = angle {
+                    CriterionData::new_result(CriterionID::HeelTurning, angle, target)
+                } else {
+                    match calculate_velocity(target) {
+                        Ok(velocity) => CriterionData::new_error(
+                            CriterionID::HeelTurning,
+                            format!(
+                                "Крен {target} градусов, рекомендуемая скорость {} m/s');",
+                                velocity,
+                            ),
+                        ),
+                        Err(err) => {
+                            let error = error.pass_with("calculate_velocity", err);
+                            log::error!("{error}");
+                            CriterionData::new_error(
+                                CriterionID::HeelTurning,
+                                "Ошибка вычисления рекомендуемой скорости: ".to_owned()
+                                    + &error.to_string(),
+                            )
+                        }
+                    }
+                };
+                let result = GrainCtx {
+                    data: result,
+                };
+                self.value = Some(result.clone());
+                ctx.write(result)
+                // TODO: В случаях, когда палубный груз контейнеров размещается только на крышках грузовых
+                // люков, вместо угла входа кромки верхней палубы может приниматься меньший из углов
+                // входа в воду верхней кромки комингса люка или входа контейнера в воду (в случае, когда
+                // контейнеры выходят за пределы этого комингса).
+            }
+            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
+            CtxResult::None => CtxResult::None,
+        }
+    }
+}
+//
+//
+impl std::fmt::Debug for GrainEval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GrainEval")
+            .field("dbg", &self.dbg)
+            .field("value", &self.value)
+            .finish()
+    }
+}

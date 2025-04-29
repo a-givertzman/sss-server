@@ -372,6 +372,18 @@ impl ContextRead<CirculationCtx> for Context {
     }
 }
 //
+impl ContextWrite<GrainCtx> for Context {
+    fn write(mut self, value: GrainCtx) -> CtxResult<Self, Error> {
+        self.grain = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<GrainCtx> for Context {
+    fn read(&self) -> GrainCtx {
+        self.grain.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);

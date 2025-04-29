@@ -66,6 +66,8 @@ pub struct Context {
     pub(super) acceleration: Option<AccelerationCtx>,
     /// Критерий крена на циркуляции
     pub(super) circulation: Option<CirculationCtx>,
+    /// Критерий при перевозки навалочных смещаемых грузов
+    pub(super) grain: Option<GrainCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///
