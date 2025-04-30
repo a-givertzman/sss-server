@@ -46,7 +46,7 @@ impl Eval<(), EvalResult> for StaticAngleEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let ship_type = initial.ship_type();
+                let ship_type = initial.ship_type.unwrap();
                 let have_container = initial.unit.as_ref()
                     .ok_or(error.err("initial.unit no data"))?
                     .into_iter()
@@ -74,21 +74,6 @@ impl Eval<(), EvalResult> for StaticAngleEval {
                     }
                 };
                 let angle = angles.first();
-                let ship_type = match ship_type {
-                    Ok(ship_type) => ship_type,
-                    Err(err) => {
-                        let error = error.pass_with("ship_type", err);
-                        log::error!("{}", error);      
-                        let result = StaticAngleCtx { 
-                            data: CriterionData::new_error(
-                                CriterionID::WindStaticHeel,
-                                "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
-                            )
-                        };
-                        self.value = Some(result.clone());
-                        return ctx.write(result);
-                    },
-                }; 
                 let target_value = if ship_type == ShipType::TimberCarrier {
                     16.
                 } else if have_container {

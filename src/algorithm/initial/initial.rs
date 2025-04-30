@@ -1,17 +1,20 @@
 use super::initial_ctx::InitialCtx;
-use crate::algorithm::entities::data::ship_type::ShipType;
-use crate::algorithm::entities::data::{loads::*, CoefficientKArray, CoefficientKThetaArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea};
-use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::algorithm::entities::Bounds;
+use crate::algorithm::entities::data::serde_parser::IFromJson;
+use crate::algorithm::entities::data::ship_type::ShipType;
+use crate::algorithm::entities::data::{
+    CoefficientKArray, CoefficientKThetaArray, LoadLineDataArray, MultiplerSArray,
+    MultiplerX1Array, MultiplerX2Array, NavigationArea, loads::*,
+};
+use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::sync::Link;
 use crate::ship_model::query;
 use crate::{
     algorithm::context::{
-            context::Context,
-            context_access::{ContextReadRef, ContextWrite},
-            ctx_result::CtxResult,
-        },
+        context::Context,
+        context_access::{ContextReadRef, ContextWrite},
+        ctx_result::CtxResult,
+    },
     infrostructure::api::client::api_client::ApiClient,
     kernel::{eval::Eval, types::eval_result::EvalResult},
 };
@@ -34,7 +37,7 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Link, 
+        model: Link,
         api_client: ApiClient,
         ctx: Context,
     ) -> Self {
@@ -58,7 +61,7 @@ impl Eval<(), EvalResult> for Initial {
             Ok(bounds) => bounds,
             Err(err) => return CtxResult::Err(error.pass_with("model.bounds error", err)),
         };
-        
+
         /*
                     let bounds = self.api_client.fetch(&format!(
                         "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={};",
@@ -76,311 +79,237 @@ impl Eval<(), EvalResult> for Initial {
                         Err(err) => CtxResult::Err(error.pass_with("Error bounds", err)),
                     }
         */
-        let data = self.api_client.fetch(&format!(
-            "SELECT   
-                name, \
-                ship_type, \
-                navigation_area, \
-                p_v, \
-                m, \
-                freeboard_type      
-            FROM             
-                ship_view     
-            WHERE  
-                id = {};",
-            initial_ctx.ship_id
-        ));
-        let ship = match data {
-            Ok(data) => match ShipArray::parse(&data) {
-                Ok(data) => match data.data.first() {
-                    Some(data) => data.to_owned(),
-                    None => {
-                        return CtxResult::Err(error.err("Error ship: no data"))
-                    }
-                },
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error ship", err))
-                }
-            }
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error ship", err))
-            }
+        let ship = ShipArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT   
+                    name, \
+                    ship_type, \
+                    navigation_area, \
+                    p_v, \
+                    m, \
+                    freeboard_type      
+                FROM             
+                    ship_view     
+                WHERE  
+                    id = {};",
+                    initial_ctx.ship_id
+                ))
+                .map_err(|err| error.pass_with("ship fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("ship parse", err))?;
+        let ship = match ship.data.first() {
+            Some(data) => data.to_owned(),
+            None => return CtxResult::Err(error.err("Error ship: no first in data")),
         };
-        let data = self.api_client.fetch(&format!(
-            "SELECT             
-                density, \
-                operational_speed, \
-                icing_type::TEXT, \
-                icing_timber_type::TEXT
-            FROM             
-                voyage_view            
-            WHERE  
-                ship_id = {} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
-        ));
-        let voyage = match data {
-            Ok(data) => match VoyageArray::parse(&data) {
-                Ok(data) => match data.data.first() {
-                    Some(data) => data.to_owned(),
-                    None => {
-                        return CtxResult::Err(error.err("Error voyage: no data"))
-                    }
-                },
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error voyage", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error voyage", err))
-            }
+        let voyage = VoyageArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT             
+                    density, \
+                    operational_speed, \
+                    icing_type::TEXT, \
+                    icing_timber_type::TEXT
+                FROM             
+                    voyage_view            
+                WHERE  
+                    ship_id = {} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("voyage fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("voyage parse", err))?;
+        let voyage = match voyage.data.first() {
+            Some(data) => data.to_owned(),
+            None => return CtxResult::Err(error.err("Error voyage: no first in data")),
         };
-        let data = self.api_client.fetch(&format!(
-            "SELECT key, value FROM \"ship/ship_general_characteristics\" WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.ship_id
-        ));
-        let ship_parameters = match data {
-            Ok(data) => match ShipParametersArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error ship_parameters", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error ship_parameters", err))
-            }
-        };
-        let data = self
-            .api_client
-            .fetch(&format!("SELECT key, value FROM icing;",));
-        let icing = match data {
-            Ok(data) => match IcingArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error icing", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error icing", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!(
-            "SELECT 
-                mass, \
-                bound_x1, \
-                bound_x2
-            FROM 
-                \"ship/ship_structures/load_constant\"
-            WHERE 
-                ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
-        ));
-        let load_constant = match data {
-            Ok(data) => match LoadConstantArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error load_constant", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error load_constant", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!(
-            "SELECT 
-                space_id, \
-                space_name, \
-                cargo_id, \
-                cargo_name, \
-                assigned_id, \
-                assigment_context as assigment_type, \
-                cargo_type, \
-                stowage_factor, \
-                weight AS mass
-            FROM 
-                bulk_cargo_view
-            WHERE 
-                language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
-        ));
-        let bulk = match data {
-            Ok(data) => match LoadBulkArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error bulk", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error bulk", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!(
-            "SELECT 
-                space_id, \
-                space_name, \
-                cargo_id, \
-                cargo_name, \
-                assigned_id, \
-                assigment_context as assigment_type, \
-                cargo_type, \
-                density, \
-                weight AS mass
-            FROM 
-                liquid_cargo_view
-            WHERE 
-                language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
-        ));
-        let liquid = match data {
-            Ok(data) => match LoadLiquidArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error liquid", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error liquid", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!(
-            "SELECT 
-                space_id, \
-                space_name, \
-                cargo_id, \
-                cargo_name, \
-                assigned_id, \
-                assigment_context as assigment_type, \
-                cargo_type, \
-                density, \
-                weight AS mass, \
-                centre_of_compartment as mass_shift
-            FROM 
-                gaseous_cargo_view
-            WHERE 
-                language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
-        ));
-        let gaseous = match data {
-            Ok(data) => match LoadGaseousArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error gaseous", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error gaseous", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!(
-            "SELECT 
-                space_id, \
-                space_name, \
-                cargo_id, \
-                cargo_name, \
-                assigned_id, \
-                assigment_context as assigment_type, \
-                cargo_type, \
-                density, \
-                weight AS mass, \
-                centre_of_gravity AS mass_shift, \
-                permeability, \
-                stowage_factor, \
-                icing_area, \
-                centre_of_icing_area, \
-                windage_area, \
-                centre_of_windage_area, \
-                bound_x1, \
-                bound_x2, \
-                bound_y1, \
-                bound_y2, \
-                bound_z1, \
-                bound_z2
-            FROM 
-                unit_cargo_view
-            WHERE 
-                language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
-        ));
-        let unit = match data {
-            Ok(data) => match LoadUnitArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error unit", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error unit", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!("SELECT key, value FROM multipler_x1;"));
-        let multipler_x1 = match data {
-            Ok(data) => match MultiplerX1Array::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error multipler_x1", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error multipler_x1", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!("SELECT key, value FROM multipler_x2;"));
-        let multipler_x2 = match data {
-            Ok(data) => match MultiplerX2Array::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error multipler_x2", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error multipler_x2", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!("SELECT area, t, s FROM multipler_s;"));
-        let multipler_s = match data {
-            Ok(data) => match MultiplerSArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error multipler_s", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error multipler_s", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!("SELECT key, value FROM coefficient_k;"));
-        let coefficient_k = match data {
-            Ok(data) => match CoefficientKArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error coefficient_k", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error coefficient_k", err))
-            }
-        };
-        let data = self.api_client.fetch(&format!("SELECT key, value FROM coefficient_k_theta;"));
-        let coefficient_k_theta = match data {
-            Ok(data) => match CoefficientKThetaArray::parse(&data) {
-                Ok(data) => data,
-                Err(err) => {
-                    return CtxResult::Err(error.pass_with("Error coefficient_k_theta", err))
-                }
-            },
-            Err(err) => {
-                return CtxResult::Err(error.pass_with("Error coefficient_k_theta", err))
-            }
-        };
-
-
+        let ship_parameters = ShipParametersArray::parse(&self.api_client.fetch(&format!(
+                "SELECT key, value FROM \"ship/ship_general_characteristics\" WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                initial_ctx.ship_id, initial_ctx.ship_id
+            )).map_err(|err| error.pass_with("ship_parameters fetch", err))?
+        ).map_err(|err| error.pass_with("ship_parameters parse", err))?;
+        let icing = IcingArray::parse(
+            &self
+                .api_client
+                .fetch(&format!("SELECT key, value FROM icing;"))
+                .map_err(|err| error.pass_with("icing fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("icing parse", err))?;
+        let load_constant = LoadConstantArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT 
+                    mass, \
+                    bound_x1, \
+                    bound_x2
+                FROM 
+                    \"ship/ship_structures/load_constant\"
+                WHERE 
+                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("load_constant fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("load_constant parse", err))?;
+        let bulk = LoadBulkArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_context as assigment_type, \
+                    cargo_type, \
+                    stowage_factor, \
+                    weight AS mass
+                FROM 
+                    bulk_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("bulk fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("bulk parse", err))?;
+        let liquid = LoadLiquidArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_context as assigment_type, \
+                    cargo_type, \
+                    density, \
+                    weight AS mass
+                FROM 
+                    liquid_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("liquid fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("liquid parse", err))?;
+        let gaseous = LoadGaseousArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_context as assigment_type, \
+                    cargo_type, \
+                    density, \
+                    weight AS mass, \
+                    centre_of_compartment as mass_shift
+                FROM 
+                    gaseous_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("gaseous fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("gaseous parse", err))?;
+        let unit = LoadUnitArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT 
+                    space_id, \
+                    space_name, \
+                    cargo_id, \
+                    cargo_name, \
+                    assigned_id, \
+                    assigment_context as assigment_type, \
+                    cargo_type, \
+                    density, \
+                    weight AS mass, \
+                    centre_of_gravity AS mass_shift, \
+                    permeability, \
+                    stowage_factor, \
+                    icing_area, \
+                    centre_of_icing_area, \
+                    windage_area, \
+                    centre_of_windage_area, \
+                    bound_x1, \
+                    bound_x2, \
+                    bound_y1, \
+                    bound_y2, \
+                    bound_z1, \
+                    bound_z2
+                FROM 
+                    unit_cargo_view
+                WHERE 
+                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("unit fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("unit parse", err))?;
+        let multipler_x1 = MultiplerX1Array::parse(
+            &self
+                .api_client
+                .fetch(&format!("SELECT key, value FROM multipler_x1;"))
+                .map_err(|err| error.pass_with("multipler_x1 fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("multipler_x1 parse", err))?;
+        let multipler_x2 = MultiplerX2Array::parse(
+            &self
+                .api_client
+                .fetch(&format!("SELECT key, value FROM multipler_x2;"))
+                .map_err(|err| error.pass_with("multipler_x2 fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("multipler_x2 parse", err))?;
+        let multipler_s = MultiplerSArray::parse(
+            &self
+                .api_client
+                .fetch(&format!("SELECT area, t, s FROM multipler_s;"))
+                .map_err(|err| error.pass_with("multipler_s fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("multipler_s parse", err))?;
+        let coefficient_k = CoefficientKArray::parse(
+            &self
+                .api_client
+                .fetch(&format!("SELECT key, value FROM coefficient_k;"))
+                .map_err(|err| error.pass_with("coefficient_k fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("coefficient_k parse", err))?;
+        let coefficient_k_theta = CoefficientKThetaArray::parse(
+            &self
+                .api_client
+                .fetch(&format!("SELECT key, value FROM coefficient_k_theta;"))
+                .map_err(|err| error.pass_with("coefficient_k_theta fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("coefficient_k_theta parse", err))?;
         let navigation_area = NavigationArea::from_str(&ship.navigation_area)
             .map_err(|e| error.pass_with("navigation_area", e))?;
-        let ship_type = ShipType::from_str(&ship.ship_type)
-            .map_err(|e| error.pass_with("ship_type", e))?;
+        let ship_type =
+            ShipType::from_str(&ship.ship_type).map_err(|e| error.pass_with("ship_type", e))?;
 
+        let load_line = LoadLineDataArray::parse(&self.api_client.fetch(&format!(
+            "SELECT criterion_id, name, x, y, z FROM load_line_view WHERE ship_id={} AND project_id={};",
+            initial_ctx.ship_id, initial_ctx.project_id
+        )).map_err(|err| error.pass_with("load_line fetch", err))?
+        ).map_err(|err| error.pass_with("load_line parse", err))?;
 
         initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
+        initial_ctx.ship_type = Some(ship_type);
+        initial_ctx.navigation_area = Some(navigation_area);
         initial_ctx.ship_parameters = Some(ship_parameters.data());
         initial_ctx.voyage = Some(voyage);
         initial_ctx.icing = Some(icing);
@@ -394,6 +323,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.multipler_s = Some(multipler_s);
         initial_ctx.coefficient_k = Some(coefficient_k.data());
         initial_ctx.coefficient_k_theta = Some(coefficient_k_theta);
+        initial_ctx.load_line = Some(load_line);
         self.ctx.clone().write(initial_ctx.to_owned())
     }
 }

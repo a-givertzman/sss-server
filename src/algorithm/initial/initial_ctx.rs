@@ -17,10 +17,14 @@ pub struct InitialCtx {
     pub bounds: Option<Bounds>,
     /// Текстовые данные по судну
     pub ship: Option<Ship>,
+    /// Тип судна
+    pub ship_type: Option<ShipType>,
     /// Численные данные по судну
     pub ship_parameters: Option<HashMap<String, f64>>,
     /// Данные по обстановке
     pub voyage: Option<Voyage>,
+    /// Район плавания судна
+    pub navigation_area: Option<NavigationArea>,
     /// Данные по обледенению
     pub icing: Option<IcingArray>,
     /// Постоянная нагрузка на судно
@@ -41,6 +45,8 @@ pub struct InitialCtx {
     pub coefficient_k: Option<Vec<(f64, f64)>>,
     /// Коэффициент k_theta учитывающий особенности качки судов смешанного типа
     pub coefficient_k_theta: Option<CoefficientKThetaArray>,
+    /// Координаты осадок судна относительно центра
+    pub load_line: Option<LoadLineDataArray>,
 }
 impl InitialCtx {
     ///
@@ -52,26 +58,6 @@ impl InitialCtx {
             project_id: project_id.to_owned(),
             ..Default::default()
         }
-    }
-    ///
-    pub fn ship(&self) -> Result<Ship, Error> {
-        let error = Error::new("InitialCtx", "ship");
-        self
-            .ship
-            .as_ref()
-            .ok_or(error.err("No ship")).cloned()
-    }
-    ///
-    pub fn ship_type(&self) -> Result<ShipType, Error> {
-        let error = Error::new("InitialCtx", "ship_type");
-        ShipType::from_str(&self.ship()?.ship_type)
-            .map_err(|e| error.pass_with("ship_type", e))
-    }
-    ///
-    pub fn navigation_area(&self) -> Result<NavigationArea, Error> {
-        let error = Error::new("InitialCtx", "navigation_area");
-        NavigationArea::from_str(&self.ship()?.navigation_area)
-            .map_err(|e| error.pass_with("navigation_area", e))
     }
 }
 // //
