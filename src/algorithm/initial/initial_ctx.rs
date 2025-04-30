@@ -49,6 +49,8 @@ pub struct InitialCtx {
     pub load_line: Option<Vec<LoadLineParsedData>>,
     /// Высота борта на носовом перпендикуляре
     pub bow_board: Option<Vec<BowBoardParsedData>>,
+    /// Координаты винтов судна относительно центра
+    pub screw: Option<Vec<ScrewParsedData>>,
 }
 impl InitialCtx {
     ///

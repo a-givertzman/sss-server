@@ -21,6 +21,7 @@ pub mod grain_eval;
 pub mod load_line_eval;
 //pub mod trim_eval;
 pub mod bow_board_eval;
+pub mod screw_eval;
 
 pub use wheather_eval::wheather_eval::WheatherEval;
 pub use wheather_eval::wheather_ctx::WheatherCtx;
@@ -63,6 +64,10 @@ pub use load_line_eval::load_line_ctx::LoadLineCtx;
 
 pub use bow_board_eval::bow_board_eval::BowBoardEval;
 pub use bow_board_eval::bow_board_ctx::BowBoardCtx;
+
+pub use screw_eval::screw_eval::ScrewEval;
+pub use screw_eval::screw_ctx::ScrewCtx;
+
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]
 pub enum CriterionID {

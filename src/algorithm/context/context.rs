@@ -72,6 +72,8 @@ pub struct Context {
     pub(super) load_line: Option<LoadLineCtx>,
     /// Критерий высоты на носовом перпендикуляре
     pub(super) bow_board: Option<BowBoardCtx>,
+    /// Расчет критерия заглубления винта
+    pub(super) screw: Option<ScrewCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

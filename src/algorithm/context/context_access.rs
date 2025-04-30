@@ -408,6 +408,18 @@ impl ContextRead<BowBoardCtx> for Context {
     }
 }
 //
+impl ContextWrite<BowBoScrewCtxardCtx> for Context {
+    fn write(mut self, value: ScrewCtx) -> CtxResult<Self, Error> {
+        self.screw = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<ScrewCtx> for Context {
+    fn read(&self) -> ScrewCtx {
+        self.screw.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
