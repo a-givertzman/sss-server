@@ -60,7 +60,7 @@ impl Eval<(), EvalResult> for BowBoardEval {
                     * pos_x
                 };  
                 for v in data {
-                    let delta_h = (v.pos.z() - v.pos.y() * roll.sin() - draught_value(v.pos.x())?)*trim.cos();
+                    let delta_h = (v.pos.z() - v.pos.y() * roll.sin() - draught_value(v.pos.x()))*trim.cos();
                     result.push(if v.pos.y() <= 0. {
                         CriterionData::new_result(
                             CriterionID::DepthAtForwardPerpendicularPS,
