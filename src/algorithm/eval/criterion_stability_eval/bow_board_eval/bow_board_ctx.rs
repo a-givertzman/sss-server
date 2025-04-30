@@ -3,5 +3,5 @@ use crate::algorithm::eval::CriterionData;
 
 #[derive(Debug, Clone)]
 pub struct BowBoardCtx {
-    pub data: CriterionData
+    pub data: Vec<CriterionData>
 }

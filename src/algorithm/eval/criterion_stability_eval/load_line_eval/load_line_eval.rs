@@ -37,11 +37,11 @@ impl Eval<(), EvalResult> for LoadLineEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let data = initial.load_line.as_ref().unwrap().load_line_data();
+                let data = initial.load_line.as_ref().unwrap();
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
-                    .expect("DSOMaxEval eval error: no ship_parameters");
+                    .unwrap();
                 let ship_length = *ship_parameters
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
