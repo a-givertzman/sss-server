@@ -68,6 +68,8 @@ pub struct Context {
     pub(super) circulation: Option<CirculationCtx>,
     /// Критерий при перевозки навалочных смещаемых грузов
     pub(super) grain: Option<GrainCtx>,
+    /// Критерий осадки по грузовой марке
+    pub(super) load_line: Option<LoadLineCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

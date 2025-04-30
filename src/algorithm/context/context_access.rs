@@ -384,6 +384,18 @@ impl ContextRead<GrainCtx> for Context {
     }
 }
 //
+impl ContextWrite<LoadLineCtx> for Context {
+    fn write(mut self, value: LoadLineCtx) -> CtxResult<Self, Error> {
+        self.load_line = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<LoadLineCtx> for Context {
+    fn read(&self) -> LoadLineCtx {
+        self.load_line.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
