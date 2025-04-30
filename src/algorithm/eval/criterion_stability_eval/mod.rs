@@ -20,6 +20,7 @@ pub mod circulation_eval;
 pub mod grain_eval;
 pub mod load_line_eval;
 //pub mod trim_eval;
+pub mod bow_board_eval;
 
 pub use wheather_eval::wheather_eval::WheatherEval;
 pub use wheather_eval::wheather_ctx::WheatherCtx;
@@ -51,11 +52,17 @@ pub use acceleration_eval::acceleration_ctx::AccelerationCtx;
 pub use circulation_eval::circulation_eval::CirculationEval;
 pub use circulation_eval::circulation_ctx::CirculationCtx;
 
+pub use grain_eval::grain_eval::GrainEval;
+pub use grain_eval::grain_ctx::GrainCtx;
+
 pub use load_line_eval::load_line_eval::LoadLineEval;
 pub use load_line_eval::load_line_ctx::LoadLineCtx;
 
 //pub use trim_eval::trim_eval::TrimEval;
 //pub use trim_eval::trim_ctx::TrimCtx;
+
+pub use bow_board_eval::bow_board_eval::BowBoardEval;
+pub use bow_board_eval::bow_board_ctx::BowBoardCtx;
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]
 pub enum CriterionID {
