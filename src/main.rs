@@ -131,12 +131,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         )
     };
-    let _result = ZgEval::new(
-        thread_pool.scheduler(),
+    let _result = 
+    DraftMarkEval::new(
         &tmp_dbg,
-        &ship_model,
-        ctx_before,
-        ctx_after,
+        ZgEval::new(
+            thread_pool.scheduler(),
+            &tmp_dbg,
+            &ship_model,
+            ctx_before,
+            ctx_after,
+        ),
     )
     .eval(());
     ship_model.exit();
