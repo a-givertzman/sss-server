@@ -51,6 +51,8 @@ pub struct InitialCtx {
     /// Координаты отметок заглубления на корпусе судна
     /// относительно центра
     pub draft_mark: Option<Vec<DraftMarkParsedData>>,
+    /// Минимальная допустимая метацентрическая высота деления на отсеки
+    pub h_subdivision: Option<Vec<(f64, f64)>>,
 }
 impl InitialCtx {
     ///
