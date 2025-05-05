@@ -1,10 +1,10 @@
 use super::lever_diagram_ctx::LeverDiagramCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        entities::{data::loads::UnitCargoType, math::curve::*, Bound, Moment, Position},
-        eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, IcingTimberCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextReadRef},
+        entities::math::curve::*,
+        eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, parameters::ParameterID},
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{Context, InitialCtx}, ship_model::query::Query, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -12,7 +12,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct LeverDiagramEval {
     dbg: Dbg,
-    model: ModelLink,
+    model: Link,
     value: Option<LeverDiagramCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
@@ -22,7 +22,7 @@ impl LeverDiagramEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: ModelLink,
+        model: Link,
         ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
@@ -30,7 +30,7 @@ impl LeverDiagramEval {
             dbg,
             model,
             value: None,
-            ctx: Box::new(ctx),
+            ctx: Box::new(ctx), 
         }
     }
 }
@@ -41,20 +41,20 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
-                let initial: &InitialCtx = ctx.read_ref();
-                let parameters: Parameters = ctx.read();                 
-                let pantocaren = self.model.call(pantocaren()
-                    .map_err(|e| error.pass_with("pantocaren", e))?;
-                let z_g_fix = parameters.get(ParameterID::CenterMassZFix).ok_or(CtxResult::Err(error.err("calculate z_g_fix error: no CenterMassZFix in parameters")))?;
-                let y_g = parameters.get(ParameterID::CenterMassY).ok_or(CtxResult::Err(error.err("calculate y_g error: no CenterMassY in parameters")))?;
-                let y_c = parameters.get(ParameterID::CenterVolumeY).ok_or(CtxResult::Err(error.err("calculate y_c error: no CenterVolumeY in parameters")))?;
+        //        let ctx = self.ctx.take().unwrap();
+                // Расчет пантокарен в модели
+                let pantocaren: Vec<(f64, f64)> = self.model.call(Query::ComputePantocaren)
+                    .map_err(|err| error.pass_with("pantocaren model.call", err))?;  
+                let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
+                let y_g = ctx.read_params(ParameterID::CenterMassY);
+                let y_c = ctx.read_params(ParameterID::CenterVolumeY);
                 let delta_y = y_g - y_c;
                 log::info!(
                     "LeverDiagram calculate z_g_fix:{z_g_fix} y_g:{y_g} y_c:{y_c} delta_y:{delta_y}"
                 );
                 let max = (MAX_LEVER_ANGLE_CALC * 10.) as i32;
                 let min = -max;
-                let roll = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>();
+                let roll = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>() TODO: пантокарен
                 let mut dso = pantocaren
                     .into_iter()
                     .filter_map(|(angle_deg, lever)| {
@@ -73,7 +73,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 let lever_zero = dso
                     .iter()
                     .find(|(a, _)| *a == 0.)
-                    .ok_or(CtxResult::Err(error.err("calculate lever_zero error!")))?.1;
+                    .ok_or(error.err("calculate lever_zero error!"))?.1;
                 // знак статического угла крена
                 let mut angle_zero_signum = 1.; // если крен на левый борт то переворачиваем диаграмму
                 if lever_zero > 0. {
@@ -90,20 +90,20 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                     v2.partial_cmp(v1)
                         .expect("LeverDiagram calculate error: sort dso!")
                 });
-                let dso_curve = Curve::new_linear(&dso).map_err(|e| CtxResult::Err(error.pass_with("calculate curve", e)))?;
+                let dso_curve = Curve::new_linear(&dso).map_err(|e| error.pass_with("calculate curve", e))?;
                 let mut angle = tmp_dso
                     .first()
                     .expect("LeverDiagram calculate error, no dso values!")
                     .0;
                 let mut theta_max = angle;
-                let mut value = dso_curve.value(angle).map_err(|e| CtxResult::Err(error.pass_with("calculate value", e)))?;
+                let mut value = dso_curve.value(angle).map_err(|e| error.pass_with("calculate value", e))?;
                 let mut max_value = value;
                 let mut delta_angle = 1.;
                 for _i in 0..10 {
                     let delta_angle_l = angle - delta_angle;
-                    let value_l = dso_curve.value(delta_angle_l).map_err(|e| CtxResult::Err(error.pass_with("calculate value_l", e)))?;
+                    let value_l = dso_curve.value(delta_angle_l).map_err(|e| error.pass_with("calculate value_l", e))?;
                     let delta_angle_r = angle + delta_angle;
-                    let value_r = dso_curve.value(delta_angle_r).map_err(|e| CtxResult::Err(error.pass_with("calculate value_r", e)))?;
+                    let value_r = dso_curve.value(delta_angle_r).map_err(|e| error.pass_with("calculate value_r", e))?;
                     if value_l >= value_r {
                         value = value_l;
                         angle -= delta_angle;
@@ -126,7 +126,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 );
                 // нахождение углов максимумов и угла пересечения с 0
                 let mut max_angles: Vec<(f64, f64)> = Vec::new();
-                let mut last_value = dso_curve.value(0.).map_err(|e| CtxResult::Err(error.pass_with("calculate last_value", e)))?;
+                let mut last_value = dso_curve.value(0.).map_err(|e| error.pass_with("calculate last_value", e))?;
                 let mut last_value2 = last_value + 1.;
                 let mut last_angle = 0.;
                 for &(angle_deg, value) in dso.iter().filter(|(a, _)| *a >= 0.) {
@@ -142,25 +142,26 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 if max_angles.is_empty() {
                     max_angles.push((
                         theta_max,
-                        dso_curve.value(theta_max).map_err(|e| CtxResult::Err(error.pass_with("calculate max_angles", e)))?
+                        dso_curve.value(theta_max).map_err(|e| error.pass_with("calculate max_angles", e))?
                     ));
                 }
                 //
                 let angle_zero = crate::algorithm::eval::lever_diagram_eval::lever_diagram_ctx::angle(theta_max, &dso_curve,  0.);
-                let angle_zero = angle_zero.map_err(|e| CtxResult::Err(error.pass_with("calculate angle_zero", e)))?;
-         
-
+                let angle_zero = *angle_zero
+                    .map_err(|e| error.pass_with("calculate angle_zero", e))?
+                    .first()
+                    .ok_or(error.err("calculate angle_zero no angles"))?;         
                 let mut ddo = Vec::new();
                 for &(angle_deg, _) in dso.iter().filter(|(a, _)| a.fract().abs() < 0.001) {
                     let value = if angle_deg < angle_zero {
                         dso_curve
                             .integral(angle_deg, angle_zero)
-                            .map_err(|e| CtxResult::Err(error.pass_with("calculate ddo", e)))?
+                            .map_err(|e| error.pass_with("calculate ddo", e))?
                             .to_radians()
                     } else if angle_deg > angle_zero {
                         dso_curve
                             .integral(angle_zero, angle_deg)
-                            .map_err(|e| CtxResult::Err(error.pass_with("calculate ddo", e)))?
+                            .map_err(|e| error.pass_with("calculate ddo", e))?
                             .to_radians()
                     } else {
                         0.
@@ -181,7 +182,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 for &(angle, dso, ddo) in diagram.iter() {
                     log::trace!("{angle} {dso} {ddo};");
                 }
-                parameters.add(ParameterID::Roll, angle_zero * angle_zero_signum);
+                ctx.write_params(ParameterID::Roll, angle_zero * angle_zero_signum);
                 let result = LeverDiagramCtx {
                     dso,
                     dso_curve,

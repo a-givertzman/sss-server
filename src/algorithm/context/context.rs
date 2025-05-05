@@ -44,16 +44,46 @@ pub struct Context {
     pub(super) roll_period: Option<RollingPeriodCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
-    /// Критерии проверки остойчивости судна
-    pub(super) criterion_stability: Option<CriterionStabilityCtx>,
     /// Критерий погоды К
     pub(super) wheather: Option<WheatherCtx>,
     /// Статический угол крена от действия постоянного ветра
     pub(super) static_angle: Option<StaticAngleCtx>,
     /// Критерий площади под диаграммой статической остойчивости
     pub(super) dso_area: Option<DSOAreaCtx>,
+    /// Критерий максимум диаграммы статической остойчивости
+    pub(super) dso_max: Option<DSOMaxCtx>,
+    /// Критерий максимум диаграммы статической остойчивости для лесовозов
+    pub(super) dso_timber_max: Option<DSOTimberMaxCtx>,
+    /// Критерий максимум диаграммы статической остойчивости с учетом обледенения
+    pub(super) dso_icing_max: Option<DSOIcingMaxCtx>,
+    /// Угол, соответствующий максимуму диаграммы статической остойчивости
+    pub(super) dso_angle_max: Option<DSOAngleMaxCtx>,
+    /// Критерий минимальной метацентрической высоты
+    pub(super) min_metacentric_height: Option<MinMetacentricHeightCtx>,
+    /// Критерий метацентрической высоты
+    pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
+    /// Критерий ускорения 𝐾∗
+    pub(super) acceleration: Option<AccelerationCtx>,
+    /// Критерий крена на циркуляции
+    pub(super) circulation: Option<CirculationCtx>,
+    /// Критерий при перевозки навалочных смещаемых грузов
+    pub(super) grain: Option<GrainCtx>,
+    /// Критерии проверки остойчивости судна
+    pub(super) criterion_stability: Option<CriterionStabilityCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
+    /// Критерий осадки по грузовой марке
+    pub(super) load_line: Option<LoadLineCtx>,
+    /// Критерий запаса плавучести в носу
+    pub(super) reserve_buoyncy: Option<ReserveBuoyncyCtx>,
+    /// Критерий высоты на носовом перпендикуляре
+    pub(super) bow_board: Option<BowBoardCtx>,
+    /// Расчет критерия заглубления винта
+    pub(super) screw: Option<ScrewCtx>,
+    /// Критерии проверки посадки судна
+    pub(super) criterion_draught: Option<CriterionDraughtCtx>,
+    /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
+    pub(super) draft_mark: Option<DraftMarkCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

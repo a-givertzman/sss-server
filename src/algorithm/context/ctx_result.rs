@@ -1,4 +1,4 @@
-use std::ops::{FromResidual, Try};
+use std::ops::Try;
 
 use bincode::{Decode, Encode};
 
@@ -39,6 +39,7 @@ impl<T, E> Default for CtxResult<T, E> {
         Self::None
     }
 }
+/*
 //
 //
 impl<T, E> From <Result<T, E>> for CtxResult<T, E> {
@@ -60,10 +61,10 @@ where E: std::error::Error, sal_core::error::Error: From<E> {
             CtxResult::None => Result::Err(sal_core::error::Error::new("CtxResult", "from").err("None")),
         }
     }
-}
+}*/
 //
 //
-impl<T> std::ops::FromResidual for CtxResult<T, crate::Error> {
+impl<T, E> std::ops::FromResidual for CtxResult<T, E> {
     fn from_residual(residual: <Self as Try>::Residual) -> Self {
         match residual {
             Ok(_) => unreachable!(),
@@ -75,7 +76,7 @@ impl<T> std::ops::FromResidual for CtxResult<T, crate::Error> {
 //
 impl<T, E> Try for CtxResult<T, E> {
     type Output = T;
-    type Residual = Result<std::convert::Infallible, crate::Error>;
+    type Residual = Result<std::convert::Infallible, E>;
 
     fn from_output(output: Self::Output) -> Self {
         CtxResult::Ok(output)

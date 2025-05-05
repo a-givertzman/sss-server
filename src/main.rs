@@ -1,3 +1,4 @@
+#![feature(try_trait_v2)]
 mod algorithm;
 mod app;
 mod conf;
@@ -5,7 +6,6 @@ mod infrostructure;
 mod kernel;
 mod prelude;
 mod ship_model;
-mod prelude;
 #[cfg(test)]
 mod tests;
 
@@ -15,12 +15,10 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{
-    eval::Eval, run::Run,
-};
-use sal_sync::thread_pool::tread_pool::ThreadPool;
-use ship_model::ship_model::ShipModel;
+use kernel::{eval::Eval, run::Run, sync::Link};
 use prelude::*;
+use sal_core::dbg::Dbg;
+use sal_sync::thread_pool::tread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 
 ///
@@ -28,6 +26,7 @@ use ship_model::ship_model::ShipModel;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     let dbg = DbgId("main".into());
+    let tmp_dbg = dbg.clone();
     let path = "config.yaml";
     let mut app = App::new(path);
     if let Err(err) = app.run() {
@@ -38,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ship_id = 2;
     let project_id = "NULL";
     let n_parts = 200;
-    let thread_pool = ThreadPool::new(Some(conf.thread_pool.size));
+    let thread_pool = ThreadPool::new(&dbg, Some(conf.thread_pool.size));
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
@@ -53,71 +52,90 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let _result = ZgEval::new(
+    let ctx_before = StabilityAreaEval::new(
         &dbg,
+        ship_model.link(),
+        BalanceEval::new(
+            &dbg,
+            ship_model.link(),
+            LoadsEval::new(
+                &dbg,
+                WettingEval::new(
+                    &dbg,
+                    IcingEval::new(
+                        &dbg,
+                        StrengthAreaEval::new(
+                            &dbg,
+                            ship_model.link(),
+                            IcingTimberEval::new(
+                                &dbg,
+                                IcingStabEval::new(
+                                    &dbg,
+                                    Initial::new(
+                                        &dbg,
+                                        ship_model.link(),
+                                        ApiClient::new(
+                                            conf.api.address.database.clone(),
+                                            conf.api.address.host.clone(),
+                                            conf.api.address.port.clone(),
+                                        ),
+                                        Context::new(InitialCtx::new(ship_id, project_id)),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    );
+    let ctx_after = |
+        dbg: Dbg,
+        z_g_fix: Option<f64>,
+        link: Link,
+        ctx: Context,
+    | -> CriterionStabilityEval {
         CriterionStabilityEval::new(
             &dbg,
-            DSOAreaEval::new(
+            MetacentricHeightSubdivisionEval::new(
                 &dbg,
-                StaticAngleEval::new(
+                GrainEval::new(
                     &dbg,
-                    WheatherEval::new(
+                    CirculationEval::new(
                         &dbg,
-                        RollingAmplitudeEval::new(
+                        AccelerationEval::new(
                             &dbg,
-                            RollingPeriodEval::new(
+                            MinMetacentricHeightEval::new(
                                 &dbg,
-                                WindEval::new(
+                                DSOAngleMaxEval::new(
                                     &dbg,
-                                    WindageEval::new(
+                                    DSOTimberMaxEval::new(
                                         &dbg,
-                                        LeverDiagramEval::new(
-                                            &dbg,
-                                            ship_model.link(),
-                                            MetacentricHeightEval::new(
+                                        DSOIcingMaxEval::new(
+                                            &dbg,        
+                                            DSOMaxEval::new(
                                                 &dbg,
-                                                StabilityAreaEval::new(
+                                                DSOAreaEval::new(
                                                     &dbg,
-                                                    ship_model.link(),
-                                                    BalanceEval::new(
+                                                    StaticAngleEval::new(
                                                         &dbg,
-                                                        ship_model.link(),
-                                                        LoadsEval::new(
+                                                        WheatherEval::new(
                                                             &dbg,
-                                                            WettingEval::new(
+                                                            RollingAmplitudeEval::new(
                                                                 &dbg,
-                                                                IcingEval::new(
+                                                                RollingPeriodEval::new(
                                                                     &dbg,
-                                                                    StrengthAreaEval::new(
+                                                                    WindEval::new(
                                                                         &dbg,
-                                                                        ship_model.link(),
-                                                                        IcingTimberEval::new(
+                                                                        WindageEval::new(
                                                                             &dbg,
-                                                                            IcingStabEval::new(
-                                                                                &dbg,
-                                                                                Initial::new(
+                                                                            LeverDiagramEval::new(
+                                                                                &dbg, 
+                                                                                link, 
+                                                                                MetacentricHeightEval::new(
                                                                                     &dbg,
-                                                                                    ship_model.link(),
-                                                                                    ApiClient::new(
-                                                                                        conf.api
-                                                                                            .address
-                                                                                            .database
-                                                                                            .clone(),
-                                                                                        conf.api
-                                                                                            .address
-                                                                                            .host
-                                                                                            .clone(),
-                                                                                        conf.api
-                                                                                            .address
-                                                                                            .port
-                                                                                            .clone(),
-                                                                                    ),
-                                                                                    Context::new(
-                                                                                        InitialCtx::new(
-                                                                                            ship_id,
-                                                                                            project_id,
-                                                                                        ),
-                                                                                    ),
+                                                                                    z_g_fix,
+                                                                                    ctx,
                                                                                 ),
                                                                             ),
                                                                         ),
@@ -131,6 +149,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ),
                                     ),
                                 ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+    };
+    let _result = 
+    DraftMarkEval::new(
+        &tmp_dbg,
+        CriterionDraughtEval::new(
+            &tmp_dbg,
+            ReserveBuoyncyEval::new(
+                &tmp_dbg,
+                ScrewEval::new(
+                    &tmp_dbg,
+                    BowBoardEval::new(
+                        &tmp_dbg,
+                        LoadLineEval::new(
+                            &tmp_dbg,
+                            ZgEval::new(
+                                    thread_pool.scheduler(),
+                                    &tmp_dbg,
+                                    &ship_model,
+                                    ctx_before,
+                                    ctx_after,
                             ),
                         ),
                     ),

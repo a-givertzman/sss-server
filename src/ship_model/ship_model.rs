@@ -13,9 +13,8 @@ use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
 use coco::Stack;
 use sal_core::error::Error;
-use sal_sync::services::entity::{
-    name::Name, point::point_tx_id::PointTxId,
-};
+use sal_sync::services::entity::Name;
+use sal_sync::services::entity::PointTxId;
 use sal_sync::thread_pool::scheduler::Scheduler;
 use std::thread::JoinHandle;
 use std::{
@@ -106,39 +105,41 @@ impl ShipModel {
             log::trace!("{}.run | Received query: {:?}", dbg, query);
             match query {
                 Query::Bounds => {
-                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                    }
-                }
+                                if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+                                    log::warn!("{}.run | Send error: {:?}", dbg, err);
+                                }
+                            }
                 Query::BoundAreas => {
-                    let bounds = bounds.clone();
-                    let api_client = api_client.clone();
-                    let exit = exit.clone();
-                    if let Err(err) = scheduler.spawn(move|| {
-                        let result = areas_strength(bounds, ship_id, &api_client, exit);
-                        if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                            let err = error.pass_with("Send error", err);
-                            log::warn!("{}", err);
-                        }
-                        Ok(())
-                    }) {
-                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                    }
-                }
+                                let bounds = bounds.clone();
+                                let api_client = api_client.clone();
+                                let exit = exit.clone();
+                                if let Err(err) = scheduler.spawn(move|| {
+                                    let result = areas_strength(bounds, ship_id, &api_client, exit);
+                                    if let Err(err) = send.send(Reply::BoundAreas(result)) {
+                                        let err = error.pass_with("Send error", err);
+                                        log::warn!("{}", err);
+                                    }
+                                    Ok(())
+                                }) {
+                                    log::warn!("{}.run | Schedule error: {:?}", dbg, err);
+                                }
+                            }
                 Query::ComputeBalance(balance_src_data) => {
-                    let bounds = bounds.clone();
-                    let exit = exit.clone();
-                    if let Err(err) = scheduler.spawn(move|| {
-                        let result = compute_balance(bounds.clone(), balance_src_data, ship_id, exit);
-                        if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                            let err = error.pass_with("Send error", err);
-                                log::warn!("{}", err);
-                        };
-                        Ok(())
-                    }) {
-                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                    }
-                }
+                                let bounds = bounds.clone();
+                                let exit = exit.clone();
+                                if let Err(err) = scheduler.spawn(move|| {
+                                    let result = compute_balance(bounds.clone(), balance_src_data, ship_id, exit);
+                                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                                        let err = error.pass_with("Send error", err);
+                                            log::warn!("{}", err);
+                                    };
+                                    Ok(())
+                                }) {
+                                    log::warn!("{}.run | Schedule error: {:?}", dbg, err);
+                                }
+                            }
+                Query::StabilityAreas => todo!(),
+                Query::ComputePantocaren => todo!(),
             };
             None::<()>
         });
