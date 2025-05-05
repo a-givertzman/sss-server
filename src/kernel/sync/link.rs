@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinH
 use bincode::{Decode, Encode};
 use coco::Stack;
 use sal_core::error::Error;
-use sal_sync::services::entity::{name::Name, point::point_tx_id::PointTxId};
+use sal_sync::services::entity::{Name, PointTxId};
 use crate::kernel::types::channel::{Receiver, RecvTimeoutError, Sender};
 use super::{LinkSend, DEFAULT_TIMEOUT};
 

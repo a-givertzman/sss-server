@@ -1,8 +1,7 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, time::Duration};
 use coco::Stack;
-use sal_core::error::Error;
-use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_tx_id::PointTxId}}, service::service_handles::ServiceHandles};
-use crate::kernel::types::{channel::{Receiver, RecvTimeoutError, Sender}, fx_map::{FxDashMap, FxIndexMap}};
+use sal_sync::services::entity::{Name, PointTxId};
+use crate::kernel::types::{channel::{Receiver, Sender}, fx_map::FxDashMap};
 use super::link::Link;
 ///
 /// 
@@ -83,10 +82,10 @@ impl Switch {
         let (rem_send, loc_recv) = kanal::unbounded();
         let remote = Link::new(&format!("{}:{}", self.name, self.subscribers.len()), rem_send, rem_recv);
         let key = remote.name().join();
-        self.subscribers.insert(key.clone(), loc_send);
+        self.subscribers.insert(String::clone(&key), loc_send);
         let receivers = self.receivers.clone();
         let len = receivers.load(Ordering::SeqCst);
-        self.receivers_tx.send((key, loc_recv)).unwrap();
+        self.receivers_tx.send((key.to_owned(), loc_recv)).unwrap();
         while len == receivers.load(Ordering::SeqCst) {
             std::thread::sleep(Duration::from_millis(3));
         }

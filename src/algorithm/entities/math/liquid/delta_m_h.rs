@@ -6,7 +6,7 @@ use super::FreeSurfaceMoment;
 
 /// Поправка к продольной метацентрической высоте на  
 /// влияние свободной поверхности жидкости в цистернах
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct DeltaMH {
     /// Продольная составляющая
     pub long: f64,

@@ -110,7 +110,7 @@ impl LoadUnitData {
                 Bound::new(self_bound_z1, self_bound_z2)
                     .map_err(|e| error.pass_with("part_z Bound::new", e))?
                     .part_ratio(bound_z)
-                    .map_err(|e| error.pass_with("part_x part_ratio", e))?;
+                    .map_err(|e| error.pass_with("part_x part_ratio", e))?
             } else {
                 return Err(Error::from("LoadUnitData.windage_area | no bound_z"));
             };

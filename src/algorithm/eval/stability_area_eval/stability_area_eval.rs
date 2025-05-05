@@ -4,14 +4,14 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, Bound, Moment, Position},
         eval::IcingTimberCtx,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::Query, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Площади боковой и горизонтальной поверхностей для расчета остойчивости
 pub struct StabilityAreaEval {
     dbg: Dbg,
-    model: ModelLink,
+    model: Link,
     value: Option<StabilityAreaCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
@@ -21,7 +21,7 @@ impl StabilityAreaEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: ModelLink,
+        model: Link,
         ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "StabilityAreaEval");
@@ -56,12 +56,8 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return CtxResult::Err(error.err("Read bounds error: no data!")),
                 };
-                let (const_area_v, const_area_h) = match self.model.stability_areas() {
-                    Ok((area_v, area_h)) => (area_v, area_h),
-                    Err(err) => {
-                        return CtxResult::Err(error.pass_with("Read areas error", err));
-                    }
-                };
+                let (const_area_v, const_area_h) = self.model.call(Query::StabilityAreas)
+                    .map_err(|err| error.pass_with("const_area model.call", err))?;
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,

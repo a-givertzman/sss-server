@@ -1,3 +1,5 @@
+use crate::algorithm::entities::DeltaMH;
+
 /// Результаты расчета исправленной метацентрической высоты
 #[derive(Debug, Clone)]
 pub struct MetacentricHeightCtx {

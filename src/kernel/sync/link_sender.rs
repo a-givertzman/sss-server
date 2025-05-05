@@ -1,6 +1,6 @@
 use bincode::Encode;
 use sal_core::error::Error;
-use sal_sync::services::entity::name::Name;
+use sal_sync::services::entity::Name;
 
 use crate::kernel::types::channel::Sender;
 

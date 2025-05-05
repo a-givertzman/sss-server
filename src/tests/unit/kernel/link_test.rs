@@ -4,7 +4,7 @@ mod link {
     use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc, Once}, thread::{self, JoinHandle}, time::Duration};
     use bincode::{Decode, Encode};
     use sal_core::error::Error;
-    use sal_sync::services::entity::name::Name;
+    use sal_sync::services::entity::Name;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::kernel::sync::Link;
