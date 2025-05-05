@@ -123,7 +123,7 @@ impl Eval<(), EvalResult> for WheatherEval {
                         CriterionData::new_error(CriterionID::Wheather, error.to_string())
                     },
                 };
-                let result: WheatherCtx = WheatherCtx { data };
+                let result = WheatherCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
