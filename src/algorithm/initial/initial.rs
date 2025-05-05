@@ -5,7 +5,7 @@ use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::data::{
     BowBoardDataArray, CoefficientKArray, CoefficientKThetaArray, DraftMarkDataArray,
     LoadLineDataArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea,
-    ScrewDataArray, loads::*,
+    ScrewDataArray, loads::*, MetacentricHeightSubdivisionArray,
 };
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::sync::Link;
@@ -319,6 +319,11 @@ impl Eval<(), EvalResult> for Initial {
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("draft_mark fetch", err))?
         ).map_err(|err| error.pass_with("draft_mark parse", err))?;
+        let h_subdivision = MetacentricHeightSubdivisionArray::parse(&self.api_client.fetch(&format!(
+            "SELECT key, value FROM min_metacentric_height_subdivision WHERE ship_id={} AND project_id={};",
+            initial_ctx.ship_id, initial_ctx.project_id
+        )).map_err(|err| error.pass_with("h_subdivision fetch", err))?
+        ).map_err(|err| error.pass_with("h_subdivision parse", err))?;
         initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
@@ -340,6 +345,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.bow_board = Some(bow_board.bow_board_data());
         initial_ctx.screw = Some(screw.data());
         initial_ctx.draft_mark = Some(draft_mark.draft_data());
+        initial_ctx.h_subdivision = Some(h_subdivision.data());
         self.ctx.clone().write(initial_ctx.to_owned())
     }
 }

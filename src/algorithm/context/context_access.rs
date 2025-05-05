@@ -348,6 +348,18 @@ impl ContextRead<MinMetacentricHeightCtx> for Context {
     }
 }
 //
+impl ContextWrite<MetacentricHeightSubdivisionCtx> for Context {
+    fn write(mut self, value: MetacentricHeightSubdivisionCtx) -> CtxResult<Self, Error> {
+        self.metacentric_height_subdivision = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<MetacentricHeightSubdivisionCtx> for Context {
+    fn read(&self) -> MetacentricHeightSubdivisionCtx {
+        self.metacentric_height_subdivision.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<AccelerationCtx> for Context {
     fn write(mut self, value: AccelerationCtx) -> CtxResult<Self, Error> {
         self.acceleration = Some(value);

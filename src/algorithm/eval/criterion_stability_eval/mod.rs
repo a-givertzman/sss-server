@@ -15,6 +15,7 @@ pub mod dso_timber_max_eval;
 pub mod dso_icing_max_eval;
 pub mod dso_angle_max_eval;
 pub mod min_metacentric_height_eval;
+pub mod metacentric_height_subdivision_eval;
 pub mod acceleration_eval;
 pub mod circulation_eval;
 pub mod grain_eval;
@@ -47,6 +48,9 @@ pub use dso_angle_max_eval::dso_angle_max_ctx::DSOAngleMaxCtx;
 
 pub use min_metacentric_height_eval::min_metacentric_height_eval::MinMetacentricHeightEval;
 pub use min_metacentric_height_eval::min_metacentric_height_ctx::MinMetacentricHeightCtx;
+
+pub use metacentric_height_subdivision_eval::metacentric_height_subdivision_eval::MetacentricHeightSubdivisionEval;
+pub use metacentric_height_subdivision_eval::metacentric_height_subdivision_ctx::MetacentricHeightSubdivisionCtx;
 
 pub use acceleration_eval::acceleration_eval::AccelerationEval;
 pub use acceleration_eval::acceleration_ctx::AccelerationCtx;

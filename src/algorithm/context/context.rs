@@ -62,6 +62,8 @@ pub struct Context {
     pub(super) dso_angle_max: Option<DSOAngleMaxCtx>,
     /// Критерий минимальной метацентрической высоты
     pub(super) min_metacentric_height: Option<MinMetacentricHeightCtx>,
+    /// Критерий метацентрической высоты
+    pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
     /// Критерий ускорения 𝐾∗
     pub(super) acceleration: Option<AccelerationCtx>,
     /// Критерий крена на циркуляции
