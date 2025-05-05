@@ -3,8 +3,7 @@ use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::data::{
-    CoefficientKArray, CoefficientKThetaArray, LoadLineDataArray, MultiplerSArray,
-    MultiplerX1Array, MultiplerX2Array, NavigationArea, loads::*,
+    loads::*, BowBoardDataArray, CoefficientKArray, CoefficientKThetaArray, LoadLineDataArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea
 };
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::sync::Link;
@@ -103,6 +102,10 @@ impl Eval<(), EvalResult> for Initial {
             Some(data) => data.to_owned(),
             None => return CtxResult::Err(error.err("Error ship: no first in data")),
         };
+        let navigation_area = NavigationArea::from_str(&ship.navigation_area)
+            .map_err(|e| error.pass_with("navigation_area", e))?;
+        let ship_type =
+            ShipType::from_str(&ship.ship_type).map_err(|e| error.pass_with("ship_type", e))?;
         let voyage = VoyageArray::parse(
             &self
                 .api_client
@@ -295,17 +298,16 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("coefficient_k_theta fetch", err))?,
         )
         .map_err(|err| error.pass_with("coefficient_k_theta parse", err))?;
-        let navigation_area = NavigationArea::from_str(&ship.navigation_area)
-            .map_err(|e| error.pass_with("navigation_area", e))?;
-        let ship_type =
-            ShipType::from_str(&ship.ship_type).map_err(|e| error.pass_with("ship_type", e))?;
-
         let load_line = LoadLineDataArray::parse(&self.api_client.fetch(&format!(
             "SELECT criterion_id, name, x, y, z FROM load_line_view WHERE ship_id={} AND project_id={};",
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("load_line fetch", err))?
         ).map_err(|err| error.pass_with("load_line parse", err))?;
-
+        let bow_board = BowBoardDataArray::parse(&self.api_client.fetch(&format!(
+            "SELECT criterion_id, name, x, y, z FROM bow_board WHERE ship_id={} AND project_id={};",
+            initial_ctx.ship_id, initial_ctx.project_id
+        )).map_err(|err| error.pass_with("bow_board fetch", err))?
+        ).map_err(|err| error.pass_with("bow_board parse", err))?;
         initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
@@ -323,7 +325,8 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.multipler_s = Some(multipler_s);
         initial_ctx.coefficient_k = Some(coefficient_k.data());
         initial_ctx.coefficient_k_theta = Some(coefficient_k_theta);
-        initial_ctx.load_line = Some(load_line);
+        initial_ctx.load_line = Some(load_line.load_line_data());
+        initial_ctx.bow_board = Some(bow_board.bow_board_data());
         self.ctx.clone().write(initial_ctx.to_owned())
     }
 }

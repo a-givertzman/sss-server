@@ -70,6 +70,8 @@ pub struct Context {
     pub(super) grain: Option<GrainCtx>,
     /// Критерий осадки по грузовой марке
     pub(super) load_line: Option<LoadLineCtx>,
+    /// Критерий высоты на носовом перпендикуляре
+    pub(super) bow_board: Option<BowBoardCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
     ///

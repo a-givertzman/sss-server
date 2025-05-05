@@ -46,7 +46,9 @@ pub struct InitialCtx {
     /// Коэффициент k_theta учитывающий особенности качки судов смешанного типа
     pub coefficient_k_theta: Option<CoefficientKThetaArray>,
     /// Координаты осадок судна относительно центра
-    pub load_line: Option<LoadLineDataArray>,
+    pub load_line: Option<Vec<LoadLineParsedData>>,
+    /// Высота борта на носовом перпендикуляре
+    pub bow_board: Option<Vec<BowBoardParsedData>>,
 }
 impl InitialCtx {
     ///
