@@ -76,6 +76,8 @@ pub struct Context {
     pub(super) screw: Option<ScrewCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
+    /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
+    pub(super) draft_mark: Option<DraftMarkCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
