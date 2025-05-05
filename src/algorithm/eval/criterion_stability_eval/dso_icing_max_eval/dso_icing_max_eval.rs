@@ -48,7 +48,7 @@ impl Eval<(), EvalResult> for DSOIcingMaxEval {
                         )
                     }
                 };
-                let result: DSOIcingMaxCtx = DSOIcingMaxCtx { data };
+                let result = DSOIcingMaxCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }

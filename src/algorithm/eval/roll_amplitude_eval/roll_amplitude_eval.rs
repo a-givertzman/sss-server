@@ -46,16 +46,11 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                 let length_wl = balance.length_wl;
                 let breadth_wl = balance.breadth_wl;
                 let mean_draught = balance.mean_draught;
-                let ship = initial
-                    .ship
-                    .as_ref()
-                    .ok_or(error.err("No ship in initial"))?;
-                let navigation_area = NavigationArea::from_str(&ship.navigation_area)
-                    .map_err(|e| error.pass_with("navigation_area", e))?;
+                let navigation_area = initial.navigation_area.unwrap();
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
-                    .expect("RollingAmplitudeEval eval error: no ship_parameters");
+                    .ok_or(error.err("no ship_parameter"))?;
                 let keel_area = ship_parameters.get("Keel area");
                 let width = ship_parameters.get("MouldedBreadth")
                     .ok_or(error.err("No MouldedBreadth in ship_parameters"))?;

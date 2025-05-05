@@ -5,7 +5,6 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::{
             CriterionData, CriterionID, LeverDiagramCtx, MetacentricHeightCtx, WheatherCtx,
-            metacentric_height_eval::metacentric_height_ctx, wheather_eval::wheather_ctx,
         },
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
@@ -61,7 +60,7 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                         CriterionID::HeelMaximumLC,
                         error.to_string(),
                     ));
-                    let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data: results };
+                    let result = DSOAngleMaxCtx { data: results };
                     self.value = Some(result.clone());
                     return ctx.write(result);
                 } else {
@@ -109,7 +108,7 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                         "Нет угла соответствующего максимуму DSO для текущих условий".to_owned(),
                     ));
                 }
-                let result: DSOAngleMaxCtx = DSOAngleMaxCtx { data: results };
+                let result = DSOAngleMaxCtx { data: results };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
