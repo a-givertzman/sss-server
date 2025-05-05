@@ -23,7 +23,7 @@ pub struct ZgEval<'a> {
     scheduler: Scheduler,
     ship_model: &'a ShipModel,
     ctx_before: StabilityAreaEval,
-    ctx_after: fn(Dbg, Option<f64>, Link, Context) -> MetacentricHeightEval,
+    ctx_after: fn(Dbg, Option<f64>, Link, Context) -> CriterionStabilityEval,
 }
 //
 //
@@ -34,7 +34,7 @@ impl<'a> ZgEval<'a> {
         parent: impl Into<String>,
         ship_model: &'a ShipModel,
         ctx_before: StabilityAreaEval,
-        ctx_after: fn(Dbg, Option<f64>, Link, Context) -> MetacentricHeightEval,
+        ctx_after: fn(Dbg, Option<f64>, Link, Context) -> CriterionStabilityEval,
     ) -> Self {
         let dbg = Dbg::new(parent, "ZgEval");
         Self {
@@ -63,7 +63,6 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 // базовый контекст
                 let base_ctx = Arc::new(Mutex::new(Option::<Context>::None));
                 let base_task = {
-                //    let temp_fn: fn(Dbg, Option<f64>, Link, Context) -> MetacentricHeightEval = create_after_ctx;
                     let dbg = self.dbg.clone();
                     let link = self.ship_model.link();
                     let ctx = ctx_before.clone();

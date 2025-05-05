@@ -444,6 +444,18 @@ impl ContextRead<ScrewCtx> for Context {
     }
 }
 //
+impl ContextWrite<CriterionDraughtCtx> for Context {
+    fn write(mut self, value: CriterionDraughtCtx) -> CtxResult<Self, Error> {
+        self.criterion_draught = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<CriterionDraughtCtx> for Context {
+    fn read(&self) -> CriterionDraughtCtx {
+        self.criterion_draught.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);

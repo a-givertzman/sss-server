@@ -15,7 +15,7 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{eval::Eval, run::Run, sync::Link, types::eval_result::EvalResult};
+use kernel::{eval::Eval, run::Run, sync::Link};
 use prelude::*;
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::tread_pool::ThreadPool;
@@ -97,38 +97,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     | -> CriterionStabilityEval {
         CriterionStabilityEval::new(
             &dbg,
-
-            GrainCtx
-            CirculationCtx
-            AccelerationCtx
-            MinMetacentricHeightCtx
-            DSOAngleMaxCtx
-            DSOTimberMaxCtx
-            DSOIcingMaxCtx
-        
-            DSOMaxEval::new(
+            MetacentricHeightSubdivisionEval::new(
                 &dbg,
-                    DSOAreaEval::new(
+                GrainEval::new(
+                    &dbg,
+                    CirculationEval::new(
                         &dbg,
-                        StaticAngleEval::new(
+                        AccelerationEval::new(
                             &dbg,
-                            WheatherEval::new(
+                            MinMetacentricHeightEval::new(
                                 &dbg,
-                                RollingAmplitudeEval::new(
+                                DSOAngleMaxEval::new(
                                     &dbg,
-                                    RollingPeriodEval::new(
+                                    DSOTimberMaxEval::new(
                                         &dbg,
-                                        WindEval::new(
-                                            &dbg,
-                                            WindageEval::new(
+                                        DSOIcingMaxEval::new(
+                                            &dbg,        
+                                            DSOMaxEval::new(
                                                 &dbg,
-                                                LeverDiagramEval::new(
-                                                    &dbg, 
-                                                    link, 
-                                                    MetacentricHeightEval::new(
+                                                DSOAreaEval::new(
+                                                    &dbg,
+                                                    StaticAngleEval::new(
                                                         &dbg,
-                                                        z_g_fix,
-                                                        ctx,
+                                                        WheatherEval::new(
+                                                            &dbg,
+                                                            RollingAmplitudeEval::new(
+                                                                &dbg,
+                                                                RollingPeriodEval::new(
+                                                                    &dbg,
+                                                                    WindEval::new(
+                                                                        &dbg,
+                                                                        WindageEval::new(
+                                                                            &dbg,
+                                                                            LeverDiagramEval::new(
+                                                                                &dbg, 
+                                                                                link, 
+                                                                                MetacentricHeightEval::new(
+                                                                                    &dbg,
+                                                                                    z_g_fix,
+                                                                                    ctx,
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
                                                     ),
                                                 ),
                                             ),
@@ -145,12 +159,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _result = 
     DraftMarkEval::new(
         &tmp_dbg,
-        ZgEval::new(
-            thread_pool.scheduler(),
+        CriterionDraughtEval::new(
             &tmp_dbg,
-            &ship_model,
-            ctx_before,
-            ctx_after,
+            ReserveBuoyncyEval::new(
+                &tmp_dbg,
+                ScrewEval::new(
+                    &tmp_dbg,
+                    BowBoardEval::new(
+                        &tmp_dbg,
+                        LoadLineEval::new(
+                            &tmp_dbg,
+                            ZgEval::new(
+                                    thread_pool.scheduler(),
+                                    &tmp_dbg,
+                                    &ship_model,
+                                    ctx_before,
+                                    ctx_after,
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         ),
     )
     .eval(());

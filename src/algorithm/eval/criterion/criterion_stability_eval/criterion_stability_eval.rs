@@ -9,7 +9,7 @@ use crate::{
 use log::info;
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Расчет периода качки судна
+/// Расчет критериев проверки остойчивости судна
 pub struct CriterionStabilityEval {
     dbg: Dbg,
     value: Option<CriterionStabilityCtx>,
@@ -38,7 +38,6 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let navigation_area = initial.navigation_area.unwrap();
                 let ship_type = initial.ship_type.unwrap();
-                let ship = initial.ship.as_ref().unwrap();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let h_trans_fix = metacentric_height.h_trans_fix;
                 let ship_parameters = initial
@@ -117,22 +116,10 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                 if have_grain {
                     data.append(&mut ContextRead::<GrainCtx>::read(&ctx).data);
                 }
-                data.push(ContextRead::<MinMetacentricHeightCtx>::read(&ctx).data);
+                data.push(ContextRead::<MetacentricHeightSubdivisionCtx>::read(&ctx).data);
                 // TODO        HeelMaximumLC, HeelFirstMaximumLC
                 // data.push(CriterionData::new_result(CriterionID::HeelMaximumLC , self.lever_diagram.max_angles(), 1.);
-                data.append(&mut ContextRead::<LoadLineCtx>::read(&ctx).data);
-                //    out_data.append(&mut ContextRead::<TrimCtx>::read(&ctx).data);
-                data.append(&mut ContextRead::<BowBoardCtx>::read(&ctx).data);
-                data.append(&mut ContextRead::<ScrewCtx>::read(&ctx).data); 
-                if ship.freeboard_type == "B"
-                    && !(ship_type == ShipType::Tanker
-                        && ship_type == ShipType::OilTanker
-                        && ship_type == ShipType::ChemicalTanker
-                        && ship_type == ShipType::GasCarrier)
-                {
-                    data.push(ContextRead::<ReserveBuoyncyCtx>::read(&ctx).data);
-                }
-                info!("Criterion end");
+            //    info!("Criterion stability end");
                 let result = CriterionStabilityCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)
