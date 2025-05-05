@@ -14,7 +14,7 @@ mod wind_eval;
 mod windage_eval;
 mod roll_period_eval;
 mod roll_amplitude_eval;
-mod criterion_stability_eval;
+mod criterion;
 mod zg_eval;
 mod draft_mark_eval;
 
@@ -60,9 +60,9 @@ pub use roll_period_eval::roll_period_ctx::RollingPeriodCtx;
 pub use roll_amplitude_eval::roll_amplitude_eval::RollingAmplitudeEval;
 pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;
 
-pub use criterion_stability_eval::criterion_stability_eval::CriterionStabilityEval;
-pub use criterion_stability_eval::criterion_stability_ctx::CriterionStabilityCtx;
-pub use criterion_stability_eval::*;
+pub use criterion::criterion_stability_eval::*;
+pub use criterion::criterion_draught_eval::*;
+pub use criterion::*;
 
 pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;

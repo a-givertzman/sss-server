@@ -2,8 +2,7 @@ use super::metacentric_height_subdivision_ctx::MetacentricHeightSubdivisionCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::data::{loads::UnitCargoType, ship_type::ShipType},
-        eval::{CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx},
+        eval::{BalanceCtx, CriterionData, CriterionID, MetacentricHeightCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
 use crate::algorithm::entities::{Curve, ICurve};

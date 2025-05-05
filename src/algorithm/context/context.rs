@@ -44,8 +44,6 @@ pub struct Context {
     pub(super) roll_period: Option<RollingPeriodCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
-    /// Критерии проверки остойчивости судна
-    pub(super) criterion_stability: Option<CriterionStabilityCtx>,
     /// Критерий погоды К
     pub(super) wheather: Option<WheatherCtx>,
     /// Статический угол крена от действия постоянного ветра
@@ -70,6 +68,10 @@ pub struct Context {
     pub(super) circulation: Option<CirculationCtx>,
     /// Критерий при перевозки навалочных смещаемых грузов
     pub(super) grain: Option<GrainCtx>,
+    /// Критерии проверки остойчивости судна
+    pub(super) criterion_stability: Option<CriterionStabilityCtx>,
+    /// Результаты для ZG
+    pub(super) zg: Option<ZgCtx>,
     /// Критерий осадки по грузовой марке
     pub(super) load_line: Option<LoadLineCtx>,
     /// Критерий запаса плавучести в носу
@@ -78,8 +80,8 @@ pub struct Context {
     pub(super) bow_board: Option<BowBoardCtx>,
     /// Расчет критерия заглубления винта
     pub(super) screw: Option<ScrewCtx>,
-    /// Результаты для ZG
-    pub(super) zg: Option<ZgCtx>,
+    /// Критерии проверки посадки судна
+    pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
     ///
