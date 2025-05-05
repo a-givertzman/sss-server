@@ -41,7 +41,7 @@ impl Eval<(), EvalResult> for GrainEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let loads: LoadsCtx = ctx.read();
-                let m_grain: f64 = loads.bulk.iter().map(|v| v.moment()).sum();
+                let m_grain: f64 = loads.bulk.iter().map(|v| v.moment() TODO: модель ).sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
                 let balance: BalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;

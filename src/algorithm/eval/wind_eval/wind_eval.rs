@@ -38,7 +38,7 @@ impl Eval<(), EvalResult> for WindEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let windage: WindageCtx = ctx.read(); 
                 let gravity_g = 9.81;
-                let ship = initial.ship().map_err(|err| error.pass_with("ship", err))?;
+                let ship = initial.ship.as_ref().unwrap();
                 let p_v = ship.p_v;
                 let m = ship.m;
                 let a_v = windage.a_v;

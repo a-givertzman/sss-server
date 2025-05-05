@@ -1,10 +1,7 @@
 use std::collections::HashMap;
-use sal_core::error::Error;
-
 use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
-use crate::kernel::types::eval_result::EvalResult;
 
 ///
 /// Общая структура для ввода данных. Содержит все данные

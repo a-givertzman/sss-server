@@ -56,7 +56,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return CtxResult::Err(error.err("Read bounds error: no data!")),
                 };
-                let (const_area_v, const_area_h) = self.model.call(Query::StabilityAreas)
+                let (const_area_v, const_area_h) TODO: модель = self.model.call(Query::StabilityAreas)
                     .map_err(|err| error.pass_with("const_area model.call", err))?;
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
