@@ -72,8 +72,12 @@ pub struct Context {
     pub(super) load_line: Option<LoadLineCtx>,
     /// Критерий высоты на носовом перпендикуляре
     pub(super) bow_board: Option<BowBoardCtx>,
+    /// Расчет критерия заглубления винта
+    pub(super) screw: Option<ScrewCtx>,
     /// Результаты для ZG
     pub(super) zg: Option<ZgCtx>,
+    /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
+    pub(super) draft_mark: Option<DraftMarkCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
