@@ -36,10 +36,8 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let navigation_area = initial.navigation_area()
-                    .map_err(|e| error.pass_with("navigation_area", e))?;
-                let ship_type = initial.ship_type()
-                    .map_err(|e| error.pass_with("ship_type", e))?;
+                let navigation_area = initial.navigation_area.unwrap();
+                let ship_type = initial.ship_type.unwrap();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let h_trans_fix = metacentric_height.h_trans_fix;
                 let ship_parameters = initial
