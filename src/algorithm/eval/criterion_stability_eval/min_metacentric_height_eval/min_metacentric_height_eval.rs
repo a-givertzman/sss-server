@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let loads: LoadsCtx = ctx.read();
-                let ship_type = initial.ship_type();
+                let ship_type = initial.ship_type.unwrap();
                 let have_grain = !loads.bulk.is_empty();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
@@ -57,20 +57,6 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                     }
                 };
                 let have_timber = unit.iter().any(|v| v.cargo_type == UnitCargoType::Timber);
-                let ship_type = match ship_type {
-                    Ok(ship_type) => ship_type,
-                    Err(err) => {
-                        let error = error.pass_with("ShipType::from_str", err);
-                        log::error!("{}", error);
-                        let result = CriterionData::new_error(
-                            CriterionID::MinMetacentricHight,
-                            "Ошибка расчета критерия минимальной метацентрической высоты: ".to_owned() + &error.to_string(),
-                        );
-                        let result = MinMetacentricHeightCtx { data: result };
-                        self.value = Some(result.clone());
-                        return ctx.write(result);
-                    }
-                };
                 // Все суда
                 let target = if have_grain {
                     0.3

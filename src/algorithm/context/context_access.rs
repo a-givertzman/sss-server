@@ -372,6 +372,54 @@ impl ContextRead<CirculationCtx> for Context {
     }
 }
 //
+impl ContextWrite<GrainCtx> for Context {
+    fn write(mut self, value: GrainCtx) -> CtxResult<Self, Error> {
+        self.grain = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<GrainCtx> for Context {
+    fn read(&self) -> GrainCtx {
+        self.grain.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<LoadLineCtx> for Context {
+    fn write(mut self, value: LoadLineCtx) -> CtxResult<Self, Error> {
+        self.load_line = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<LoadLineCtx> for Context {
+    fn read(&self) -> LoadLineCtx {
+        self.load_line.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<BowBoardCtx> for Context {
+    fn write(mut self, value: BowBoardCtx) -> CtxResult<Self, Error> {
+        self.bow_board = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<BowBoardCtx> for Context {
+    fn read(&self) -> BowBoardCtx {
+        self.bow_board.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ScrewCtx> for Context {
+    fn write(mut self, value: ScrewCtx) -> CtxResult<Self, Error> {
+        self.screw = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<ScrewCtx> for Context {
+    fn read(&self) -> ScrewCtx {
+        self.screw.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
@@ -383,6 +431,19 @@ impl ContextRead<ZgCtx> for Context {
         self.zg.clone().unwrap()
     }
 }
+//
+impl ContextWrite<DraftMarkCtx> for Context {
+    fn write(mut self, value: DraftMarkCtx) -> CtxResult<Self, Error> {
+        self.draft_mark = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<DraftMarkCtx> for Context {
+    fn read(&self) -> DraftMarkCtx {
+        self.draft_mark.clone().unwrap()
+    }
+}
+
 
 
 

@@ -39,10 +39,6 @@ impl Eval<(), EvalResult> for CirculationEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let ship_parameters = initial
-                    .ship_parameters
-                    .as_ref()
-                    .ok_or(error.err("ship_parameters error: no data!"))?;
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let voyage = initial
                     .voyage
@@ -50,9 +46,6 @@ impl Eval<(), EvalResult> for CirculationEval {
                     .ok_or(error.err("voyage error: no data!"))?;
                 // Эксплуатационная скорость судна, m/s
                 let v_0 = voyage.operational_speed;
-                let b = *ship_parameters
-                    .get("MouldedBreadth")
-                    .ok_or(error.err("breadth error: no data!"))?;
                 let balance: BalanceCtx = ctx.read();
                 let d = balance.mean_draught;
                 let l_wl = balance.length_wl;
@@ -70,7 +63,7 @@ impl Eval<(), EvalResult> for CirculationEval {
                     log::trace!("Circulation angle v:{v} m_r:{m_r} l_r:{l_r}");
                     l_r
                 };
-                /// Максимальная скорость при заданном угле крена
+                // Максимальная скорость при заданном угле крена
                 let calculate_velocity = |target_angle: f64| -> Result<f64, Error> {
                     let mut current_vel = 10.; // m/s
                     let mut delta_vel = current_vel / 2.;
@@ -133,9 +126,7 @@ impl Eval<(), EvalResult> for CirculationEval {
                         }
                     }
                 };
-                let result = CirculationCtx {
-                    data: result,
-                };
+                let result = CirculationCtx { data: result };
                 self.value = Some(result.clone());
                 ctx.write(result)
                 // TODO: В случаях, когда палубный груз контейнеров размещается только на крышках грузовых
