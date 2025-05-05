@@ -3,7 +3,9 @@ use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::data::{
-    loads::*, BowBoardDataArray, CoefficientKArray, CoefficientKThetaArray, LoadLineDataArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea, ScrewDataArray
+    BowBoardDataArray, CoefficientKArray, CoefficientKThetaArray, DraftMarkDataArray,
+    LoadLineDataArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea,
+    ScrewDataArray, loads::*,
 };
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::sync::Link;
@@ -309,10 +311,15 @@ impl Eval<(), EvalResult> for Initial {
         )).map_err(|err| error.pass_with("bow_board fetch", err))?
         ).map_err(|err| error.pass_with("bow_board parse", err))?;
         let screw = ScrewDataArray::parse(&self.api_client.fetch(&format!(
-                    "SELECT criterion_id, x, y, z, d FROM screw_view WHERE ship_id={} AND project_id={};",
+            "SELECT criterion_id, x, y, z, d FROM screw_view WHERE ship_id={} AND project_id={};",
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("screw fetch", err))?
         ).map_err(|err| error.pass_with("screw parse", err))?;
+        let draft_mark = DraftMarkDataArray::parse(&self.api_client.fetch(&format!(
+            "SELECT criterion_id, name, x, y, z FROM draft_mark_view WHERE ship_id={} AND project_id={};",
+            initial_ctx.ship_id, initial_ctx.project_id
+        )).map_err(|err| error.pass_with("draft_mark fetch", err))?
+        ).map_err(|err| error.pass_with("draft_mark parse", err))?;
         initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
@@ -333,6 +340,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.load_line = Some(load_line.load_line_data());
         initial_ctx.bow_board = Some(bow_board.bow_board_data());
         initial_ctx.screw = Some(screw.data());
+        initial_ctx.draft_mark = Some(draft_mark.draft_data());
         self.ctx.clone().write(initial_ctx.to_owned())
     }
 }

@@ -16,6 +16,7 @@ mod roll_period_eval;
 mod roll_amplitude_eval;
 mod criterion_stability_eval;
 mod zg_eval;
+mod draft_mark_eval;
 
 pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
 pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx; 
@@ -65,4 +66,6 @@ pub use criterion_stability_eval::*;
 
 pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;
-pub use zg_eval::zg::Zg;
+
+pub use draft_mark_eval::draft_mark_ctx::DraftMarkCtx;
+pub use draft_mark_eval::draft_mark_eval::DraftMarkEval;

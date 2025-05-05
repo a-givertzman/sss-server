@@ -51,6 +51,9 @@ pub struct InitialCtx {
     pub bow_board: Option<Vec<BowBoardParsedData>>,
     /// Координаты винтов судна относительно центра
     pub screw: Option<Vec<ScrewParsedData>>,
+    /// Координаты отметок заглубления на корпусе судна
+    /// относительно центра
+    pub draft_mark: Option<Vec<DraftMarkParsedData>>,
 }
 impl InitialCtx {
     ///
