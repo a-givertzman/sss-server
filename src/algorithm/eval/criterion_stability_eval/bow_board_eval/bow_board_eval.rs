@@ -1,27 +1,26 @@
-use super::load_line_ctx::LoadLineCtx;
-use crate::algorithm::context::context_access::ContextParamsRead;
+use super::bow_board_ctx::BowBoardCtx;
+use crate::algorithm::context::context_access::{ContextParamsRead, ContextReadRef};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
+use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite, CtxResult,
-    algorithm::context::context_access::ContextReadRef,
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Расчет критерия осадки по грузовой марке
-pub struct LoadLineEval {
+/// Расчет критерия высоты на носовом перпендикуляре
+pub struct BowBoardEval {
     dbg: Dbg,
-    value: Option<LoadLineCtx>,
+    value: Option<BowBoardCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
-impl LoadLineEval {
+impl BowBoardEval {
     ///
     pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
-        let dbg = Dbg::new(parent, "LoadLineEval");
+        let dbg = Dbg::new(parent, "BowBoardEval");
         Self {
             dbg,
             value: None,
@@ -31,21 +30,25 @@ impl LoadLineEval {
 }
 //
 //
-impl Eval<(), EvalResult> for LoadLineEval {
+impl Eval<(), EvalResult> for BowBoardEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let data = initial.load_line.as_ref().unwrap();
+                let data = initial.bow_board.as_ref().unwrap();   
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
-                    .unwrap();
+                    .unwrap();          
                 let ship_length = *ship_parameters
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
+                let bow_h_min = *ship_parameters
+                    .get("Calculated minimum bow height")
+                    .ok_or(error.err("No bow_h_min in ship_parameters"))?;
                 let roll = ctx.read_params(ParameterID::Roll).to_degrees();  
+                let trim = ctx.read_params(ParameterID::TrimDeg).to_radians();
                 let draught_bow = ctx.read_params(ParameterID::DraughtBow);    
                 let draught_stern = ctx.read_params(ParameterID::DraughtStern);    
                 let draught_mid = ctx.read_params(ParameterID::DraughtMid);
@@ -55,21 +58,24 @@ impl Eval<(), EvalResult> for LoadLineEval {
                     draught_mid
                     + delta_draught 
                     * pos_x
-                };                
-                for v in data.iter() {
-                    let z_fix = draught_value(v.pos.x()) + v.pos.y() * roll.sin();
-                    let z_target = v.pos.z();
-
-                    match CriterionID::from(v.criterion_id) {
-                        Ok(criterion_id) => {
-                            result.push(CriterionData::new_result(criterion_id, z_fix, z_target))
-                        }
-                        Err(e) => {
-                            log::error!("load_line criterion_id error: {}", e.to_string())
-                        }
-                    }
+                };  
+                for v in data {
+                    let delta_h = (v.pos.z() - v.pos.y() * roll.sin() - draught_value(v.pos.x()))*trim.cos();
+                    result.push(if v.pos.y() <= 0. {
+                        CriterionData::new_result(
+                            CriterionID::DepthAtForwardPerpendicularPS,
+                            delta_h,
+                            bow_h_min,
+                        )
+                    } else {
+                        CriterionData::new_result(
+                            CriterionID::DepthAtForwardPerpendicularSB,
+                            delta_h,
+                            bow_h_min,
+                        )
+                    });
                 }
-                let result = LoadLineCtx {
+                let result = BowBoardCtx {
                     data: result,
                 };
                 self.value = Some(result.clone());
@@ -82,9 +88,9 @@ impl Eval<(), EvalResult> for LoadLineEval {
 }
 //
 //
-impl std::fmt::Debug for LoadLineEval {
+impl std::fmt::Debug for BowBoardEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LoadLineEval")
+        f.debug_struct("BowBoardEval")
             .field("dbg", &self.dbg)
             .field("value", &self.value)
             .finish()

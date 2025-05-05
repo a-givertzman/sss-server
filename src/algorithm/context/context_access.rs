@@ -396,6 +396,18 @@ impl ContextRead<LoadLineCtx> for Context {
     }
 }
 //
+impl ContextWrite<BowBoardCtx> for Context {
+    fn write(mut self, value: BowBoardCtx) -> CtxResult<Self, Error> {
+        self.bow_board = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<BowBoardCtx> for Context {
+    fn read(&self) -> BowBoardCtx {
+        self.bow_board.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
         self.zg = Some(value);
