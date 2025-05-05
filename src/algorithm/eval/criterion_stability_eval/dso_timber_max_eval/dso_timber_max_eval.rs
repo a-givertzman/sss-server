@@ -48,7 +48,7 @@ impl Eval<(), EvalResult> for DSOTimberMaxEval {
                         )
                     }
                 };
-                let result: DSOTimberMaxCtx = DSOTimberMaxCtx { data };
+                let result = DSOTimberMaxCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
