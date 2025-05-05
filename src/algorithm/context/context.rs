@@ -70,6 +70,8 @@ pub struct Context {
     pub(super) grain: Option<GrainCtx>,
     /// Критерий осадки по грузовой марке
     pub(super) load_line: Option<LoadLineCtx>,
+    /// Критерий запаса плавучести в носу
+    pub(super) reserve_buoyncy: Option<ReserveBuoyncyCtx>,
     /// Критерий высоты на носовом перпендикуляре
     pub(super) bow_board: Option<BowBoardCtx>,
     /// Расчет критерия заглубления винта

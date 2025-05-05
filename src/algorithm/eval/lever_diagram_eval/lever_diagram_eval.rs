@@ -14,7 +14,7 @@ pub struct LeverDiagramEval {
     dbg: Dbg,
     model: Link,
     value: Option<LeverDiagramCtx>,
-    ctx: Option<Context>,//Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -23,14 +23,14 @@ impl LeverDiagramEval {
     pub fn new(
         parent: impl Into<String>,
         model: Link,
-        ctx: Context,//impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
         Self {
             dbg,
             model,
             value: None,
-            ctx: Some(ctx),
+            ctx: Box::new(ctx), 
         }
     }
 }
@@ -39,9 +39,9 @@ impl LeverDiagramEval {
 impl Eval<(), EvalResult> for LeverDiagramEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-     //   match self.ctx.eval(()) {
-       //     CtxResult::Ok(ctx) => {
-                let ctx = self.ctx.take().unwrap();
+        match self.ctx.eval(()) {
+            CtxResult::Ok(ctx) => {
+        //        let ctx = self.ctx.take().unwrap();
                 // Расчет пантокарен в модели
                 let pantocaren: Vec<(f64, f64)> = self.model.call(Query::ComputePantocaren)
                     .map_err(|err| error.pass_with("pantocaren model.call", err))?;  
@@ -193,10 +193,10 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 };
                 self.value = Some(result.clone());
                 ctx.write(result)
-         //   }
-          //  CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-         //   CtxResult::None => CtxResult::None,
-       // }
+            }
+            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
+            CtxResult::None => CtxResult::None,
+        }
     }
 }
 //

@@ -62,7 +62,6 @@ impl Eval<(), EvalResult> for Initial {
             Ok(bounds) => bounds,
             Err(err) => return CtxResult::Err(error.pass_with("model.bounds error", err)),
         };
-
         /*
                     let bounds = self.api_client.fetch(&format!(
                         "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={};",
@@ -84,7 +83,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT   
+                "SELECT   
                     name, \
                     ship_type, \
                     navigation_area, \
@@ -112,7 +111,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT             
+                "SELECT             
                     density, \
                     operational_speed, \
                     icing_type::TEXT, \
@@ -146,7 +145,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT 
+                "SELECT 
                     mass, \
                     bound_x1, \
                     bound_x2
@@ -163,7 +162,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT 
+                "SELECT 
                     space_id, \
                     space_name, \
                     cargo_id, \
@@ -186,7 +185,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT 
+                "SELECT 
                     space_id, \
                     space_name, \
                     cargo_id, \
@@ -209,7 +208,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT 
+                "SELECT 
                     space_id, \
                     space_name, \
                     cargo_id, \
@@ -233,7 +232,7 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                    "SELECT 
+                "SELECT 
                     space_id, \
                     space_name, \
                     cargo_id, \

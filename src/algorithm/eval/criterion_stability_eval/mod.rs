@@ -15,14 +15,14 @@ pub mod dso_timber_max_eval;
 pub mod dso_icing_max_eval;
 pub mod dso_angle_max_eval;
 pub mod min_metacentric_height_eval;
-pub mod acceleration;
+pub mod acceleration_eval;
 pub mod circulation_eval;
 pub mod grain_eval;
 pub mod load_line_eval;
 //pub mod trim_eval;
 pub mod bow_board_eval;
 pub mod screw_eval;
-//pub mod reserve_buoyncy_eval;
+pub mod reserve_buoyncy_eval;
 
 pub use wheather_eval::wheather_eval::WheatherEval;
 pub use wheather_eval::wheather_ctx::WheatherCtx;
@@ -48,8 +48,8 @@ pub use dso_angle_max_eval::dso_angle_max_ctx::DSOAngleMaxCtx;
 pub use min_metacentric_height_eval::min_metacentric_height_eval::MinMetacentricHeightEval;
 pub use min_metacentric_height_eval::min_metacentric_height_ctx::MinMetacentricHeightCtx;
 
-pub use acceleration::acceleration_eval::AccelerationEval;
-pub use acceleration::acceleration_ctx::AccelerationCtx;
+pub use acceleration_eval::acceleration_eval::AccelerationEval;
+pub use acceleration_eval::acceleration_ctx::AccelerationCtx;
 
 pub use circulation_eval::circulation_eval::CirculationEval;
 pub use circulation_eval::circulation_ctx::CirculationCtx;
@@ -69,8 +69,8 @@ pub use bow_board_eval::bow_board_ctx::BowBoardCtx;
 pub use screw_eval::screw_eval::ScrewEval;
 pub use screw_eval::screw_ctx::ScrewCtx;
 
-//pub use reserve_buoyncy_eval::reserve_buoyncy_eval::ReserveBuoyncyEval;
-//pub use reserve_buoyncy_eval::reserve_buoyncy_ctx::ReserveBuoyncyCtx;
+pub use reserve_buoyncy_eval::reserve_buoyncy_eval::ReserveBuoyncyEval;
+pub use reserve_buoyncy_eval::reserve_buoyncy_ctx::ReserveBuoyncyCtx;
 
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]

@@ -1,12 +1,15 @@
 use super::criterion_stability_ctx::CriterionStabilityCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef}, entities::data::{ship_type::ShipType, NavigationArea}, eval::{AccelerationCtx, DSOAngleMaxCtx, DSOAreaCtx, DSOIcingMaxCtx, DSOMaxCtx, DSOTimberMaxCtx, IcingStabCtx, MetacentricHeightCtx, MinMetacentricHeightCtx, StaticAngleCtx, WheatherCtx}
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
+        context::context_access::{ContextRead, ContextReadRef},
+        entities::data::{loads::UnitCargoType, ship_type::ShipType, NavigationArea},
+        eval::*,
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
+use log::info;
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Расчет периода качки судна 
+/// Расчет периода качки судна
 pub struct CriterionStabilityEval {
     dbg: Dbg,
     value: Option<CriterionStabilityCtx>,
@@ -16,10 +19,7 @@ pub struct CriterionStabilityEval {
 //
 impl CriterionStabilityEval {
     ///
-    pub fn new(
-        parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
-    ) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "CriterionStabilityEval");
         Self {
             dbg,
@@ -38,6 +38,7 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let navigation_area = initial.navigation_area.unwrap();
                 let ship_type = initial.ship_type.unwrap();
+                let ship = initial.ship.as_ref().unwrap();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let h_trans_fix = metacentric_height.h_trans_fix;
                 let ship_parameters = initial
@@ -50,6 +51,14 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                 let moulded_depth = *ship_parameters
                     .get("Moulded depth")
                     .ok_or(error.err("moulded_depth error: no data!"))?;
+                let have_container = initial
+                    .unit
+                    .as_ref()
+                    .ok_or(error.err("initial.unit no data"))?
+                    .into_iter()
+                    .any(|v| v.cargo_type == UnitCargoType::Container);
+                let loads: LoadsCtx = ctx.read();
+                let have_grain = !loads.bulk.is_empty();
                 let mut data = Vec::new();
                 if navigation_area != NavigationArea::R3Rsn {
                     data.push(ContextRead::<WheatherCtx>::read(&ctx).data);
@@ -60,23 +69,28 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                 data.append(&mut ContextRead::<DSOAreaCtx>::read(&ctx).data);
                 let icing_stab: IcingStabCtx = ctx.read();
                 let have_icing = icing_stab.is_some;
-                match (have_icing, navigation_area == NavigationArea::Unrestricted, ship_type == ShipType::TimberCarrier) {
+                match (
+                    have_icing,
+                    navigation_area == NavigationArea::Unrestricted,
+                    ship_type == ShipType::TimberCarrier,
+                ) {
                     // обледенение, не лесовоз, неограниченный район
                     (true, true, false) => {
                         data.push(ContextRead::<DSOMaxCtx>::read(&ctx).data) // 2.2.1.2    
-                    },         
+                    }
                     // обледенение, не лесовоз, ограниченный район
-                    (true, false, false) => {                        
+                    (true, false, false) => {
                         data.push(ContextRead::<DSOIcingMaxCtx>::read(&ctx).data) // 2.4.9
-                    }, 
+                    }
                     // обледенение, лесовоз, неограниченный район
                     (true, true, true) => {
-                        data.push(ContextRead::<DSOTimberMaxCtx>::read(&ctx).data)// 3.3.5  
-                    },           
-                    (true, false, true) => { // обледенение, лесовоз, ограниченный район
-                        data.push(ContextRead::<DSOIcingMaxCtx>::read(&ctx).data);  // 2.4.9
+                        data.push(ContextRead::<DSOTimberMaxCtx>::read(&ctx).data) // 3.3.5  
+                    }
+                    (true, false, true) => {
+                        // обледенение, лесовоз, ограниченный район
+                        data.push(ContextRead::<DSOIcingMaxCtx>::read(&ctx).data); // 2.4.9
                         data.push(ContextRead::<DSOTimberMaxCtx>::read(&ctx).data); // 3.3.5   
-                    },
+                    }
                     // без обледенения, лесовоз
                     (false, _, true) => {
                         data.push(ContextRead::<DSOTimberMaxCtx>::read(&ctx).data) // 3.3.5
@@ -84,40 +98,42 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                     // без обледенения, все суда
                     (false, _, _) => {
                         data.push(ContextRead::<DSOMaxCtx>::read(&ctx).data) // 2.2.1.2   
-                    },          
-                }
-                data.append(&mut ContextRead::<DSOAngleMaxCtx>::read(&ctx).data);   
-                //       if self.have_cargo {
-                data.push(ContextRead::<MinMetacentricHeightCtx>::read(&ctx).data);
-                //    }
-                
-                    if navigation_area == NavigationArea::R2Rsn
-                        || navigation_area == NavigationArea::R2Rsn45
-                        || h_trans_fix.sqrt() / breadth > 0.08
-                        || breadth / moulded_depth > 2.5
-                    {
-                        data.push(ContextRead::<AccelerationCtx>::read(&ctx).data);
                     }
-
+                }
+                data.append(&mut ContextRead::<DSOAngleMaxCtx>::read(&ctx).data);
+                //if self.have_cargo {
+                data.push(ContextRead::<MinMetacentricHeightCtx>::read(&ctx).data);
+                //}
+                if navigation_area == NavigationArea::R2Rsn
+                    || navigation_area == NavigationArea::R2Rsn45
+                    || h_trans_fix.sqrt() / breadth > 0.08
+                    || breadth / moulded_depth > 2.5
+                {
+                    data.push(ContextRead::<AccelerationCtx>::read(&ctx).data);
+                }
                 if have_container {
-                    data.push(ContextRead::<CirculationCtx>::read(&ctx).data self.circulation());
+                    data.push(ContextRead::<CirculationCtx>::read(&ctx).data);
                 }
                 if have_grain {
-                    data.append(&mut self.grain());
+                    data.append(&mut ContextRead::<GrainCtx>::read(&ctx).data);
                 }
-                data.push(self.metacentric_height_subdivision());
-        
+                data.push(ContextRead::<MinMetacentricHeightCtx>::read(&ctx).data);
                 // TODO        HeelMaximumLC, HeelFirstMaximumLC
                 // data.push(CriterionData::new_result(CriterionID::HeelMaximumLC , self.lever_diagram.max_angles(), 1.);
-        
+                data.append(&mut ContextRead::<LoadLineCtx>::read(&ctx).data);
+                //    out_data.append(&mut ContextRead::<TrimCtx>::read(&ctx).data);
+                data.append(&mut ContextRead::<BowBoardCtx>::read(&ctx).data);
+                data.append(&mut ContextRead::<ScrewCtx>::read(&ctx).data); 
+                if ship.freeboard_type == "B"
+                    && !(ship_type == ShipType::Tanker
+                        && ship_type == ShipType::OilTanker
+                        && ship_type == ShipType::ChemicalTanker
+                        && ship_type == ShipType::GasCarrier)
+                {
+                    data.push(ContextRead::<ReserveBuoyncyCtx>::read(&ctx).data);
+                }
                 info!("Criterion end");
-                data
-
-
-
-                let result = CriterionStabilityCtx {
-                    data,
-                };
+                let result = CriterionStabilityCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }

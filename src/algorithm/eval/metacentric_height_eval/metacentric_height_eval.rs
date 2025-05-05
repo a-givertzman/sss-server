@@ -13,7 +13,7 @@ pub struct MetacentricHeightEval {
     dbg: Dbg,
     z_g_fix: Option<f64>,
     value: Option<MetacentricHeightCtx>,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Option<Context>,//Box<dyn Eval<(), EvalResult>>,
 }
 //
 //
@@ -22,14 +22,14 @@ impl MetacentricHeightEval {
     pub fn new(
         parent: impl Into<String>,
         z_g_fix: Option<f64>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: Context,//impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "MetacentricHeightEval");
         Self {
             dbg,
             z_g_fix,
             value: None,
-            ctx: Box::new(ctx),
+            ctx: Some(ctx),
         }
     }
 }
@@ -38,8 +38,9 @@ impl MetacentricHeightEval {
 impl Eval<(), EvalResult> for MetacentricHeightEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+    //    match self.ctx.eval(()) {
+    //        CtxResult::Ok(ctx) => {
+                let ctx = self.ctx.take().unwrap();
                 let initial: &InitialCtx = ctx.read_ref();
                 // суммарная масса судна
                 let mass = ctx.read_params(ParameterID::Displacement);
@@ -139,10 +140,10 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 };
                 self.value = Some(result.clone());
                 ctx.write(result)
-            }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
-        }
+    //        }
+    //        CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
+    //        CtxResult::None => CtxResult::None,
+    //    }
     }
 }
 //

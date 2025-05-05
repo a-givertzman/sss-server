@@ -396,6 +396,18 @@ impl ContextRead<LoadLineCtx> for Context {
     }
 }
 //
+impl ContextWrite<ReserveBuoyncyCtx> for Context {
+    fn write(mut self, value: ReserveBuoyncyCtx) -> CtxResult<Self, Error> {
+        self.reserve_buoyncy = Some(value);
+        CtxResult::Ok(self)
+    }
+}
+impl ContextRead<ReserveBuoyncyCtx> for Context {
+    fn read(&self) -> ReserveBuoyncyCtx {
+        self.reserve_buoyncy.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<BowBoardCtx> for Context {
     fn write(mut self, value: BowBoardCtx) -> CtxResult<Self, Error> {
         self.bow_board = Some(value);

@@ -94,17 +94,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         z_g_fix: Option<f64>,
         link: Link,
         ctx: Context,
-    | -> MetacentricHeightEval {
-
-        dso_timber_max
-        
-        MetacentricHeightEval::new(
+    | -> CriterionStabilityEval {
+        CriterionStabilityEval::new(
             &dbg,
-            z_g_fix,
+
+            GrainCtx
+            CirculationCtx
+            AccelerationCtx
+            MinMetacentricHeightCtx
+            DSOAngleMaxCtx
+            DSOTimberMaxCtx
+            DSOIcingMaxCtx
+        
             DSOMaxEval::new(
                 &dbg,
-                CriterionStabilityEval::new(
-                    &dbg,
                     DSOAreaEval::new(
                         &dbg,
                         StaticAngleEval::new(
@@ -119,7 +122,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             &dbg,
                                             WindageEval::new(
                                                 &dbg,
-                                                LeverDiagramEval::new(&dbg, link, ctx),
+                                                LeverDiagramEval::new(
+                                                    &dbg, 
+                                                    link, 
+                                                    MetacentricHeightEval::new(
+                                                        &dbg,
+                                                        z_g_fix,
+                                                        ctx,
+                                                    ),
+                                                ),
                                             ),
                                         ),
                                     ),
