@@ -1,6 +1,10 @@
 use std::collections::HashMap;
+use sal_core::error::Error;
+
+use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
+use crate::kernel::types::eval_result::EvalResult;
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
@@ -13,10 +17,14 @@ pub struct InitialCtx {
     pub bounds: Option<Bounds>,
     /// Текстовые данные по судну
     pub ship: Option<Ship>,
+    /// Тип судна
+    pub ship_type: Option<ShipType>,
     /// Численные данные по судну
     pub ship_parameters: Option<HashMap<String, f64>>,
     /// Данные по обстановке
     pub voyage: Option<Voyage>,
+    /// Район плавания судна
+    pub navigation_area: Option<NavigationArea>,
     /// Данные по обледенению
     pub icing: Option<IcingArray>,
     /// Постоянная нагрузка на судно
@@ -37,6 +45,15 @@ pub struct InitialCtx {
     pub coefficient_k: Option<Vec<(f64, f64)>>,
     /// Коэффициент k_theta учитывающий особенности качки судов смешанного типа
     pub coefficient_k_theta: Option<CoefficientKThetaArray>,
+    /// Координаты осадок судна относительно центра
+    pub load_line: Option<Vec<LoadLineParsedData>>,
+    /// Высота борта на носовом перпендикуляре
+    pub bow_board: Option<Vec<BowBoardParsedData>>,
+    /// Координаты винтов судна относительно центра
+    pub screw: Option<Vec<ScrewParsedData>>,
+    /// Координаты отметок заглубления на корпусе судна
+    /// относительно центра
+    pub draft_mark: Option<Vec<DraftMarkParsedData>>,
 }
 impl InitialCtx {
     ///

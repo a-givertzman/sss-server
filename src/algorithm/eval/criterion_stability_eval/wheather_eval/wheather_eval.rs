@@ -1,14 +1,11 @@
 use super::wheather_ctx::WheatherCtx;
 use crate::{
-    ContextWrite, CtxResult,
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead},
         eval::{
-            BalanceCtx, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx,
-            parameters::ParameterID,
+            parameters::ParameterID, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx
         },
-    },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -87,10 +84,14 @@ impl Eval<(), EvalResult> for WheatherEval {
                     .map_err(|e| error.pass_with("b_s1", e))?;
                 let b_s2 = b_delta_angle * l_w2.to_radians();
                 let b = b_s1 - b_s2;
-                let k = b / a;
+                let k = if a > 0. {
+                    Some(b / a)
+                } else {
+                    None
+                };
                 log::trace!("\t l_w1:{l_w1} l_w2:{l_w2} theta_w1:{theta_w1}  theta_w2:{theta_w2} theta_c:{theta_c} theta_f:{theta_f}
                     a_angle1:{a_angle_first} a_angle2:{l_w2_angle_first} a_s1:{a_s1} a_s2:{a_s2} a:{a} 
-                    b_angle1:{l_w2_angle_first} b_angle2:{b_angle_second} b_s1:{b_s1} b_s2:{b_s2} b:{b} k:{k}");
+                    b_angle1:{l_w2_angle_first} b_angle2:{b_angle_second} b_s1:{b_s1} b_s2:{b_s2} b:{b} k:{:?}", k);
                 ctx.write_params(ParameterID::StaticWindageHeelingAngle, theta_w1);
                 ctx.write_params(ParameterID::DynamicWindageHeelingAngle, l_w2_angle_first);
                 ctx.write_params(
@@ -113,7 +114,16 @@ impl Eval<(), EvalResult> for WheatherEval {
                     a_lever_first,
                 );
                 ctx.write_params(ParameterID::RollToTheWindwardSide, a_angle_first);
-                let result: WheatherCtx = WheatherCtx { k };
+
+                let data = match k {
+                    Some(k) => CriterionData::new_result(CriterionID::Wheather, k, 1.),
+                    None => {
+                        let error = error.err("computing k error");
+                        log::error!("WheatherEval eval error: {}", error);
+                        CriterionData::new_error(CriterionID::Wheather, error.to_string())
+                    },
+                };
+                let result = WheatherCtx { data };
                 self.value = Some(result.clone());
                 ctx.write(result)
             }

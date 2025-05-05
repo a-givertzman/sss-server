@@ -34,11 +34,11 @@ impl Eval<(), EvalResult> for WindEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            CtxResult::Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let windage: WindageCtx = ctx.read(); 
                 let gravity_g = 9.81;
-                let ship = initial.ship.as_ref().expect("WindEval eval error: no ship!");
+                let ship = initial.ship().map_err(|err| error.pass_with("ship", err))?;
                 let p_v = ship.p_v;
                 let m = ship.m;
                 let a_v = windage.a_v;
