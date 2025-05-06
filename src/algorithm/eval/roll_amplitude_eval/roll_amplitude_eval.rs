@@ -1,5 +1,4 @@
 use super::roll_amplitude_ctx::RollingAmplitudeCtx;
-use crate::algorithm::entities::data::stability::{multipler_s::*, *};
 use crate::algorithm::entities::math::curve::*;
 use crate::{
     ContextWrite, CtxResult,

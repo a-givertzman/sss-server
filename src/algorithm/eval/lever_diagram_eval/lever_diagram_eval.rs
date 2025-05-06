@@ -1,10 +1,10 @@
 use super::lever_diagram_ctx::LeverDiagramCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextReadRef},
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead},
         entities::math::curve::*,
-        eval::{lever_diagram_eval::lever_diagram_ctx::MAX_LEVER_ANGLE_CALC, parameters::ParameterID},
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{Context, InitialCtx}, ship_model::query::Query, ContextWrite, CtxResult
+        eval::{parameters::ParameterID, BalanceCtx},
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -12,7 +12,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct LeverDiagramEval {
     dbg: Dbg,
-    model: Link,
+  //  model: Link,
     value: Option<LeverDiagramCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
@@ -22,13 +22,13 @@ impl LeverDiagramEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: Link,
+  //      model: Link,
         ctx: impl Eval<(), EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
         Self {
             dbg,
-            model,
+    //        model,
             value: None,
             ctx: Box::new(ctx), 
         }
@@ -40,11 +40,10 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            CtxResult::Ok(mut ctx) => {
         //        let ctx = self.ctx.take().unwrap();
-                // Расчет пантокарен в модели
-                let pantocaren: Vec<(f64, f64)> = self.model.call(Query::ComputePantocaren)
-                    .map_err(|err| error.pass_with("pantocaren model.call", err))?;  
+                let balance: BalanceCtx = ctx.read();
+                let pantocaren = &balance.pantocaren; 
                 let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
                 let y_g = ctx.read_params(ParameterID::CenterMassY);
                 let y_c = ctx.read_params(ParameterID::CenterVolumeY);
@@ -52,12 +51,9 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 log::info!(
                     "LeverDiagram calculate z_g_fix:{z_g_fix} y_g:{y_g} y_c:{y_c} delta_y:{delta_y}"
                 );
-                let max = (MAX_LEVER_ANGLE_CALC * 10.) as i32;
-                let min = -max;
-                let roll = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>() TODO: пантокарен
                 let mut dso = pantocaren
-                    .into_iter()
-                    .filter_map(|(angle_deg, lever)| {
+                    .iter()
+                    .filter_map(|&(angle_deg, lever)| {
                         let angle_rad: f64 = angle_deg.to_radians();
                         let v1 = lever;
                         let v2 = z_g_fix * angle_rad.sin();

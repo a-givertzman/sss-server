@@ -1,12 +1,9 @@
 use super::circulation_ctx::CirculationCtx;
-use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
-use crate::algorithm::entities::{Curve, ICurve};
+use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
-use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, LoadsCtx};
+use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
-    BalanceCtx, ContextWrite, CtxResult, MetacentricHeightCtx, RollingAmplitudeCtx,
-    RollingPeriodCtx,
-    algorithm::context::context_access::{ContextRead, ContextReadRef},
+    BalanceCtx, ContextWrite, CtxResult, algorithm::context::context_access::{ContextRead, ContextReadRef},
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
 };

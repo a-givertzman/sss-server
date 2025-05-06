@@ -10,6 +10,6 @@ pub enum Query {
     Bounds,
     BoundAreas,
     ComputeBalance(BalanceQuery),
-    StabilityAreas,
-    ComputePantocaren,
+   // StabilityAreas,
+   // ComputePantocaren,
 }

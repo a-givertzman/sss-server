@@ -1,5 +1,5 @@
 use bincode::{Decode, Encode};
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::{data::loads::{AssignmentType, LiquidCargoType}, Position};
 
 ///
 /// To be moved to it's right place if it is a part of a `Context`
@@ -10,6 +10,10 @@ pub struct LiquidResult {
     pub cargo_id: usize,
     /// ID помещения
     pub space_id: usize,
+    /// Тип назначения груза
+    pub assigment_type: AssignmentType,
+    /// Тип жидкого груза
+    pub cargo_type: LiquidCargoType,
     /// смещение центра массы
     pub mass_shift: Position,
     /// продольный момент свободной поверхности жидкости

@@ -1,4 +1,6 @@
 use bincode::{Decode, Encode};
+use crate::algorithm::entities::Position;
+
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
 ///
@@ -24,4 +26,18 @@ pub struct BalanceCtx {
     pub entry_angle: f64, 
     ///  Угол заливания отверстий
     pub flooding_angle: f64, 
+    /// Суммарная площадь проекции на диаметральную плоскость, в пределах  
+    /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна  
+    /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2`
+    pub bow_area: f64,
+    /// Площади боковой и горизонтальной поверхностей для расчета остойчивости
+    pub const_area_v: Vec<(f64, Position)>,
+    pub const_area_h: Vec<(f64, Position)>,
+    /// Продольный метацентрический радиус
+    pub rad_long: f64,
+    /// Поперечный метацентрические радиус
+    pub rad_trans: f64,
+    /// Массив значений плечей от крена для текущих значений дифферента и осадки  
+    pub pantocaren: Vec<(f64, f64)>,
+
 }

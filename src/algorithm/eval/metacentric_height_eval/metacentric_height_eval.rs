@@ -1,9 +1,8 @@
 use super::metacentric_height_ctx::MetacentricHeightCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextReadRef},
-        eval::{parameters::ParameterID, Zg},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx}, CtxResult,
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead}, entities::data::loads::AssignmentType, eval::{parameters::ParameterID, BalanceCtx}
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::entities::math::liquid::*;
@@ -37,28 +36,23 @@ impl MetacentricHeightEval {
 //
 impl Eval<(), EvalResult> for MetacentricHeightEval {
     fn eval(&mut self, _: ()) -> EvalResult {
-        let error = Error::new(&self.dbg, "eval");
+        let _error = Error::new(&self.dbg, "eval");
     //    match self.ctx.eval(()) {
     //        CtxResult::Ok(ctx) => {
-                let ctx = self.ctx.take().unwrap();
-                let initial: &InitialCtx = ctx.read_ref();
+                let mut ctx = self.ctx.take().unwrap();
                 // суммарная масса судна
                 let mass = ctx.read_params(ParameterID::Displacement);
                 // Смещение центра массы по оси Z
                 let mass_shift_z = ctx.read_params(ParameterID::CenterMassZ);
-                // Продольный - метацентрические радиус
-                let rad_long = todo()!;
+                let balance: BalanceCtx = ctx.read();
+                // Продольный метацентрический радиус
+                let rad_long = balance.rad_long;
                 // Поперечный метацентрические радиус
-                let rad_trans = todo()!;
+                let rad_trans = balance.rad_trans;
                 // Отстояние центра величины погруженной части судна    
                 let center_draught_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);  
                 // Все жидкие грузы судна
-                let liquid: Vec<_> = match initial.liquid.as_ref() {
-                    Some(data) => data
-                        .into_iter()
-                        .collect(),
-                    None => return CtxResult::Err(error.err("Read liquid error: no data!")),
-                };
+                let liquid = &balance.liquid;
                 // Аппликата продольного метацентра (2)
                 let Z_m = center_draught_shift_z + rad_long;
                 // Поправка к продольной метацентрической высоте на влияние
@@ -67,7 +61,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                     liquid
                         .iter()
                         .filter(|v| v.assigment_type == AssignmentType::Ballast)
-                        .map(|c| c.moment_surface() todo()! )
+                        .map(|c| FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia) )
                         .sum::<FreeSurfaceMoment>(),
                     mass,
                 );
@@ -75,7 +69,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                     liquid
                         .iter()
                         .filter(|v| v.assigment_type != AssignmentType::Ballast)
-                        .map(|c| c.moment_surface() todo()! )
+                        .map(|c| FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia) )
                         .sum::<FreeSurfaceMoment>(),
                     mass,
                 );

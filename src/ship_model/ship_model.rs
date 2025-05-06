@@ -15,7 +15,7 @@ use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
-use sal_sync::thread_pool::scheduler::Scheduler;
+use sal_sync::thread_pool::Scheduler;
 use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
@@ -114,7 +114,7 @@ impl ShipModel {
                                 let api_client = api_client.clone();
                                 let exit = exit.clone();
                                 if let Err(err) = scheduler.spawn(move|| {
-                                    let result = areas_strength(bounds, ship_id, &api_client, exit);
+                                    let result = bound_areas(bounds, ship_id, &api_client, exit);
                                     if let Err(err) = send.send(Reply::BoundAreas(result)) {
                                         let err = error.pass_with("Send error", err);
                                         log::warn!("{}", err);
@@ -138,8 +138,8 @@ impl ShipModel {
                                     log::warn!("{}.run | Schedule error: {:?}", dbg, err);
                                 }
                             }
-                Query::StabilityAreas => todo!(),
-                Query::ComputePantocaren => todo!(),
+      //          Query::StabilityAreas => todo!(),
+      //          Query::ComputePantocaren => todo!(),
             };
             None::<()>
         });
@@ -229,8 +229,8 @@ fn get_bounds(
 ///
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
-fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc<AtomicBool>) -> Result<BoundArea, Error> {
-    let err = Error::new("ShipModel", "areas_strength");
+fn bound_areas(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc<AtomicBool>) -> Result<BoundArea, Error> {
+    let err = Error::new("ShipModel", "bound_areas");
     let area_h_str = HStrAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
@@ -273,5 +273,7 @@ fn areas_strength(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: 
 /// - `exit` - used to breake long havy computation if possible
 fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
     let err = Error::new("ShipModel", "compute_balance");
+
+    
     Err(err.err("Not implemented yet"))
 }

@@ -6,10 +6,10 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::*,
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, ship_model::ship_model::ShipModel, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{JoinHandle, scheduler::Scheduler};
+use sal_sync::thread_pool::{JoinHandle, Scheduler};
 
 use super::zg_ctx::ZgCtx;
 
@@ -18,36 +18,36 @@ unsafe impl Sync for StabilityAreaEval {}
 
 ///
 /// Расчет равновесного положения судна
-pub struct ZgEval<'a> {
+pub struct ZgEval {
     dbg: Dbg,
     scheduler: Scheduler,
-    ship_model: &'a ShipModel,
+ //   ship_model: &'a ShipModel,
     ctx_before: StabilityAreaEval,
-    ctx_after: fn(Dbg, Option<f64>, Link, Context) -> CriterionStabilityEval,
+    ctx_after: fn(Dbg, Option<f64>, Context) -> CriterionStabilityEval,
 }
 //
 //
-impl<'a> ZgEval<'a> {
+impl ZgEval {
     ///
     pub fn new(
         scheduler: Scheduler,
         parent: impl Into<String>,
-        ship_model: &'a ShipModel,
+      //  ship_model: &'a ShipModel,
         ctx_before: StabilityAreaEval,
-        ctx_after: fn(Dbg, Option<f64>, Link, Context) -> CriterionStabilityEval,
+        ctx_after: fn(Dbg, Option<f64>, Context) -> CriterionStabilityEval,
     ) -> Self {
         let dbg = Dbg::new(parent, "ZgEval");
         Self {
             dbg,
             scheduler,
-            ship_model,
+         //   ship_model,
             ctx_before,
             ctx_after,
         }
     }
 }
 //
-impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
+impl Eval<(), EvalResult> for ZgEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx_before.eval(()) {
@@ -64,13 +64,13 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 let base_ctx = Arc::new(Mutex::new(Option::<Context>::None));
                 let base_task = {
                     let dbg = self.dbg.clone();
-                    let link = self.ship_model.link();
+                 //   let link = self.ship_model.link();
                     let ctx = ctx_before.clone();
                     let base_ctx = base_ctx.clone();
                     let ctx_after = self.ctx_after.clone();
                     self.scheduler
                         .spawn(move || {
-                            let ctx = (ctx_after)(dbg, None, link, ctx).eval(())?;
+                            let ctx = (ctx_after)(dbg, None, ctx).eval(())?;
                             let mut base_ctx = base_ctx.lock().unwrap();
                             *base_ctx = Some(ctx);
                             Ok(())
@@ -85,7 +85,7 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                 for index in 0..max_index {
                     let z_g_fix = index as f64 * delta;
                     let dbg = self.dbg.clone();
-                    let link = self.ship_model.link();
+                //    let link = self.ship_model.link();
                     let ctx = ctx_before.clone();
                     let criterion = Arc::new(Mutex::new(Option::<CriterionStabilityCtx>::None));
                     let moved_criterion = criterion.clone();
@@ -93,7 +93,7 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
                     let task = self
                         .scheduler
                         .spawn(move || {
-                            let ctx = (ctx_after)(dbg, Some(z_g_fix), link, ctx).eval(())?;
+                            let ctx = (ctx_after)(dbg, Some(z_g_fix), ctx).eval(())?;
                             let mut criterion = moved_criterion.lock().unwrap();
                             *criterion = Some(ctx.read());
                             // criterion.clone().write(ctx.read());
@@ -167,7 +167,7 @@ impl<'a> Eval<(), EvalResult> for ZgEval<'a> {
 }
 //
 //
-impl<'a> std::fmt::Debug for ZgEval<'a> {
+impl std::fmt::Debug for ZgEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ZgEval").field("dbg", &self.dbg).finish()
     }

@@ -13,4 +13,6 @@ pub struct BulkResult {
     pub mass_shift: Position,
     /// Распределение массы по шпациям, (index, value)
     pub mass_values: Vec<(usize, f64)>,
+    /// Объемный кренящий момент
+    pub moment: f64,
 }

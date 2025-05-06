@@ -1,3 +1,5 @@
+use bincode::{Decode, Encode};
+
 pub mod constant;
 pub mod liquid;
 pub mod gaseous;
@@ -12,7 +14,7 @@ pub use unit::*;
 
 use serde::{Deserialize, Serialize};
 /// Тип назначения груза
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Decode, Encode)]
 pub enum AssignmentType {
     #[serde(alias = "ballast")]
     Ballast,
@@ -90,7 +92,7 @@ impl std::fmt::Display for BulkCargoType {
     }
 }
 /// Тип жидкого груза судна
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Decode, Encode)]
 pub enum LiquidCargoType {
     #[serde(alias = "crude_oil")]
     CrudeOil,

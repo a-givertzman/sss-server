@@ -15,7 +15,7 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{eval::Eval, run::Run, sync::Link};
+use kernel::{eval::Eval, run::Run};
 use prelude::*;
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx_after = |
         dbg: Dbg,
         z_g_fix: Option<f64>,
-        link: Link,
+     //   link: Link,
         ctx: Context,
     | -> CriterionStabilityEval {
         CriterionStabilityEval::new(
@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                             &dbg,
                                                                             LeverDiagramEval::new(
                                                                                 &dbg, 
-                                                                                link, 
+                                                                             //   link, 
                                                                                 MetacentricHeightEval::new(
                                                                                     &dbg,
                                                                                     z_g_fix,
@@ -172,7 +172,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ZgEval::new(
                                     thread_pool.scheduler(),
                                     &tmp_dbg,
-                                    &ship_model,
+                              //      &ship_model,
                                     ctx_before,
                                     ctx_after,
                             ),

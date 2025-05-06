@@ -1,14 +1,10 @@
 use super::grain_ctx::GrainCtx;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
-use crate::algorithm::entities::{Curve, ICurve};
 use crate::algorithm::eval::parameters::ParameterID;
-use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, LoadsCtx};
+use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
-    BalanceCtx, ContextWrite, CtxResult, MetacentricHeightCtx, RollingAmplitudeCtx,
-    RollingPeriodCtx,
-    algorithm::context::context_access::{ContextRead, ContextReadRef},
+    BalanceCtx, ContextWrite, CtxResult, algorithm::context::context_access::ContextRead,
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -37,15 +33,18 @@ impl Eval<(), EvalResult> for GrainEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
-                let initial: &InitialCtx = ctx.read_ref();
+            CtxResult::Ok(mut ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let loads: LoadsCtx = ctx.read();
-                let m_grain: f64 = loads.bulk.iter().map(|v| v.moment() TODO: модель ).sum();
+                let balance: BalanceCtx = ctx.read();
+                let m_grain = balance
+                    .bulk
+                    .iter()
+                    .map(|v| v.moment )
+                    .sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
                 let balance: BalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
-                let results = Vec::new();
+                let mut results = Vec::new();
                 let lambda_0 = m_grain / mass;
                 // Первая точка апроксимирующей прямой
                 let first_point_ab = (0.0f64, lambda_0);
@@ -59,8 +58,9 @@ impl Eval<(), EvalResult> for GrainEval {
                 // точку, в которой значение кривой плеч момента зерна меньше чем значение dso
                 // Если точка отсутствует (момент от зерна слишком большй) то принимаем
                 // максимальный угол при расчете диаграммы
-                let angle = match lever_diagram.max_angles().first() {
-                    Some((angle, lever)) => angle,
+                let max_angles = lever_diagram.max_angles();
+                let angle = match max_angles.first() {
+                    Some((angle, _lever)) => angle,
                     None => {
                         let error = error.err("no max max_angle");
                         log::error!("{error}");

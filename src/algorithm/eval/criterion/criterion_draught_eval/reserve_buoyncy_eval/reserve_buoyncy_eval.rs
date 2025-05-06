@@ -1,6 +1,5 @@
 use super::reserve_buoyncy_ctx::ReserveBuoyncyCtx;
-use crate::algorithm::context::context_access::{ContextParamsRead, ContextRead, ContextReadRef};
-use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
@@ -36,25 +35,15 @@ impl Eval<(), EvalResult> for ReserveBuoyncyEval {
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let balance: BalanceCtx = ctx.read();
-                bow_area = balance.bow_area TODO: модель; // TODO Cуммарая площадь проекции на диаметральную плоскость, м^2                 
+                let balance: BalanceCtx = ctx.read();               
                 let ship_parameters = initial.ship_parameters.as_ref().unwrap();
                 let bow_area_min = *ship_parameters
                     .get("Calculated minimum bow area")
                     .ok_or(error.err("No bow_area_min"))?;
-                let ship_length = *ship_parameters
-                    .get("LBP")
-                    .ok_or(error.err("No LBP in ship_parameters"))?;
-                let draught_bow = ctx.read_params(ParameterID::DraughtBow);
-                let draught_stern = ctx.read_params(ParameterID::DraughtStern);
-                let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-                let delta_draught = (draught_bow - draught_stern) / ship_length;
-                let draught_value = |pos_x: f64| -> f64 { draught_mid + delta_draught * pos_x };
-                let draught_0075l = draught_value((0.5 - 0.075) * ship_length);
                 let result = ReserveBuoyncyCtx {
                     data: CriterionData::new_result(
                         CriterionID::ReserveBuoyncyInBow,
-                        draught_0075l,
+                        balance.bow_area,
                         bow_area_min,
                     ),
                 };

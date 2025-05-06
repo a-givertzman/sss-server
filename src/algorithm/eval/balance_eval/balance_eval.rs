@@ -83,6 +83,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     entry_angle: result_data.entry_angle, 
                     flooding_angle: result_data.flooding_angle,
                     volume: result_data.volume,
+                    ..result_data
                 };
                 //
                 // TODO Propably additional BalanceResult is not required, sorry if not

@@ -2,9 +2,8 @@ use super::stability_area_ctx::StabilityAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{data::loads::UnitCargoType, Bound, Moment, Position},
-        eval::IcingTimberCtx,
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::Query, ContextWrite, CtxResult
+        entities::{data::loads::UnitCargoType, Bound, Moment, Position}, eval::{BalanceCtx, IcingTimberCtx},
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx}, CtxResult
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -56,8 +55,9 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return CtxResult::Err(error.err("Read bounds error: no data!")),
                 };
-                let (const_area_v, const_area_h) TODO: модель = self.model.call(Query::StabilityAreas)
-                    .map_err(|err| error.pass_with("const_area model.call", err))?;
+                let balance: BalanceCtx = ctx.read();
+                let const_area_v = &balance.const_area_v;
+                let const_area_h = &balance.const_area_h; 
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,
@@ -107,7 +107,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Bound::None
                 };
                 // Перебираем шпации и ищем площадь попавшую в текущую шпацию
-                for (i, bound_x) in bounds.iter().enumerate() {
+                for (_i, bound_x) in bounds.iter().enumerate() {
                     let mut current_area = 0.;
                     let mut current_moment = Moment::zero();
                     // Пересечение шпации и диапазона грузов
@@ -167,8 +167,8 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                             .unwrap_or(Bound::None);
                         match u.icing_area(&current_bound_x, &icing_timber_bound_y) {
                             Ok((_, full_moment, delta_moment)) => {
-                                let x = current_bound_x.center().unwrap_or(0.);
-                                let z = u.centre_of_icing_area.unwrap_or(Position::zero()).z();
+                               // let x = current_bound_x.center().unwrap_or(0.);
+                               // let z = u.centre_of_icing_area.unwrap_or(Position::zero()).z();
                                 current_moment += full_moment;
                                 current_delta_moment += delta_moment;
                             }

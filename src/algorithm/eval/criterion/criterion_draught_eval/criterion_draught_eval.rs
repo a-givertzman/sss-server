@@ -2,11 +2,10 @@ use super::criterion_draught_ctx::CriterionDraughtCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::data::{loads::UnitCargoType, ship_type::ShipType, NavigationArea},
+        entities::data::ship_type::ShipType,
         eval::*,
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
-use log::info;
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критериев посадки судна

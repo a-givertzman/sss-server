@@ -6,7 +6,6 @@ use crate::{
         eval::*,
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
-use log::info;
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критериев проверки остойчивости судна
