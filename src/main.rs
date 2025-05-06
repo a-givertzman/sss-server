@@ -18,7 +18,7 @@ use infrostructure::api::client::api_client::ApiClient;
 use kernel::{eval::Eval, run::Run, sync::Link};
 use prelude::*;
 use sal_core::dbg::Dbg;
-use sal_sync::thread_pool::tread_pool::ThreadPool;
+use sal_sync::thread_pool::ThreadPool;
 use ship_model::ship_model::ShipModel;
 
 ///
