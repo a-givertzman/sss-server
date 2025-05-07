@@ -1,10 +1,6 @@
-#[cfg(test)]
-#[path = "../../../tests/unit/algorithm/cache/column_test.rs"]
-mod tests;
-//
+use sal_core::{dbg::Dbg, error::Error};
 use super::bound::Bound;
 use super::OwnedSet;
-use sal_sync::services::entity::dbg_id::DbgId;
 use std::{cmp::Ordering, ops::Deref};
 ///
 /// Analyzed dataset, column of a [super::Table] instance.
@@ -14,7 +10,7 @@ use std::{cmp::Ordering, ops::Deref};
 pub(super) struct Column<T> {
     inflections: OwnedSet<usize>,
     data: OwnedSet<T>,
-    dbgid: DbgId,
+    Dbg: Dbg,
 }
 //
 //
@@ -24,14 +20,14 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
-    pub(super) fn new<S>(dbgid: DbgId, values: S) -> Self
+    pub(super) fn new<S>(Dbg: Dbg, values: S) -> Self
     where
         S: Into<OwnedSet<T>> + Deref<Target = [T]>,
     {
         Self {
-            inflections: Self::get_inflections(&dbgid, &values),
+            inflections: Self::get_inflections(&Dbg, &values),
             data: values.into(),
-            dbgid,
+            Dbg,
         }
     }
     ///
@@ -39,7 +35,7 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
-    fn get_inflections(dbgid: &DbgId, values: &[T]) -> OwnedSet<usize> {
+    fn get_inflections(Dbg: &Dbg, values: &[T]) -> OwnedSet<usize> {
         use Ordering::*;
         //
         if values.is_empty() {
@@ -82,7 +78,7 @@ impl<T: PartialOrd> Column<T> {
                 },
                 _ => panic!(
                     "{}.{} | Non-comparable value at position {}, {} or {}",
-                    dbgid,
+                    Dbg,
                     callee,
                     m_id - 1,
                     m_id,
@@ -128,7 +124,7 @@ impl<T: PartialOrd> Column<T> {
                     ),
                     _ => panic!(
                         "{}.{} | `val`={} is a non-comparable value",
-                        self.dbgid, callee, val
+                        self.Dbg, callee, val
                     ),
                 }
             })

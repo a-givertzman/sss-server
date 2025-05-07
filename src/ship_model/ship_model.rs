@@ -1,6 +1,7 @@
 use super::query::*;
 use super::reply::*;
 use super::{query::Query, reply::Reply};
+use crate::algorithm::entities::cache::Cache;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
@@ -11,6 +12,7 @@ use crate::algorithm::eval::BalanceCtx;
 use crate::kernel::sync::Link;
 use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
+use api_tools::debug::dbg_id::DbgId;
 use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
@@ -133,7 +135,7 @@ impl ShipModel {
                                 let bounds = bounds.clone();
                                 let exit = exit.clone();
                                 if let Err(err) = scheduler.spawn(move|| {
-                                    let result = compute_balance(model_key, model_path, cashe_path, bounds.clone(), balance_src_data, ship_id, exit);
+                                    let result = compute_balance(model_key, model_path, &cashe_path, bounds.clone(), balance_src_data, ship_id, exit);
                                     if let Err(err) = send.send(Reply::ComputeBalance(result)) {
                                         let err = error.pass_with("Send error", err);
                                             log::warn!("{}", err);
@@ -293,7 +295,7 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
                 Shape::Solid(model) => Some(model.center().point()),
                 _ => None,
             })
-            .map_err(|err| error.err("model_tree Expected Solid by model_key='{}'", model_key))?;
+            .map_err(|err| error.err(format!("model_tree Expected Solid by model_key='{model_key}'")))?;
         let heel_steps = conf.heel_steps.clone();
         let trim_steps = conf.trim_steps.clone();
         let draught_steps = conf.draught_steps.clone();
@@ -313,7 +315,7 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
         .build()
         .map_err(|err| error.pass_with("handlers", err))?;
         for (_, handler) in handlers {
-            match handler.join()
+            match handler.join() {
                 Err(why) => Err(format!("Failed preparing thread: {:?}", why)),
                 Ok(res) => {
                     if let Err(why) = res {
@@ -335,6 +337,7 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
         cache
             .init()
             .map_err(|err| error.pass_with("cache.init", err))?;
-    }
-    
+
+        Err(error.err("Unimplemented"))
+    }    
 }

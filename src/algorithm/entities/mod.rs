@@ -9,7 +9,7 @@ pub mod math;
 //pub mod area;
 pub mod data;
 pub mod model;
-pub mod cashe;
+pub mod cache;
 
 //pub use stability::*;
 //pub use parameters::*;

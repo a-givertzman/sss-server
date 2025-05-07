@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::models::ship_model::{
     local_cache::floating_position_cache::{
         floating_position_cache_conf::FloatingPositionCacheConf, CalculatedFloatingPositionCache,

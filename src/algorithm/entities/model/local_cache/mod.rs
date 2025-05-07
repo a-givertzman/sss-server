@@ -12,7 +12,7 @@ pub mod floating_position_cache;
 //
 use crate::common::cache::Cache;
 use sal_sync::services::{
-    entity::error::str_err::StrErr, service::service_handles::ServiceHandles,
+    entity::error::str_err::Error, service::service_handles::ServiceHandles,
 };
 use std::sync::{atomic::AtomicBool, Arc};
 ///
@@ -26,7 +26,7 @@ pub(super) trait LocalCache {
     fn calculate(
         &self,
         exit: Arc<AtomicBool>,
-    ) -> Result<ServiceHandles<Result<(), StrErr>>, StrErr>;
+    ) -> Result<ServiceHandles<Result<(), Error>>, Error>;
     ///
     /// Returns approximated values based on given set.
     fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>>;

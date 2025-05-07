@@ -10,7 +10,7 @@ use sal_3dlib::{
         vertex::Vertex,
     },
 };
-use sal_sync::services::entity::{dbg_id::DbgId, error::str_err::StrErr};
+use sal_sync::services::entity::{dbg_id::Dbg, error::str_err::Error};
 //
 //
 pub struct EvaluatedFloatingPosition {
@@ -27,7 +27,7 @@ pub struct EvaluatedFloatingPosition {
 //
 //
 pub struct FloatingPosition<'cache, Attr> {
-    dbgid: DbgId,
+    dbg: Dbg,
     cache: &'cache dyn LocalCache,
     centreline: Edge<Attr>,
     middle: Face<Attr>,
@@ -41,7 +41,7 @@ pub struct FloatingPosition<'cache, Attr> {
 #[allow(clippy::too_many_arguments)]
 impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     pub(super) fn new(
-        parent: &DbgId,
+        parent: &Dbg,
         cache: &'cache dyn LocalCache,
         centreline: Edge<Attr>,
         middle: Face<Attr>,
@@ -51,7 +51,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
         accuracy: f64,
     ) -> Self {
         Self {
-            dbgid: DbgId::with_parent(parent, "FloatingPosition"),
+            dbg: Dbg::with_parent(parent, "FloatingPosition"),
             cache,
             centreline,
             middle,
@@ -67,11 +67,11 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     /// # Panics
     /// Panic occurs if cached dataset is inconsistent. In particular, `disp_vol_center`,
     /// which read from the cache, _must be_ a point in 3-dimensional space.
-    pub fn eval(mut self) -> Result<EvaluatedFloatingPosition, StrErr>
+    pub fn eval(mut self) -> Result<EvaluatedFloatingPosition, Error>
     where
         Attr: Clone,
     {
-        let dbgid = DbgId(format!("{}/eval", self.dbgid));
+        let dbg = Dbg(format!("{}/eval", self.Dbg));
         let init_keel = self.centreline.center().point();
         let disp_vol = self.disp / self.density;
         let mut theta = 0.0;
@@ -107,7 +107,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         if rows.len() > 1 {
                             log::warn!(
                                 "{} | More than one cached row for approx_vals='{:?}'",
-                                dbgid,
+                                Dbg,
                                 approx_vals
                             );
                         }
@@ -115,7 +115,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                     .and_then(|rows| rows.into_iter().next())
                     .ok_or(format!(
                         "{} | No value found for approx_vals='{:?}'",
-                        dbgid, approx_vals
+                        Dbg, approx_vals
                     ))
                     .map(|row| {
                         let mb_disp_vol_center = &row[4..=6];
@@ -126,7 +126,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         panic!(
                             "{} |`center_of_displacement_volume` must be a point \
                                 in 3-dimensional space, but it has {} coordinates",
-                            dbgid,
+                            Dbg,
                             mb_disp_vol_center.len()
                         );
                     })?
@@ -228,7 +228,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         .ok_or(format!(
                             "{} | No intersection between Vertical\
                             plane and Parallel to Midlle planes.",
-                            dbgid
+                            Dbg
                         ))?;
                     let cb_m = m_plane
                         .project(&disp_vol_center)

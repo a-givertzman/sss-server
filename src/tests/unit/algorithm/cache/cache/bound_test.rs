@@ -1,3 +1,4 @@
+#[cfg(test)]
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;

@@ -9,8 +9,8 @@ use sal_3dlib::topology::shape::{
     vertex::Vertex,
     wire::{Polygon, Wire},
 };
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{
-    entity::{dbg_id::DbgId, error::str_err::StrErr},
     service::service_handles::ServiceHandles,
 };
 use std::{
@@ -22,7 +22,7 @@ use std::{
 ///
 /// See [FloatingPositionCacheConf] for more details about the fields.
 pub(in super::super) struct FloatingPositionCache<A> {
-    dbgid: DbgId,
+    dbg: Dbg,
     file_path: PathBuf,
     model_keys: Vec<String>,
     waterline_position: [f64; 3],
@@ -46,12 +46,12 @@ impl<A> FloatingPositionCache<A> {
     /// Creates a new instance.
     /// - path - folder contains all cache files
     pub(in super::super) fn new(
-        parent: &DbgId,
+        parent: &Dbg,
         model_tree: ModelTree<A>,
         path: impl AsRef<Path>,
         conf: FloatingPositionCacheConf,
     ) -> Self {
-        let dbgid = DbgId::with_parent(parent, "FloatingPositionCache");
+        let dbg = Dbg::with_parent(parent, "FloatingPositionCache");
         let file_path = path.as_ref().join(Self::KEY);
         Self {
             model_tree,
@@ -60,17 +60,17 @@ impl<A> FloatingPositionCache<A> {
             waterline_position: conf.waterline_position,
             trim_steps: conf.trim_steps,
             draught_steps: conf.draught_steps,
-            cache: Cache::new(&dbgid, &file_path),
+            cache: Cache::new(&Dbg, &file_path),
             file_path,
-            dbgid,
+            Dbg,
         }
     }
     ///
     /// Creates a waterline object in 3D space centered at `self.waterline_position`.
     ///
     /// The result object is used for calculating cache algorithm (see [FloatingPositionCache::calculate]).
-    fn create_waterline<T>(&self) -> Result<Face<T>, StrErr> {
-        let dbgid = DbgId(format!("{}.create_waterline_model", self.dbgid));
+    fn create_waterline<T>(&self) -> Result<Face<T>, Error> {
+        let dbg = Dbg(format!("{}.create_waterline_model", self.dbg));
         let [x, y, z] = self.waterline_position;
         // dynamic range could be built based on bounding box of target element behind self.model_keys,
         // but now reserve big enough offsets, which should work with most elements
@@ -87,14 +87,14 @@ impl<A> FloatingPositionCache<A> {
             true,
         ) {
             Ok(ref polygon) => Face::try_from(polygon).map_err(|why| {
-                StrErr(format!(
+                Error(format!(
                     "{} | Failed creating Face from *polygon*: {}",
-                    dbgid, why
+                    Dbg, why
                 ))
             }),
-            Err(why) => Err(StrErr(format!(
+            Err(why) => Err(Error(format!(
                 "{} | Failed creating *polygon* from Wire: {}",
-                dbgid, why
+                Dbg, why
             ))),
         }
     }
@@ -107,9 +107,9 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
     fn calculate(
         &self,
         exit: Arc<AtomicBool>,
-    ) -> Result<ServiceHandles<Result<(), StrErr>>, StrErr> {
+    ) -> Result<ServiceHandles<Result<(), Error>>, Error> {
         CalculatedFloatingPositionCache::new(
-            &self.dbgid,
+            &self.dbg,
             self.file_path.clone(),
             self.model_tree
                 .iter()
@@ -134,6 +134,6 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
     //
     //
     fn reload(&mut self) {
-        self.cache = Cache::new(&self.dbgid, &self.file_path);
+        self.cache = Cache::new(&self.dbg, &self.file_path);
     }
 }

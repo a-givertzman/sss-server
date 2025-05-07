@@ -7,12 +7,9 @@
 mod bound;
 mod column;
 mod table;
-#[cfg(test)]
-#[path = "../../../tests/unit/algorithm/cache/cache_test.rs"]
-mod tests;
 //
 use column::Column;
-use sal_sync::services::entity::{dbg_id::DbgId, error::str_err::StrErr};
+use sal_core::{dbg::Dbg, error::Error};
 use std::{
     fs::File,
     io::{BufRead, BufReader},
@@ -29,21 +26,21 @@ type OwnedSet<T> = std::sync::Arc<[T]>;
 ///
 /// # Examples
 /// ```
-/// use sal_sync::services::entity::dbg_id::DbgId;
+/// use sal_sync::services::entity::dbg_id::Dbg;
 /// //
 /// // only initializing, no file reading
-/// let dbgid = DbgId("cache creator".to_owned());
+/// let Dbg = Dbg("cache creator".to_owned());
 /// let file_path = "/path/to/cache/file";
-/// let cache = Cache::new(&dbgid, file_path);
+/// let cache = Cache::new(&Dbg, file_path);
 /// // the first call causes reading file
 /// let _ = cache.get(&[None, Some(1.0)]);
 /// // the second call uses taken dataset
 /// let _ = cache.get(&[Some(2.0)]);
 /// ```
 pub struct Cache<T> {
-    dbgid: DbgId,
+    Dbg: Dbg,
     path: PathBuf,
-    table: OnceLock<Result<Table<T>, StrErr>>,
+    table: OnceLock<Table<T>>,
 }
 //
 //
@@ -53,9 +50,9 @@ impl<T> Cache<T> {
     ///
     /// Note that this call doesn't read the file yet.
     /// The first access (see [Cache::get]) causes file reading.
-    pub fn new(parent: &DbgId, path: impl AsRef<Path>) -> Self {
+    pub fn new(parent: &Dbg, path: impl AsRef<Path>) -> Self {
         Self {
-            dbgid: DbgId::with_parent(parent, "Cache"),
+            Dbg: Dbg::with_parent(parent, "Cache"),
             path: path.as_ref().to_owned(),
             table: OnceLock::new(),
         }
@@ -69,7 +66,7 @@ impl<T: PartialOrd> Cache<T> {
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    fn init(&self) -> Result<Table<T>, StrErr>
+    fn init(&self) -> Result<(), Error>
     where
         T: FromStr<Err = ParseFloatError> + Clone + Default,
     {
@@ -77,7 +74,7 @@ impl<T: PartialOrd> Cache<T> {
         let file = File::open(&self.path).map_err(|err| {
             format!(
                 "{}.{} | Failed reading file='{}': {}",
-                self.dbgid,
+                self.Dbg,
                 callee,
                 self.path.display(),
                 err
@@ -89,7 +86,7 @@ impl<T: PartialOrd> Cache<T> {
             let line = try_line.map_err(|err| {
                 format!(
                     "{}.{} | Failed reading line={}: {}",
-                    self.dbgid, callee, line_id, err
+                    self.Dbg, callee, line_id, err
                 )
             })?;
             let ss = line.split_ascii_whitespace();
@@ -99,7 +96,7 @@ impl<T: PartialOrd> Cache<T> {
                 Some(vals) if vals.len() != ss_len => {
                     return Err(format!(
                         "{}.{} | Inconsistent dataset at line={}",
-                        self.dbgid, callee, line_id
+                        self.Dbg, callee, line_id
                     )
                     .into())
                 }
@@ -109,7 +106,7 @@ impl<T: PartialOrd> Cache<T> {
                 let val = s.parse().map_err(|err| {
                     format!(
                         "{}.{} | Failed parsing value at line={}: {}",
-                        self.dbgid, callee, line_id, err
+                        self.Dbg, callee, line_id, err
                     )
                 })?;
                 vals_mut[i].push(val);
@@ -118,13 +115,14 @@ impl<T: PartialOrd> Cache<T> {
         let cols = vals
             .map(|vals| {
                 let iter_over_cols = vals.into_iter().enumerate().map(|(id, vals)| {
-                    let dbgid = DbgId::with_parent(&self.dbgid, &format!("Column_{}", id));
-                    Column::new(dbgid, vals)
+                    let Dbg = Dbg::with_parent(&self.Dbg, &format!("Column_{}", id));
+                    Column::new(Dbg, vals)
                 });
                 OwnedSet::from_iter(iter_over_cols)
             })
             .unwrap_or_default();
-        Ok(Table::new(&self.dbgid, cols))
+        self.table.set(Table::new(&self.Dbg, cols));
+        Ok(())
     }
 }
 //
@@ -174,12 +172,12 @@ impl Cache<f64> {
     /// ```
     pub fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
         self.table
-            .get_or_init(|| self.init())
+            .get()
             .as_ref()
             .unwrap_or_else(|err| {
                 panic!(
                     "{}.{} | Failed initializing Table: {}",
-                    self.dbgid, "get", err
+                    self.Dbg, "get", err
                 )
             })
             .get(approx_vals)

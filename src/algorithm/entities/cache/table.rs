@@ -1,13 +1,9 @@
-#[cfg(test)]
-#[path = "../../../tests/unit/algorithm/cache/table_test.rs"]
-mod tests;
-//
+use sal_core::{dbg::Dbg, error::Error};
 use super::{bound::Bound, column::Column, OwnedSet};
-use sal_sync::services::entity::dbg_id::DbgId;
 ///
 /// Set of [Column]s.
 pub(super) struct Table<T> {
-    dbgid: DbgId,
+    Dbg: Dbg,
     columns: OwnedSet<Column<T>>,
 }
 //
@@ -15,10 +11,10 @@ pub(super) struct Table<T> {
 impl<T> Table<T> {
     ///
     /// Creates a new instance.
-    pub(super) fn new(parent: &DbgId, cols: impl Into<OwnedSet<Column<T>>>) -> Self {
-        let dbgid = DbgId::with_parent(parent, "Table");
+    pub(super) fn new(parent: &Dbg, cols: impl Into<OwnedSet<Column<T>>>) -> Self {
+        let Dbg = Dbg::with_parent(parent, "Table");
         let columns = cols.into();
-        Self { dbgid, columns }
+        Self { Dbg, columns }
     }
 }
 //
@@ -50,7 +46,7 @@ impl Table<f64> {
         assert!(
             self.columns.len() >= approx_vals.len(),
             "{}.{} | columns.len={} < approx_vals.len={}",
-            self.dbgid,
+            self.Dbg,
             callee,
             self.columns.len(),
             approx_vals.len()
@@ -67,7 +63,7 @@ impl Table<f64> {
             }
             log::debug!(
                 "{}.{} | Filtered bounds: {:?}",
-                self.dbgid,
+                self.Dbg,
                 callee,
                 val_bounds
             );
@@ -99,7 +95,7 @@ impl Table<f64> {
                 }
             }
         };
-        log::debug!("{}.{} | Merged bounds: {:?}", self.dbgid, callee, bounds);
+        log::debug!("{}.{} | Merged bounds: {:?}", self.Dbg, callee, bounds);
         bounds
             .into_iter()
             .flat_map(|bound| match bound {
@@ -121,7 +117,7 @@ impl Table<f64> {
                         vals.push(val);
                         log::trace!(
                             "{}.{} | Interpolation: col_id={} from row_id={} to row_id={} with result={}",
-                            self.dbgid, callee, col_id, start, end, val
+                            self.Dbg, callee, col_id, start, end, val
                         );
                     }
                     Some(vals)

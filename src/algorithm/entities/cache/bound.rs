@@ -1,6 +1,3 @@
-#[cfg(test)]
-#[path = "../../../tests/unit/algorithm/cache/bound_test.rs"]
-mod tests;
 //
 use std::ops::BitAnd;
 ///

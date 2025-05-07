@@ -2,3 +2,4 @@
 // mod algorithm;
 mod app;
 mod kernel;
+mod tests;

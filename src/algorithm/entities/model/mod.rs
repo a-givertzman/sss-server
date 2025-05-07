@@ -9,6 +9,7 @@ pub mod ship_model_conf;
 use floating_position::FloatingPosition;
 //
 use indexmap::{IndexMap, IndexSet};
+use sal_core::{dbg::Dbg, error::Error};
 use local_cache::{
     cache_key::CacheKey, floating_position_cache::FloatingPositionCache, LocalCache,
 };
@@ -24,7 +25,6 @@ use sal_3dlib::{
         Shape,
     },
 };
-use sal_sync::services::entity::{dbg_id::DbgId, error::str_err::StrErr};
 use ship_model_conf::ShipModelConf;
 use std::sync::Arc;
 ///
@@ -32,7 +32,7 @@ use std::sync::Arc;
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
 pub struct ShipModel<A> {
-    dbgid: DbgId,
+    dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element by keys.
     model_tree: ModelTree<A>,
@@ -46,18 +46,18 @@ pub struct ShipModel<A> {
 impl<A: Clone + Send + 'static> ShipModel<A> {
     ///
     /// Creates a new instance.
-    pub fn new(parent: &DbgId, conf: ShipModelConf) -> Self {
-        let dbgid = DbgId::with_parent(parent, "ShipModel");
-        let model_tree = ModelTree::new(&dbgid, conf.model_path);
+    pub fn new(parent: &Dbg, conf: ShipModelConf) -> Self {
+        let dbg = Dbg::with_parent(parent, "ShipModel");
+        let model_tree = ModelTree::new(&Dbg, conf.model_path);
         let mut ship_model = Self {
             caches: IndexMap::new(),
             model_tree: model_tree.clone(),
-            dbgid: dbgid.clone(),
+            dbg: Dbg.clone(),
         };
         ship_model.caches.insert(
             CacheKey::FloatingPostion,
             Box::new(FloatingPositionCache::new(
-                &dbgid,
+                &Dbg,
                 model_tree,
                 conf.cache_dir,
                 conf.floating_position_cache_conf,
@@ -76,7 +76,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     /// # Examples
     /// ```
     /// use sal_3dlib::topology::shape::Face;
-    /// use sal_sync::services::entity::error::str_err::StrErr;
+    /// use sal_sync::services::entity::error::str_err::Error;
     /// //
     /// // waterline constructor that creates a face (kind of plane)
     /// // based on x, y, and z coordinates - the waterline center
@@ -85,7 +85,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     /// }
     /// //
     /// //
-    /// fn algorithm<T>(ship_model: &ShipModel<T>) -> Result<(), StrErr> {
+    /// fn algorithm<T>(ship_model: &ShipModel<T>) -> Result<(), Error> {
     ///     let waterline = create_waterline(0.0, 0.0, 0.0);
     ///     // split an element of the target ship model (consider there is one called 'hull')
     ///     // and filter result elements to get those, which are above created waterline plane
@@ -100,12 +100,12 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         keys: &[&str],
         waterline: &Face<Option<A>>,
         relative_position: RelativePostion,
-    ) -> Result<Vec<Shape<Option<A>>>, StrErr> {
-        let dbgid = DbgId(format!("{}.subvolume", self.dbgid));
+    ) -> Result<Vec<Shape<Option<A>>>, Error> {
+        let dbg = Dbg(format!("{}.subvolume", self.dbg));
         // pop up warning if a key is not present in `self.model_key`
         for key in keys {
             if !self.model_tree.contains_key(key) {
-                log::warn!("{} | No element found for key='{}'", dbgid, key);
+                log::warn!("{} | No element found for key='{}'", Dbg, key);
             }
         }
         // defines whether the key should be taken
@@ -165,7 +165,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     ///     }
     /// }
     /// ```
-    pub fn update_caches(&mut self, caches: &[&CacheKey]) -> Result<(), StrErr> {
+    pub fn update_caches(&mut self, caches: &[&CacheKey]) -> Result<(), Error> {
         // start wokers to calculate required caches
         let handlers = {
             let mut handlers = vec![];
@@ -182,19 +182,19 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         // Get keys of successfuly calculated caches.
         // Return the full error if any worker fails.
         let calculated = {
-            let dbgid = DbgId(format!("{}.update_caches", self.dbgid));
+            let dbg = Dbg(format!("{}.update_caches", self.dbg));
             let mut calculated = IndexSet::new();
             let mut errors = vec![];
             for (cache_key, workers) in handlers {
                 for (id, handler) in workers {
                     match handler.join() {
                         Err(err) => {
-                            log::error!("{} | Preparing thread='{}'..", dbgid, id);
+                            log::error!("{} | Preparing thread='{}'..", Dbg, id);
                             errors.push(format!("  thread_id='{}', {:?}", id, err));
                         }
                         Ok(worker_res) => {
                             if let Err(err) = worker_res {
-                                log::error!("{} | Calculating cache in thread='{}'..", dbgid, id);
+                                log::error!("{} | Calculating cache in thread='{}'..", Dbg, id);
                                 errors.push(format!("  thread_id='{}', {:?}", id, err));
                             } else {
                                 calculated.insert(cache_key);
@@ -204,7 +204,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
                 }
             }
             if !errors.is_empty() {
-                return Err(StrErr(errors.join("\n")));
+                return Err(Error(errors.join("\n")));
             }
             calculated
         };
@@ -227,13 +227,13 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         const WATER_DENCITY: f64 = 0.0;
         //
         FloatingPosition::new(
-            &self.dbgid,
+            &self.dbg,
             self.caches
                 .get(&CacheKey::FloatingPostion)
                 .unwrap_or_else(|| {
                     panic!(
                         "{} | Trying to access uninitialized FloatingPositionCache",
-                        self.dbgid
+                        self.dbg
                     )
                 })
                 .as_ref(),

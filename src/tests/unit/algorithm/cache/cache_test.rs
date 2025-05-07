@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::common::cache::Cache;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_sync::services::entity::dbg_id::DbgId;

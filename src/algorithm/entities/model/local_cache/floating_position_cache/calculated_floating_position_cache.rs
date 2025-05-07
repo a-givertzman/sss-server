@@ -1,6 +1,3 @@
-#[cfg(test)]
-#[path = "../../../../../../../tests/unit/algorithm/models/ship_model/local_cache/floating_position_cache/calculated_floating_position_cache_test.rs"]
-mod tests;
 //
 use sal_3dlib::{
     gmath::vector::Vector,
@@ -11,10 +8,8 @@ use sal_3dlib::{
         Shape,
     },
 };
-use sal_sync::services::{
-    entity::{dbg_id::DbgId, error::str_err::StrErr},
-    service::service_handles::ServiceHandles,
-};
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::services::service::ServiceHandles;
 use std::{
     fs::File,
     io::Write,
@@ -30,7 +25,7 @@ use std::{
 ///
 /// See [super::FloatingPositionCacheConf] for more details about the fields.
 pub(super) struct CalculatedFloatingPositionCache<A> {
-    dbgid: DbgId,
+    dbg: Dbg,
     file_path: PathBuf,
     elements: Vec<Shape<A>>,
     waterline: Face<A>,
@@ -50,7 +45,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
-        parent: &DbgId,
+        parent: &Dbg,
         file_path: PathBuf,
         elements: Vec<Shape<A>>,
         waterline: Face<A>,
@@ -60,7 +55,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
         exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
-            dbgid: DbgId::with_parent(parent, "CalculatedFloatingPositionCache"),
+            dbg: Dbg::with_parent(parent, "CalculatedFloatingPositionCache"),
             file_path,
             elements,
             waterline,
@@ -72,24 +67,24 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     }
     ///
     /// Creates and starts worker for [FloatingPositionCache::calculate].
-    pub(super) fn build(self) -> Result<ServiceHandles<Result<(), StrErr>>, StrErr>
+    pub(super) fn build(self) -> Result<ServiceHandles<Result<(), Error>>, Error>
     where
         A: Send + 'static,
     {
-        let dbgid = DbgId(format!("{}.build", self.dbgid));
-        log::info!("{} | Starting...", dbgid);
+        let dbg = Dbg::new(self.dbg, "build");
+        log::info!("{} | Starting...", Dbg);
         match thread::Builder::new()
-            .name(self.dbgid.0.clone())
+            .name(self.dbg.0.clone())
             .spawn(move || self.calculate())
         {
             Ok(handler) => {
-                log::info!("{} | Starting - OK", dbgid);
-                Ok(ServiceHandles::new(vec![(dbgid.0, handler)]))
+                log::info!("{} | Starting - OK", Dbg);
+                Ok(ServiceHandles::new(vec![(Dbg.0, handler)]))
             }
             Err(why) => {
-                let err_msg = format!("{} | Starting - FAILED: {}", dbgid, why);
+                let err_msg = format!("{} | Starting - FAILED: {}", Dbg, why);
                 log::warn!("{}", err_msg);
-                Err(StrErr(err_msg))
+                Err(Error(err_msg))
             }
         }
     }
@@ -104,12 +99,12 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     /// to get, in order, _volume_ of all volumed parts placed under the waterline.
     /// At the end of each iteration, a line is written to the output file in format:
     /// "{heel_step} {trim_step} {draught_step} {volume}".
-    fn calculate(self) -> Result<(), StrErr> {
-        let dbgid = DbgId(format!("{}.calculate", self.dbgid));
+    fn calculate(self) -> Result<(), Error> {
+        let dbg = Dbg(format!("{}.calculate", self.dbg));
         let out_f = &mut File::create(&self.file_path).map_err(|err| {
-            StrErr(format!(
+            Error(format!(
                 "{} | Creating file='{}': {}",
-                dbgid,
+                Dbg,
                 self.file_path.display(),
                 err
             ))
@@ -120,7 +115,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                     // _true_ if the caller has requisted to exit.
                     // Note that in this case the file may be partially filled.
                     if self.exit.load(Ordering::SeqCst) {
-                        log::warn!("{} | Interrupted: `exit` has got true", dbgid);
+                        log::warn!("{} | Interrupted: `exit` has got true", Dbg);
                         return Ok(());
                     }
                     // make a clone of origin waterline and transform it
@@ -182,14 +177,14 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         .and_then(|(volume, mb_volume_center)| match mb_volume_center {
                             None => {
                                 if volume > 0.0 {
-                                    Err(StrErr(format!(
+                                    Err(Error(format!(
                                         "{} | Triple [{}, {}, {}] gives no solids, but the volume={}.", 
-                                        dbgid, heel, trim, draught, volume
+                                        Dbg, heel, trim, draught, volume
                                     )))
                                 } else {
                                     log::warn!(
                                         "{} | Triple [{}, {}, {}] gives no solids under the waterline.", 
-                                        dbgid, heel, trim, draught
+                                        Dbg, heel, trim, draught
                                     );
                                     Ok(())
                                 }
@@ -200,9 +195,9 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                 heel, trim, draught, volume, x, y, z
                             )
                             .map_err(|err| {
-                                StrErr(format!(
+                                Error(format!(
                                     "{} | Writing to file='{}': {}",
-                                    dbgid,
+                                    Dbg,
                                     self.file_path.display(),
                                     err
                                 ))

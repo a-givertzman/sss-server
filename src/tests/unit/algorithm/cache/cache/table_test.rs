@@ -1,3 +1,4 @@
+#[cfg(test)]
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_sync::services::entity::dbg_id::DbgId;
 use std::{sync::Once, time::Duration};

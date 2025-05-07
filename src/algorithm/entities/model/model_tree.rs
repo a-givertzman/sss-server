@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use sal_3dlib::topology::shape::Shape;
-use sal_sync::services::entity::{dbg_id::DbgId, error::str_err::StrErr};
+use sal_core::{dbg::Dbg, error::Error};
 use std::path::{Path, PathBuf};
 ///
 /// Internal structure of [super::ShipModel], the collection of its 3D elements.
@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 /// This allows to do lazy attribute assigment by demand.
 #[derive(Clone)]
 pub(super) struct ModelTree<A> {
-    dbgid: DbgId,
+    dbg: Dbg,
     ///
     /// Source file in STEP format.
     path: PathBuf,
@@ -27,9 +27,9 @@ pub(super) struct ModelTree<A> {
 impl<A> ModelTree<A> {
     ///
     /// Creates a new instance.
-    pub(super) fn new(parent: &DbgId, path: impl AsRef<Path>) -> Self {
+    pub(super) fn new(parent: &Dbg, path: impl AsRef<Path>) -> Self {
         Self {
-            dbgid: DbgId::with_parent(parent, "ModelTree.new"),
+            dbg: Dbg::with_parent(parent, "ModelTree.new"),
             path: path.as_ref().to_path_buf(),
             elements: IndexMap::new(),
         }
@@ -43,7 +43,7 @@ impl<A> ModelTree<A> {
             .map_err(|why| {
                 StrErr(format!(
                     "{} | Failed reading model_path='{}': {}",
-                    self.dbgid,
+                    self.dbg,
                     self.path.display(),
                     why
                 ))
@@ -52,7 +52,7 @@ impl<A> ModelTree<A> {
                 reader.into_vec::<A>().map_err(|why| {
                     StrErr(format!(
                         "{} | Failed reading model tree: {:?}",
-                        self.dbgid, why
+                        self.dbg, why
                     ))
                 })
             })
