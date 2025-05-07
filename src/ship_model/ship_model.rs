@@ -93,8 +93,13 @@ impl ShipModel {
         let api_client = self.api_client.pop().unwrap();
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
+        // TODO read key by ship_id
+        let model_key = "/cube_1_1_1_centered";
+        // TODO read path by ship_id
+        let model_path = "src/tests/unit/algorithm/models/ship_model/local_cache/floating_position_cache/assets/cube_1_1_1.step";
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
+        let cashe_path = format!("/cashe{model_key}_{n_parts}");
         let scheduler = self.scheduler.pop().unwrap();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
@@ -128,7 +133,7 @@ impl ShipModel {
                                 let bounds = bounds.clone();
                                 let exit = exit.clone();
                                 if let Err(err) = scheduler.spawn(move|| {
-                                    let result = compute_balance(bounds.clone(), balance_src_data, ship_id, exit);
+                                    let result = compute_balance(model_key, model_path, cashe_path, bounds.clone(), balance_src_data, ship_id, exit);
                                     if let Err(err) = send.send(Reply::ComputeBalance(result)) {
                                         let err = error.pass_with("Send error", err);
                                             log::warn!("{}", err);
@@ -271,9 +276,65 @@ fn bound_areas(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc
 ///
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
-fn compute_balance(bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
-    let err = Error::new("ShipModel", "compute_balance");
+fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
+    let dbgid = DbgId("ModelTree".to_string());
+    let error = Error::new("ShipModel", "compute_balance");
 
+    let mut cache = Cache::new(&dbgid, cashe_path);
+    if !cache.init().is_ok() {
+        // нет кэша, считаем модель
+        // create model tree with empty attribute for each model
+        let model_tree = ModelTree::<()>::new(&dbgid, model_path)
+            .load()
+            .map_err(|err| error.pass_with("model_tree", err))?;
+        let waterline_position = model_tree
+            .get(model_key)
+            .and_then(|shape| match shape {
+                Shape::Solid(model) => Some(model.center().point()),
+                _ => None,
+            })
+            .map_err(|err| error.err("model_tree Expected Solid by model_key='{}'", model_key))?;
+        let heel_steps = conf.heel_steps.clone();
+        let trim_steps = conf.trim_steps.clone();
+        let draught_steps = conf.draught_steps.clone();
+        let waterline = FloatingPositionCache::new(&dbgid, model_tree, result_path, conf)
+            .create_waterline()
+            .map_err(|err| error.pass_with("waterline", err))?;
+        let handlers = CalculatedFloatingPositionCache::new(
+            &dbgid,
+            cashe_path.into(),
+            model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
+            waterline,
+            heel_steps,
+            trim_steps,
+            draught_steps,
+            Arc::default(),
+        )
+        .build()
+        .map_err(|err| error.pass_with("handlers", err))?;
+        for (_, handler) in handlers {
+            match handler.join()
+                Err(why) => Err(format!("Failed preparing thread: {:?}", why)),
+                Ok(res) => {
+                    if let Err(why) = res {
+                        Err(format!("Failed executing thread: {:?}", why))
+                    } else {
+                        Ok(())
+                    }
+                }
+            }
+            .map_err(|err| error.pass_with("handler.join", err))?;
+        }
+        // read result file
+        /*      let mut result_reader = {
+            let result_file = File::open(result_path)
+                .map_err(|err| panic!("Failed opening result file='{}': {}", cashe_path, err))?;
+            BufReader::new(result_file)
+            };
+        */
+        cache
+            .init()
+            .map_err(|err| error.pass_with("cache.init", err))?;
+    }
     
-    Err(err.err("Not implemented yet"))
 }
