@@ -101,7 +101,7 @@ impl ShipModel {
         let model_path = "src/tests/unit/algorithm/models/ship_model/local_cache/floating_position_cache/assets/cube_1_1_1.step";
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
-        let cashe_path = format!("/cashe{model_key}_{n_parts}");
+        let cashe_path = format!("/cashe_{model_key}_{n_parts}");
         let scheduler = self.scheduler.pop().unwrap();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
@@ -336,7 +336,8 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
         cache
             .init()
             .map_err(|err| error.pass_with("cache.init", err))?;
-
-        Err(error.err("Unimplemented"))
     }    
+
+    cache.
+    Err(error.err("Unimplemented"))
 }
