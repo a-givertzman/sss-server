@@ -2,28 +2,31 @@ use super::query::*;
 use super::reply::*;
 use super::{query::Query, reply::Reply};
 use crate::algorithm::entities::cache::Cache;
-use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
 use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
+use crate::algorithm::entities::data::serde_parser::IFromJson;
+use crate::algorithm::entities::data::strength;
+use crate::algorithm::entities::model::model_tree::ModelTree;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
-use crate::kernel::sync::Link;
-use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
+use crate::kernel::sync::Hub;
+use crate::kernel::sync::Link;
 use coco::Stack;
+use sal_3dlib::topology::shape::Shape;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
 use sal_sync::thread_pool::Scheduler;
+use std::path::PathBuf;
 use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };
@@ -98,10 +101,10 @@ impl ShipModel {
         // TODO read key by ship_id
         let model_key = "/cube_1_1_1_centered";
         // TODO read path by ship_id
-        let model_path = "src/tests/unit/algorithm/models/ship_model/local_cache/floating_position_cache/assets/cube_1_1_1.step";
+        let model_path = "src/assets/cube_1_1_1.step";
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
-        let cashe_path = format!("/cashe_{model_key}_{n_parts}");
+        let cache_dir = format!("src/assets/cashe/");
         let scheduler = self.scheduler.pop().unwrap();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
@@ -112,47 +115,54 @@ impl ShipModel {
             log::trace!("{}.run | Received query: {:?}", dbg, query);
             match query {
                 Query::Bounds => {
-                                if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-                                    log::warn!("{}.run | Send error: {:?}", dbg, err);
-                                }
-                            }
+                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+                        log::warn!("{}.run | Send error: {:?}", dbg, err);
+                    }
+                }
                 Query::BoundAreas => {
-                                let bounds = bounds.clone();
-                                let api_client = api_client.clone();
-                                let exit = exit.clone();
-                                if let Err(err) = scheduler.spawn(move|| {
-                                    let result = bound_areas(bounds, ship_id, &api_client, exit);
-                                    if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                                        let err = error.pass_with("Send error", err);
-                                        log::warn!("{}", err);
-                                    }
-                                    Ok(())
-                                }) {
-                                    log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                                }
-                            }
+                    let bounds = bounds.clone();
+                    let api_client = api_client.clone();
+                    let exit = exit.clone();
+                    if let Err(err) = scheduler.spawn(move || {
+                        let result = bound_areas(bounds, ship_id, &api_client, exit);
+                        if let Err(err) = send.send(Reply::BoundAreas(result)) {
+                            let err = error.pass_with("Send error", err);
+                            log::warn!("{}", err);
+                        }
+                        Ok(())
+                    }) {
+                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
+                    }
+                }
                 Query::ComputeBalance(balance_src_data) => {
-                                let bounds = bounds.clone();
-                                let exit = exit.clone();
-                                if let Err(err) = scheduler.spawn(move|| {
-                                    let result = compute_balance(model_key, model_path, &cashe_path, bounds.clone(), balance_src_data, ship_id, exit);
-                                    if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                                        let err = error.pass_with("Send error", err);
-                                            log::warn!("{}", err);
-                                    };
-                                    Ok(())
-                                }) {
-                                    log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                                }
-                            }
-      //          Query::StabilityAreas => todo!(),
-      //          Query::ComputePantocaren => todo!(),
+                    let bounds = bounds.clone();
+                    let exit = exit.clone();
+                    if let Err(err) = scheduler.spawn(move || {
+                        let result = compute_balance(
+                            model_key,
+                            model_path,
+                            cache_dir,
+                            bounds.clone(),
+                            balance_src_data,
+                            ship_id,
+                            exit,
+                        );
+                        if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+                            let err = error.pass_with("Send error", err);
+                            log::warn!("{}", err);
+                        };
+                        Ok(())
+                    }) {
+                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
+                    }
+                } //          Query::StabilityAreas => todo!(),
+                  //          Query::ComputePantocaren => todo!(),
             };
             None::<()>
         });
         let dbg = self.name.join();
         log::info!("{}.run | Starting - Ok", dbg);
-        handle.map_err(|err|error.pass(err.to_string()))
+        handle.map_err(|err| error.pass(err.to_string()))
     }
     ///
     /// Sends "exit" signal to the service's task
@@ -191,13 +201,13 @@ fn get_bounds(
         ));
     let bounds = match data {
         Ok(data) => {
-            // TODO: если шпации для разбиения на n_parts есть, значит есть кэш для этого разбиения - читаем их 
+            // TODO: если шпации для разбиения на n_parts есть, значит есть кэш для этого разбиения - читаем их
             match ComputedFrameDataArray::parse(&data) {
                 Ok(data) => data.data(),
                 Err(err) => return Err(error.pass_with("parse error", err)),
             }
-        },
-        Err(err1) => { 
+        }
+        Err(err1) => {
             // TODO: если шпаций для n_parts нет, значит создаем такое разбиение и считаем кэш
             let data = api_client.fetch(&format!(
                 "SELECT pos_x, frame_index as index FROM physical_frame WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
@@ -206,13 +216,20 @@ fn get_bounds(
                 Ok(data) => {
                     let physical_frames = match PhysicalFrameArray::parse(&data) {
                         Ok(data) => data.data(),
-                        Err(err2) => return Err(error.pass(format!("error: {err1}, physical_frames parse error: {err2}"))),
+                        Err(err2) => {
+                            return Err(error.pass(format!(
+                                "error: {err1}, physical_frames parse error: {err2}"
+                            )));
+                        }
                     };
-                    if let (Some(bow_x), Some(stern_x)) = (physical_frames.first(), physical_frames.last()) {
+                    if let (Some(bow_x), Some(stern_x)) =
+                        (physical_frames.first(), physical_frames.last())
+                    {
                         return match Bounds::from_min_max(stern_x.1, bow_x.1, n_parts) {
                             Ok(bounds) => Ok(bounds),
                             Err(err2) => {
-                                return Err(error.pass(format!("error: {err1}, create_bounds error: {err2}")))
+                                return Err(error
+                                    .pass(format!("error: {err1}, create_bounds error: {err2}")));
                             }
                         };
                     } else {
@@ -220,9 +237,7 @@ fn get_bounds(
                     };
                 }
                 Err(err2) => {
-                    return Err(error.pass(format!(
-                        "error: {err1}, physical_frames error: {err2}"
-                    )))
+                    return Err(error.pass(format!("error: {err1}, physical_frames error: {err2}")));
                 }
             };
         }
@@ -236,7 +251,12 @@ fn get_bounds(
 ///
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
-fn bound_areas(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc<AtomicBool>) -> Result<BoundArea, Error> {
+fn bound_areas(
+    bounds: Bounds,
+    ship_id: usize,
+    api_client: &ApiClient,
+    exit: Arc<AtomicBool>,
+) -> Result<BoundArea, Error> {
     let err = Error::new("ShipModel", "bound_areas");
     let area_h_str = HStrAreaArray::parse(
         &api_client.fetch(&format!(
@@ -273,14 +293,67 @@ fn bound_areas(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc
             )
         })
         .collect();
-    Ok(BoundArea { v: area_v_str, h: area_h_str })
+    Ok(BoundArea {
+        v: area_v_str,
+        h: area_h_str,
+    })
 }
 ///
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
-fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
+fn compute_balance(
+    model_key: &str,
+    model_path: &str,
+    cache_dir: &str,
+    bounds: Bounds,
+    src_data: BalanceQuery,
+    ship_id: usize,
+    exit: Arc<AtomicBool>,
+) -> Result<BalanceCtx, Error> {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let error = Error::new(&dbg, "compute_balance");
+    let model = crate::algorithm::entities::model::ShipModel::new(
+        &dbg, 
+        crate::algorithm::entities::model::ship_model_conf::ShipModelConf {
+            model_path: PathBuf::from(model_path),
+            cache_dir: PathBuf::from(cache_dir),
+            floating_position_cache_conf: crate::algorithm::entities::model::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf {
+                waterline_position: [0., 0., 0.],
+                heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
+                trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
+                draught_steps: vec![0.0, 0.25],
+            },
+        }
+    );
+    let floating_position = model.floating_position(
+        src_data.mass_sum/src_data.water_density,
+        src_data.mass_shift.values(),
+        0.1,
+    ).eval().map_err(|err| error.pass_with("floating_position", err))?;
+
+    let result = BalanceCtx {
+        trim_deg: todo!(),
+        trim_meter: todo!(),
+        roll: todo!(),
+        mean_draught: floating_position.
+        bulk: todo!(),
+        liquid: todo!(),
+        bounds_volume: todo!(),
+        volume: todo!(),
+        area_wl: todo!(),
+        length_wl: todo!(),
+        breadth_wl: todo!(),
+        volume_shift_z: todo!(),
+        entry_angle: todo!(),
+        flooding_angle: todo!(),
+        bow_area: todo!(),
+        const_area_v: todo!(),
+        const_area_h: todo!(),
+        rad_long: todo!(),
+        rad_trans: todo!(),
+        pantocaren: todo!(),
+    };
+    /*
     let mut cache = Cache::new(&dbg, cashe_path);
     if !cache.init().is_ok() {
         // нет кэша, считаем модель
@@ -294,7 +367,11 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
                 Shape::Solid(model) => Some(model.center().point()),
                 _ => None,
             })
-            .map_err(|err| error.err(format!("model_tree Expected Solid by model_key='{model_key}'")))?;
+            .map_err(|err| {
+                error.err(format!(
+                    "model_tree Expected Solid by model_key='{model_key}'"
+                ))
+            })?;
         let heel_steps = conf.heel_steps.clone();
         let trim_steps = conf.trim_steps.clone();
         let draught_steps = conf.draught_steps.clone();
@@ -336,8 +413,7 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
         cache
             .init()
             .map_err(|err| error.pass_with("cache.init", err))?;
-    }    
-
-    cache.
+    }
+*/
     Err(error.err("Unimplemented"))
 }

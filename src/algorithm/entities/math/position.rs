@@ -56,6 +56,10 @@ impl Position {
         self.z
     }
     //
+    pub fn values(&self) -> [f64; 3] {
+        [self.x, self.y, self.z]
+    }   
+    //
     #[allow(unused)]
     pub fn len(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()

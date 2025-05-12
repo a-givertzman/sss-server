@@ -21,7 +21,6 @@ pub struct EvaluatedFloatingPosition {
     pub displacement_center: [f64; 3],
     pub displacement_volume: f64,
     pub displacement_volume_center: [f64; 3],
-    pub water_density: f64,
     pub accuracy: f64,
 }
 //
@@ -31,9 +30,8 @@ pub struct FloatingPosition<'cache, Attr> {
     cache: &'cache dyn LocalCache,
     centreline: Edge<Attr>,
     middle: Face<Attr>,
-    disp: f64,
+    displacement: f64,
     disp_center: Vertex<Attr>,
-    density: f64,
     accuracy: f64,
 }
 //
@@ -45,9 +43,8 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
         cache: &'cache dyn LocalCache,
         centreline: Edge<Attr>,
         middle: Face<Attr>,
-        disp: f64,
+        displacement: f64,
         disp_center: Vertex<Attr>,
-        density: f64,
         accuracy: f64,
     ) -> Self {
         Self {
@@ -55,9 +52,8 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
             cache,
             centreline,
             middle,
-            disp,
+            displacement,
             disp_center,
-            density,
             accuracy,
         }
     }
@@ -73,7 +69,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     {
         let error = Error::new(&self.dbg, "eval");
         let init_keel = self.centreline.center().point();
-        let disp_vol = self.disp / self.density;
+        let disp_vol = self.displacement;
         let mut theta = 0.0;
         let mut psi = 0.0;
         loop {
@@ -142,11 +138,10 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         heel_angle: theta,
                         trim_angle: psi,
                         draught_at_amidships: draught,
-                        displacement: self.disp,
+                        displacement: self.displacement,
                         displacement_center: self.disp_center.point(),
                         displacement_volume: disp_vol,
                         displacement_volume_center: disp_vol_center.point(),
-                        water_density: self.density,
                         accuracy: self.accuracy,
                     });
                 }

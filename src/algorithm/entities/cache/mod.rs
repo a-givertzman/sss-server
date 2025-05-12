@@ -66,7 +66,7 @@ impl<T: PartialOrd> Cache<T> {
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    fn init(&self) -> Result<(), Error>
+    pub fn init(&self) -> Result<(), Error>
     where
         T: FromStr<Err = ParseFloatError> + Clone + Default,
     {

@@ -6,18 +6,24 @@ use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 ///
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BalanceCtx {
+    /// Дифферент, градусы
+    pub trim_deg: f64,
+    /// Дифферент, метры
+    pub trim_meter: f64,
+    /// Средняя осадка, м
+    pub mean_draught: f64,
+    /// Крен, градус
+    pub roll: f64,
     /// Груз, для которого центр массы и распределение зависит от 
     /// объема и/или положения корпуса.
     pub bulk: Vec<BulkResult>,
     pub liquid: Vec<LiquidResult>,
     /// Объемное водоизмещение по шпациям, м^3
-    pub bounds_volume: Vec<(f64)>,    
+    pub bounds_volume: Vec<f64>,    
     /// Полное объемное водоизмещение, м^3
     pub volume: f64,
     /// Площадь ватерлинии, м^2
     pub area_wl: f64, 
-    /// Средняя осадка, м
-    pub mean_draught: f64,
     /// Длинна по ватерлинии при текущей осадке, м
     pub length_wl: f64, 
     ///  Ширина по ватерлинии при текущей осадке, м

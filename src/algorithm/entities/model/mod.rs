@@ -223,8 +223,6 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         displacement_center: [f64; 3],
         accuracy: f64,
     ) -> FloatingPosition<A> {
-        //  TODO: set a correct value
-        const WATER_DENCITY: f64 = 0.0;
         //
         FloatingPosition::new(
             &self.dbg,
@@ -241,7 +239,6 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
             self.middle(),
             displacement,
             Vertex::new(displacement_center),
-            WATER_DENCITY,
             accuracy,
         )
     }
