@@ -79,6 +79,8 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 let h_long_0 = Z_m - mass_shift_z;
                 // Продольная исправленная метацентрическая высота (3)
                 let h_long_fix = h_long_0 - delta_m_h.long();
+                // Момент дифферентующий на 1 см осадки (4)
+                let trim_moment = (self.mass.sum()? * h_long_fix) / (100. * self.ship_length_lbp);
                 // Аппликата поперечного метацентра (8)
                 let z_m = center_draught_shift_z + rad_trans; //
                 // Поперечная метацентрическая высота без учета влияния
@@ -125,6 +127,11 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 ctx.write_params(ParameterID::MetacentricTransHeightFix, h_trans_fix);
                 ctx.write_params(ParameterID::MetacentricLongHeight, h_long_0);
                 ctx.write_params(ParameterID::MetacentricLongHeightFix, h_long_fix);
+                ctx.write_params(ParameterID::MomentTrimPerCm, trim_moment);
+                ctx.write_params(
+                    ParameterID::MomentRollPerDeg,
+                    mass * h_trans_fix.to_radians().sin(),
+                );
                 let result = MetacentricHeightCtx {
                     h_trans_0,
                     h_long_fix,

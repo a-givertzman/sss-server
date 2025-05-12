@@ -178,7 +178,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 for &(angle, dso, ddo) in diagram.iter() {
                     log::trace!("{angle} {dso} {ddo};");
                 }
-                ctx.write_params(ParameterID::Roll, angle_zero * angle_zero_signum);
+                ctx.write_params(ParameterID::Roll, angle_zero * angle_zero_signum) TODO: возможно надо перенести в баланс и брать от модели
                 let result = LeverDiagramCtx {
                     dso,
                     dso_curve,

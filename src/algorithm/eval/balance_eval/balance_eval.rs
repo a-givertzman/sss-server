@@ -71,7 +71,28 @@ impl Eval<(), EvalResult> for BalanceEval {
                 };
                 // Расчет баланса в модели
                 let result_data: BalanceCtx = self.model.call(Query::ComputeBalance(balance_query))
-                    .map_err(|err| error.pass_with("result_data model.call", err))?;                  
+                    .map_err(|err| error.pass_with("result_data model.call", err))?;    
+
+                let center_waterline_shift = self.center_waterline_shift;
+                let bow_x = self.ship_length - self.midship;
+                let stern_x = -self.midship;
+                let draught_bow = self.mean_draught + (bow_x - center_waterline_shift)*self.trim/self.ship_length;
+                let draught_stern = self.mean_draught + (stern_x - center_waterline_shift)*self.trim/self.ship_length;
+
+                // Осадка на миделе в ДП, м (8)
+                let draught_mid = (draught_bow + draught_stern) / 2.;
+                //let draught_mid = self.mean_draught + (0. - self.center_waterline_shift)*self.trim/self.ship_length;
+                // dbg!(self.mean_draught, self.center_waterline_shift, self.midship, self.ship_length, bow_x, stern_x, self.trim, draught_bow, draught_stern, draught_mid);
+                // Изменение осадки
+                let delta_draught = (draught_bow - draught_stern) / self.ship_length;
+
+                ctx.write_params(ParameterID::DraughtMid, draught_mid);    
+                ctx.write_params(ParameterID::DraughtBow, draught_bow);
+                ctx.write_params(ParameterID::DraughtStern, draught_stern);      
+                ctx.write_params(ParameterID::TrimDeg, result_data.trim_degree);
+                ctx.write_params(ParameterID::TrimMeter, result_data.trim_meter);
+                ctx.write_params(ParameterID::Roll, result_data.roll); TODO: брать из модели или из диаграммы плечей?
+
                 let result = BalanceCtx {
                     bulk: result_data.bulk,
                     liquid: result_data.liquid,
