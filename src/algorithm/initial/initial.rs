@@ -171,7 +171,8 @@ impl Eval<(), EvalResult> for Initial {
                     assigment_context as assigment_type, \
                     cargo_type, \
                     stowage_factor, \
-                    weight AS mass
+                    weight AS mass, \
+                    centre_of_compartment as mass_shift
                 FROM 
                     bulk_cargo_view
                 WHERE 
@@ -194,7 +195,11 @@ impl Eval<(), EvalResult> for Initial {
                     assigment_context as assigment_type, \
                     cargo_type, \
                     density, \
-                    weight AS mass
+                    weight AS mass, \
+                    centre_of_compartment as mass_shift, \
+                    use_moment_of_inertia_max,   
+                    long_moment_of_inertia_max,
+                    trans_moment_of_inertia_max
                 FROM 
                     liquid_cargo_view
                 WHERE 

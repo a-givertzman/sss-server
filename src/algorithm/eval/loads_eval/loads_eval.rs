@@ -57,25 +57,50 @@ impl Eval<(), EvalResult> for LoadsEval {
                     Some(data) => data.data().iter().map(|v| v.mass).sum(),
                     None => return CtxResult::Err(error.err("Read load_constant error: no data!")),
                 };
-                let bulk: Vec<_> = match initial.bulk.clone() {
-                    Some(data) => data.iter().map(|v| v.data()).collect(),
+                let (bulk, mass_bulk, shift_bulk) = match initial.bulk.clone() {
+                    Some(data) => {
+                        let bulk: Vec<_> = data.iter().map(|v| v.data()).collect();
+                        let (mass, shift) = unit
+                            .iter()
+                            .filter_map(|v| match v.mass_shift() {
+                                Ok(mass_shift) => Some((v.mass, mass_shift)),
+                                Err(_) => None,
+                            })
+                            .fold(
+                                (0., Moment::zero()),
+                                |(mass_sum, moment_sum), (mass, mass_shift)| {
+                                    (
+                                        mass_sum + mass,
+                                        moment_sum + Moment::from_pos(mass_shift, mass),
+                                    )
+                                },
+                            );
+                        (bulk, mass, shift)
+                    },
                     None => return CtxResult::Err(error.err("Read bulk error: no data!")),
                 };
-
-
-                let mass_bulk = bulk.iter().fold(0., |sum, v| sum + v.mass);
-                shift_liquid,
-                shift_bulk,
-
                 let (liquid, mass_liquid, shift_liquid) = match initial.liquid.clone() {
                     Some(data) => {
                         let liquid: Vec<_> = data.iter().map(|v| v.data()).collect();
-                        let mass_liquid = liquid.iter().fold(0., |sum, v| sum + v.mass);
-                        let shift_liquid = data.iter().map(|v| v.).collect();
+                        let (mass, shift) = unit
+                            .iter()
+                            .filter_map(|v| match v.mass_shift() {
+                                Ok(mass_shift) => Some((v.mass, mass_shift)),
+                                Err(_) => None,
+                            })
+                            .fold(
+                                (0., Moment::zero()),
+                                |(mass_sum, moment_sum), (mass, mass_shift)| {
+                                    (
+                                        mass_sum + mass,
+                                        moment_sum + Moment::from_pos(mass_shift, mass),
+                                    )
+                                },
+                            );
+                        (liquid, mass, shift)
                     },
                     None => return CtxResult::Err(error.err("Read liquid error: no data!")),
                 };
-                let mass_liquid = liquid.iter().fold(0., |sum, v| sum + v.mass);
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {
                         let unit = data;

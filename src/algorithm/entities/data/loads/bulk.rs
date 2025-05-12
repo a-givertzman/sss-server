@@ -25,6 +25,8 @@ pub struct LoadBulkData {
     pub stowage_factor: Option<f64>,
     /// Обьем, м^3
     pub volume: Option<f64>,
+    /// Центр отсека, размещающего груз, м
+    pub mass_shift: Option<Position>,
 }
 //
 impl LoadBulkData {

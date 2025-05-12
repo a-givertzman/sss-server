@@ -21,7 +21,7 @@ pub struct LoadGaseousData {
     pub mass: f64,
     /// Общая масса, т
     pub volume: Option<f64>,
-    /// Центр отсека, размещающего газ, м
+    /// Центр отсека, размещающего груз, м
     pub mass_shift: Option<Position>,
 }
 //

@@ -98,6 +98,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                 ctx.write_params(ParameterID::TrimDeg, result_data.trim);
                 ctx.write_params(ParameterID::TrimMeter, trim_meter);
                 ctx.write_params(ParameterID::Roll, result_data.roll);
+                ctx.write_params(ParameterID::DraughtMean, mean_draught);
 
                 let result = BalanceCtx {
                     bulk: result_data.bulk,
