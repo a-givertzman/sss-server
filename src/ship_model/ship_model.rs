@@ -12,8 +12,8 @@ use crate::algorithm::eval::BalanceCtx;
 use crate::kernel::sync::Link;
 use crate::kernel::sync::Hub;
 use crate::infrostructure::api::client::api_client::ApiClient;
-use api_tools::debug::dbg_id::DbgId;
 use coco::Stack;
+use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
@@ -279,14 +279,13 @@ fn bound_areas(bounds: Bounds, ship_id: usize, api_client: &ApiClient, exit: Arc
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
 fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: Bounds, src_data: BalanceQuery, ship_id: usize, exit: Arc<AtomicBool>) -> Result<BalanceCtx, Error> {
-    let dbgid = DbgId("ModelTree".to_string());
-    let error = Error::new("ShipModel", "compute_balance");
-
-    let mut cache = Cache::new(&dbgid, cashe_path);
+    let dbg = Dbg::new("ShipModel", "compute_balance");
+    let error = Error::new(&dbg, "compute_balance");
+    let mut cache = Cache::new(&dbg, cashe_path);
     if !cache.init().is_ok() {
         // нет кэша, считаем модель
         // create model tree with empty attribute for each model
-        let model_tree = ModelTree::<()>::new(&dbgid, model_path)
+        let model_tree = ModelTree::<()>::new(&dbg, model_path)
             .load()
             .map_err(|err| error.pass_with("model_tree", err))?;
         let waterline_position = model_tree
@@ -299,11 +298,11 @@ fn compute_balance(model_key: &str, model_path: &str, cashe_path: &str, bounds: 
         let heel_steps = conf.heel_steps.clone();
         let trim_steps = conf.trim_steps.clone();
         let draught_steps = conf.draught_steps.clone();
-        let waterline = FloatingPositionCache::new(&dbgid, model_tree, result_path, conf)
+        let waterline = FloatingPositionCache::new(&dbg, model_tree, result_path, conf)
             .create_waterline()
             .map_err(|err| error.pass_with("waterline", err))?;
         let handlers = CalculatedFloatingPositionCache::new(
-            &dbgid,
+            &dbg,
             cashe_path.into(),
             model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
             waterline,

@@ -9,12 +9,9 @@
 //
 pub(super) mod cache_key;
 pub mod floating_position_cache;
-//
-use crate::common::cache::Cache;
-use sal_sync::services::{
-    entity::error::str_err::Error, service::service_handles::ServiceHandles,
-};
 use std::sync::{atomic::AtomicBool, Arc};
+use sal_core::error::Error;
+use sal_sync::services::service::ServiceHandles;
 ///
 /// A common trait for caches, which work with file systems.
 pub(super) trait LocalCache {

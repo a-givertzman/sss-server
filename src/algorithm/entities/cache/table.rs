@@ -3,7 +3,7 @@ use super::{bound::Bound, column::Column, OwnedSet};
 ///
 /// Set of [Column]s.
 pub(super) struct Table<T> {
-    Dbg: Dbg,
+    dbg: Dbg,
     columns: OwnedSet<Column<T>>,
 }
 //
@@ -12,9 +12,9 @@ impl<T> Table<T> {
     ///
     /// Creates a new instance.
     pub(super) fn new(parent: &Dbg, cols: impl Into<OwnedSet<Column<T>>>) -> Self {
-        let Dbg = Dbg::with_parent(parent, "Table");
+        let dbg = Dbg::new(parent, "Table");
         let columns = cols.into();
-        Self { Dbg, columns }
+        Self { dbg, columns }
     }
 }
 //
@@ -46,7 +46,7 @@ impl Table<f64> {
         assert!(
             self.columns.len() >= approx_vals.len(),
             "{}.{} | columns.len={} < approx_vals.len={}",
-            self.Dbg,
+            self.dbg,
             callee,
             self.columns.len(),
             approx_vals.len()
@@ -63,7 +63,7 @@ impl Table<f64> {
             }
             log::debug!(
                 "{}.{} | Filtered bounds: {:?}",
-                self.Dbg,
+                self.dbg,
                 callee,
                 val_bounds
             );
@@ -95,7 +95,7 @@ impl Table<f64> {
                 }
             }
         };
-        log::debug!("{}.{} | Merged bounds: {:?}", self.Dbg, callee, bounds);
+        log::debug!("{}.{} | Merged bounds: {:?}", self.dbg, callee, bounds);
         bounds
             .into_iter()
             .flat_map(|bound| match bound {
@@ -117,7 +117,7 @@ impl Table<f64> {
                         vals.push(val);
                         log::trace!(
                             "{}.{} | Interpolation: col_id={} from row_id={} to row_id={} with result={}",
-                            self.Dbg, callee, col_id, start, end, val
+                            self.dbg, callee, col_id, start, end, val
                         );
                     }
                     Some(vals)

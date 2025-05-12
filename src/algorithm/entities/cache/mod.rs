@@ -38,7 +38,7 @@ type OwnedSet<T> = std::sync::Arc<[T]>;
 /// let _ = cache.get(&[Some(2.0)]);
 /// ```
 pub struct Cache<T> {
-    Dbg: Dbg,
+    dbg: Dbg,
     path: PathBuf,
     table: OnceLock<Table<T>>,
 }
@@ -52,7 +52,7 @@ impl<T> Cache<T> {
     /// The first access (see [Cache::get]) causes file reading.
     pub fn new(parent: &Dbg, path: impl AsRef<Path>) -> Self {
         Self {
-            Dbg: Dbg::with_parent(parent, "Cache"),
+            dbg: Dbg::new(parent, "Cache"),
             path: path.as_ref().to_owned(),
             table: OnceLock::new(),
         }
@@ -74,7 +74,7 @@ impl<T: PartialOrd> Cache<T> {
         let file = File::open(&self.path).map_err(|err| {
             format!(
                 "{}.{} | Failed reading file='{}': {}",
-                self.Dbg,
+                self.dbg,
                 callee,
                 self.path.display(),
                 err
@@ -86,7 +86,7 @@ impl<T: PartialOrd> Cache<T> {
             let line = try_line.map_err(|err| {
                 format!(
                     "{}.{} | Failed reading line={}: {}",
-                    self.Dbg, callee, line_id, err
+                    self.dbg, callee, line_id, err
                 )
             })?;
             let ss = line.split_ascii_whitespace();
@@ -96,9 +96,9 @@ impl<T: PartialOrd> Cache<T> {
                 Some(vals) if vals.len() != ss_len => {
                     return Err(format!(
                         "{}.{} | Inconsistent dataset at line={}",
-                        self.Dbg, callee, line_id
+                        self.dbg, callee, line_id
                     )
-                    .into())
+                    .into());
                 }
                 Some(vals) => vals,
             };
@@ -106,7 +106,7 @@ impl<T: PartialOrd> Cache<T> {
                 let val = s.parse().map_err(|err| {
                     format!(
                         "{}.{} | Failed parsing value at line={}: {}",
-                        self.Dbg, callee, line_id, err
+                        self.dbg, callee, line_id, err
                     )
                 })?;
                 vals_mut[i].push(val);
@@ -115,13 +115,13 @@ impl<T: PartialOrd> Cache<T> {
         let cols = vals
             .map(|vals| {
                 let iter_over_cols = vals.into_iter().enumerate().map(|(id, vals)| {
-                    let Dbg = Dbg::with_parent(&self.Dbg, &format!("Column_{}", id));
-                    Column::new(Dbg, vals)
+                    let dbg = Dbg::new(&self.dbg, &format!("Column_{}", id));
+                    Column::new(dbg, vals)
                 });
                 OwnedSet::from_iter(iter_over_cols)
             })
             .unwrap_or_default();
-        self.table.set(Table::new(&self.Dbg, cols));
+        self.table.set(Table::new(&self.dbg, cols));
         Ok(())
     }
 }
@@ -174,12 +174,9 @@ impl Cache<f64> {
         self.table
             .get()
             .as_ref()
-            .unwrap_or_else(|err| {
-                panic!(
-                    "{}.{} | Failed initializing Table: {}",
-                    self.Dbg, "get", err
-                )
-            })
+            .unwrap_or_else(|| 
+                 panic!("{}.{} | Failed initializing Table", self.dbg, "get")
+            )
             .get(approx_vals)
     }
 }

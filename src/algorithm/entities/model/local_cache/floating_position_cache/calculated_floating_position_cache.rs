@@ -3,9 +3,9 @@ use sal_3dlib::{
     gmath::vector::Vector,
     props::{Center, Volume},
     topology::shape::{
+        Shape,
         compound::{AlgoMakerVolume, Compound, Solids},
         face::{Face, Rotate, Translate},
-        Shape,
     },
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -15,8 +15,8 @@ use std::{
     io::Write,
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     thread,
 };
@@ -55,7 +55,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
         exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
-            dbg: Dbg::with_parent(parent, "CalculatedFloatingPositionCache"),
+            dbg: Dbg::new(parent, "CalculatedFloatingPositionCache"),
             file_path,
             elements,
             waterline,
@@ -71,20 +71,20 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     where
         A: Send + 'static,
     {
-        let dbg = Dbg::new(self.dbg, "build");
-        log::info!("{} | Starting...", Dbg);
+        let dbg = Dbg::new(&self.dbg, "build");
+        log::info!("{} | Starting...", dbg);
         match thread::Builder::new()
-            .name(self.dbg.0.clone())
+            .name(self.dbg.to_string())
             .spawn(move || self.calculate())
         {
             Ok(handler) => {
-                log::info!("{} | Starting - OK", Dbg);
-                Ok(ServiceHandles::new(vec![(Dbg.0, handler)]))
+                log::info!("{} | Starting - OK", dbg);
+                Ok(ServiceHandles::new(vec![(dbg.to_string(), handler)]))
             }
             Err(why) => {
-                let err_msg = format!("{} | Starting - FAILED: {}", Dbg, why);
+                let err_msg = format!("{} | Starting - FAILED: {}", dbg, why);
                 log::warn!("{}", err_msg);
-                Err(Error(err_msg))
+                Err(Error::new(dbg, "build").pass(err_msg))
             }
         }
     }
@@ -100,14 +100,12 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     /// At the end of each iteration, a line is written to the output file in format:
     /// "{heel_step} {trim_step} {draught_step} {volume}".
     fn calculate(self) -> Result<(), Error> {
-        let dbg = Dbg(format!("{}.calculate", self.dbg));
+        let error = Error::new(&self.dbg, "calculate");
         let out_f = &mut File::create(&self.file_path).map_err(|err| {
-            Error(format!(
-                "{} | Creating file='{}': {}",
-                Dbg,
-                self.file_path.display(),
-                err
-            ))
+            error.pass_with(
+                format!("File::create error! path:{}", self.file_path.display()),
+                err.to_string(),
+            )
         })?;
         for &draught in &self.draught_steps {
             for &heel in &self.heel_steps {
@@ -115,7 +113,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                     // _true_ if the caller has requisted to exit.
                     // Note that in this case the file may be partially filled.
                     if self.exit.load(Ordering::SeqCst) {
-                        log::warn!("{} | Interrupted: `exit` has got true", Dbg);
+                        log::warn!("{} | Interrupted: `exit` has got true", &self.dbg);
                         return Ok(());
                     }
                     // make a clone of origin waterline and transform it
@@ -177,32 +175,32 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         .and_then(|(volume, mb_volume_center)| match mb_volume_center {
                             None => {
                                 if volume > 0.0 {
-                                    Err(Error(format!(
-                                        "{} | Triple [{}, {}, {}] gives no solids, but the volume={}.", 
-                                        Dbg, heel, trim, draught, volume
-                                    )))
+                                    Err(
+                                        format!("{} | Triple [{}, {}, {}] gives no solids, but the volume={}.",
+                                        &self.dbg, heel, trim, draught, volume).into()
+                                    )
                                 } else {
                                     log::warn!(
                                         "{} | Triple [{}, {}, {}] gives no solids under the waterline.", 
-                                        Dbg, heel, trim, draught
+                                        &self.dbg, heel, trim, draught
                                     );
                                     Ok(())
                                 }
-                            }
-                            Some([x, y, z]) => writeln!(
-                                out_f,
-                                "{} {} {} {} {} {} {}",
-                                heel, trim, draught, volume, x, y, z
-                            )
-                            .map_err(|err| {
-                                Error(format!(
-                                    "{} | Writing to file='{}': {}",
-                                    Dbg,
-                                    self.file_path.display(),
-                                    err
-                                ))
-                            }),
-                        })?;
+                            },
+                            Some([x, y, z]) => {
+                                Ok(writeln!(
+                                    out_f,
+                                    "{} {} {} {} {} {} {}",
+                                    heel, trim, draught, volume, x, y, z
+                                )
+                                .map_err(|err| {
+                                    format!(
+                                        "{} | Writing to file, error:{} path:{}",
+                                        &self.dbg, err.to_string(), self.file_path.display()
+                                    )
+                                })?)
+                            },
+                        });
                 }
             }
         }

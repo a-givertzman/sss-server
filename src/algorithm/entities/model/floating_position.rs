@@ -10,7 +10,7 @@ use sal_3dlib::{
         vertex::Vertex,
     },
 };
-use sal_sync::services::entity::{dbg_id::Dbg, error::str_err::Error};
+use sal_core::{dbg::Dbg, error::Error};
 //
 //
 pub struct EvaluatedFloatingPosition {
@@ -51,7 +51,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
         accuracy: f64,
     ) -> Self {
         Self {
-            dbg: Dbg::with_parent(parent, "FloatingPosition"),
+            dbg: Dbg::new(parent, "FloatingPosition"),
             cache,
             centreline,
             middle,
@@ -71,7 +71,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     where
         Attr: Clone,
     {
-        let dbg = Dbg(format!("{}/eval", self.Dbg));
+        let error = Error::new(&self.dbg, "eval");
         let init_keel = self.centreline.center().point();
         let disp_vol = self.disp / self.density;
         let mut theta = 0.0;
@@ -107,7 +107,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         if rows.len() > 1 {
                             log::warn!(
                                 "{} | More than one cached row for approx_vals='{:?}'",
-                                Dbg,
+                                &self.dbg,
                                 approx_vals
                             );
                         }
@@ -115,7 +115,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                     .and_then(|rows| rows.into_iter().next())
                     .ok_or(format!(
                         "{} | No value found for approx_vals='{:?}'",
-                        Dbg, approx_vals
+                        &self.dbg, approx_vals
                     ))
                     .map(|row| {
                         let mb_disp_vol_center = &row[4..=6];
@@ -126,7 +126,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         panic!(
                             "{} |`center_of_displacement_volume` must be a point \
                                 in 3-dimensional space, but it has {} coordinates",
-                            Dbg,
+                            &self.dbg,
                             mb_disp_vol_center.len()
                         );
                     })?
@@ -160,7 +160,8 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                 let frac_delta_psi_2 = 0.5 * {
                     let cb_v = v_plane
                         .project(&disp_vol_center /* ~ CB */)
-                        .map(|vertex| Point::from(vertex.point()))?;
+                        .map(|vertex| Point::from(vertex.point()))
+                        .map_err(|err| error.pass_with("cb_v = m_plane.project", err.to_string()))?;
                     let cg_h = {
                         let [.., z] = *cb_v;
                         let [x, y, ..] = self.disp_center.point();
@@ -228,11 +229,12 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                         .ok_or(format!(
                             "{} | No intersection between Vertical\
                             plane and Parallel to Midlle planes.",
-                            Dbg
+                            &self.dbg
                         ))?;
                     let cb_m = m_plane
                         .project(&disp_vol_center)
-                        .map(|vertex| Point::from(vertex.point()))?;
+                        .map(|vertex| Point::from(vertex.point()))
+                        .map_err(|err| error.pass_with("cb_m = m_plane.project", err.to_string()))?;
                     // Consider the tail of the model is behind the drawn part, then:
                     //      |
                     //   +--+--+

@@ -8,7 +8,7 @@ use crate::models::ship_model::{
 };
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_3dlib::{props::Center, topology::shape::Shape};
-use sal_sync::services::entity::{dbg_id::DbgId, error::str_err::StrErr};
+use sal_core::{dbg::Dbg, error::Error};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Read},
@@ -43,9 +43,9 @@ fn calculated_floating_position_cache() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbgid = DbgId("test cache Calculated_floating_position_cache".to_string());
-    log::debug!("\n{}", dbgid);
-    let test_duration = TestDuration::new(&dbgid, Duration::from_secs(300));
+    let dbg = Dbg("test cache",  "Calculated_floating_position_cache");
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(300));
     test_duration.run().unwrap();
     let model_key = "/cube_1_1_1_centered";
     let model_path =
@@ -55,7 +55,7 @@ fn calculated_floating_position_cache() {
     let result_path =
         "src/tests/models/ship_model/local_cache/floating_position_cache/tmpdir/fpc_result";
     // create model tree with empty attribute for each model
-    let model_tree = ModelTree::<()>::new(&dbgid, model_path)
+    let model_tree = ModelTree::<()>::new(&dbg, model_path)
         .load()
         .unwrap_or_else(|err| panic!("Failing building *model_tree*: {}", err));
     // set waterline init position to target model center
@@ -76,10 +76,10 @@ fn calculated_floating_position_cache() {
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
     let handlers = CalculatedFloatingPositionCache::new(
-        &dbgid,
+        &dbg,
         result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        FloatingPositionCache::new(&dbgid, model_tree, result_path, conf)
+        FloatingPositionCache::new(&dbg, model_tree, result_path, conf)
             .create_waterline()
             .unwrap_or_else(|err| panic!("Failed creating *waterline*: {}", err)),
         heel_steps,
@@ -94,12 +94,12 @@ fn calculated_floating_position_cache() {
         match handler.join() {
             Err(why) => {
                 let err_msg = format!("Failed preparing thread: {:?}", why);
-                errors.push(StrErr(err_msg));
+                errors.push(Error::new(dbg, err_msg));
             }
             Ok(res) => {
                 if let Err(why) = res {
                     let err_msg = format!("Failed executing thread: {:?}", why);
-                    errors.push(StrErr(err_msg));
+                    errors.push(Error::new(dbg, err_msg));
                 }
             }
         }

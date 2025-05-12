@@ -29,7 +29,7 @@ impl<A> ModelTree<A> {
     /// Creates a new instance.
     pub(super) fn new(parent: &Dbg, path: impl AsRef<Path>) -> Self {
         Self {
-            dbg: Dbg::with_parent(parent, "ModelTree.new"),
+            dbg: Dbg::new(parent, "ModelTree.new"),
             path: path.as_ref().to_path_buf(),
             elements: IndexMap::new(),
         }
@@ -38,23 +38,20 @@ impl<A> ModelTree<A> {
     /// Builds the new instance.
     ///
     /// Internally it reads `self.path` and converts the result to the target representation.
-    pub(super) fn load(self) -> Result<Self, StrErr> {
+    pub(super) fn load(self) -> Result<Self, Error> {
+        let error = Error::new(&self.dbg, "load");
         sal_3dlib::fs::Reader::read_step(&self.path)
             .map_err(|why| {
-                StrErr(format!(
-                    "{} | Failed reading model_path='{}': {}",
-                    self.dbg,
+                error.err(format!(
+                    "Failed reading model_path='{}': {}",
                     self.path.display(),
                     why
                 ))
             })
             .and_then(|reader| {
-                reader.into_vec::<A>().map_err(|why| {
-                    StrErr(format!(
-                        "{} | Failed reading model tree: {:?}",
-                        self.dbg, why
-                    ))
-                })
+                reader
+                    .into_vec::<A>()
+                    .map_err(|why| error.err(format!("Failed reading model tree: {:?}", why)))
             })
             .map(|elmnts| Self {
                 elements: elmnts.into_iter().collect(),

@@ -41,6 +41,7 @@ dashmap = "^6.1"
 splines = "^4.4"
 #
 # Helpful macros for working with enums and strings
+strum = "0.26.3"
 strum_macros = "^0.27"
 #
 # Thread safe

@@ -47,17 +47,17 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     ///
     /// Creates a new instance.
     pub fn new(parent: &Dbg, conf: ShipModelConf) -> Self {
-        let dbg = Dbg::with_parent(parent, "ShipModel");
-        let model_tree = ModelTree::new(&Dbg, conf.model_path);
+        let dbg = Dbg::new(parent, "ShipModel");
+        let model_tree = ModelTree::new(&dbg, conf.model_path);
         let mut ship_model = Self {
             caches: IndexMap::new(),
             model_tree: model_tree.clone(),
-            dbg: Dbg.clone(),
+            dbg: dbg.clone(),
         };
         ship_model.caches.insert(
             CacheKey::FloatingPostion,
             Box::new(FloatingPositionCache::new(
-                &Dbg,
+                &dbg,
                 model_tree,
                 conf.cache_dir,
                 conf.floating_position_cache_conf,
@@ -101,11 +101,11 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         waterline: &Face<Option<A>>,
         relative_position: RelativePostion,
     ) -> Result<Vec<Shape<Option<A>>>, Error> {
-        let dbg = Dbg(format!("{}.subvolume", self.dbg));
+        let error = Error::new(&self.dbg, "subvolume");
         // pop up warning if a key is not present in `self.model_key`
         for key in keys {
             if !self.model_tree.contains_key(key) {
-                log::warn!("{} | No element found for key='{}'", Dbg, key);
+                log::warn!("{} subvolume | No element found for key='{}'", self.dbg, key);
             }
         }
         // defines whether the key should be taken
@@ -128,7 +128,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
                 })
             })
             .try_fold(vec![], |mut elmnts, build| {
-                let elmnt = build?;
+                let elmnt = build.map_err(|err| error.pass_with("self.model_tree error", err.to_string()))?;
                 let [.., elmnt_z] = elmnt.center().point();
                 if match relative_position {
                     RelativePostion::Above => elmnt_z > waterline_z,
@@ -182,19 +182,19 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         // Get keys of successfuly calculated caches.
         // Return the full error if any worker fails.
         let calculated = {
-            let dbg = Dbg(format!("{}.update_caches", self.dbg));
+            let error = Error::new(&self.dbg, "update_caches");
             let mut calculated = IndexSet::new();
             let mut errors = vec![];
             for (cache_key, workers) in handlers {
                 for (id, handler) in workers {
                     match handler.join() {
                         Err(err) => {
-                            log::error!("{} | Preparing thread='{}'..", Dbg, id);
+                            log::error!("{} | Preparing thread='{}'..", &self.dbg, id);
                             errors.push(format!("  thread_id='{}', {:?}", id, err));
                         }
                         Ok(worker_res) => {
                             if let Err(err) = worker_res {
-                                log::error!("{} | Calculating cache in thread='{}'..", Dbg, id);
+                                log::error!("{} | Calculating cache in thread='{}'..", &self.dbg, id);
                                 errors.push(format!("  thread_id='{}', {:?}", id, err));
                             } else {
                                 calculated.insert(cache_key);
@@ -204,7 +204,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
                 }
             }
             if !errors.is_empty() {
-                return Err(Error(errors.join("\n")));
+                return Err(error.pass_with("calculated", errors.join("\n")));
             }
             calculated
         };
