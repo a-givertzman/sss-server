@@ -332,18 +332,17 @@ fn compute_balance(
     ).eval().map_err(|err| error.pass_with("floating_position", err))?;
 
     let result = BalanceCtx {
-        trim_deg: todo!(),
-        trim_meter: todo!(),
-        roll: todo!(),
-        mean_draught: floating_position.
+        trim: floating_position.trim_angle,
+        roll: floating_position.heel_angle,
+        draught_mid: floating_position.draught_at_amidships,
         bulk: todo!(),
         liquid: todo!(),
         bounds_volume: todo!(),
-        volume: todo!(),
+        volume: floating_position.displacement_volume,
         area_wl: todo!(),
         length_wl: todo!(),
         breadth_wl: todo!(),
-        volume_shift_z: todo!(),
+        volume_shift_z: floating_position.displacement_volume_center[2],
         entry_angle: todo!(),
         flooding_angle: todo!(),
         bow_area: todo!(),

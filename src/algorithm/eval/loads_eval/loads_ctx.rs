@@ -15,6 +15,8 @@ pub struct LoadsCtx {
     pub shift_const: Position,
     pub shift_unit: Position,
     pub shift_gaseous: Position,
+    pub shift_liquid: Position,
+    pub shift_bulk: Position,
     /// Груз, для которого центр массы и распределение зависит от 
     /// объема и/или положения корпуса, считается в модели
     pub bulk: Vec<BulkData>,

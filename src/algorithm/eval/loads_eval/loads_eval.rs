@@ -61,10 +61,21 @@ impl Eval<(), EvalResult> for LoadsEval {
                     Some(data) => data.iter().map(|v| v.data()).collect(),
                     None => return CtxResult::Err(error.err("Read bulk error: no data!")),
                 };
-                let liquid: Vec<_> = match initial.liquid.clone() {
-                    Some(data) => data.iter().map(|v| v.data()).collect(),
+
+
+                let mass_bulk = bulk.iter().fold(0., |sum, v| sum + v.mass);
+                shift_liquid,
+                shift_bulk,
+
+                let (liquid, mass_liquid, shift_liquid) = match initial.liquid.clone() {
+                    Some(data) => {
+                        let liquid: Vec<_> = data.iter().map(|v| v.data()).collect();
+                        let mass_liquid = liquid.iter().fold(0., |sum, v| sum + v.mass);
+                        let shift_liquid = data.iter().map(|v| v.).collect();
+                    },
                     None => return CtxResult::Err(error.err("Read liquid error: no data!")),
                 };
+                let mass_liquid = liquid.iter().fold(0., |sum, v| sum + v.mass);
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {
                         let unit = data;
@@ -115,13 +126,15 @@ impl Eval<(), EvalResult> for LoadsEval {
                 };
                 let result = LoadsCtx {
                     mass_const,
-                    mass_bulk: bulk.iter().fold(0., |sum, v| sum + v.mass),
-                    mass_liquid: liquid.iter().fold(0., |sum, v| sum + v.mass),
+                    mass_bulk,
+                    mass_liquid,
                     mass_unit,
                     mass_gaseous,
                     shift_const,
                     shift_unit,
                     shift_gaseous,
+                    shift_liquid,
+                    shift_bulk,
                     bulk,
                     liquid,
                     grain_bulkhead,

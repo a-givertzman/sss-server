@@ -8,8 +8,8 @@ use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 pub struct BalanceCtx {
     /// Дифферент, градусы
     pub trim: f64,
-    /// Средняя осадка, м
-    pub mean_draught: f64,
+    /// Осадка на миделе в ДП, м
+    pub draught_mid: f64,
     /// Крен, градус
     pub roll: f64,
     /// Груз, для которого центр массы и распределение зависит от 

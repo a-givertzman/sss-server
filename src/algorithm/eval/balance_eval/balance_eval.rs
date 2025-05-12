@@ -2,13 +2,10 @@ use sal_core::{dbg::Dbg, error::Error};
 
 use crate::{
     algorithm::{
-        context::context_access::ContextRead,
+        context::context_access::{ContextRead, ContextReadRef},
         entities::Moment,
         eval::{IcingCtx, LoadsCtx, WettingCtx},
-    },
-    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult},
-    ship_model::query::{BalanceQuery, Query},
-    ContextWrite, CtxResult,
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::{BalanceQuery, Query}, ContextWrite, CtxResult
 };
 use super::balance_ctx::BalanceCtx;
 
@@ -44,6 +41,8 @@ impl Eval<(), EvalResult> for BalanceEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             CtxResult::Ok(ctx) => {
+                let initial: &InitialCtx = ctx.read_ref();
+                let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
                 let loads: LoadsCtx = ctx.read();
                 let icing: IcingCtx = ctx.read();
                 let wetting: WettingCtx = ctx.read();
@@ -60,10 +59,15 @@ impl Eval<(), EvalResult> for BalanceEval {
                     Moment::from_pos(loads.shift_unit, loads.mass_unit) + 
                     Moment::from_pos(loads.shift_gaseous, loads.mass_gaseous) + 
                     Moment::new(icing.mass*icing.mass_shift_x, 0., 0.) + 
-                    Moment::from_pos(wetting.mass_shift, wetting.mass);    
+                    Moment::from_pos(wetting.mass_shift, wetting.mass);
+                let moment_sum = moment_const + 
+                Moment::from_pos(loads.shift_liquid, loads.mass_liquid) + 
+                Moment::from_pos(loads.shift_bulk, loads.mass_bulk);
                 // Структура для передачи в модель
                 let balance_query = BalanceQuery {
+                    water_density: voyage.density,
                     mass_sum,
+                    mass_shift,
                     moment_const,
                     bulk: loads.bulk.clone(),
                     liquid: loads.liquid.clone(),
@@ -73,7 +77,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                 let result_data: BalanceCtx = self.model.call(Query::ComputeBalance(balance_query))
                     .map_err(|err| error.pass_with("result_data model.call", err))?;    
 
-                let center_waterline_shift = self.center_waterline_shift;
+          /*      let center_waterline_shift = self.center_waterline_shift;
                 let bow_x = self.ship_length - self.midship;
                 let stern_x = -self.midship;
                 let draught_bow = self.mean_draught + (bow_x - center_waterline_shift)*self.trim/self.ship_length;
@@ -108,6 +112,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     volume: result_data.volume,
                     ..result_data
                 };
+            */
                 //
                 // TODO Propably additional BalanceResult is not required, sorry if not
                 //
@@ -116,9 +121,9 @@ impl Eval<(), EvalResult> for BalanceEval {
                 //     bulk: result.bulk,
                 //     liquid: result.liquid,
                 // };
-                self.value = Some(result.clone());
+                self.value = Some(result_data.clone());
                  // TODO ctx.write(result_data.parameters);
-                ctx.write(result)
+                ctx.write(result_data)
             }
             CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
             CtxResult::None => CtxResult::None,

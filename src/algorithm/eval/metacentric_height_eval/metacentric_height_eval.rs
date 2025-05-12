@@ -80,7 +80,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 // Продольная исправленная метацентрическая высота (3)
                 let h_long_fix = h_long_0 - delta_m_h.long();
                 // Момент дифферентующий на 1 см осадки (4)
-                let trim_moment = (self.mass.sum()? * h_long_fix) / (100. * self.ship_length_lbp);
+                let trim_moment = (mass * h_long_fix) / (100. * self.ship_length_lbp);
                 // Аппликата поперечного метацентра (8)
                 let z_m = center_draught_shift_z + rad_trans; //
                 // Поперечная метацентрическая высота без учета влияния
