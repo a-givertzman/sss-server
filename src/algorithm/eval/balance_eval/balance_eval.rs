@@ -86,12 +86,14 @@ impl Eval<(), EvalResult> for BalanceEval {
                 // Изменение осадки
                 let delta_draught = (draught_bow - draught_stern) / self.ship_length;
 
+                let trim_meter = result_data.trim.to_radian().tan()*self.ship_length_lbp;
+
                 ctx.write_params(ParameterID::DraughtMid, draught_mid);    
                 ctx.write_params(ParameterID::DraughtBow, draught_bow);
                 ctx.write_params(ParameterID::DraughtStern, draught_stern);      
-                ctx.write_params(ParameterID::TrimDeg, result_data.trim_degree);
-                ctx.write_params(ParameterID::TrimMeter, result_data.trim_meter);
-                ctx.write_params(ParameterID::Roll, result_data.roll); TODO: брать из модели или из диаграммы плечей?
+                ctx.write_params(ParameterID::TrimDeg, result_data.trim);
+                ctx.write_params(ParameterID::TrimMeter, trim_meter);
+                ctx.write_params(ParameterID::Roll, result_data.roll);
 
                 let result = BalanceCtx {
                     bulk: result_data.bulk,

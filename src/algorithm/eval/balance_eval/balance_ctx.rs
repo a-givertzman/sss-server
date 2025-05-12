@@ -7,9 +7,7 @@ use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BalanceCtx {
     /// Дифферент, градусы
-    pub trim_deg: f64,
-    /// Дифферент, метры
-    pub trim_meter: f64,
+    pub trim: f64,
     /// Средняя осадка, м
     pub mean_draught: f64,
     /// Крен, градус
