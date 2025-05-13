@@ -1,6 +1,6 @@
 mod data;
 mod cache;
-//mod models;
+//mod models; // перенес тесты в папку с крейтом из-за проблем с видимостью методов
 //mod fake_initial;
 //mod fake_model_link;
 //mod fake_ship_model;

@@ -1,7 +1,7 @@
 mod calculated_floating_position_cache;
 pub mod floating_position_cache_conf;
 use crate::algorithm::entities::cache::Cache;
-
+mod tests;
 //
 use super::{super::ModelTree, LocalCache};
 use calculated_floating_position_cache::CalculatedFloatingPositionCache;

@@ -1,10 +1,10 @@
 #[cfg(test)]
-use crate::models::ship_model::{
+use crate::algorithm::entities::model::{
     local_cache::floating_position_cache::{
         floating_position_cache_conf::FloatingPositionCacheConf, CalculatedFloatingPositionCache,
         FloatingPositionCache,
     },
-    model_tree::ModelTree,
+    ModelTree,
 };
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_3dlib::{props::Center, topology::shape::Shape};
@@ -43,17 +43,17 @@ fn calculated_floating_position_cache() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg("test cache",  "Calculated_floating_position_cache");
+    let dbg = Dbg::new("test models", "Calculated_floating_position_cache");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(300));
     test_duration.run().unwrap();
     let model_key = "/cube_1_1_1_centered";
     let model_path =
-        "src/tests/models/ship_model/local_cache/floating_position_cache/assets/cube_1_1_1.step";
+        "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/cube_1_1_1.step";
     let target_path =
-        "src/tests/models/ship_model/local_cache/floating_position_cache/assets/fpc_target";
+        "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/fpc_target";
     let result_path =
-        "src/tests/models/ship_model/local_cache/floating_position_cache/tmpdir/fpc_result";
+        "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/fpc_result";
     // create model tree with empty attribute for each model
     let model_tree = ModelTree::<()>::new(&dbg, model_path)
         .load()
@@ -94,12 +94,12 @@ fn calculated_floating_position_cache() {
         match handler.join() {
             Err(why) => {
                 let err_msg = format!("Failed preparing thread: {:?}", why);
-                errors.push(Error::new(dbg, err_msg));
+                errors.push(Error::new(&dbg, err_msg));
             }
             Ok(res) => {
                 if let Err(why) = res {
                     let err_msg = format!("Failed executing thread: {:?}", why);
-                    errors.push(Error::new(dbg, err_msg));
+                    errors.push(Error::new(&dbg, err_msg));
                 }
             }
         }
