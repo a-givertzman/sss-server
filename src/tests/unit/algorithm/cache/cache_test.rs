@@ -1,4 +1,6 @@
 #[cfg(test)]
+
+mod cache {
 use crate::common::cache::Cache;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_sync::services::entity::dbg_id::DbgId;
@@ -86,4 +88,5 @@ fn init_cache_table_from_inconsistent_files() {
         }
     }
     test_duration.exit();
+}
 }

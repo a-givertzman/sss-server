@@ -40,7 +40,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(mut ctx) => {
+            CtxResult::Ok(ctx) => {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: BalanceCtx = ctx.read();
                 let pantocaren = &balance.pantocaren; 

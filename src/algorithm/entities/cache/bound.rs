@@ -3,7 +3,7 @@ use std::ops::BitAnd;
 ///
 /// Represents bound(s) of element within the collection.
 #[derive(PartialEq, Clone, Copy, Debug)]
-pub(super) enum Bound {
+pub enum Bound {
     ///
     /// No bound.
     None,

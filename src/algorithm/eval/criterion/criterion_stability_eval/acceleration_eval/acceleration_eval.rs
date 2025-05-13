@@ -1,4 +1,6 @@
 use super::acceleration_ctx::AccelerationCtx;
+use crate::algorithm::context::context_access::ContextParamsRead;
+use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     MetacentricHeightCtx, RollingAmplitudeCtx, BalanceCtx, RollingPeriodCtx,
@@ -44,8 +46,7 @@ impl Eval<(), EvalResult> for AccelerationEval {
                 let b = *ship_parameters
                     .get("MouldedBreadth")
                     .ok_or(error.err("breadth error: no data!"))?;
-                let balance: BalanceCtx = ctx.read();
-                let d = balance.mean_draught;
+                let d = ctx.read_params(ParameterID::DraughtMean);
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let rolling_amplitude: RollingAmplitudeCtx = ctx.read();
                 let rolling_period: RollingPeriodCtx = ctx.read();

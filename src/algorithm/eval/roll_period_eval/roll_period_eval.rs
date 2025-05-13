@@ -1,7 +1,7 @@
 use super::roll_period_ctx::RollingPeriodCtx;
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, eval::{BalanceCtx, MetacentricHeightCtx},
+        context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, BalanceCtx, MetacentricHeightCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult,
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -39,7 +39,7 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
                 let balance_ctx: BalanceCtx = ctx.read();
                 let length_wl = balance_ctx.length_wl;
                 let breadth_wl = balance_ctx.breadth_wl;
-                let mean_draught = balance_ctx.mean_draught;
+                let mean_draught = ctx.read_params(ParameterID::DraughtMean);
                 // Коэффициент для расчета периода
                 let c = 0.373 + 0.023 * breadth_wl / mean_draught - 0.043 * length_wl / 100.0;
                 let roll_period = if metacentric_height.h_trans_fix > 0. {

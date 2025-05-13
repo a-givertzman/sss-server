@@ -1,8 +1,8 @@
 use super::metacentric_height_subdivision_ctx::MetacentricHeightSubdivisionCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::{BalanceCtx, CriterionData, CriterionID, MetacentricHeightCtx},
+        context::context_access::{ContextParamsRead, ContextRead, ContextReadRef},
+        eval::{parameters::ParameterID, BalanceCtx, CriterionData, CriterionID, MetacentricHeightCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
 use crate::algorithm::entities::{Curve, ICurve};
@@ -37,10 +37,10 @@ impl Eval<(), EvalResult> for MetacentricHeightSubdivisionEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let data = initial.h_subdivision.as_ref().unwrap();
-                let balance: BalanceCtx = ctx.read();
+                let mean_draught = ctx.read_params(ParameterID::DraughtMean);
                 let h_subdivision = Curve::new_linear(data)
                     .map_err(|err| error.pass_with("h_subdivision Curve::new_linear", err))?
-                    .value(balance.mean_draught)
+                    .value(mean_draught)
                     .map_err(|err| error.pass_with("h_subdivision Curve::value", err))?;
                 let result = MetacentricHeightSubdivisionCtx {
                     data: CriterionData::new_result(

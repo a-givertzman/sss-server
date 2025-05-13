@@ -1,8 +1,8 @@
 use super::metacentric_height_ctx::MetacentricHeightCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead}, entities::data::loads::AssignmentType, eval::{parameters::ParameterID, BalanceCtx}
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite},
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, entities::data::loads::AssignmentType, eval::{parameters::ParameterID, BalanceCtx}
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::entities::math::liquid::*;
@@ -36,7 +36,7 @@ impl MetacentricHeightEval {
 //
 impl Eval<(), EvalResult> for MetacentricHeightEval {
     fn eval(&mut self, _: ()) -> EvalResult {
-        let _error = Error::new(&self.dbg, "eval");
+        let error = Error::new(&self.dbg, "eval");
     //    match self.ctx.eval(()) {
     //        CtxResult::Ok(ctx) => {
                 let mut ctx = self.ctx.take().unwrap();
@@ -44,6 +44,14 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 let mass = ctx.read_params(ParameterID::Displacement);
                 // Смещение центра массы по оси Z
                 let mass_shift_z = ctx.read_params(ParameterID::CenterMassZ);
+                let initial: &InitialCtx = ctx.read_ref();
+                let ship_parameters = initial
+                    .ship_parameters
+                    .as_ref()
+                    .unwrap();
+                let ship_length_lbp = *ship_parameters
+                    .get("LBP")
+                    .ok_or(error.err("No LBP in ship_parameters"))?;
                 let balance: BalanceCtx = ctx.read();
                 // Продольный метацентрический радиус
                 let rad_long = balance.rad_long;
@@ -80,7 +88,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 // Продольная исправленная метацентрическая высота (3)
                 let h_long_fix = h_long_0 - delta_m_h.long();
                 // Момент дифферентующий на 1 см осадки (4)
-                let trim_moment = (mass * h_long_fix) / (100. * self.ship_length_lbp);
+                let trim_moment = (mass * h_long_fix) / (100. * ship_length_lbp);
                 // Аппликата поперечного метацентра (8)
                 let z_m = center_draught_shift_z + rad_trans; //
                 // Поперечная метацентрическая высота без учета влияния

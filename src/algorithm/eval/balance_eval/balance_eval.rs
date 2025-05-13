@@ -61,8 +61,9 @@ impl Eval<(), EvalResult> for BalanceEval {
                     Moment::new(icing.mass*icing.mass_shift_x, 0., 0.) + 
                     Moment::from_pos(wetting.mass_shift, wetting.mass);
                 let moment_sum = moment_const + 
-                Moment::from_pos(loads.shift_liquid, loads.mass_liquid) + 
-                Moment::from_pos(loads.shift_bulk, loads.mass_bulk);
+                    Moment::from_pos(loads.shift_liquid, loads.mass_liquid) + 
+                    Moment::from_pos(loads.shift_bulk, loads.mass_bulk);
+                let mass_shift = moment_sum.to_pos(mass_sum);
                 // Структура для передачи в модель
                 let balance_query = BalanceQuery {
                     water_density: voyage.density,

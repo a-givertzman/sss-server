@@ -37,6 +37,8 @@ mod tests {
             shift_const: Position::new(1.05, 0., 5.32),
             shift_unit: Position::zero(),
             shift_gaseous: Position::new(43.67, -0.836, 7.88),
+            shift_liquid: Position::zero(),
+            shift_bulk: Position::zero(),
             bulk: Vec::new(),
             liquid: Vec::new(),
             grain_bulkhead: Vec::new(),

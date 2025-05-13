@@ -7,10 +7,10 @@ use std::{cmp::Ordering, ops::Deref};
 ///
 /// A dataset is _analyzed_ if all its inflection points are defined.
 #[derive(Clone, Debug)]
-pub(super) struct Column<T> {
+pub struct Column<T> {
     inflections: OwnedSet<usize>,
     data: OwnedSet<T>,
-    Dbg: Dbg,
+    dbg: Dbg,
 }
 //
 //
@@ -20,14 +20,14 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
-    pub(super) fn new<S>(Dbg: Dbg, values: S) -> Self
+    pub fn new<S>(dbg: Dbg, values: S) -> Self
     where
         S: Into<OwnedSet<T>> + Deref<Target = [T]>,
     {
         Self {
-            inflections: Self::get_inflections(&Dbg, &values),
+            inflections: Self::get_inflections(&dbg, &values),
             data: values.into(),
-            Dbg,
+            dbg,
         }
     }
     ///
@@ -35,7 +35,7 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
-    fn get_inflections(Dbg: &Dbg, values: &[T]) -> OwnedSet<usize> {
+    fn get_inflections(dbg: &Dbg, values: &[T]) -> OwnedSet<usize> {
         use Ordering::*;
         //
         if values.is_empty() {
@@ -78,7 +78,7 @@ impl<T: PartialOrd> Column<T> {
                 },
                 _ => panic!(
                     "{}.{} | Non-comparable value at position {}, {} or {}",
-                    Dbg,
+                    dbg,
                     callee,
                     m_id - 1,
                     m_id,
@@ -124,7 +124,7 @@ impl<T: PartialOrd> Column<T> {
                     ),
                     _ => panic!(
                         "{}.{} | `val`={} is a non-comparable value",
-                        self.Dbg, callee, val
+                        self.dbg, callee, val
                     ),
                 }
             })

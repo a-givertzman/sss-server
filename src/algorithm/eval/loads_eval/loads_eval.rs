@@ -60,11 +60,11 @@ impl Eval<(), EvalResult> for LoadsEval {
                 let (bulk, mass_bulk, shift_bulk) = match initial.bulk.clone() {
                     Some(data) => {
                         let bulk: Vec<_> = data.iter().map(|v| v.data()).collect();
-                        let (mass, shift) = unit
+                        let (mass, shift) = data
                             .iter()
-                            .filter_map(|v| match v.mass_shift() {
-                                Ok(mass_shift) => Some((v.mass, mass_shift)),
-                                Err(_) => None,
+                            .filter_map(|v| match v.mass_shift {
+                                Some(mass_shift) => Some((v.mass, mass_shift)),
+                                None => None,
                             })
                             .fold(
                                 (0., Moment::zero()),
@@ -82,11 +82,11 @@ impl Eval<(), EvalResult> for LoadsEval {
                 let (liquid, mass_liquid, shift_liquid) = match initial.liquid.clone() {
                     Some(data) => {
                         let liquid: Vec<_> = data.iter().map(|v| v.data()).collect();
-                        let (mass, shift) = unit
+                        let (mass, shift) = data
                             .iter()
-                            .filter_map(|v| match v.mass_shift() {
-                                Ok(mass_shift) => Some((v.mass, mass_shift)),
-                                Err(_) => None,
+                            .filter_map(|v| match v.mass_shift {
+                                Some(mass_shift) => Some((v.mass, mass_shift)),
+                                None => None,
                             })
                             .fold(
                                 (0., Moment::zero()),

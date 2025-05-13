@@ -2,7 +2,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use super::{bound::Bound, column::Column, OwnedSet};
 ///
 /// Set of [Column]s.
-pub(super) struct Table<T> {
+pub struct Table<T> {
     dbg: Dbg,
     columns: OwnedSet<Column<T>>,
 }
@@ -11,7 +11,7 @@ pub(super) struct Table<T> {
 impl<T> Table<T> {
     ///
     /// Creates a new instance.
-    pub(super) fn new(parent: &Dbg, cols: impl Into<OwnedSet<Column<T>>>) -> Self {
+    pub fn new(parent: &Dbg, cols: impl Into<OwnedSet<Column<T>>>) -> Self {
         let dbg = Dbg::new(parent, "Table");
         let columns = cols.into();
         Self { dbg, columns }
@@ -28,7 +28,7 @@ impl Table<f64> {
     ///
     /// # Panics
     /// Panic occurs if `approx_vals` contains a non-comparable value (e. g. _NaN_).
-    pub(super) fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
+    pub fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
         (approx_vals.len() <= self.columns.len()).then(|| self.get_unchecked(approx_vals))
     }
     ///

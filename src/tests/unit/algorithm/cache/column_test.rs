@@ -1,10 +1,11 @@
 #[cfg(test)]
+
+mod cache {
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use sal_sync::services::entity::dbg_id::DbgId;
+use sal_core::{dbg::Dbg, error::Error};
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
 
-use crate::common::cache::{bound::Bound, column::Column};
 //
 //
 static INIT: Once = Once::new();
@@ -170,4 +171,5 @@ fn get_bounds_non_descresing() {
         );
     }
     test_duration.exit();
+}
 }

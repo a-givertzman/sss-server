@@ -4,9 +4,9 @@ use std::{
     ops::{Add, AddAssign, Sub},
 };
 use bincode::{Decode, Encode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 //
-#[derive(Debug, Copy, Clone, Deserialize, Encode, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Encode, PartialEq)]
 pub struct Point3 {
     x: f64,
     y: f64,
@@ -24,7 +24,7 @@ impl TryFrom<Point3> for Position {
     }
 }
 //
-#[derive(Debug, Copy, Clone, Deserialize, Decode, Encode, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq)]
 #[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,

@@ -1,10 +1,10 @@
 #[cfg(test)]
+
+mod cache {
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use sal_sync::services::entity::dbg_id::DbgId;
+use sal_core::{dbg::Dbg, error::Error};
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-
-use crate::common::cache::{column::Column, table::Table};
 //
 //
 static INIT: Once = Once::new();
@@ -27,10 +27,10 @@ fn get_unchecked() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbgid = DbgId("test Table".to_string());
+    let dbg = Dbg::new("test", "Table");
     let callee = "get_unchecked";
-    log::debug!("\n{}", dbgid);
-    let test_duration = TestDuration::new(&dbgid, Duration::from_secs(1));
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     // init
     //
@@ -52,11 +52,11 @@ fn get_unchecked() {
             let var_name = matrix[row_id][col_id];
             values.push(var_name);
         });
-        let dbgid = DbgId::with_parent(&dbgid, &format!("Column_{}", col_id));
-        let column = Column::new(dbgid, values);
+        let dbg = Dbg::with_parent(&dbg, &format!("Column_{}", col_id));
+        let column = Column::new(dbg, values);
         columns.push(column);
     }
-    let table = Table::new(&dbgid, columns);
+    let table = Table::new(&dbg, columns);
     //
     ////
     #[rustfmt::skip]
@@ -117,13 +117,14 @@ fn get_unchecked() {
         let result = table.get_unchecked(value);
         println!(
             "{}.{} | step={} value={:?} result={:?} target={:?}",
-            dbgid, callee, step, value, result, target
+            dbg, callee, step, value, result, target
         );
         assert_eq!(
             target, result,
             "{}.{} | step={} value={:?} result={:?} target={:?}",
-            dbgid, callee, step, value, result, target
+            dbg, callee, step, value, result, target
         );
     }
     test_duration.exit();
+}
 }

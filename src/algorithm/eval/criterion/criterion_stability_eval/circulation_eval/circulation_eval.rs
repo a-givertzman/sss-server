@@ -44,7 +44,7 @@ impl Eval<(), EvalResult> for CirculationEval {
                 // Эксплуатационная скорость судна, m/s
                 let v_0 = voyage.operational_speed;
                 let balance: BalanceCtx = ctx.read();
-                let d = balance.mean_draught;
+                let d = ctx.read_params(ParameterID::DraughtMean);
                 let l_wl = balance.length_wl;
                 let moment_shift_z = ctx.read_params(ParameterID::CenterMassZ);
                 let balance: BalanceCtx = ctx.read();

@@ -7,8 +7,8 @@ use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
-use crate::algorithm::entities::model::model_tree::ModelTree;
 use crate::algorithm::entities::{Bound, Bounds};
+use crate::algorithm::entities::model;
 use crate::algorithm::eval::BalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
 use crate::kernel::sync::Hub;
@@ -104,7 +104,7 @@ impl ShipModel {
         let model_path = "src/assets/cube_1_1_1.step";
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
-        let cache_dir = format!("src/assets/cashe/");
+        let cache_dir = "src/assets/cashe/";
         let scheduler = self.scheduler.pop().unwrap();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
@@ -312,12 +312,12 @@ fn compute_balance(
 ) -> Result<BalanceCtx, Error> {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let error = Error::new(&dbg, "compute_balance");
-    let model = crate::algorithm::entities::model::ShipModel::new(
+    let model: model::ShipModel<()> = model::ShipModel::new(
         &dbg, 
-        crate::algorithm::entities::model::ship_model_conf::ShipModelConf {
+        model::ship_model_conf::ShipModelConf {
             model_path: PathBuf::from(model_path),
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: crate::algorithm::entities::model::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf {
+            floating_position_cache_conf: model::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf {
                 waterline_position: [0., 0., 0.],
                 heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
                 trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),

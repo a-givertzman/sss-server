@@ -1,4 +1,5 @@
 use super::roll_amplitude_ctx::RollingAmplitudeCtx;
+use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::entities::math::curve::*;
 use crate::{
     ContextWrite, CtxResult,
@@ -44,7 +45,7 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                 let volume = balance.volume;
                 let length_wl = balance.length_wl;
                 let breadth_wl = balance.breadth_wl;
-                let mean_draught = balance.mean_draught;
+                let mean_draught = ctx.read_params(ParameterID::DraughtMean);
                 let navigation_area = initial.navigation_area.unwrap();
                 let ship_parameters = initial
                     .ship_parameters
