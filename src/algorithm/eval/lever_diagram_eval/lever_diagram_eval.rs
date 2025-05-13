@@ -1,7 +1,7 @@
 use super::lever_diagram_ctx::LeverDiagramCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead},
+        context::context_access::{ContextParamsRead, ContextRead},
         entities::math::curve::*,
         eval::{parameters::ParameterID, BalanceCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult

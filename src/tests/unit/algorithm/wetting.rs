@@ -6,6 +6,7 @@ mod tests {
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
     use crate::{algorithm::{entities::Position, eval::{WettingCtx, WettingEval}}, kernel::eval::Eval, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
+    use crate::algorithm::context::context_access::ContextRead;
 
     #[test]
     fn wetting() {
@@ -17,7 +18,7 @@ mod tests {
 
         let dbg = Dbg::own("wetting");
         let ctx = FakeInitial::new(
-            dbg,
+            dbg.clone(),
             Context::new(
                 InitialCtx::new(
                     1,
@@ -26,7 +27,7 @@ mod tests {
             )
         );
 
-        let result: WettingCtx = WettingEval::new(&dbg, ctx).eval(()).read();
+        let result: WettingCtx = WettingEval::new(&dbg, ctx).eval(()).unwrap().read();
 
         let target =  WettingCtx {
             mass: 0.,

@@ -24,7 +24,7 @@ pub use stability::MultiplerX1Array as MultiplerX1Array;
 pub use stability::MultiplerX2Array as MultiplerX2Array;
 pub use stability::CoefficientKArray as CoefficientKArray;
 pub use stability::CoefficientKThetaArray as CoefficientKThetaArray;
-pub use stability::CenterDraughtShiftArray as CenterDraughtShiftArray;
+//pub use stability::CenterDraughtShiftArray as CenterDraughtShiftArray;
 
 pub type RadLongDataArray = DataArray<TrimVolumeData>;
 pub type RadTransDataArray = DataArray<TrimVolumeData>;

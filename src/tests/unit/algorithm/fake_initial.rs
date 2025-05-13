@@ -41,7 +41,7 @@ impl FakeInitial {
 //
 impl Eval<(), EvalResult> for FakeInitial {
     fn eval(&mut self, _: ()) -> EvalResult {
-        let error = Error::new(&self.dbg, "eval");
+        let _error = Error::new(&self.dbg, "eval");
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
         // Расчет баланса в модели

@@ -1,4 +1,4 @@
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::dbg::Dbg;
 use super::{bound::Bound, column::Column, OwnedSet};
 ///
 /// Set of [Column]s.
@@ -41,7 +41,7 @@ impl Table<f64> {
     /// This method panics if at least one of the statements is true:
     /// - `approx_vals.len()` is greter than `self.columns.len()`,
     /// - `approx_vals` contains a non-comparable value (e. g. _NaN_) (see [Column::get_bounds]).
-    fn get_unchecked(&self, approx_vals: &[Option<f64>]) -> Vec<Vec<f64>> {
+    pub fn get_unchecked(&self, approx_vals: &[Option<f64>]) -> Vec<Vec<f64>> {
         let callee = "get_unchecked";
         assert!(
             self.columns.len() >= approx_vals.len(),

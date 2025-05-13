@@ -233,8 +233,10 @@ pub fn liquid() -> Vec<LoadLiquidData> {
             assigment_type: v.3,
             cargo_type: v.2,
             mass: v.1,
+            mass_shift: 
             density: density,
             volume: volume,
+            long_moment_of_inertia_max`, `mass_shift`, `trans_moment_of_inertia_max
         }
     }).collect()
     //     LoadLiquidArray::from(

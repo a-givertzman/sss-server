@@ -1,7 +1,6 @@
 use super::query::*;
 use super::reply::*;
 use super::{query::Query, reply::Reply};
-use crate::algorithm::entities::cache::Cache;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
 use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
@@ -14,7 +13,6 @@ use crate::infrostructure::api::client::api_client::ApiClient;
 use crate::kernel::sync::Hub;
 use crate::kernel::sync::Link;
 use coco::Stack;
-use sal_3dlib::topology::shape::Shape;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;

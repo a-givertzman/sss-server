@@ -1,4 +1,4 @@
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::dbg::Dbg;
 use super::bound::Bound;
 use super::OwnedSet;
 use std::{cmp::Ordering, ops::Deref};
@@ -35,7 +35,7 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
-    fn get_inflections(dbg: &Dbg, values: &[T]) -> OwnedSet<usize> {
+    pub fn get_inflections(dbg: &Dbg, values: &[T]) -> OwnedSet<usize> {
         use Ordering::*;
         //
         if values.is_empty() {
@@ -103,7 +103,7 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `val` is a non-comparable value (e. g. _NaN_).
-    pub(super) fn get_bounds(&self, val: &T) -> Vec<Bound>
+    pub fn get_bounds(&self, val: &T) -> Vec<Bound>
     where
         T: std::fmt::Display,
     {

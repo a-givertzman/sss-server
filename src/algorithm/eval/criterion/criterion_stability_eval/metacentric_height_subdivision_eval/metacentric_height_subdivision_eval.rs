@@ -2,7 +2,7 @@ use super::metacentric_height_subdivision_ctx::MetacentricHeightSubdivisionCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextRead, ContextReadRef},
-        eval::{parameters::ParameterID, BalanceCtx, CriterionData, CriterionID, MetacentricHeightCtx},
+        eval::{parameters::ParameterID, CriterionData, CriterionID, MetacentricHeightCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
 };
 use crate::algorithm::entities::{Curve, ICurve};

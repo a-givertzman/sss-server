@@ -1,11 +1,10 @@
 #[cfg(test)]
 
-mod cache {
+
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-
-use crate::common::cache::bound::Bound;
+use crate::algorithm::entities::cache::*;
 //
 //
 static INIT: Once = Once::new();
@@ -28,9 +27,9 @@ fn bitand_test() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbgid = "bitand_test";
-    log::debug!("\n{}", dbgid);
-    let test_duration = TestDuration::new(dbgid, Duration::from_secs(1));
+    let dbg = "cache bitand_test";
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
         // 0
@@ -75,4 +74,4 @@ fn bitand_test() {
     }
     test_duration.exit();
 }
-}
+

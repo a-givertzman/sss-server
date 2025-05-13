@@ -1,11 +1,10 @@
 #[cfg(test)]
 
-mod cache {
-use crate::common::cache::Cache;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use sal_sync::services::entity::dbg_id::DbgId;
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
+use sal_core::dbg::Dbg;
+use crate::algorithm::entities::cache::*;
 //
 //
 static INIT: Once = Once::new();
@@ -28,9 +27,9 @@ fn init_cache_table_from_file() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbgid = DbgId("test Cache".to_string());
-    log::debug!("\n{}", dbgid);
-    let test_duration = TestDuration::new(&dbgid, Duration::from_secs(1));
+    let dbg = Dbg::new("cache cache", "init_cache_table_from_file");
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     // init
     //
@@ -45,8 +44,9 @@ fn init_cache_table_from_file() {
         ([Some(0.6), Some(4.6), Some(3.6), Some(70.6)], Some(vec![vec![0.6, 4.6, 3.6, 70.6]])),
         ([Some(0.7), Some(0.7), Some(4.7), Some(80.7)], Some(vec![vec![0.7, 0.7, 4.7, 80.7]])),
     ];
-    let path = "src/tests/common/cache/assets/table-ok";
-    let cache = Cache::new(&dbgid, path);
+    let path = "src/tests/unit/algorithm/cache/assets/table-ok";
+    let cache = Cache::new(&dbg, path);
+    cache.init();
     for (step, (vals, target)) in test_data.into_iter().enumerate() {
         let result = cache.get(&vals);
         println!(
@@ -69,24 +69,24 @@ fn init_cache_table_from_inconsistent_files() {
     init_once();
     init_each();
     let callee = "init_cache_table_from_inconsistent_files";
-    let dbgid = DbgId("test Cache".to_string());
-    log::debug!("\n{}", dbgid);
-    let test_duration = TestDuration::new(&dbgid, Duration::from_secs(1));
+    let dbg = Dbg::new("cache", "init_cache_table_from_inconsistent_files");
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
-        ("src/tests/common/cache/assets/table-inc-row", 6),
-        ("src/tests/common/cache/assets/table-inc-col", 8),
-    ];
+        ("src/tests/unit/algorithm/cache/assets/table-inc-row", 6),
+        ("src/tests/unit/algorithm/cache/assets/table-inc-col", 8),
+    ]; 
     for (path, target) in test_data {
-        let result = Cache::<f64>::new(&dbgid, path).init();
+        let result = Cache::<f64>::new(&dbg, path).init();
         match result {
             Err(error) => {
                 let line_info = format!("line={}", target);
                 assert!(error.to_string().contains(&line_info));
             }
-            Ok(_) => panic!("{}.{} | Must fail to create Cache", dbgid, callee),
+            Ok(_) => panic!("{}.{} | Must fail to create Cache", dbg, callee),
         }
     }
     test_duration.exit();
 }
-}
+

@@ -4,11 +4,12 @@
 //! This implemetation can be used either directly or
 //! be taken to create a more specific cache structure.
 //
-mod bound;
-mod column;
-mod table;
+pub mod bound;
+pub mod column;
+pub mod table;
 //
-use column::Column;
+pub use bound::Bound;
+pub use column::Column;
 use sal_core::{dbg::Dbg, error::Error};
 use std::{
     fs::File,
@@ -18,7 +19,7 @@ use std::{
     str::FromStr,
     sync::OnceLock,
 };
-use table::Table;
+pub use table::Table;
 //
 type OwnedSet<T> = std::sync::Arc<[T]>;
 ///
@@ -40,7 +41,7 @@ type OwnedSet<T> = std::sync::Arc<[T]>;
 pub struct Cache<T> {
     dbg: Dbg,
     path: PathBuf,
-    table: OnceLock<Table<T>>,
+    table: OnceLock<Result<Table<T>, Error>>,
 }
 //
 //
@@ -66,7 +67,7 @@ impl<T: PartialOrd> Cache<T> {
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    pub fn init(&self) -> Result<(), Error>
+    pub fn init(&self) -> Result<Table<T>, Error>
     where
         T: FromStr<Err = ParseFloatError> + Clone + Default,
     {
@@ -121,8 +122,9 @@ impl<T: PartialOrd> Cache<T> {
                 OwnedSet::from_iter(iter_over_cols)
             })
             .unwrap_or_default();
-        self.table.set(Table::new(&self.dbg, cols));
-        Ok(())
+      //  self.table.set(Table::new(&self.dbg, cols))
+        //    .map_err(|_| Error::new("Cache", "init").err("self.table.set error!"))
+        Ok(Table::new(&self.dbg, cols))
     }
 }
 //
@@ -172,10 +174,10 @@ impl Cache<f64> {
     /// ```
     pub fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
         self.table
-            .get()
+            .get_or_init(|| self.init())
             .as_ref()
-            .unwrap_or_else(|| 
-                 panic!("{}.{} | Failed initializing Table", self.dbg, "get")
+            .unwrap_or_else(|err| 
+                 panic!("{}.{} | Failed initializing Table, error:{}", self.dbg, "get", err)
             )
             .get(approx_vals)
     }

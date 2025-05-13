@@ -1,10 +1,11 @@
 #[cfg(test)]
 
-mod cache {
+
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use sal_core::{dbg::Dbg, error::Error};
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
+use sal_core::dbg::Dbg;
+use crate::algorithm::entities::cache::*;
 //
 //
 static INIT: Once = Once::new();
@@ -27,7 +28,7 @@ fn get_unchecked() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test", "Table");
+    let dbg = Dbg::new("cache table", "get_unchecked");
     let callee = "get_unchecked";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
@@ -52,7 +53,7 @@ fn get_unchecked() {
             let var_name = matrix[row_id][col_id];
             values.push(var_name);
         });
-        let dbg = Dbg::with_parent(&dbg, &format!("Column_{}", col_id));
+        let dbg = Dbg::new(&dbg, &format!("Column_{}", col_id));
         let column = Column::new(dbg, values);
         columns.push(column);
     }
@@ -127,4 +128,4 @@ fn get_unchecked() {
     }
     test_duration.exit();
 }
-}
+
