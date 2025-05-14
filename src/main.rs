@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let ctx_before = StabilityAreaEval::new(
+    let ctx = StabilityAreaEval::new(
         &dbg,
         ship_model.link(),
         BalanceEval::new(
@@ -90,54 +90,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
-    let ctx_after = |
-        dbg: Dbg,
-        z_g_fix: Option<f64>,
-     //   link: Link,
-        ctx: Context,
-    | -> CriterionStabilityEval {
-        CriterionStabilityEval::new(
+    //  |
+    //     dbg: Dbg,
+    //     z_g_fix: Option<f64>,
+    //  //   link: Link,
+    //     ctx: Context,
+    // | -> CriterionStabilityEval {
+    // };
+    let ctx = CriterionStabilityEval::new(
+        &dbg,
+        MetacentricHeightSubdivisionEval::new(
             &dbg,
-            MetacentricHeightSubdivisionEval::new(
+            GrainEval::new(
                 &dbg,
-                GrainEval::new(
+                CirculationEval::new(
                     &dbg,
-                    CirculationEval::new(
+                    AccelerationEval::new(
                         &dbg,
-                        AccelerationEval::new(
+                        MinMetacentricHeightEval::new(
                             &dbg,
-                            MinMetacentricHeightEval::new(
+                            DSOAngleMaxEval::new(
                                 &dbg,
-                                DSOAngleMaxEval::new(
+                                DSOTimberMaxEval::new(
                                     &dbg,
-                                    DSOTimberMaxEval::new(
-                                        &dbg,
-                                        DSOIcingMaxEval::new(
-                                            &dbg,        
-                                            DSOMaxEval::new(
+                                    DSOIcingMaxEval::new(
+                                        &dbg,        
+                                        DSOMaxEval::new(
+                                            &dbg,
+                                            DSOAreaEval::new(
                                                 &dbg,
-                                                DSOAreaEval::new(
+                                                StaticAngleEval::new(
                                                     &dbg,
-                                                    StaticAngleEval::new(
+                                                    WheatherEval::new(
                                                         &dbg,
-                                                        WheatherEval::new(
+                                                        RollingAmplitudeEval::new(
                                                             &dbg,
-                                                            RollingAmplitudeEval::new(
+                                                            RollingPeriodEval::new(
                                                                 &dbg,
-                                                                RollingPeriodEval::new(
+                                                                WindEval::new(
                                                                     &dbg,
-                                                                    WindEval::new(
+                                                                    WindageEval::new(
                                                                         &dbg,
-                                                                        WindageEval::new(
-                                                                            &dbg,
-                                                                            LeverDiagramEval::new(
-                                                                                &dbg, 
-                                                                             //   link, 
-                                                                                MetacentricHeightEval::new(
-                                                                                    &dbg,
-                                                                                    z_g_fix,
-                                                                                    ctx,
-                                                                                ),
+                                                                        LeverDiagramEval::new(
+                                                                            &dbg, 
+                                                                         //   link, 
+                                                                            MetacentricHeightEval::new(
+                                                                                &dbg,
+                                                                                ctx,
                                                                             ),
                                                                         ),
                                                                     ),
@@ -155,8 +154,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
             ),
-        )
-    };
+        ),
+    );
     let _result = DraftMarkEval::new(
         &tmp_dbg,
         CriterionDraughtEval::new(
@@ -173,8 +172,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     thread_pool.scheduler(),
                                     &tmp_dbg,
                               //      &ship_model,
-                                    ctx_before,
-                                    ctx_after,
+                                    ctx,
                             ),
                         ),
                     ),

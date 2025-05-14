@@ -1,7 +1,7 @@
 use super::roll_period_ctx::RollingPeriodCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, BalanceCtx, MetacentricHeightCtx},
+        context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx, MetacentricHeightCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -9,7 +9,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет периода качки судна 
 pub struct RollingPeriodEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
@@ -17,7 +17,7 @@ impl RollingPeriodEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<Zg, EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "RollingPeriodEval");
         Self {
@@ -28,10 +28,10 @@ impl RollingPeriodEval {
 }
 //
 //
-impl Eval<(), EvalResult> for RollingPeriodEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for RollingPeriodEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let balance_ctx: BalanceCtx = ctx.read();

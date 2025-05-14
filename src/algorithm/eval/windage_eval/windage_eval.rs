@@ -1,7 +1,7 @@
 use super::windage_ctx::WindageCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, IcingStabCtx, StabilityAreaCtx}
+        context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, zg_eval::Zg, IcingStabCtx, StabilityAreaCtx}
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -10,7 +10,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// центра относительно миделя и ОП
 pub struct WindageEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
@@ -18,7 +18,7 @@ impl WindageEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<Zg, EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "WindageEval");
         Self {
@@ -29,10 +29,10 @@ impl WindageEval {
 }
 //
 //
-impl Eval<(), EvalResult> for WindageEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for WindageEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let volume_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);
                 let stability_area: StabilityAreaCtx = ctx.read();

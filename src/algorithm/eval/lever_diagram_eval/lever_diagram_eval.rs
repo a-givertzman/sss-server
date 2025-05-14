@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextRead},
         entities::math::curve::*,
-        eval::{parameters::ParameterID, BalanceCtx},
+        eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -13,7 +13,7 @@ use sal_core::{dbg::Dbg, error::Error};
 pub struct LeverDiagramEval {
     dbg: Dbg,
   //  model: Link,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
@@ -22,7 +22,7 @@ impl LeverDiagramEval {
     pub fn new(
         parent: impl Into<String>,
   //      model: Link,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<Zg, EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
         Self {
@@ -34,10 +34,10 @@ impl LeverDiagramEval {
 }
 //
 //
-impl Eval<(), EvalResult> for LeverDiagramEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for LeverDiagramEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: BalanceCtx = ctx.read();

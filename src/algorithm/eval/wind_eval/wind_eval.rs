@@ -1,7 +1,7 @@
 use super::wind_ctx::WindCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, eval::{parameters::ParameterID, WindageCtx}
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, eval::{parameters::ParameterID, zg_eval::Zg, WindageCtx}
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -9,7 +9,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет плеча кренящего момента от давления ветра
 pub struct WindEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
@@ -17,7 +17,7 @@ impl WindEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<Zg, EvalResult> + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "WindEval");
         Self {
@@ -28,10 +28,10 @@ impl WindEval {
 }
 //
 //
-impl Eval<(), EvalResult> for WindEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for WindEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let windage: WindageCtx = ctx.read(); 

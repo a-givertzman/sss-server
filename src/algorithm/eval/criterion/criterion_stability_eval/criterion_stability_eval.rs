@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::data::{loads::UnitCargoType, ship_type::ShipType, NavigationArea},
-        eval::*,
+        eval::{zg_eval::Zg, *},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -11,13 +11,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критериев проверки остойчивости судна
 pub struct CriterionStabilityEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl CriterionStabilityEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "CriterionStabilityEval");
         Self {
             dbg,
@@ -27,10 +27,10 @@ impl CriterionStabilityEval {
 }
 //
 //
-impl Eval<(), EvalResult> for CriterionStabilityEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for CriterionStabilityEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let navigation_area = initial.navigation_area.unwrap();

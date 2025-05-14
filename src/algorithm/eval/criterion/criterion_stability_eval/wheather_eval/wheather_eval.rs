@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead},
         eval::{
-            parameters::ParameterID, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx
+            parameters::ParameterID, zg_eval::Zg, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx
         },
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
 };
@@ -12,13 +12,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия погоды К
 pub struct WheatherEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl WheatherEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "WheatherEval");
         Self {
             dbg,
@@ -28,10 +28,10 @@ impl WheatherEval {
 }
 //
 //
-impl Eval<(), EvalResult> for WheatherEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for WheatherEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(mut ctx) => {
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();

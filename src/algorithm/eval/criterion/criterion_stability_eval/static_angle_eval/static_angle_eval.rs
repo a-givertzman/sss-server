@@ -1,6 +1,7 @@
 use super::static_angle_ctx::StaticAngleCtx;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::data::stability::ship_type::*;
+use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
 use crate::{
     ContextWrite,
@@ -18,13 +19,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Статический угол крена от действия постоянного ветра.
 pub struct StaticAngleEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl StaticAngleEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "StaticAngleEval");
         Self {
             dbg,
@@ -34,14 +35,14 @@ impl StaticAngleEval {
 }
 //
 //
-impl Eval<(), EvalResult> for StaticAngleEval {
+impl Eval<Zg, EvalResult> for StaticAngleEval {
     /// Статический угол крена от действия постоянного ветра.
     /// При расчете плеча кренящего момента от давления ветра 𝑙𝑤1, используемое при
     /// определении угла крена θ𝑤1, предполагаемое давление ветра 𝑝𝑣 принимается как для судна
     /// неограниченного района плавания судна.
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_type = initial.ship_type.unwrap();

@@ -1,26 +1,23 @@
 use super::dso_area_ctx::DSOAreaCtx;
 use crate::{
-    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::data::ship_type::ShipType,
-        eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx},
-    },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
+        eval::{zg_eval::Zg, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx},
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критерия площади под диаграммой статической остойчивости
 pub struct DSOAreaEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl DSOAreaEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "DSOAreaEval");
         Self {
             dbg,
@@ -30,10 +27,10 @@ impl DSOAreaEval {
 }
 //
 //
-impl Eval<(), EvalResult> for DSOAreaEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for DSOAreaEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_type = initial.ship_type.unwrap();

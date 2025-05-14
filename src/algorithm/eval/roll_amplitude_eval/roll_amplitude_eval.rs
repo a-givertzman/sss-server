@@ -1,6 +1,7 @@
 use super::roll_amplitude_ctx::RollingAmplitudeCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::entities::math::curve::*;
+use crate::algorithm::eval::zg_eval::Zg;
 use crate::{
     ContextWrite,
     algorithm::{
@@ -15,13 +16,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет амплитуды качки судна
 pub struct RollingAmplitudeEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl RollingAmplitudeEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "RollingAmplitudeEval");
         Self {
             dbg,
@@ -31,10 +32,10 @@ impl RollingAmplitudeEval {
 }
 //
 //
-impl Eval<(), EvalResult> for RollingAmplitudeEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for RollingAmplitudeEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let balance: BalanceCtx = ctx.read();

@@ -2,7 +2,7 @@ use super::metacentric_height_subdivision_ctx::MetacentricHeightSubdivisionCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextRead, ContextReadRef},
-        eval::{parameters::ParameterID, CriterionData, CriterionID, MetacentricHeightCtx},
+        eval::{parameters::ParameterID, zg_eval::Zg, CriterionData, CriterionID, MetacentricHeightCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
 };
 use crate::algorithm::entities::{Curve, ICurve};
@@ -11,13 +11,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия метацентрической высоты
 pub struct MetacentricHeightSubdivisionEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl MetacentricHeightSubdivisionEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "MetacentricHeightSubdivisionEval");
         Self {
             dbg,
@@ -27,10 +27,10 @@ impl MetacentricHeightSubdivisionEval {
 }
 //
 //
-impl Eval<(), EvalResult> for MetacentricHeightSubdivisionEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for MetacentricHeightSubdivisionEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();

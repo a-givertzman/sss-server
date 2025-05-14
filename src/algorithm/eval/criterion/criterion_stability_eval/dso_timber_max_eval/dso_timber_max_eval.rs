@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead,
         eval::{
-            CriterionData, CriterionID, LeverDiagramCtx
+            zg_eval::Zg, CriterionData, CriterionID, LeverDiagramCtx
         },
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
 };
@@ -12,13 +12,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет максимума диаграммы статической остойчивости для лесовозов
 pub struct DSOTimberMaxEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult>>,
 }
 //
 //
 impl DSOTimberMaxEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
         let dbg = Dbg::new(parent, "DSOTimberMaxEval");
         Self {
             dbg,
@@ -28,10 +28,10 @@ impl DSOTimberMaxEval {
 }
 //
 //
-impl Eval<(), EvalResult> for DSOTimberMaxEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+impl Eval<Zg, EvalResult> for DSOTimberMaxEval {
+    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(()) {
+        match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let target = 0.25;
