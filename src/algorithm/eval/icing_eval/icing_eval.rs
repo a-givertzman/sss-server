@@ -13,7 +13,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Учет обледенения судна
 pub struct IcingEval {
     dbg: Dbg,
-    value: Option<IcingCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -27,7 +26,6 @@ impl IcingEval {
         let dbg = Dbg::new(parent, "IcingEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -99,7 +97,6 @@ impl Eval<(), EvalResult> for IcingEval {
                     mass_shift_x,
                     mass_values,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -112,7 +109,6 @@ impl std::fmt::Debug for IcingEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("IcingEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

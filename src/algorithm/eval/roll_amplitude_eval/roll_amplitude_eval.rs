@@ -15,7 +15,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет амплитуды качки судна
 pub struct RollingAmplitudeEval {
     dbg: Dbg,
-    value: Option<RollingAmplitudeCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -26,7 +25,6 @@ impl RollingAmplitudeEval {
         let dbg = Dbg::new(parent, "RollingAmplitudeEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -103,7 +101,6 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                 );
                 let amplitude = amplitude.round();
                 let result = RollingAmplitudeCtx { amplitude };
-                self.value = Some(result.clone());
                 ctx.write_params(ParameterID::RollAmplitude, amplitude);
                 ctx.write_params(ParameterID::RollPeriod, t);
                 ctx.write(result)
@@ -118,7 +115,6 @@ impl std::fmt::Debug for RollingAmplitudeEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RollingAmplitudeEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

@@ -14,7 +14,6 @@ use sal_core::{dbg::Dbg, error::Error};
 pub struct StrengthAreaEval {
     dbg: Dbg,
     model: Link,
-    value: Option<StrengthAreaCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -30,7 +29,6 @@ impl StrengthAreaEval {
         Self {
             dbg,
             model,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -238,7 +236,6 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     area_timber_h_shift,
                     area_timber_h_values,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -251,7 +248,6 @@ impl std::fmt::Debug for StrengthAreaEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StrengthAreaEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

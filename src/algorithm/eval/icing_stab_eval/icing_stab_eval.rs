@@ -11,7 +11,6 @@ use crate::{
 /// Коэффициенты для расчета обледенения судна
 pub struct IcingStabEval {
     dbg: Dbg,
-    value: Option<IcingStabCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -22,7 +21,6 @@ impl IcingStabEval {
         let dbg = Dbg::new(parent, "IcingStabEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -86,7 +84,6 @@ impl Eval<(), EvalResult> for IcingStabEval {
                     coef_v_moment,
                     is_some,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -99,7 +96,6 @@ impl std::fmt::Debug for IcingStabEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("IcingStabEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

@@ -12,7 +12,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия заглубления винта
 pub struct ScrewEval {
     dbg: Dbg,
-    value: Option<ScrewCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl ScrewEval {
         let dbg = Dbg::new(parent, "ScrewEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -70,7 +68,6 @@ impl Eval<(), EvalResult> for ScrewEval {
                 let result = ScrewCtx {
                     data: result,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -83,7 +80,6 @@ impl std::fmt::Debug for ScrewEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ScrewEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

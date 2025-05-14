@@ -11,7 +11,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критериев посадки судна
 pub struct CriterionDraughtEval {
     dbg: Dbg,
-    value: Option<CriterionDraughtCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -22,7 +21,6 @@ impl CriterionDraughtEval {
         let dbg = Dbg::new(parent, "CriterionDraughtEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -51,7 +49,6 @@ impl Eval<(), EvalResult> for CriterionDraughtEval {
                     data.push(ContextRead::<ReserveBuoyncyCtx>::read(&ctx).data);
                 }
                 let result = CriterionDraughtCtx { data };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -64,7 +61,6 @@ impl std::fmt::Debug for CriterionDraughtEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CriterionDraughtEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

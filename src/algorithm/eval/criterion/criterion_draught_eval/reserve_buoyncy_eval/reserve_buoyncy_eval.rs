@@ -11,7 +11,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия запаса плавучести в носу
 pub struct ReserveBuoyncyEval {
     dbg: Dbg,
-    value: Option<ReserveBuoyncyCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -22,7 +21,6 @@ impl ReserveBuoyncyEval {
         let dbg = Dbg::new(parent, "ReserveBuoyncyEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -47,7 +45,6 @@ impl Eval<(), EvalResult> for ReserveBuoyncyEval {
                         bow_area_min,
                     ),
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -60,7 +57,6 @@ impl std::fmt::Debug for ReserveBuoyncyEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ReserveBuoyncyEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

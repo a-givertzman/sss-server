@@ -12,7 +12,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия крена на циркуляции
 pub struct CirculationEval {
     dbg: Dbg,
-    value: Option<CirculationCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl CirculationEval {
         let dbg = Dbg::new(parent, "CirculationEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -96,7 +94,6 @@ impl Eval<(), EvalResult> for CirculationEval {
                                     + &error.to_string(),
                             ),
                         };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -124,7 +121,6 @@ impl Eval<(), EvalResult> for CirculationEval {
                     }
                 };
                 let result = CirculationCtx { data: result };
-                self.value = Some(result.clone());
                 ctx.write(result)
                 // TODO: В случаях, когда палубный груз контейнеров размещается только на крышках грузовых
                 // люков, вместо угла входа кромки верхней палубы может приниматься меньший из углов
@@ -141,7 +137,6 @@ impl std::fmt::Debug for CirculationEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CirculationEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

@@ -11,7 +11,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критериев проверки остойчивости судна
 pub struct CriterionStabilityEval {
     dbg: Dbg,
-    value: Option<CriterionStabilityCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -22,7 +21,6 @@ impl CriterionStabilityEval {
         let dbg = Dbg::new(parent, "CriterionStabilityEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -120,7 +118,6 @@ impl Eval<(), EvalResult> for CriterionStabilityEval {
                 // data.push(CriterionData::new_result(CriterionID::HeelMaximumLC , self.lever_diagram.max_angles(), 1.);
             //    info!("Criterion stability end");
                 let result = CriterionStabilityCtx { data };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -133,7 +130,6 @@ impl std::fmt::Debug for CriterionStabilityEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CriterionStabilityEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

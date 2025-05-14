@@ -14,7 +14,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия площади под диаграммой статической остойчивости
 pub struct DSOAreaEval {
     dbg: Dbg,
-    value: Option<DSOAreaCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -25,7 +24,6 @@ impl DSOAreaEval {
         let dbg = Dbg::new(parent, "DSOAreaEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -100,7 +98,6 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                 };
                 //    log::info!("Criterion dso: zg:{} theta_0:{theta_0} theta_max:{theta_max} first_angle_30:{first_angle_30} second_angle_30:{second_angle_30} second_angle_40:{second_angle_40}", self.metacentric_height.z_g_fix().unwrap_or(-1.));
                 let result = DSOAreaCtx { data };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -113,7 +110,6 @@ impl std::fmt::Debug for DSOAreaEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DSOAreaEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

@@ -15,7 +15,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия ускорения 𝐾∗
 pub struct AccelerationEval {
     dbg: Dbg,
-    value: Option<AccelerationCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -26,7 +25,6 @@ impl AccelerationEval {
         let dbg = Dbg::new(parent, "AccelerationEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -61,7 +59,6 @@ impl Eval<(), EvalResult> for AccelerationEval {
                             "Ошибка расчета критерия ускорения 𝐾∗".to_owned() + &error.to_string(),
                         );
                         let result = AccelerationCtx { data: result };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -75,7 +72,6 @@ impl Eval<(), EvalResult> for AccelerationEval {
                             "Ошибка расчета критерия ускорения 𝐾∗".to_owned() + &error.to_string(),
                         );
                         let result = AccelerationCtx { data: result };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -89,7 +85,6 @@ impl Eval<(), EvalResult> for AccelerationEval {
                             "Ошибка расчета критерия ускорения 𝐾∗".to_owned() + &error.to_string(),
                         );
                         let result = AccelerationCtx { data: result };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -100,7 +95,6 @@ impl Eval<(), EvalResult> for AccelerationEval {
                 let result = AccelerationCtx {
                     data: CriterionData::new_result(CriterionID::Acceleration, k, 1.),
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -113,7 +107,6 @@ impl std::fmt::Debug for AccelerationEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AccelerationEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

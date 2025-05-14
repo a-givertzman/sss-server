@@ -157,8 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         )
     };
-    let _result = 
-    DraftMarkEval::new(
+    let _result = DraftMarkEval::new(
         &tmp_dbg,
         CriterionDraughtEval::new(
             &tmp_dbg,

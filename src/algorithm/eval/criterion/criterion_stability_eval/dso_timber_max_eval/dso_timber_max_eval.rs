@@ -12,7 +12,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет максимума диаграммы статической остойчивости для лесовозов
 pub struct DSOTimberMaxEval {
     dbg: Dbg,
-    value: Option<DSOTimberMaxCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl DSOTimberMaxEval {
         let dbg = Dbg::new(parent, "DSOTimberMaxEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -49,7 +47,6 @@ impl Eval<(), EvalResult> for DSOTimberMaxEval {
                     }
                 };
                 let result = DSOTimberMaxCtx { data };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -62,7 +59,6 @@ impl std::fmt::Debug for DSOTimberMaxEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DSOTimberMaxEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

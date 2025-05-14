@@ -11,7 +11,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия при перевозки навалочных смещаемых грузов
 pub struct GrainEval {
     dbg: Dbg,
-    value: Option<GrainCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -22,7 +21,6 @@ impl GrainEval {
         let dbg = Dbg::new(parent, "GrainEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -69,7 +67,6 @@ impl Eval<(), EvalResult> for GrainEval {
                             "Ошибка вычисления расчетного и максимально допустимого угла крена от смещения зерна крена: ".to_owned() + &error.to_string(),
                         ));
                         let result = GrainCtx { data: results };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -172,7 +169,6 @@ impl Eval<(), EvalResult> for GrainEval {
                     0.075,
                 ));
                 let result = GrainCtx { data: results };
-                self.value = Some(result.clone());
                 ctx.write(result)
                 // TODO: В случаях, когда палубный груз контейнеров размещается только на крышках грузовых
                 // люков, вместо угла входа кромки верхней палубы может приниматься меньший из углов
@@ -189,7 +185,6 @@ impl std::fmt::Debug for GrainEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GrainEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

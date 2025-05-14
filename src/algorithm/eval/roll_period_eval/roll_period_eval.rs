@@ -9,7 +9,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет периода качки судна 
 pub struct RollingPeriodEval {
     dbg: Dbg,
-    value: Option<RollingPeriodCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl RollingPeriodEval {
         let dbg = Dbg::new(parent, "RollingPeriodEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -57,7 +55,6 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
                     c,
                     roll_period,
                 }; 
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -70,7 +67,6 @@ impl std::fmt::Debug for RollingPeriodEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RollingPeriodEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

@@ -18,7 +18,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Статический угол крена от действия постоянного ветра.
 pub struct StaticAngleEval {
     dbg: Dbg,
-    value: Option<StaticAngleCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -29,7 +28,6 @@ impl StaticAngleEval {
         let dbg = Dbg::new(parent, "StaticAngleEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -69,7 +67,6 @@ impl Eval<(), EvalResult> for StaticAngleEval {
                                 "Ошибка расчета угла крена судна соответствующего плечу кренящего момента постоянного ветра: ".to_owned() + &error.to_string(),
                             )
                         };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -92,7 +89,6 @@ impl Eval<(), EvalResult> for StaticAngleEval {
                 let result = StaticAngleCtx { 
                     data 
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -105,7 +101,6 @@ impl std::fmt::Debug for StaticAngleEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StaticAngleEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

@@ -12,7 +12,6 @@ use super::mass_ctx::MassCtx;
 /// Площади боковой и горизонтальной поверхностей для расчета прочности
 pub struct MassEval {
     dbg: Dbg,
-    value: Option<MassCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl MassEval {
         let dbg = Dbg::new(parent, "MassEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -177,7 +175,6 @@ impl Eval<(), EvalResult> for MassEval {
                     area_h: const_area_h,
                     area_timber_h,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(Error(format!(
@@ -193,7 +190,6 @@ impl std::fmt::Debug for MassEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MassEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

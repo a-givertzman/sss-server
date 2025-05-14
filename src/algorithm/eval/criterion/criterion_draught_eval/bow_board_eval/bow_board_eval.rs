@@ -12,7 +12,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия высоты на носовом перпендикуляре
 pub struct BowBoardEval {
     dbg: Dbg,
-    value: Option<BowBoardCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl BowBoardEval {
         let dbg = Dbg::new(parent, "BowBoardEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -78,7 +76,6 @@ impl Eval<(), EvalResult> for BowBoardEval {
                 let result = BowBoardCtx {
                     data: result,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -91,7 +88,6 @@ impl std::fmt::Debug for BowBoardEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BowBoardEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

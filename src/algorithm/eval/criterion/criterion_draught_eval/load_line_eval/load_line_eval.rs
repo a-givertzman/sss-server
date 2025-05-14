@@ -13,7 +13,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия осадки по грузовой марке
 pub struct LoadLineEval {
     dbg: Dbg,
-    value: Option<LoadLineCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -24,7 +23,6 @@ impl LoadLineEval {
         let dbg = Dbg::new(parent, "LoadLineEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -72,7 +70,6 @@ impl Eval<(), EvalResult> for LoadLineEval {
                 let result = LoadLineCtx {
                     data: result,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -85,7 +82,6 @@ impl std::fmt::Debug for LoadLineEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LoadLineEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

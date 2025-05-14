@@ -10,7 +10,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// центра относительно миделя и ОП
 pub struct WindageEval {
     dbg: Dbg,
-    value: Option<WindageCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -24,7 +23,6 @@ impl WindageEval {
         let dbg = Dbg::new(parent, "WindageEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -49,7 +47,6 @@ impl Eval<(), EvalResult> for WindageEval {
                     a_v,
                     z_v,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -62,7 +59,6 @@ impl std::fmt::Debug for WindageEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WindageEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

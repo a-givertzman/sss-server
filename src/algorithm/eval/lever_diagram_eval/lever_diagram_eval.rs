@@ -13,7 +13,6 @@ use sal_core::{dbg::Dbg, error::Error};
 pub struct LeverDiagramEval {
     dbg: Dbg,
   //  model: Link,
-    value: Option<LeverDiagramCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -29,7 +28,6 @@ impl LeverDiagramEval {
         Self {
             dbg,
     //        model,
-            value: None,
             ctx: Box::new(ctx), 
         }
     }
@@ -187,7 +185,6 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                     theta_max,
                     max_angles,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -200,7 +197,6 @@ impl std::fmt::Debug for LeverDiagramEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LeverDiagramEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

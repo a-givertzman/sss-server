@@ -11,7 +11,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия минимальной метацентрической высоты
 pub struct MinMetacentricHeightEval {
     dbg: Dbg,
-    value: Option<MinMetacentricHeightCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -22,7 +21,6 @@ impl MinMetacentricHeightEval {
         let dbg = Dbg::new(parent, "MinMetacentricHeightEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -52,7 +50,6 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                             "Ошибка расчета критерия минимальной метацентрической высоты: ".to_owned() + &error.to_string(),
                         );
                         let result = MinMetacentricHeightCtx { data: result };
-                        self.value = Some(result.clone());
                         return ctx.write(result);
                     }
                 };
@@ -74,7 +71,6 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                         target,
                     ),
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -87,7 +83,6 @@ impl std::fmt::Debug for MinMetacentricHeightEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MinMetacentricHeightEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

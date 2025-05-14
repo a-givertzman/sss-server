@@ -14,7 +14,6 @@ use super::balance_ctx::BalanceCtx;
 pub struct BalanceEval {
     dbg: Dbg,
     model: Link,
-    value: Option<BalanceCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -30,7 +29,6 @@ impl BalanceEval {
         Self {
             dbg,
             model,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -123,7 +121,6 @@ impl Eval<(), EvalResult> for BalanceEval {
                 //     bulk: result.bulk,
                 //     liquid: result.liquid,
                 // };
-                self.value = Some(result_data.clone());
                  // TODO ctx.write(result_data.parameters);
                 ctx.write(result_data)
             }
@@ -137,7 +134,6 @@ impl std::fmt::Debug for BalanceEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BalanceEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

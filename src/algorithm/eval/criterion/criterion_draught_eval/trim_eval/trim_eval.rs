@@ -13,7 +13,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия максимального и минимального дифферента
 pub struct TrimEval {
     dbg: Dbg,
-    value: Option<TrimCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -24,7 +23,6 @@ impl TrimEval {
         let dbg = Dbg::new(parent, "TrimEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -47,7 +45,6 @@ impl Eval<(), EvalResult> for TrimEval {
                 let result = TrimCtx {
                     data: vec![aft_trim, forward_trim],
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -60,7 +57,6 @@ impl std::fmt::Debug for TrimEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TrimEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

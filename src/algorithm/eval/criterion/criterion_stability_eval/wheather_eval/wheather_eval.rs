@@ -12,7 +12,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия погоды К
 pub struct WheatherEval {
     dbg: Dbg,
-    value: Option<WheatherCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl WheatherEval {
         let dbg = Dbg::new(parent, "WheatherEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -124,7 +122,6 @@ impl Eval<(), EvalResult> for WheatherEval {
                     },
                 };
                 let result = WheatherCtx { data };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -137,7 +134,6 @@ impl std::fmt::Debug for WheatherEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WheatherEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

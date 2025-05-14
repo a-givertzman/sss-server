@@ -15,7 +15,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет угла, соответствующий максимуму диаграммы статической остойчивости
 pub struct DSOAngleMaxEval {
     dbg: Dbg,
-    value: Option<DSOAngleMaxCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -26,7 +25,6 @@ impl DSOAngleMaxEval {
         let dbg = Dbg::new(parent, "DSOAngleMaxEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -61,7 +59,6 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                         error.to_string(),
                     ));
                     let result = DSOAngleMaxCtx { data: results };
-                    self.value = Some(result.clone());
                     return ctx.write(result);
                 } else {
                     wheather.data.result
@@ -109,7 +106,6 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                     ));
                 }
                 let result = DSOAngleMaxCtx { data: results };
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -122,7 +118,6 @@ impl std::fmt::Debug for DSOAngleMaxEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DSOAngleMaxEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

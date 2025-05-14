@@ -11,7 +11,7 @@ use crate::algorithm::entities::math::liquid::*;
 pub struct MetacentricHeightEval {
     dbg: Dbg,
     z_g_fix: Option<f64>,
-    value: Option<MetacentricHeightCtx>,
+    value_: Option<f64>,
     ctx: Option<Context>,//Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -27,7 +27,7 @@ impl MetacentricHeightEval {
         Self {
             dbg,
             z_g_fix,
-            value: None,
+            value_: None,
             ctx: Some(ctx),
         }
     }
@@ -147,7 +147,6 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                     z_g_fix,
                     delta_m_h,
                 };
-                self.value = Some(result.clone());
                 ctx.write(result)
     //        }
     //        Err(err) => Err(error.pass_with("Read context error", err)),
@@ -160,7 +159,6 @@ impl std::fmt::Debug for MetacentricHeightEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MetacentricHeightEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }

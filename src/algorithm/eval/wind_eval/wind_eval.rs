@@ -9,7 +9,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет плеча кренящего момента от давления ветра
 pub struct WindEval {
     dbg: Dbg,
-    value: Option<WindCtx>,
     ctx: Box<dyn Eval<(), EvalResult>>,
 }
 //
@@ -23,7 +22,6 @@ impl WindEval {
         let dbg = Dbg::new(parent, "WindEval");
         Self {
             dbg,
-            value: None,
             ctx: Box::new(ctx),
         }
     }
@@ -57,7 +55,6 @@ impl Eval<(), EvalResult> for WindEval {
                     arm_wind_static,
                     arm_wind_dynamic,
                 }; 
-                self.value = Some(result.clone());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -70,7 +67,6 @@ impl std::fmt::Debug for WindEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WindEval")
             .field("dbg", &self.dbg)
-            .field("value", &self.value)
             .finish()
     }
 }
