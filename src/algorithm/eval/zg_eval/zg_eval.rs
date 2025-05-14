@@ -85,7 +85,8 @@ impl Eval<(), EvalResult> for ZgEval {
                 }
                 // получаем массив рассчитанных критериев для разных zg
                 for task in tasks {
-                    task.join();
+                    // TODO try to handle errors
+                    task.join().unwrap();
                 }
                 let mut results = Vec::new(); //<(f64, Vec<(usize, Option<f64>)>)>'
                 
