@@ -14,13 +14,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
 pub struct DraftMarkEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl DraftMarkEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "DraftMarkEval");
         Self {
             dbg,

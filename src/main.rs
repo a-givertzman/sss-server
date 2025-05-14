@@ -52,51 +52,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let ship_model_handle = ship_model.run().unwrap();
     log::debug!("main | Calculations...");
-    let ctx = StabilityAreaEval::new(
-        &dbg,
-        ship_model.link(),
-        BalanceEval::new(
-            &dbg,
-            ship_model.link(),
-            LoadsEval::new(
-                &dbg,
-                WettingEval::new(
-                    &dbg,
-                    IcingEval::new(
-                        &dbg,
-                        StrengthAreaEval::new(
-                            &dbg,
-                            ship_model.link(),
-                            IcingTimberEval::new(
-                                &dbg,
-                                IcingStabEval::new(
-                                    &dbg,
-                                    Initial::new(
-                                        &dbg,
-                                        ship_model.link(),
-                                        ApiClient::new(
-                                            &dbg,
-                                            conf.api.address.database.clone(),
-                                            conf.api.address.host.clone(),
-                                            conf.api.address.port.clone(),
-                                        ),
-                                        Context::new(InitialCtx::new(ship_id, project_id)),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-    );
-    //  |
-    //     dbg: Dbg,
-    //     z_g_fix: Option<f64>,
-    //  //   link: Link,
-    //     ctx: Context,
-    // | -> CriterionStabilityEval {
-    // };
     let ctx = CriterionStabilityEval::new(
         &dbg,
         MetacentricHeightSubdivisionEval::new(
@@ -133,10 +88,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                         &dbg,
                                                                         LeverDiagramEval::new(
                                                                             &dbg, 
-                                                                         //   link, 
+                                                                            //   link, 
                                                                             MetacentricHeightEval::new(
                                                                                 &dbg,
-                                                                                ctx,
+                                                                                // Before ZG
+                                                                                StabilityAreaEval::new(
+                                                                                    &dbg,
+                                                                                    ship_model.link(),
+                                                                                    BalanceEval::new(
+                                                                                        &dbg,
+                                                                                        ship_model.link(),
+                                                                                        LoadsEval::new(
+                                                                                            &dbg,
+                                                                                            WettingEval::new(
+                                                                                                &dbg,
+                                                                                                IcingEval::new(
+                                                                                                    &dbg,
+                                                                                                    StrengthAreaEval::new(
+                                                                                                        &dbg,
+                                                                                                        ship_model.link(),
+                                                                                                        IcingTimberEval::new(
+                                                                                                            &dbg,
+                                                                                                            IcingStabEval::new(
+                                                                                                                &dbg,
+                                                                                                                Initial::new(
+                                                                                                                    &dbg,
+                                                                                                                    ship_model.link(),
+                                                                                                                    ApiClient::new(
+                                                                                                                        &dbg,
+                                                                                                                        conf.api.address.database.clone(),
+                                                                                                                        conf.api.address.host.clone(),
+                                                                                                                        conf.api.address.port.clone(),
+                                                                                                                    ),
+                                                                                                                    Context::new(InitialCtx::new(ship_id, project_id)),
+                                                                                                                ),
+                                                                                                            ),
+                                                                                                        ),
+                                                                                                    ),
+                                                                                                ),
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                ),
                                                                             ),
                                                                         ),
                                                                     ),

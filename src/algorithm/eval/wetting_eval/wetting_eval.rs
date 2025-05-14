@@ -16,13 +16,13 @@ use super::wetting_ctx::WettingCtx;
 /// при расчете прочности.
 pub struct WettingEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl WettingEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "WettingEval");
         Self {
             dbg,

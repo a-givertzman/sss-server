@@ -13,7 +13,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Учет обледенения судна
 pub struct IcingEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
@@ -21,7 +21,7 @@ impl IcingEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "IcingEval");
         Self {

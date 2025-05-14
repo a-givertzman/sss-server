@@ -12,13 +12,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия при перевозки навалочных смещаемых грузов
 pub struct GrainEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
 impl GrainEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "GrainEval");
         Self {
             dbg,

@@ -12,13 +12,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет максимума диаграммы статической остойчивости с учетом обледенения
 pub struct DSOIcingMaxEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
 impl DSOIcingMaxEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "DSOIcingMaxEval");
         Self {
             dbg,

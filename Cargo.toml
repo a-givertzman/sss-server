@@ -45,3 +45,4 @@ strum_macros = "^0.27"
 # Thread safe
 kanal = "^0.1"
 papaya = "^0.2"
+parking_lot = "^0.12"

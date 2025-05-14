@@ -11,7 +11,7 @@ use crate::algorithm::entities::math::liquid::*;
 pub struct MetacentricHeightEval {
     dbg: Dbg,
     context: Option<Context>,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
@@ -19,7 +19,7 @@ impl MetacentricHeightEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "MetacentricHeightEval");
         Self {

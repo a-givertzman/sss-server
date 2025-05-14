@@ -13,13 +13,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия максимального и минимального дифферента
 pub struct TrimEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl TrimEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "TrimEval");
         Self {
             dbg,

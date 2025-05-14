@@ -13,13 +13,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет положения массы корпуса и грузов судна
 pub struct LoadsEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl LoadsEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "LoadsEval");
         Self {
             dbg,

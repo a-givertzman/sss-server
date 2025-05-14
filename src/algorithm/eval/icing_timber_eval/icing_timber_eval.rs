@@ -8,7 +8,7 @@ use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
 /// Ограничение горизонтальной площади обледенения палубного груза - леса
 pub struct IcingTimberEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
@@ -16,7 +16,7 @@ impl IcingTimberEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "IcingTimberEval");
         Self {

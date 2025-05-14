@@ -16,13 +16,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия ускорения 𝐾∗
 pub struct AccelerationEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
 impl AccelerationEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "AccelerationEval");
         Self {
             dbg,

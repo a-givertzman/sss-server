@@ -13,13 +13,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия крена на циркуляции
 pub struct CirculationEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
 impl CirculationEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "CirculationEval");
         Self {
             dbg,

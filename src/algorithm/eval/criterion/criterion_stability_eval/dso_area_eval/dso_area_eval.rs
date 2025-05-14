@@ -11,13 +11,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия площади под диаграммой статической остойчивости
 pub struct DSOAreaEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
 impl DSOAreaEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "DSOAreaEval");
         Self {
             dbg,

@@ -12,13 +12,13 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет критерия высоты на носовом перпендикуляре
 pub struct BowBoardEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl BowBoardEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "BowBoardEval");
         Self {
             dbg,

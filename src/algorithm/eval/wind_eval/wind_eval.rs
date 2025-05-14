@@ -9,7 +9,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Расчет плеча кренящего момента от давления ветра
 pub struct WindEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult>>,
+    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
@@ -17,7 +17,7 @@ impl WindEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        ctx: impl Eval<Zg, EvalResult> + 'static,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "WindEval");
         Self {

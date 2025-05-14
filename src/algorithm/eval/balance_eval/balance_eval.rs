@@ -14,7 +14,7 @@ use super::balance_ctx::BalanceCtx;
 pub struct BalanceEval {
     dbg: Dbg,
     model: Link,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
@@ -23,7 +23,7 @@ impl BalanceEval {
     pub fn new(
         parent: impl Into<String>,
         model: Link,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "BalanceEval");
         Self {

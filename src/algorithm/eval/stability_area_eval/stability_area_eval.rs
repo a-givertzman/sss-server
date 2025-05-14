@@ -11,7 +11,7 @@ use sal_core::{dbg::Dbg, error::Error};
 pub struct StabilityAreaEval {
     dbg: Dbg,
     model: Link,
-    ctx: Box<dyn Eval<(), EvalResult>>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
@@ -20,7 +20,7 @@ impl StabilityAreaEval {
     pub fn new(
         parent: impl Into<String>,
         model: Link,
-        ctx: impl Eval<(), EvalResult> + 'static,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "StabilityAreaEval");
         Self {
