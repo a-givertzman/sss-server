@@ -7,7 +7,7 @@ mod switch {
     use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{algorithm::context::ctx_result::CtxResult, kernel::sync::{link::Link, switch::Switch}};
+    use crate::{kernel::sync::{link::Link, switch::Switch}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -105,18 +105,18 @@ mod switch {
                 }
                 'main: loop {
                     match link.recv_query::<String>() {
-                        CtxResult::Ok(query) => match query.as_str() {
+                        Ok(query) => match query.as_str() {
                             "Query-1" => send_reply(&dbg, &mut link, "Reply-1"),
                             "Query-2" => send_reply(&dbg, &mut link, "Reply-2"),
                             "Query-3" => send_reply(&dbg, &mut link, "Reply-3"),
                             "Query-4" => send_reply(&dbg, &mut link, "Reply-4"),
                             _ => panic!("Unknown Query: {:?}", query)
                         }
-                        CtxResult::Err(err) => {
+                        Err(err) => {
                             log::warn!("{}.run | Error: {:?}", dbg, err);
                             break;
                         }
-                        CtxResult::None => {},
+                        None => {},
                     }
                     if exit.load(Ordering::SeqCst) {
                         break 'main;

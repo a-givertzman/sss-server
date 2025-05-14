@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextRead, ContextReadRef},
         eval::{parameters::ParameterID, CriterionData, CriterionID, MetacentricHeightCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
 };
 use crate::algorithm::entities::{Curve, ICurve};
 use sal_core::{dbg::Dbg, error::Error};
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for MetacentricHeightSubdivisionEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let data = initial.h_subdivision.as_ref().unwrap();
@@ -52,8 +52,7 @@ impl Eval<(), EvalResult> for MetacentricHeightSubdivisionEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

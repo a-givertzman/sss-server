@@ -3,7 +3,7 @@ use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::context::context_access::ContextReadRef,
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -35,7 +35,7 @@ impl Eval<(), EvalResult> for LoadLineEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let data = initial.load_line.as_ref().unwrap();
                 let ship_parameters = initial
@@ -75,8 +75,7 @@ impl Eval<(), EvalResult> for LoadLineEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

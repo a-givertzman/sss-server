@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{data::loads::UnitCargoType, Bound, Moment, Position}, eval::{BalanceCtx, IcingTimberCtx},
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx}, CtxResult
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx}
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -38,14 +38,14 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
                         .into_iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
-                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
+                    None => return Err(error.err("Read unit error: no data!")),
                 };
                 let timber_unit: Vec<_> = unit
                     .iter()
@@ -53,7 +53,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     .collect();
                 let bounds = match initial.bounds.clone() {
                     Some(data) => data,
-                    None => return CtxResult::Err(error.err("Read bounds error: no data!")),
+                    None => return Err(error.err("Read bounds error: no data!")),
                 };
                 let balance: BalanceCtx = ctx.read();
                 let const_area_v = &balance.const_area_v;
@@ -62,7 +62,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,
                     Err(err) => {
-                        return CtxResult::Err(
+                        return Err(
                             error.pass_with("Read icing_timber_bound_x error", err),
                         );
                     }
@@ -70,7 +70,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 let icing_timber_bound_y = match icing_timber_bound.bound_y() {
                     Ok(data) => data,
                     Err(err) => {
-                        return CtxResult::Err(
+                        return Err(
                             error.pass_with("Read icing_timber_bound_y error", err),
                         );
                     }
@@ -100,7 +100,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     match Bound::new(min_x, max_x) {
                         Ok(data) => data,
                         Err(err) => {
-                            return CtxResult::Err(error.pass_with("units_bound error", err));
+                            return Err(error.pass_with("units_bound error", err));
                         }
                     }
                 } else {
@@ -114,7 +114,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     let bound_x = match bound_x.intersect(&units_bound) {
                         Ok(data) => data,
                         Err(err) => {
-                            return CtxResult::Err(error.pass_with("bound_x.intersect error", err));
+                            return Err(error.pass_with("bound_x.intersect error", err));
                         }
                     };
                     // Если есть пересечение шпации и диапазона грузов
@@ -173,7 +173,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                                 current_delta_moment += delta_moment;
                             }
                             Err(err) => {
-                                return CtxResult::Err(
+                                return Err(
                                     error.pass_with("Read unit horizontal_area error", err),
                                 );
                             }
@@ -192,8 +192,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

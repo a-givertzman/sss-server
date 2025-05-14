@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextParamsRead, ContextRead},
         entities::math::curve::*,
         eval::{parameters::ParameterID, BalanceCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -40,7 +40,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: BalanceCtx = ctx.read();
                 let pantocaren = &balance.pantocaren; 
@@ -190,8 +190,7 @@ impl Eval<(), EvalResult> for LeverDiagramEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

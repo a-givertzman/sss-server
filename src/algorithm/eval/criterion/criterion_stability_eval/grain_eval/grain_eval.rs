@@ -3,7 +3,7 @@ use crate::algorithm::context::context_access::{ContextParamsRead, ContextParams
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
-    BalanceCtx, ContextWrite, CtxResult, algorithm::context::context_access::ContextRead,
+    BalanceCtx, ContextWrite, algorithm::context::context_access::ContextRead,
     kernel::{eval::Eval, types::eval_result::EvalResult},
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for GrainEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(mut ctx) => {
+            Ok(mut ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();
                 let m_grain = balance
@@ -179,8 +179,7 @@ impl Eval<(), EvalResult> for GrainEval {
                 // входа в воду верхней кромки комингса люка или входа контейнера в воду (в случае, когда
                 // контейнеры выходят за пределы этого комингса).
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

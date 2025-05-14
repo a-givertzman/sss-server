@@ -3,7 +3,7 @@ use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
     ship_model::model_link::Link,
-    ContextWrite, CtxResult,
+    ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use super::mass_ctx::MassCtx;
@@ -34,12 +34,12 @@ impl Eval<(), EvalResult> for MassEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = match initial.bounds.clone() {
                     Some(data) => data,
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read bounds error: no data!",
                             self.dbg
                         )))
@@ -48,7 +48,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let ship_parameters = match initial.ship_parameters.as_ref() {
                     Some(data) => data,
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read voyage error: no data!",
                             self.dbg
                         )))
@@ -57,7 +57,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let const_mass_shift_x = match ship_parameters.get("LCG from middle") {
                     Some(data) => *data,
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read const_mass_shift_x error: no data!",
                             self.dbg
                         )))
@@ -66,7 +66,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let const_mass_shift_y = match ship_parameters.get("TCG from CL") {
                     Some(data) => *data,
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read const_mass_shift_y error: no data!",
                             self.dbg
                         )))
@@ -75,7 +75,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let const_mass_shift_z = match ship_parameters.get("VCG from BL") {
                     Some(data) => *data,
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read const_mass_shift_z error: no data!",
                             self.dbg
                         )))
@@ -84,7 +84,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let load_constant = match initial.load_constant.clone() {
                     Some(data) => data.data(),
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read load_constant error: no data!",
                             self.dbg
                         )))
@@ -93,7 +93,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data.data(),
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read unit error: no data!",
                             self.dbg
                         )))
@@ -102,7 +102,7 @@ impl Eval<(), EvalResult> for MassEval {
                 let liquid: Vec<_> = match initial.liquid.as_ref() {
                     Some(data) => data.data(),
                     None => {
-                        return CtxResult::Err(Error(format!(
+                        return Err(Error(format!(
                             "{}.eval | Read liquid error: no data!",
                             self.dbg
                         )))
@@ -180,11 +180,10 @@ impl Eval<(), EvalResult> for MassEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(Error(format!(
+            Err(err) => Err(Error(format!(
                 "{}.eval | Read context error: {:?}",
                 self.dbg, err
             ))),
-            CtxResult::None => CtxResult::None,
         }
     }
 }

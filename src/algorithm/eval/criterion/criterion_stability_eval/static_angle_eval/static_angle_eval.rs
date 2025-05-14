@@ -3,7 +3,7 @@ use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::data::stability::ship_type::*;
 use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::{
@@ -44,7 +44,7 @@ impl Eval<(), EvalResult> for StaticAngleEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_type = initial.ship_type.unwrap();
                 let have_container = initial.unit.as_ref()
@@ -95,8 +95,7 @@ impl Eval<(), EvalResult> for StaticAngleEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

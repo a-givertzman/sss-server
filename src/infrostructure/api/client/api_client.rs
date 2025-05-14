@@ -1,18 +1,20 @@
 use api_tools::client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest};
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 
 ///
 /// Provides access to the API Server
 #[derive(Debug, Clone)]
 pub struct ApiClient {
+    dbg: Dbg,
     database: String,
     host: String,
     port: String,
 }
 //
 impl ApiClient {
-    pub fn new(database: String, host: String, port: String) -> Self {
+    pub fn new(parent: impl Into<String>, database: String, host: String, port: String) -> Self {
         Self {
+            dbg: Dbg::new(parent, "ApiClient"),
             database,
             host,
             port,
@@ -22,7 +24,7 @@ impl ApiClient {
     /// Performs an API request with the parameters specified in the constructor
     pub fn fetch(&self, sql: &str) -> Result<Vec<u8>, Error> {
         let mut request = ApiRequest::new(
-            &api_tools::debug::dbg_id::DbgId("parent".to_owned()),
+            &self.dbg,
             self.host.clone() + ":" + &self.port,
             "auth_token",
             ApiQuery::new(

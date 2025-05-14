@@ -1,6 +1,6 @@
 use super::dso_area_ctx::DSOAreaCtx;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::data::ship_type::ShipType,
@@ -36,7 +36,7 @@ impl Eval<(), EvalResult> for DSOAreaEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_type = initial.ship_type.unwrap();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
@@ -103,8 +103,7 @@ impl Eval<(), EvalResult> for DSOAreaEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

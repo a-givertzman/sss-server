@@ -1,6 +1,6 @@
 use sal_core::{dbg::Dbg, error::Error};
 use crate::{
-    algorithm::context::context_access::ContextReadRef, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
+    algorithm::context::context_access::ContextReadRef, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
 };
 use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
 
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
                 let icing_timber_stab = IcingTimberType::from_str(&voyage.icing_timber_type)
@@ -45,8 +45,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

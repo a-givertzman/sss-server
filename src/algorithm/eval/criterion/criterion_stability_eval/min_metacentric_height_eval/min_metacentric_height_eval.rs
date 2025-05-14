@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::data::{loads::UnitCargoType, ship_type::ShipType},
         eval::{CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let loads: LoadsCtx = ctx.read();
@@ -77,8 +77,7 @@ impl Eval<(), EvalResult> for MinMetacentricHeightEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

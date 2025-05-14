@@ -3,7 +3,7 @@ use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::context::context_access::ContextReadRef,
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -35,7 +35,7 @@ impl Eval<(), EvalResult> for TrimEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let draught_bow = ctx.read_params(ParameterID::DraughtBow);    
                 let draught_stern = ctx.read_params(ParameterID::DraughtStern);  
                 let forward_trim = CriterionData::new_result(
@@ -50,8 +50,7 @@ impl Eval<(), EvalResult> for TrimEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

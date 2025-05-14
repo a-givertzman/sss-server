@@ -4,7 +4,7 @@ use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx,
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::context::context_access::{ContextRead, ContextReadRef},
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for AccelerationEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial
                     .ship_parameters
@@ -103,8 +103,7 @@ impl Eval<(), EvalResult> for AccelerationEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

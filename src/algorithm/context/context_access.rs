@@ -1,10 +1,10 @@
 use sal_core::error::Error;
-use super::{context::Context, ctx_result::CtxResult};
+use super::context::Context;
 use crate::algorithm::{eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
-    fn write(self, value: T) -> CtxResult<Context, Error>;
+    fn write(self, value: T) -> Result<Context, Error>;
 }
 ///
 /// Provides simple read access to the [Context] members
@@ -29,9 +29,9 @@ pub trait ContextParamsRead {
 
 //
 impl ContextWrite<Parameters> for Context {
-    fn write(mut self, value: Parameters) -> CtxResult<Self, Error> {
+    fn write(mut self, value: Parameters) -> Result<Self, Error> {
         self.parameters = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextReadRef<Parameters> for Context {
@@ -61,9 +61,9 @@ impl ContextParamsRead for Context {
 //
 //
 impl ContextWrite<InitialCtx> for Context {
-    fn write(mut self, value: InitialCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: InitialCtx) -> Result<Self, Error> {
         self.initial = value;
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextReadRef<InitialCtx> for Context {
@@ -73,9 +73,9 @@ impl ContextReadRef<InitialCtx> for Context {
 }
 //
 impl ContextWrite<StrengthAreaCtx> for Context {
-    fn write(mut self, value: StrengthAreaCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: StrengthAreaCtx) -> Result<Self, Error> {
         self.strength_area = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<StrengthAreaCtx> for Context {
@@ -85,9 +85,9 @@ impl ContextRead<StrengthAreaCtx> for Context {
 }
 //
 impl ContextWrite<IcingStabCtx> for Context {
-    fn write(mut self, value: IcingStabCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: IcingStabCtx) -> Result<Self, Error> {
         self.icing_stab = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<IcingStabCtx> for Context {
@@ -97,9 +97,9 @@ impl ContextRead<IcingStabCtx> for Context {
 }
 //
 impl ContextWrite<IcingCtx> for Context {
-    fn write(mut self, value: IcingCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: IcingCtx) -> Result<Self, Error> {
         self.icing = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<IcingCtx> for Context {
@@ -109,9 +109,9 @@ impl ContextRead<IcingCtx> for Context {
 }
 //
 impl ContextWrite<WettingCtx> for Context {
-    fn write(mut self, value: WettingCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: WettingCtx) -> Result<Self, Error> {
         self.wetting = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<WettingCtx> for Context {
@@ -121,9 +121,9 @@ impl ContextRead<WettingCtx> for Context {
 }
 //
 impl ContextWrite<LoadsCtx> for Context {
-    fn write(mut self, value: LoadsCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: LoadsCtx) -> Result<Self, Error> {
         self.loads = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<LoadsCtx> for Context {
@@ -133,9 +133,9 @@ impl ContextRead<LoadsCtx> for Context {
 }
 //
 impl ContextWrite<IcingTimberCtx> for Context {
-    fn write(mut self, value: IcingTimberCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: IcingTimberCtx) -> Result<Self, Error> {
         self.icing_timber = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<IcingTimberCtx> for Context {
@@ -145,9 +145,9 @@ impl ContextRead<IcingTimberCtx> for Context {
 }
 //
 impl ContextWrite<BalanceCtx> for Context {
-    fn write(mut self, value: BalanceCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: BalanceCtx) -> Result<Self, Error> {
         self.balance = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<BalanceCtx> for Context {
@@ -157,9 +157,9 @@ impl ContextRead<BalanceCtx> for Context {
 }
 //
 impl ContextWrite<StabilityAreaCtx> for Context {
-    fn write(mut self, value: StabilityAreaCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: StabilityAreaCtx) -> Result<Self, Error> {
         self.stability_area = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<StabilityAreaCtx> for Context {
@@ -169,9 +169,9 @@ impl ContextRead<StabilityAreaCtx> for Context {
 }
 //
 impl ContextWrite<MetacentricHeightCtx> for Context {
-    fn write(mut self, value: MetacentricHeightCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: MetacentricHeightCtx) -> Result<Self, Error> {
         self.metacentric_height = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<MetacentricHeightCtx> for Context {
@@ -181,9 +181,9 @@ impl ContextRead<MetacentricHeightCtx> for Context {
 }
 //
 impl ContextWrite<LeverDiagramCtx> for Context {
-    fn write(mut self, value: LeverDiagramCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: LeverDiagramCtx) -> Result<Self, Error> {
         self.lever_diagram = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<LeverDiagramCtx> for Context {
@@ -193,9 +193,9 @@ impl ContextRead<LeverDiagramCtx> for Context {
 }
 //
 impl ContextWrite<WindCtx> for Context {
-    fn write(mut self, value: WindCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: WindCtx) -> Result<Self, Error> {
         self.wind = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<WindCtx> for Context {
@@ -205,9 +205,9 @@ impl ContextRead<WindCtx> for Context {
 }
 //
 impl ContextWrite<WindageCtx> for Context {
-    fn write(mut self, value: WindageCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: WindageCtx) -> Result<Self, Error> {
         self.windage = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<WindageCtx> for Context {
@@ -217,9 +217,9 @@ impl ContextRead<WindageCtx> for Context {
 }
 //
 impl ContextWrite<RollingPeriodCtx> for Context {
-    fn write(mut self, value: RollingPeriodCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: RollingPeriodCtx) -> Result<Self, Error> {
         self.roll_period = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<RollingPeriodCtx> for Context {
@@ -229,9 +229,9 @@ impl ContextRead<RollingPeriodCtx> for Context {
 }
 //
 impl ContextWrite<RollingAmplitudeCtx> for Context {
-    fn write(mut self, value: RollingAmplitudeCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: RollingAmplitudeCtx) -> Result<Self, Error> {
         self.roll_amplitude = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<RollingAmplitudeCtx> for Context {
@@ -241,9 +241,9 @@ impl ContextRead<RollingAmplitudeCtx> for Context {
 }
 //
 impl ContextWrite<CriterionStabilityCtx> for Context {
-    fn write(mut self, value: CriterionStabilityCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: CriterionStabilityCtx) -> Result<Self, Error> {
         self.criterion_stability = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<CriterionStabilityCtx> for Context {
@@ -253,9 +253,9 @@ impl ContextRead<CriterionStabilityCtx> for Context {
 }
 //
 impl ContextWrite<WheatherCtx> for Context {
-    fn write(mut self, value: WheatherCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: WheatherCtx) -> Result<Self, Error> {
         self.wheather = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<WheatherCtx> for Context {
@@ -265,9 +265,9 @@ impl ContextRead<WheatherCtx> for Context {
 }
 //
 impl ContextWrite<StaticAngleCtx> for Context {
-    fn write(mut self, value: StaticAngleCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: StaticAngleCtx) -> Result<Self, Error> {
         self.static_angle = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<StaticAngleCtx> for Context {
@@ -277,9 +277,9 @@ impl ContextRead<StaticAngleCtx> for Context {
 }
 //
 impl ContextWrite<DSOAreaCtx> for Context {
-    fn write(mut self, value: DSOAreaCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: DSOAreaCtx) -> Result<Self, Error> {
         self.dso_area = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<DSOAreaCtx> for Context {
@@ -289,9 +289,9 @@ impl ContextRead<DSOAreaCtx> for Context {
 }
 //
 impl ContextWrite<DSOMaxCtx> for Context {
-    fn write(mut self, value: DSOMaxCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: DSOMaxCtx) -> Result<Self, Error> {
         self.dso_max = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<DSOMaxCtx> for Context {
@@ -301,9 +301,9 @@ impl ContextRead<DSOMaxCtx> for Context {
 }
 //
 impl ContextWrite<DSOTimberMaxCtx> for Context {
-    fn write(mut self, value: DSOTimberMaxCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: DSOTimberMaxCtx) -> Result<Self, Error> {
         self.dso_timber_max = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<DSOTimberMaxCtx> for Context {
@@ -313,9 +313,9 @@ impl ContextRead<DSOTimberMaxCtx> for Context {
 }
 //
 impl ContextWrite<DSOIcingMaxCtx> for Context {
-    fn write(mut self, value: DSOIcingMaxCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: DSOIcingMaxCtx) -> Result<Self, Error> {
         self.dso_icing_max = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<DSOIcingMaxCtx> for Context {
@@ -325,9 +325,9 @@ impl ContextRead<DSOIcingMaxCtx> for Context {
 }
 //
 impl ContextWrite<DSOAngleMaxCtx> for Context {
-    fn write(mut self, value: DSOAngleMaxCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: DSOAngleMaxCtx) -> Result<Self, Error> {
         self.dso_angle_max = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<DSOAngleMaxCtx> for Context {
@@ -337,9 +337,9 @@ impl ContextRead<DSOAngleMaxCtx> for Context {
 }
 //
 impl ContextWrite<MinMetacentricHeightCtx> for Context {
-    fn write(mut self, value: MinMetacentricHeightCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: MinMetacentricHeightCtx) -> Result<Self, Error> {
         self.min_metacentric_height = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<MinMetacentricHeightCtx> for Context {
@@ -349,9 +349,9 @@ impl ContextRead<MinMetacentricHeightCtx> for Context {
 }
 //
 impl ContextWrite<MetacentricHeightSubdivisionCtx> for Context {
-    fn write(mut self, value: MetacentricHeightSubdivisionCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: MetacentricHeightSubdivisionCtx) -> Result<Self, Error> {
         self.metacentric_height_subdivision = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<MetacentricHeightSubdivisionCtx> for Context {
@@ -361,9 +361,9 @@ impl ContextRead<MetacentricHeightSubdivisionCtx> for Context {
 }
 //
 impl ContextWrite<AccelerationCtx> for Context {
-    fn write(mut self, value: AccelerationCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: AccelerationCtx) -> Result<Self, Error> {
         self.acceleration = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<AccelerationCtx> for Context {
@@ -373,9 +373,9 @@ impl ContextRead<AccelerationCtx> for Context {
 }
 //
 impl ContextWrite<CirculationCtx> for Context {
-    fn write(mut self, value: CirculationCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: CirculationCtx) -> Result<Self, Error> {
         self.circulation = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<CirculationCtx> for Context {
@@ -385,9 +385,9 @@ impl ContextRead<CirculationCtx> for Context {
 }
 //
 impl ContextWrite<GrainCtx> for Context {
-    fn write(mut self, value: GrainCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: GrainCtx) -> Result<Self, Error> {
         self.grain = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<GrainCtx> for Context {
@@ -397,9 +397,9 @@ impl ContextRead<GrainCtx> for Context {
 }
 //
 impl ContextWrite<LoadLineCtx> for Context {
-    fn write(mut self, value: LoadLineCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: LoadLineCtx) -> Result<Self, Error> {
         self.load_line = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<LoadLineCtx> for Context {
@@ -409,9 +409,9 @@ impl ContextRead<LoadLineCtx> for Context {
 }
 //
 impl ContextWrite<ReserveBuoyncyCtx> for Context {
-    fn write(mut self, value: ReserveBuoyncyCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: ReserveBuoyncyCtx) -> Result<Self, Error> {
         self.reserve_buoyncy = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<ReserveBuoyncyCtx> for Context {
@@ -421,9 +421,9 @@ impl ContextRead<ReserveBuoyncyCtx> for Context {
 }
 //
 impl ContextWrite<BowBoardCtx> for Context {
-    fn write(mut self, value: BowBoardCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: BowBoardCtx) -> Result<Self, Error> {
         self.bow_board = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<BowBoardCtx> for Context {
@@ -433,9 +433,9 @@ impl ContextRead<BowBoardCtx> for Context {
 }
 //
 impl ContextWrite<ScrewCtx> for Context {
-    fn write(mut self, value: ScrewCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: ScrewCtx) -> Result<Self, Error> {
         self.screw = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<ScrewCtx> for Context {
@@ -445,9 +445,9 @@ impl ContextRead<ScrewCtx> for Context {
 }
 //
 impl ContextWrite<CriterionDraughtCtx> for Context {
-    fn write(mut self, value: CriterionDraughtCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: CriterionDraughtCtx) -> Result<Self, Error> {
         self.criterion_draught = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<CriterionDraughtCtx> for Context {
@@ -457,9 +457,9 @@ impl ContextRead<CriterionDraughtCtx> for Context {
 }
 //
 impl ContextWrite<ZgCtx> for Context {
-    fn write(mut self, value: ZgCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: ZgCtx) -> Result<Self, Error> {
         self.zg = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<ZgCtx> for Context {
@@ -469,9 +469,9 @@ impl ContextRead<ZgCtx> for Context {
 }
 //
 impl ContextWrite<DraftMarkCtx> for Context {
-    fn write(mut self, value: DraftMarkCtx) -> CtxResult<Self, Error> {
+    fn write(mut self, value: DraftMarkCtx) -> Result<Self, Error> {
         self.draft_mark = Some(value);
-        CtxResult::Ok(self)
+        Result::Ok(self)
     }
 }
 impl ContextRead<DraftMarkCtx> for Context {

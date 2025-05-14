@@ -3,7 +3,7 @@ use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
-    BalanceCtx, ContextWrite, CtxResult, algorithm::context::context_access::{ContextRead, ContextReadRef},
+    BalanceCtx, ContextWrite, algorithm::context::context_access::{ContextRead, ContextReadRef},
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
 };
@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for CirculationEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let voyage = initial
@@ -131,8 +131,7 @@ impl Eval<(), EvalResult> for CirculationEval {
                 // входа в воду верхней кромки комингса люка или входа контейнера в воду (в случае, когда
                 // контейнеры выходят за пределы этого комингса).
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

@@ -1,6 +1,6 @@
 use super::strength_area_ctx::StrengthAreaCtx;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{Bound, Position, data::loads::UnitCargoType},
@@ -41,14 +41,14 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
                         .into_iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
-                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
+                    None => return Err(error.err("Read unit error: no data!")),
                 };
                 let timber_unit: Vec<_> = unit
                     .iter()
@@ -56,7 +56,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     .collect();
                 let bounds = match initial.bounds.clone() {
                     Some(data) => data,
-                    None => return CtxResult::Err(error.err("Read bounds error: no data!")),
+                    None => return Err(error.err("Read bounds error: no data!")),
                 };
                 // 
                 // Тут все вроде правильно раскрыл,
@@ -69,18 +69,18 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         match reply {
                             Reply::BoundAreas(areas) => match areas {
                                 Ok(areas) => (areas.v, areas.h),
-                                Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
+                                Err(err) => return Err(error.pass_with("Read bound_areas error", err)),
                             }
-                            _ => return CtxResult::Err(error.err(format!("Read bound_areas - Wrong reply: {:?}", reply))),
+                            _ => return Err(error.err(format!("Read bound_areas - Wrong reply: {:?}", reply))),
                         }
                     }
-                    Err(err) => return CtxResult::Err(error.pass_with("Read bound_areas error", err)),
+                    Err(err) => return Err(error.pass_with("Read bound_areas error", err)),
                 };
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,
                     Err(err) => {
-                        return CtxResult::Err(
+                        return Err(
                             error.pass_with("Read icing_timber_bound_x error", err),
                         );
                     }
@@ -88,7 +88,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 let icing_timber_bound_y = match icing_timber_bound.bound_y() {
                     Ok(data) => data,
                     Err(err) => {
-                        return CtxResult::Err(
+                        return Err(
                             error.pass_with("Read icing_timber_bound_y error", err),
                         );
                     }
@@ -113,7 +113,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     match Bound::new(min_x, max_x) {
                         Ok(data) => data,
                         Err(err) => {
-                            return CtxResult::Err(error.pass_with("units_bound error", err));
+                            return Err(error.pass_with("units_bound error", err));
                         }
                     }
                 } else {
@@ -125,7 +125,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     let mut current_area = match const_area_v.get(i) {
                         Some(&data) => data,
                         None => {
-                            return CtxResult::Err(
+                            return Err(
                                 error
                                     .err(format!("const_area_v.get error: no value for bound {i}")),
                             );
@@ -135,7 +135,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     let bound_x = match bound_x.intersect(&units_bound) {
                         Ok(data) => data,
                         Err(err) => {
-                            return CtxResult::Err(error.pass_with("bound_x.intersect error", err));
+                            return Err(error.pass_with("bound_x.intersect error", err));
                         }
                     };
                     // Если есть пересечение шпации и диапазона грузов
@@ -185,7 +185,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         ) {
                             Ok(area) => area.0,
                             Err(err) => {
-                                return CtxResult::Err(
+                                return Err(
                                     error.pass_with("Read unit horizontal_area error", err),
                                 );
                             }
@@ -213,7 +213,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                         }
                         (Some(&current_const_area), None) => current_const_area,
                         _ => {
-                            return CtxResult::Err(
+                            return Err(
                                 error.err(format!("area_h.get error: no value for bound {i}")),
                             );
                         }
@@ -241,8 +241,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

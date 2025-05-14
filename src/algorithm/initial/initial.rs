@@ -14,7 +14,6 @@ use crate::{
     algorithm::context::{
         context::Context,
         context_access::{ContextReadRef, ContextWrite},
-        ctx_result::CtxResult,
     },
     infrostructure::api::client::api_client::ApiClient,
     kernel::{eval::Eval, types::eval_result::EvalResult},
@@ -60,7 +59,7 @@ impl Eval<(), EvalResult> for Initial {
         // Расчет баланса в модели
         let bounds: Bounds = match self.model.call(query::Query::Bounds) {
             Ok(bounds) => bounds,
-            Err(err) => return CtxResult::Err(error.pass_with("model.bounds error", err)),
+            Err(err) => return Err(error.pass_with("model.bounds error", err)),
         };
         /*
                     let bounds = self.api_client.fetch(&format!(
@@ -74,9 +73,9 @@ impl Eval<(), EvalResult> for Initial {
                                 initial_ctx.bounds = Some(bounds.data());
                                 self.ctx.clone().write(initial_ctx.to_owned())
                             }
-                            Err(err) => CtxResult::Err(error.pass_with("Error bounds", err)),
+                            Err(err) => Err(error.pass_with("Error bounds", err)),
                         },
-                        Err(err) => CtxResult::Err(error.pass_with("Error bounds", err)),
+                        Err(err) => Err(error.pass_with("Error bounds", err)),
                     }
         */
         let ship = ShipArray::parse(
@@ -101,7 +100,7 @@ impl Eval<(), EvalResult> for Initial {
         .map_err(|err| error.pass_with("ship parse", err))?;
         let ship = match ship.data.first() {
             Some(data) => data.to_owned(),
-            None => return CtxResult::Err(error.err("Error ship: no first in data")),
+            None => return Err(error.err("Error ship: no first in data")),
         };
         let navigation_area = NavigationArea::from_str(&ship.navigation_area)
             .map_err(|e| error.pass_with("navigation_area", e))?;
@@ -127,7 +126,7 @@ impl Eval<(), EvalResult> for Initial {
         .map_err(|err| error.pass_with("voyage parse", err))?;
         let voyage = match voyage.data.first() {
             Some(data) => data.to_owned(),
-            None => return CtxResult::Err(error.err("Error voyage: no first in data")),
+            None => return Err(error.err("Error voyage: no first in data")),
         };
         let ship_parameters = ShipParametersArray::parse(&self.api_client.fetch(&format!(
                 "SELECT key, value FROM \"ship/ship_general_characteristics\" WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",

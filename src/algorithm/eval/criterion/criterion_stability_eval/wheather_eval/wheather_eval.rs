@@ -5,7 +5,7 @@ use crate::{
         eval::{
             parameters::ParameterID, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx
         },
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for WheatherEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(mut ctx) => {
+            Ok(mut ctx) => {
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();
@@ -127,8 +127,7 @@ impl Eval<(), EvalResult> for WheatherEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

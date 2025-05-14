@@ -6,7 +6,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::*,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx}
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
@@ -51,7 +51,7 @@ impl Eval<(), EvalResult> for ZgEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx_before.eval(()) {
-            CtxResult::Ok(ctx_before) => {
+            Ok(ctx_before) => {
                 let initial: &InitialCtx = ctx_before.read_ref();
                 let ship_parameters = initial
                     .ship_parameters
@@ -160,8 +160,7 @@ impl Eval<(), EvalResult> for ZgEval {
                 let result = ZgCtx { zg: result };
                 base_ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

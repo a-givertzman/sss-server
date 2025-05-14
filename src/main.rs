@@ -1,4 +1,4 @@
-#![feature(try_trait_v2)]
+// #![feature(try_trait_v2)]
 mod algorithm;
 mod app;
 mod conf;
@@ -10,7 +10,6 @@ mod ship_model;
 mod tests;
 
 use algorithm::eval::*;
-use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
@@ -25,7 +24,7 @@ use ship_model::ship_model::ShipModel;
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
-    let dbg = DbgId("main".into());
+    let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
     let path = "config.yaml";
     let mut app = App::new(path);
@@ -44,6 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         project_id.to_owned(),
         n_parts,
         ApiClient::new(
+            &dbg,
             conf.api.address.database.clone(),
             conf.api.address.host.clone(),
             conf.api.address.port.clone(),
@@ -75,6 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         &dbg,
                                         ship_model.link(),
                                         ApiClient::new(
+                                            &dbg,
                                             conf.api.address.database.clone(),
                                             conf.api.address.host.clone(),
                                             conf.api.address.port.clone(),

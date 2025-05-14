@@ -4,7 +4,7 @@ use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ContextWrite, CtxResult,
+    ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use super::wetting_ctx::WettingCtx;
@@ -38,18 +38,18 @@ impl Eval<(), EvalResult> for WettingEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = match initial.bounds.as_ref() {
                     Some(data) => data,
                     None => {
-                        return CtxResult::Err(error.err("Read bounds error: no data!"))
+                        return Err(error.err("Read bounds error: no data!"))
                     }
                 };
                 let unit = match initial.unit.as_ref() {
                     Some(data) => data,
                     None => {
-                        return CtxResult::Err(error.err("Read unit error: no data!"))
+                        return Err(error.err("Read unit error: no data!"))
                     }
                 };
                 let (mass, mass_moment) =
@@ -97,8 +97,7 @@ impl Eval<(), EvalResult> for WettingEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

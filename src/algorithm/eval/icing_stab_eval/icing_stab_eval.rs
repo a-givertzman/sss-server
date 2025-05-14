@@ -4,7 +4,7 @@ use crate::{
     algorithm::{context::context_access::ContextReadRef, entities::icing_stab::IcingStabType},
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ContextWrite, CtxResult,
+    ContextWrite,
 };
 
 ///
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
                 let icing = initial.icing.clone().ok_or(error.err("icing error: no data!"))?.data(); 
@@ -89,8 +89,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

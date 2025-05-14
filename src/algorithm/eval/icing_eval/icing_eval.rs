@@ -5,7 +5,7 @@ use crate::algorithm::eval::{IcingStabCtx, StrengthAreaCtx};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
-    ContextWrite, CtxResult,
+    ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -38,12 +38,12 @@ impl Eval<(), EvalResult> for IcingEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = match initial.bounds.clone() {
                     Some(data) => data,
                     None => {
-                        return CtxResult::Err(error.err("Read bounds error: no data!"))
+                        return Err(error.err("Read bounds error: no data!"))
                     }
                 };
                 let area_strength: StrengthAreaCtx = ctx.read();
@@ -54,25 +54,25 @@ impl Eval<(), EvalResult> for IcingEval {
                 /*    let current_x = match bound.center() {
                         Some(data) => data,
                         None => {
-                            return CtxResult::Err(error.err(format!("bound.center error: no center for bound {i}")));
+                            return Err(error.err(format!("bound.center error: no center for bound {i}")));
                         }
                     };*/
                     let current_area_h = match area_strength.area_h_values.get(i) {
                         Some(&data) => data,
                         None => {
-                            return CtxResult::Err(error.err(format!("area_strength.area_h.get error: no value for bound {i}")));
+                            return Err(error.err(format!("area_strength.area_h.get error: no value for bound {i}")));
                         }
                     };
                     let current_area_v = match area_strength.area_v_values.get(i) {
                         Some(&data) => data,
                         None => {
-                            return CtxResult::Err(error.err(format!("area_strength.area_v.get error: no value for bound {i}")));
+                            return Err(error.err(format!("area_strength.area_v.get error: no value for bound {i}")));
                         }
                     };
                     let current_area_timber_h = match area_strength.area_timber_h_values.get(i) {
                         Some(&data) => data,
                         None => {
-                            return CtxResult::Err(error.err(format!("area_strength.area_timber_h.get error: no value for bound {i}")));
+                            return Err(error.err(format!("area_strength.area_timber_h.get error: no value for bound {i}")));
                         }
                     };
                     let current_mass = current_area_h * icing_stab.mass_desc_h
@@ -102,8 +102,7 @@ impl Eval<(), EvalResult> for IcingEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

@@ -2,7 +2,7 @@ use super::roll_amplitude_ctx::RollingAmplitudeCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::entities::math::curve::*;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead, ContextReadRef},
         eval::{BalanceCtx, MetacentricHeightCtx, RollingPeriodCtx, parameters::ParameterID},
@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(mut ctx) => {
+            Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let balance: BalanceCtx = ctx.read();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
@@ -108,8 +108,7 @@ impl Eval<(), EvalResult> for RollingAmplitudeEval {
                 ctx.write_params(ParameterID::RollPeriod, t);
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

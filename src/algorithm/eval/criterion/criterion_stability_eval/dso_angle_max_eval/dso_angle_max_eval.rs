@@ -1,6 +1,6 @@
 use super::dso_angle_max_ctx::DSOAngleMaxCtx;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::{
@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let mut results = Vec::new();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let initial: &InitialCtx = ctx.read_ref();
@@ -112,8 +112,7 @@ impl Eval<(), EvalResult> for DSOAngleMaxEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

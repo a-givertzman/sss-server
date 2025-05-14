@@ -3,7 +3,7 @@ use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{Moment, Position};
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
 };
@@ -35,7 +35,7 @@ impl Eval<(), EvalResult> for LoadsEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let shift_const = if let Some(ship_parameters) = initial.ship_parameters.as_ref() {
                     let const_mass_shift_x = *ship_parameters
@@ -49,13 +49,13 @@ impl Eval<(), EvalResult> for LoadsEval {
                         .ok_or(error.err("Read const_mass_shift_z error: no data!"))?;
                     Position::new(const_mass_shift_x, const_mass_shift_y, const_mass_shift_z)
                 } else {
-                    return CtxResult::Err(
+                    return Err(
                         error.err("Read const_mass_shift_z error: no ship_parameters!"),
                     );
                 };
                 let mass_const = match initial.load_constant.clone() {
                     Some(data) => data.data().iter().map(|v| v.mass).sum(),
-                    None => return CtxResult::Err(error.err("Read load_constant error: no data!")),
+                    None => return Err(error.err("Read load_constant error: no data!")),
                 };
                 let (bulk, mass_bulk, shift_bulk) = match initial.bulk.clone() {
                     Some(data) => {
@@ -77,7 +77,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                             );
                         (bulk, mass, shift)
                     },
-                    None => return CtxResult::Err(error.err("Read bulk error: no data!")),
+                    None => return Err(error.err("Read bulk error: no data!")),
                 };
                 let (liquid, mass_liquid, shift_liquid) = match initial.liquid.clone() {
                     Some(data) => {
@@ -99,7 +99,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                             );
                         (liquid, mass, shift)
                     },
-                    None => return CtxResult::Err(error.err("Read liquid error: no data!")),
+                    None => return Err(error.err("Read liquid error: no data!")),
                 };
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {
@@ -129,7 +129,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                             );
                         (mass_unit, shift_unit, grain_bulkhead)
                     }
-                    None => return CtxResult::Err(error.err("Read unit error: no data!")),
+                    None => return Err(error.err("Read unit error: no data!")),
                 };
                 let (mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
                     Some(data) => data
@@ -147,7 +147,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                                 )
                             },
                         ),
-                    None => return CtxResult::Err(error.err("Read gaseous error: no data!")),
+                    None => return Err(error.err("Read gaseous error: no data!")),
                 };
                 let result = LoadsCtx {
                     mass_const,
@@ -167,8 +167,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

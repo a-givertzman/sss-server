@@ -5,7 +5,7 @@ use crate::{
         eval::{
             CriterionData, CriterionID, LeverDiagramCtx
         },
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for DSOTimberMaxEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let target = 0.25;
                 let data  = match lever_diagram.dso_lever_max(0., 90.) {
@@ -52,8 +52,7 @@ impl Eval<(), EvalResult> for DSOTimberMaxEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

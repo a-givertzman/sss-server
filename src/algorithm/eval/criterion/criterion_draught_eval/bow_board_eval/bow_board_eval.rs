@@ -4,7 +4,7 @@ use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     kernel::{eval::Eval, types::eval_result::EvalResult},
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for BowBoardEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let data = initial.bow_board.as_ref().unwrap();   
                 let ship_parameters = initial
@@ -81,8 +81,7 @@ impl Eval<(), EvalResult> for BowBoardEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

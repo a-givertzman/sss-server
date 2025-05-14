@@ -38,7 +38,7 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
     //    match self.ctx.eval(()) {
-    //        CtxResult::Ok(ctx) => {
+    //        Ok(ctx) => {
                 let mut ctx = self.ctx.take().unwrap();
                 // суммарная масса судна
                 let mass = ctx.read_params(ParameterID::Displacement);
@@ -150,9 +150,8 @@ impl Eval<(), EvalResult> for MetacentricHeightEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
     //        }
-    //        CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-    //        CtxResult::None => CtxResult::None,
-    //    }
+    //        Err(err) => Err(error.pass_with("Read context error", err)),
+    //    //    }
     }
 }
 //

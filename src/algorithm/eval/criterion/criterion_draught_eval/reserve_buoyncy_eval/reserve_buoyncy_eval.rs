@@ -3,7 +3,7 @@ use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     kernel::{eval::Eval, types::eval_result::EvalResult},
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for ReserveBuoyncyEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let balance: BalanceCtx = ctx.read();               
                 let ship_parameters = initial.ship_parameters.as_ref().unwrap();
@@ -50,8 +50,7 @@ impl Eval<(), EvalResult> for ReserveBuoyncyEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

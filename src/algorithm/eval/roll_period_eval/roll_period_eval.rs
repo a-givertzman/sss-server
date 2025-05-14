@@ -2,7 +2,7 @@ use super::roll_period_ctx::RollingPeriodCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, BalanceCtx, MetacentricHeightCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite, CtxResult,
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let balance_ctx: BalanceCtx = ctx.read();
                 let length_wl = balance_ctx.length_wl;
@@ -60,8 +60,7 @@ impl Eval<(), EvalResult> for RollingPeriodEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

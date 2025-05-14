@@ -2,7 +2,7 @@ use super::wind_ctx::WindCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, eval::{parameters::ParameterID, WindageCtx}
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite, CtxResult,
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -34,7 +34,7 @@ impl Eval<(), EvalResult> for WindEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(mut ctx) => {
+            Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let windage: WindageCtx = ctx.read(); 
                 let gravity_g = 9.81;
@@ -60,8 +60,7 @@ impl Eval<(), EvalResult> for WindEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

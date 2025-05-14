@@ -2,7 +2,7 @@ use super::dso_max_ctx::DSOMaxCtx;
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::LeverDiagramCtx,
@@ -37,7 +37,7 @@ impl Eval<(), EvalResult> for DSOMaxEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let ship_parameters = initial
@@ -72,8 +72,7 @@ impl Eval<(), EvalResult> for DSOMaxEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

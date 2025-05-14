@@ -5,7 +5,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::Moment,
         eval::{IcingCtx, LoadsCtx, WettingCtx},
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::{BalanceQuery, Query}, ContextWrite, CtxResult
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::{BalanceQuery, Query}, ContextWrite
 };
 use super::balance_ctx::BalanceCtx;
 
@@ -40,7 +40,7 @@ impl Eval<(), EvalResult> for BalanceEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(ctx) => {
+            Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
                 let loads: LoadsCtx = ctx.read();
@@ -127,8 +127,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                  // TODO ctx.write(result_data.parameters);
                 ctx.write(result_data)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

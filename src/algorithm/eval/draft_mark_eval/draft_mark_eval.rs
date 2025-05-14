@@ -4,7 +4,7 @@ use crate::algorithm::context::context_access::{ContextParamsRead, ContextParams
 use crate::algorithm::entities::{Curve, ICurve};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::{
-    ContextWrite, CtxResult,
+    ContextWrite,
     algorithm::context::context_access::ContextReadRef,
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
@@ -36,7 +36,7 @@ impl Eval<(), EvalResult> for DraftMarkEval {
     fn eval(&mut self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            CtxResult::Ok(mut ctx) => {
+            Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let data = initial.draft_mark.clone().unwrap();
                 let ship_parameters = initial
@@ -130,8 +130,7 @@ impl Eval<(), EvalResult> for DraftMarkEval {
                 self.value = Some(result.clone());
                 ctx.write(result)
             }
-            CtxResult::Err(err) => CtxResult::Err(error.pass_with("Read context error", err)),
-            CtxResult::None => CtxResult::None,
+            Err(err) => Err(error.pass_with("Read context error", err)),
         }
     }
 }

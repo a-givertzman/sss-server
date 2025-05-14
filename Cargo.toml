@@ -12,12 +12,10 @@ env_logger = "^0.11"
 # Internal deps
 testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
-api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.0" }
+api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.1" }
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
 sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.8" }
-#sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.1.1" }
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.2.0" }
-
 #
 # Time
 chrono = "^0.4"
@@ -38,10 +36,10 @@ coco = "^0.3"
 dashmap = "^6.1"
 #
 # Math
-splines = "^4.4"
+splines = "^5.0"
 #
 # Helpful macros for working with enums and strings
-strum = "0.26.3"
+strum = "^0.27"
 strum_macros = "^0.27"
 #
 # Thread safe
