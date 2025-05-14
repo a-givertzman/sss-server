@@ -248,12 +248,12 @@ impl Eval<(), EvalResult> for ZgEval {
                         (v1.0 - v1.1)
                             .abs()
                             .partial_cmp(&(v2.0 - v2.1).abs())
-                            .expect("CriterionComputer calculate error: sort values!")
+                            .expect("ZgEval eval values error: sort values!")
                     });
                     // берем первое значение как ближайшее значение к целевому
                     let closest_value = values
                         .first()
-                        .expect("CriterionComputer calculate error, no values!");
+                        .expect("ZgEval eval closest_value error, no values!");
                     result.insert(id, closest_value.0);
                 }
                 let result = ZgCtx { zg: result };
