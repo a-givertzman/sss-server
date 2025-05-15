@@ -30,7 +30,7 @@ impl LoadLineEval {
 //
 //
 impl Eval<(), EvalResult> for LoadLineEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {

@@ -2,7 +2,7 @@ use super::metacentric_height_ctx::MetacentricHeightCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, entities::data::loads::AssignmentType, eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx}
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{Context, ContextWrite, InitialCtx},
+    }, kernel::{eval::Eval, types::{eval_result::EvalResult, Arc, RwLock}}, prelude::{Context, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::entities::math::liquid::*;
@@ -10,7 +10,7 @@ use crate::algorithm::entities::math::liquid::*;
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct MetacentricHeightEval {
     dbg: Dbg,
-    context: Option<Context>,
+    context: Arc<RwLock<Option<Context>>>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -24,7 +24,7 @@ impl MetacentricHeightEval {
         let dbg = Dbg::new(parent, "MetacentricHeightEval");
         Self {
             dbg,
-            context: None,
+            context: Arc::new(RwLock::new(None)),
             ctx: Box::new(ctx),
         }
     }
@@ -145,13 +145,13 @@ impl MetacentricHeightEval {
 //
 //
 impl Eval<Zg, EvalResult> for MetacentricHeightEval {
-    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
+    fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match &self.context {
+        match &self.context.read().clone() {
             Some(ctx) => self.calc(ctx.clone(), Some(z_g_fix.0)),
             None => match self.ctx.eval(()) {
                 Ok(ctx) => {
-                    self.context = Some(ctx.clone());
+                    *self.context.write() = Some(ctx.clone());
                     self.calc(ctx, None)
                 }
                 Err(err) => Err(error.pass_with("Read context error", err)),

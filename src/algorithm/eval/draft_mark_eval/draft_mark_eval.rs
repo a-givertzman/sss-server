@@ -31,7 +31,7 @@ impl DraftMarkEval {
 //
 //
 impl Eval<(), EvalResult> for DraftMarkEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(mut ctx) => {

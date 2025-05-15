@@ -29,7 +29,7 @@ impl WindEval {
 //
 //
 impl Eval<Zg, EvalResult> for WindEval {
-    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
+    fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(mut ctx) => {

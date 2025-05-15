@@ -33,7 +33,7 @@ impl AccelerationEval {
 //
 //
 impl Eval<Zg, EvalResult> for AccelerationEval {
-    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
+    fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {

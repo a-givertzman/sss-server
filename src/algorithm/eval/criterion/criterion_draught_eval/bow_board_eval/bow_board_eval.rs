@@ -29,7 +29,7 @@ impl BowBoardEval {
 //
 //
 impl Eval<(), EvalResult> for BowBoardEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {

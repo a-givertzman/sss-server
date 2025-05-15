@@ -40,7 +40,7 @@ impl Eval<Zg, EvalResult> for StaticAngleEval {
     /// При расчете плеча кренящего момента от давления ветра 𝑙𝑤1, используемое при
     /// определении угла крена θ𝑤1, предполагаемое давление ветра 𝑝𝑣 принимается как для судна
     /// неограниченного района плавания судна.
-    fn eval(&mut self, z_g_fix: Zg) -> EvalResult {
+    fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {

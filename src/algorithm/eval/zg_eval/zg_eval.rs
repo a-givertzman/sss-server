@@ -22,7 +22,7 @@ pub struct ZgEval {
     dbg: Dbg,
     scheduler: Scheduler,
  //   ship_model: &'a ShipModel,
-    ctx: Arc<RwLock<Box<dyn Eval<Zg, EvalResult> + Send + Sync>>>,
+    ctx: Arc<Box<dyn Eval<Zg, EvalResult> + Send + Sync>>,
 }
 //
 //
@@ -39,15 +39,15 @@ impl ZgEval {
             dbg,
             scheduler,
          //   ship_model,
-            ctx: Arc::new(RwLock::new(Box::new(ctx))),
+            ctx: Arc::new(Box::new(ctx)),
         }
     }
 }
 //
 impl Eval<(), EvalResult> for ZgEval {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.write().eval(Zg::empty()) {
+        match self.ctx.eval(Zg::empty()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial
@@ -74,7 +74,7 @@ impl Eval<(), EvalResult> for ZgEval {
                     let task = self
                         .scheduler
                         .spawn(move || {
-                            let ctx = self_ctx.write().eval(Zg(z_g_fix))?;
+                            let ctx = self_ctx.eval(Zg(z_g_fix))?;
                             // let criterion = Arc::new(Mutex::new(Option::<CriterionStabilityCtx>::None));
                             let criterion: CriterionStabilityCtx = ctx.read();
                             zg_results_.push((z_g_fix, criterion));

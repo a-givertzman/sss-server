@@ -40,7 +40,7 @@ impl FakeInitial {
 }
 //
 impl Eval<(), EvalResult> for FakeInitial {
-    fn eval(&mut self, _: ()) -> EvalResult {
+    fn eval(&self, _: ()) -> EvalResult {
         let _error = Error::new(&self.dbg, "eval");
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
