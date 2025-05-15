@@ -11,7 +11,7 @@ use strum_macros::EnumIter;
 /// Cache keys of [ShipModel] caches.
 ///
 /// [ShipModel]: super::super::ShipModel
-#[derive(Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, EnumIter, Debug)]
 pub enum CacheKey {
     ///
     /// Points to [FloatingPositionCache].

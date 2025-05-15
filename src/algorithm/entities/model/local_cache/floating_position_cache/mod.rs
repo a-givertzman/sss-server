@@ -104,6 +104,12 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
         &self,
         exit: Arc<AtomicBool>,
     ) -> Vec::<Error> {
+        let waterline = match self.create_waterline() {
+            Ok(waterline) => waterline,
+            Err(err) => {
+                return vec![Error::new(&self.dbg, "calculate").pass_with("waterline", err)];
+            },
+        };
         CalculatedFloatingPositionCache::new(
             &self.dbg,
             self.file_path.clone(),
@@ -114,7 +120,7 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
                 })
                 .cloned()
                 .collect(),
-            self.create_waterline()?,
+            waterline,
             self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_steps.clone(),

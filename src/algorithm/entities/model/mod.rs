@@ -167,44 +167,35 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     /// ```
     pub fn update_caches(&mut self, caches: &[&CacheKey]) -> Result<(), Error> {
         // start wokers to calculate required caches
-        let handlers = {
-            let mut handlers = vec![];
+        let errors = {
+            let mut errors = vec![];
             let calculate_all = caches.is_empty();
             for (cache_key, cache) in &self.caches {
                 if calculate_all || caches.contains(&cache_key) {
-                    cache
-                        .calculate(Arc::default())
-                        .map(|workers| handlers.push((*cache_key, workers)))?;
+                    errors.push((*cache_key, cache.calculate(Arc::default())));
                 }
             }
-            handlers
+            errors
         };
         // Get keys of successfuly calculated caches.
         // Return the full error if any worker fails.
         let calculated = {
             let error = Error::new(&self.dbg, "update_caches");
             let mut calculated = IndexSet::new();
-            let mut errors = vec![];
-            for (cache_key, workers) in handlers {
-                for (id, handler) in workers {
-                    match handler.join() {
-                        Err(err) => {
-                            log::error!("{} | Preparing thread='{}'..", &self.dbg, id);
-                            errors.push(format!("  thread_id='{}', {:?}", id, err));
-                        }
-                        Ok(worker_res) => {
-                            if let Err(err) = worker_res {
-                                log::error!("{} | Calculating cache in thread='{}'..", &self.dbg, id);
-                                errors.push(format!("  thread_id='{}', {:?}", id, err));
-                            } else {
-                                calculated.insert(cache_key);
-                            }
-                        }
-                    }
+            let mut filtered_errors = vec![];
+            for (cache_key, errors) in errors {
+                if errors.is_empty() {
+                    calculated.insert(cache_key);
+                } else {
+                    for err in &errors {
+                        let err_text = format!(" {} | Calculating cache: {:?} in thread error: {:?}", &self.dbg, cache_key, err);
+                        log::error!("{}", &err_text);
+                        filtered_errors.push(err_text);  
+                    }            
                 }
             }
-            if !errors.is_empty() {
-                return Err(error.pass_with("calculated", errors.join("\n")));
+            if !filtered_errors.is_empty() {
+                return Err(error.pass_with("calculated", filtered_errors.join("\n")));
             }
             calculated
         };

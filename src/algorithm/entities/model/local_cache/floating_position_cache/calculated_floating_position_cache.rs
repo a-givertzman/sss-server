@@ -8,6 +8,7 @@ use sal_3dlib::{
         face::{Face, Rotate, Translate},
     },
 };
+use std::thread::JoinHandle;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::service::ServiceHandles;
 use std::{
@@ -73,12 +74,17 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     {
         log::info!("{} | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
-        let out_f = &mut File::create(&self.file_path).map_err(|err| {
+        let out_f = match &mut File::create(&self.file_path).map_err(|err| {
             error.pass_with(
                 format!("File::create error! path:{}", self.file_path.display()),
                 err.to_string(),
             )
-        })?;
+        }) {
+            Ok(file) => file, 
+            Err(err) => {
+                return vec![error.pass_with(format!("File::create, path: {:?}", self.file_path), err.to_string())];
+            },
+        };
         let work = |heel: f64, trim: f64, draught: f64| {
             // make a clone of origin waterline and transform it
             // according to heel, trim, and draught values
@@ -113,7 +119,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         _ => return None,
                     })
                 })
-                .try_fold((0.0, None), |(mut volume, mut mb_volume_center), build| {
+                .try_fold((0.0, None), |(mut volume, mut mb_volume_center, ), build| {
                     build.map(|volumed| {
                         volumed.solids().into_iter().for_each(|elmnt| {
                             let [.., elmnt_z] = elmnt.center().point();
@@ -133,12 +139,14 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                 }
                             }
                         });
-                        (volume, mb_volume_center, heel, trim, draught)
+                        (volume, mb_volume_center)
                     })
                 })
+                .map(|(volume, mb_volume_center)|  (volume, mb_volume_center, heel, trim, draught))
         };
         let builder = thread::Builder::new().name(self.dbg.to_string());
-        let mut tasks: Vec<JoinHandle<()>> = vec![];
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let spawn_errors = Vec::new();
         for &draught in &self.draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -149,17 +157,20 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         return Vec::<Error>::new();
                     }
                     let task = builder
-                        .spawn(move || work(heel, trim, draught))
+                        .spawn(move |heel, trim, draught| work(heel, trim, draught))
                         .map_err(|err| {
                             error.pass_with(
                                 format!(
                                     "spawn task draught:{} heel:{} trim:{}",
                                     draught, heel, trim
                                 ),
-                                err,
+                                err.to_string(),
                             )
-                        })?;
-                    tasks.push(task);
+                        });
+                    match task {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => spawn_errors.push(err),
+                    };                    
                 }
             }
         }
@@ -194,15 +205,15 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         .map_err(|err| {
                             error.pass_with(
                                 format!("Writing to file, path:{}", self.file_path.display()),
-                                err,
+                                err.to_string(),
                             )
                         }),
                     },
-                    Err(err) => Err(error.pass_with(format!("work"), err)),
+                    Err(err) => Err(error.pass_with(format!("work"), err.to_string())),
                 },
-                Err(err) => Err(error.pass_with(format!("task.join"), err)),
+                Err(_) => Err(error.err(format!("task.join"))),
             })
-            .filter(|v| v.is_err())
+            .filter_map(|v| v.err())
             .collect();
         errors
     }

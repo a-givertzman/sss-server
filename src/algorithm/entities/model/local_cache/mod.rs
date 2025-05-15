@@ -23,7 +23,7 @@ pub(super) trait LocalCache {
     fn calculate(
         &self,
         exit: Arc<AtomicBool>,
-    ) -> Result<ServiceHandles<Result<(), Error>>, Error>;
+    ) -> Vec<Error>;
     ///
     /// Returns approximated values based on given set.
     fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>>;
