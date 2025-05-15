@@ -253,7 +253,7 @@ fn bound_areas(
     bounds: Bounds,
     ship_id: usize,
     api_client: &ApiClient,
-    exit: Arc<AtomicBool>,
+    _: Arc<AtomicBool>,
 ) -> Result<BoundArea, Error> {
     let err = Error::new("ShipModel", "bound_areas");
     let area_h_str = HStrAreaArray::parse(
@@ -333,7 +333,7 @@ fn compute_balance(
         trim: floating_position.trim_angle,
         roll: floating_position.heel_angle,
         draught_mid: floating_position.draught_at_amidships,
-        bulk: todo!(),
+        bulk: ,
         liquid: todo!(),
         bounds_volume: todo!(),
         volume: floating_position.displacement_volume,
@@ -350,6 +350,7 @@ fn compute_balance(
         rad_trans: todo!(),
         pantocaren: todo!(),
     };
+    Ok(result)
     /*
     let mut cache = Cache::new(&dbg, cashe_path);
     if !cache.init().is_ok() {
@@ -412,5 +413,4 @@ fn compute_balance(
             .map_err(|err| error.pass_with("cache.init", err))?;
     }
 */
-    Err(error.err("Unimplemented"))
 }

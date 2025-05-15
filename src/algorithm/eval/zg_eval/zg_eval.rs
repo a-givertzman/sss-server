@@ -1,6 +1,4 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
@@ -65,10 +63,6 @@ impl Eval<(), EvalResult> for ZgEval {
                 let max_index = (overall_height / delta).floor() as i32;
                 for index in 0..max_index {
                     let z_g_fix = index as f64 * delta;
-                    let dbg = self.dbg.clone();
-                //    let link = self.ship_model.link();
-                    let ctx_ = ctx.clone();
-                    // let moved_criterion = criterion.clone();
                     let zg_results_ = zg_results.clone();
                     let self_ctx = self.ctx.clone();
                     let task = self
