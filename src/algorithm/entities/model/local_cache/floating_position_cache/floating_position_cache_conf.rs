@@ -12,6 +12,6 @@ pub struct FloatingPositionCacheConf {
     /// Angle in degrees.
     pub trim_steps: Vec<f64>,
     ///
-    /// TODO: clarify units.
+    /// Draught in meters
     pub draught_steps: Vec<f64>,
 }

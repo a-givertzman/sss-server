@@ -49,7 +49,7 @@ fn calculated_floating_position_cache() {
     test_duration.run().unwrap();
     let model_key = "/cube_1_1_1_centered";
     let model_path =
-        "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/cube_1_1_1.step";
+        "src/assets/cube_1_1_1.step";
     let target_path =
         "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/fpc_target";
     let result_path =
