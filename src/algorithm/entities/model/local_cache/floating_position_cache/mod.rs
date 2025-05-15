@@ -103,7 +103,7 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
     fn calculate(
         &self,
         exit: Arc<AtomicBool>,
-    ) -> Result<ServiceHandles<Result<(), Error>>, Error> {
+    ) -> Vec::<Error> {
         CalculatedFloatingPositionCache::new(
             &self.dbg,
             self.file_path.clone(),

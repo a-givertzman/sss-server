@@ -75,7 +75,7 @@ fn calculated_floating_position_cache() {
     let heel_steps = conf.heel_steps.clone();
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
-    let handlers = CalculatedFloatingPositionCache::new(
+    let errors = CalculatedFloatingPositionCache::new(
         &dbg,
         result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
@@ -87,23 +87,7 @@ fn calculated_floating_position_cache() {
         draught_steps,
         Arc::default(),
     )
-    .build()
-    .unwrap_or_else(|err| panic!("Failed creating *handlers*: {}", err));
-    let mut errors = vec![];
-    for (_, handler) in handlers {
-        match handler.join() {
-            Err(why) => {
-                let err_msg = format!("Failed preparing thread: {:?}", why);
-                errors.push(Error::new(&dbg, err_msg));
-            }
-            Ok(res) => {
-                if let Err(why) = res {
-                    let err_msg = format!("Failed executing thread: {:?}", why);
-                    errors.push(Error::new(&dbg, err_msg));
-                }
-            }
-        }
-    }
+    .build();
     assert!(errors.is_empty(), "*errors*: {:?}", errors);
     // read target file
     let mut target_reader = {
@@ -187,7 +171,7 @@ fn calculated_floating_position_sofia() {
     let heel_steps = conf.heel_steps.clone();
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
-    let handlers = CalculatedFloatingPositionCache::new(
+    let errors = CalculatedFloatingPositionCache::new(
         &dbg,
         result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
@@ -199,23 +183,7 @@ fn calculated_floating_position_sofia() {
         draught_steps,
         Arc::default(),
     )
-    .build()
-    .unwrap_or_else(|err| panic!("Failed creating *handlers*: {}", err));
-    let mut errors = vec![];
-    for (_, handler) in handlers {
-        match handler.join() {
-            Err(why) => {
-                let err_msg = format!("Failed preparing thread: {:?}", why);
-                errors.push(Error::new(&dbg, err_msg));
-            }
-            Ok(res) => {
-                if let Err(why) = res {
-                    let err_msg = format!("Failed executing thread: {:?}", why);
-                    errors.push(Error::new(&dbg, err_msg));
-                }
-            }
-        }
-    }
+    .build();
     assert!(errors.is_empty(), "*errors*: {:?}", errors);
     // clean up
     if let Err(why) = fs::remove_file(result_path) {
