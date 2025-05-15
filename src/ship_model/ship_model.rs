@@ -333,7 +333,7 @@ fn compute_balance(
         trim: floating_position.trim_angle,
         roll: floating_position.heel_angle,
         draught_mid: floating_position.draught_at_amidships,
-        bulk: ,
+        bulk: todo!(),
         liquid: todo!(),
         bounds_volume: todo!(),
         volume: floating_position.displacement_volume,
