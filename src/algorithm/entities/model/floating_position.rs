@@ -25,8 +25,8 @@ pub struct EvaluatedFloatingPosition {
 pub struct FloatingPosition<'cache, Attr> {
     dbg: Dbg,
     cache: &'cache dyn LocalCache,
-    centreline: Edge<Attr>,
-    middle: Face<Attr>,
+ //   centreline: Edge<Attr>,
+ //   middle: Face<Attr>,
     displacement: f64,
     disp_center: Vertex<Attr>,
 }
@@ -37,16 +37,16 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     pub(super) fn new(
         parent: &Dbg,
         cache: &'cache dyn LocalCache,
-        centreline: Edge<Attr>,
-        middle: Face<Attr>,
+  //      centreline: Edge<Attr>,
+   //     middle: Face<Attr>,
         displacement: f64,
         disp_center: Vertex<Attr>,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "FloatingPosition"),
             cache,
-            centreline,
-            middle,
+    //        centreline,
+    //        middle,
             displacement,
             disp_center,
         }
@@ -57,12 +57,12 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     /// # Panics
     /// Panic occurs if cached dataset is inconsistent. In particular, `disp_vol_center`,
     /// which read from the cache, _must be_ a point in 3-dimensional space.
-    pub fn eval(mut self) -> Result<EvaluatedFloatingPosition, Error>
+    pub fn eval(&self) -> Result<EvaluatedFloatingPosition, Error>
     where
         Attr: Clone,
     {
-        let error = Error::new(&self.dbg, "eval");
-        let init_keel = self.centreline.center().point();
+ //       let error = Error::new(&self.dbg, "eval");
+  //      let init_keel = self.centreline.center().point();
         let x = self.disp_center.point()[0];
         let y = self.disp_center.point()[1];
 

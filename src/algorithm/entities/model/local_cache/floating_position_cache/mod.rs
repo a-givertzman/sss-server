@@ -110,16 +110,31 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
                 return vec![Error::new(&self.dbg, "calculate").pass_with("waterline", err)];
             },
         };
+        let model_tree = self.model_tree.clone();
+        let model_tree = match model_tree.load() {
+            Ok(model_tree) => model_tree,
+            Err(err) => {
+                return vec![Error::new(&self.dbg, "calculate").pass_with("model_tree", err)];
+            },
+        };
         CalculatedFloatingPositionCache::new(
             &self.dbg,
             self.file_path.clone(),
-            self.model_tree
-                .iter()
-                .filter_map(|(shape_key, shape)| {
+            model_tree
+            .iter()
+            .map(|(shape_key, shape)|
+                shape
+            )
+            .cloned()
+            .collect(),
+       /* TODO зачем этот фильтр?
+            .iter()
+               .filter_map(|(shape_key, shape)| {
                     self.model_keys.contains(shape_key).then_some(shape)
                 })
-                .cloned()
+               .cloned()
                 .collect(),
+    */ 
             waterline,
             self.heel_steps.clone(),
             self.trim_steps.clone(),

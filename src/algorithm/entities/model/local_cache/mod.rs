@@ -7,7 +7,7 @@
 //! - reload the stored dataset for the current cache,
 //! - calculate and get rows for given approximated values.
 //
-pub(super) mod cache_key;
+pub mod cache_key;
 pub mod floating_position_cache;
 use std::sync::{atomic::AtomicBool, Arc};
 use sal_core::error::Error;

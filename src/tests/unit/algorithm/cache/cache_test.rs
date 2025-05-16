@@ -46,7 +46,7 @@ fn init_cache_table_from_file() {
     ];
     let path = "src/tests/unit/algorithm/cache/assets/table-ok";
     let cache = Cache::new(&dbg, path);
-    cache.init();
+    let _ = cache.init();
     for (step, (vals, target)) in test_data.into_iter().enumerate() {
         let result = cache.get(&vals);
         println!(

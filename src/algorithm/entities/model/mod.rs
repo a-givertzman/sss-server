@@ -225,8 +225,8 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
                     )
                 })
                 .as_ref(),
-            self.centreline(),
-            self.middle(),
+     //       self.centreline(),
+     //       self.middle(),
             displacement,
             Vertex::new(displacement_center),
         )

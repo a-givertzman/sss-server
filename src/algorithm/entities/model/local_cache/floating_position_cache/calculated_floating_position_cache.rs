@@ -80,7 +80,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                 err.to_string(),
             )
         });
-        let out_f = match &mut binding {
+        let mut out_f = match &mut binding {
             Ok(file) => file, 
             Err(err) => {
                 return vec![error.pass_with(format!("File::create, path: {:?}", self.file_path), err.to_string())];
@@ -135,11 +135,13 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                 })
                                 .try_fold((0.0, None), |(mut volume, mut mb_volume_center, ), build| {
                                     build.map(|volumed| {
+                                     //   dbg!("try_fold volumed", volumed.solids().len());
                                         volumed.solids().into_iter().for_each(|elmnt| {
                                             let [.., elmnt_z] = elmnt.center().point();
                                             let [.., waterline_z] = w_obj.center().point();
                                             // Only calculate volume if volumed element is below waterline.
                                             // Put 0.0 if it's not for consistent.
+                                            dbg!("try_fold volumed", elmnt_z, waterline_z);
                                             if elmnt_z < waterline_z {
                                                 volume += elmnt.volume();
                                                 match mb_volume_center.as_mut() {
@@ -182,23 +184,21 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         None => {
                             if volume > 0.0 {
                                 Err(format!(
-                                    "{} | Triple [{}, {}, {}] gives no solids, but the volume={}.",
-                                    &self.dbg, heel, trim, draught, volume
+                                    "{} | no mb_volume_center, volume > 0.0, res={:?}.",
+                                    &self.dbg, res
                                 )
                                 .into())
                             } else {
                                 log::warn!(
-                                    "{} | Triple [{}, {}, {}] gives no solids under the waterline.",
+                                    "{} | no solids, volume <= 0.0, res={:?}.",
                                     &self.dbg,
-                                    heel,
-                                    trim,
-                                    draught
+                                    res
                                 );
                                 Ok(())
                             }
                         }
                         Some([x, y, z]) => writeln!(
-                            out_f,
+                            &mut out_f,
                             "{} {} {} {} {} {} {}",
                             heel, trim, draught, volume, x, y, z
                         )

@@ -40,23 +40,20 @@ impl<A> ModelTree<A> {
     /// Internally it reads `self.path` and converts the result to the target representation.
     pub(super) fn load(self) -> Result<Self, Error> {
         let error = Error::new(&self.dbg, "load");
-        sal_3dlib::fs::Reader::read_step(&self.path)
+        let elements = sal_3dlib::fs::Reader::read_step(&self.path)
             .map_err(|why| {
                 error.err(format!(
                     "Failed reading model_path='{}': {}",
                     self.path.display(),
                     why
                 ))
-            })
-            .and_then(|reader| {
-                reader
-                    .into_vec::<A>()
-                    .map_err(|why| error.err(format!("Failed reading model tree: {:?}", why)))
-            })
-            .map(|elmnts| Self {
-                elements: elmnts.into_iter().collect(),
-                ..self
-            })
+            })?
+            .into_vec::<A>()
+            .map_err(|why| error.err(format!("Failed reading model tree: {:?}", why)))?;
+        Ok(Self {
+            elements: elements.into_iter().collect(),
+            ..self
+        })
     }
     ///
     /// Return an iterator over the key-value pairs of the map, in their order.

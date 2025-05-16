@@ -16,14 +16,50 @@ use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
 use kernel::{eval::Eval, run::Run};
 use prelude::*;
-use sal_core::dbg::Dbg;
+use sal_core::{error::Error, dbg::Dbg};
 use sal_sync::thread_pool::ThreadPool;
-use ship_model::ship_model::ShipModel;
+//use ship_model::ship_model::ShipModel;
 
+use crate::model::local_cache::cache_key::CacheKey;
+use std::path::PathBuf;
+use crate::algorithm::entities::model::ShipModel;
+use crate::algorithm::entities::model;
+use crate::algorithm::entities::model::local_cache::floating_position_cache::floating_position_cache_conf;
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
+
+    let dbg = Dbg::new("ShipModel", "compute_balance");
+    let error = Error::new(&dbg, "compute_balance");
+    let model_key = "/Sofiya_4work";
+    let model_path = "src/assets/sofia.stp";
+
+   // let reader = sal_3dlib::fs::Reader::read_step(&model_path).unwrap();
+   // dbg!(reader.into_vec::<()>().unwrap().len());
+
+    let cache_dir = "src/assets/cache/";
+    let waterline_position = [59.837, -0.44, 7.81];
+    let mut model: model::ShipModel<()> = model::ShipModel::new(
+        &dbg, 
+        model::ship_model_conf::ShipModelConf {
+            model_path: PathBuf::from(model_path),
+            cache_dir: PathBuf::from(cache_dir),
+            floating_position_cache_conf: model::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf {
+                waterline_position,
+                heel_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
+                trim_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
+                draught_steps: vec![2., 3., 4., 5., 6., 7., 8.,],//vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         
+            },
+        }
+    );
+    let _ = model.update_caches(&[&CacheKey::FloatingPostion]);
+    let floating_position = model.floating_position(
+        1000.,
+        waterline_position,
+    ).eval().map_err(|err| error.pass_with("floating_position", err))?;
+
+ /*    
     let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
     let path = "config.yaml";
@@ -176,5 +212,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .eval(());
     ship_model.exit();
     ship_model_handle.join().unwrap();
+    */
     Ok(())
 }
