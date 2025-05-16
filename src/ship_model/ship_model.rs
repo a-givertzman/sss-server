@@ -326,7 +326,6 @@ fn compute_balance(
     let floating_position = model.floating_position(
         src_data.mass_sum/src_data.water_density,
         src_data.mass_shift.values(),
-        0.1,
     ).eval().map_err(|err| error.pass_with("floating_position", err))?;
 
     let result = BalanceCtx {
@@ -336,11 +335,11 @@ fn compute_balance(
         bulk: todo!(),
         liquid: todo!(),
         bounds_volume: todo!(),
-        volume: floating_position.displacement_volume,
+        volume: floating_position.displacement,
         area_wl: todo!(),
         length_wl: todo!(),
         breadth_wl: todo!(),
-        volume_shift_z: floating_position.displacement_volume_center[2],
+        volume_shift_z: floating_position.disp_center[2],
         entry_angle: todo!(),
         flooding_angle: todo!(),
         bow_area: todo!(),
