@@ -212,7 +212,6 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
         &self,
         displacement: f64,
         displacement_center: [f64; 3],
-        accuracy: f64,
     ) -> FloatingPosition<A> {
         //
         FloatingPosition::new(
@@ -230,7 +229,6 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
             self.middle(),
             displacement,
             Vertex::new(displacement_center),
-            accuracy,
         )
     }
     ///
