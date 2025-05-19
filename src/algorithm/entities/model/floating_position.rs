@@ -62,10 +62,9 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
         Attr: Clone,
     {
  //       let error = Error::new(&self.dbg, "eval");
-  //      let init_keel = self.centreline.center().point();
-        let x = self.disp_center.point()[0];
+        let x = self.disp_center.point()[0]; //convert meters to mm
         let y = self.disp_center.point()[1];
-
+        let displacement = self.displacement;
         // Prepare values (key) to extract data from `self.cache`.
         // Note that 3rd parameter sets to None (as well as 5th and the rest).
         // This means we expect to get their approximated values from the cache.
@@ -109,11 +108,12 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
                 &self.dbg, approx_vals
             ))
             .map(|row| (row[0], row[1], row[2], row[6]))?;
+
         return Ok(EvaluatedFloatingPosition {
             heel_angle: heel,
             trim_angle: trim,
-            draught_at_amidships: draught,
-            displacement: self.displacement,
+            draught_at_amidships: draught, 
+            displacement: displacement,
             disp_center: [x, y, z],
         });
     }

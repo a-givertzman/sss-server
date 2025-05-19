@@ -24,7 +24,7 @@ use std::{
 pub struct FloatingPositionCache<A> {
     dbg: Dbg,
     file_path: PathBuf,
-    model_keys: Vec<String>,
+    //    model_keys: Vec<String>,
     waterline_position: [f64; 3],
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
@@ -53,13 +53,21 @@ impl<A> FloatingPositionCache<A> {
     ) -> Self {
         let dbg = Dbg::new(parent, "FloatingPositionCache");
         let file_path = path.as_ref().join(Self::KEY);
+        let waterline_position = conf
+            .waterline_position
+            .try_into()
+            .unwrap();
+        let draught_steps = conf
+            .draught_steps
+            .try_into()
+            .unwrap();
         Self {
             model_tree,
-            model_keys: vec![],
+            //         model_keys: vec![],
             heel_steps: conf.heel_steps,
-            waterline_position: conf.waterline_position,
+            waterline_position,
             trim_steps: conf.trim_steps,
-            draught_steps: conf.draught_steps,
+            draught_steps,
             cache: Cache::new(&dbg, &file_path),
             file_path,
             dbg,
@@ -72,10 +80,11 @@ impl<A> FloatingPositionCache<A> {
     fn create_waterline<T>(&self) -> Result<Face<T>, Error> {
         let error = Error::new(&self.dbg, "create_waterline");
         let [x, y, z] = self.waterline_position;
+        let (x, y, z) = (x*1000., y*1000., z*1000.); // m to mm
         // dynamic range could be built based on bounding box of target element behind self.model_keys,
         // but now reserve big enough offsets, which should work with most elements
-        let dx = 1000.0;
-        let dy = 1000.0;
+        let dx = 1000000.0;  
+        let dy = 1000000.0;
         //
         match Wire::polygon(
             [
@@ -86,12 +95,11 @@ impl<A> FloatingPositionCache<A> {
             ],
             true,
         ) {
-            Ok(ref polygon) => Face::try_from(polygon).map_err(|why| {
-                error.pass_with("Failed creating Face from *polygon*:", why)
-            }),
-            Err(why) => Err(
-                error.pass_with("Failed creating *polygon* from Wire", why.to_string())
-            ),
+            Ok(ref polygon) => Face::try_from(polygon)
+                .map_err(|why| error.pass_with("Failed creating Face from *polygon*:", why)),
+            Err(why) => {
+                Err(error.pass_with("Failed creating *polygon* from Wire", why.to_string()))
+            }
         }
     }
 }
@@ -100,41 +108,32 @@ impl<A> FloatingPositionCache<A> {
 impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
     ///
     /// See [CalculatedFloatingPositionCache] for details.
-    fn calculate(
-        &self,
-        exit: Arc<AtomicBool>,
-    ) -> Vec::<Error> {
+    fn calculate(&self, exit: Arc<AtomicBool>) -> Vec<Error> {
         let waterline = match self.create_waterline() {
             Ok(waterline) => waterline,
             Err(err) => {
                 return vec![Error::new(&self.dbg, "calculate").pass_with("waterline", err)];
-            },
+            }
         };
         let model_tree = self.model_tree.clone();
         let model_tree = match model_tree.load() {
             Ok(model_tree) => model_tree,
             Err(err) => {
                 return vec![Error::new(&self.dbg, "calculate").pass_with("model_tree", err)];
-            },
+            }
         };
         CalculatedFloatingPositionCache::new(
             &self.dbg,
             self.file_path.clone(),
-            model_tree
-            .iter()
-            .map(|(shape_key, shape)|
-                shape
-            )
-            .cloned()
-            .collect(),
-       /* TODO зачем этот фильтр?
-            .iter()
-               .filter_map(|(shape_key, shape)| {
-                    self.model_keys.contains(shape_key).then_some(shape)
-                })
-               .cloned()
-                .collect(),
-    */ 
+            model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
+            /* TODO зачем этот фильтр?
+                    .iter()
+                       .filter_map(|(shape_key, shape)| {
+                            self.model_keys.contains(shape_key).then_some(shape)
+                        })
+                       .cloned()
+                        .collect(),
+            */
             waterline,
             self.heel_steps.clone(),
             self.trim_steps.clone(),

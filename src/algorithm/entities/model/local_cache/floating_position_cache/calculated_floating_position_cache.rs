@@ -89,6 +89,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let mut spawn_errors = Vec::new();
         for &draught in &self.draught_steps {
+            let draught = draught*1000.;
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
@@ -117,7 +118,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                     obj = obj.rotate(origin, loc_y, trim.to_radians());
                                 }
                                 if 0.0 != draught {
-                                    obj = obj.translate(Vector::new(0.0, 0.0, -draught));
+                                    obj = obj.translate(Vector::new(0.0, 0.0, draught));
                                 }
                                 obj
                             };
@@ -141,8 +142,9 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                             let [.., waterline_z] = w_obj.center().point();
                                             // Only calculate volume if volumed element is below waterline.
                                             // Put 0.0 if it's not for consistent.
-                                            dbg!("try_fold volumed", elmnt_z, waterline_z);
+                                            dbg!("try_fold volumed", elmnt_z, waterline_z, elmnt.volume(), mb_volume_center);
                                             if elmnt_z < waterline_z {
+                                                dbg!("try_fold volumed elmnt_z < waterline_z ", elmnt_z, waterline_z, elmnt.volume(), mb_volume_center);
                                                 volume += elmnt.volume();
                                                 match mb_volume_center.as_mut() {
                                                     None => mb_volume_center = Some(elmnt.center().point()),
@@ -158,7 +160,13 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                         (volume, mb_volume_center)
                                     })
                                 })
-                                .map(|(volume, mb_volume_center)|  (volume, mb_volume_center, heel, trim, draught))
+                                .map(|(volume, mb_volume_center)|  {
+                                    let volume = volume/1000000000.; //mm^3 to m^3
+                                    let mb_volume_center = mb_volume_center
+                                        .map(|[x, y, z]| [x/1000., y/1000., z/1000.]);
+                                    let draught = draught/1000.;
+                                    (volume, mb_volume_center, heel, trim, draught)
+                                })
                         })
                         .map_err(|err| {
                             error.pass_with(
