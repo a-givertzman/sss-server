@@ -104,7 +104,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                         .spawn(move || {
                             // make a clone of origin waterline and transform it
                             // according to heel, trim, and draught values
-                            let w_obj = &{
+                            let obj = &{
                                 let origin = obj.center();
                                 let mut loc_y = Vector::unit_y();
                                 if 0.0 != heel {
@@ -129,43 +129,72 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
                                     // applied to waterline and each target element
                                     // (taking into account its shape type)
                                     Some(match elmnt {
-                                        Shape::Shell(elmnt) => Compound::build([w_obj], [elmnt], []),
-                                        Shape::Solid(elmnt) => Compound::build([w_obj], [], [elmnt]),
+                                        Shape::Shell(elmnt) => {
+                           //                 dbg!("elmnt ", elmnt.center().point());
+                                            Compound::build([obj], [elmnt], [])
+                                        },
+                                        Shape::Solid(elmnt) => {
+                            //                dbg!("elmnt ", elmnt.center().point());
+                                            Compound::build([obj], [], [elmnt])
+                                        },
                                         _ => return None,
                                     })
                                 })
-                                .try_fold((0.0, None), |(mut volume, mut mb_volume_center, ), build| {
+                                .try_fold((0.0, None), |(mut volume, mut volume_moment, ), build| {
                                     build.map(|volumed| {
-                                     //   dbg!("try_fold volumed", volumed.solids().len());
-                                        volumed.solids().into_iter().for_each(|elmnt| {
+                                        let solids: Vec<_> = volumed.solids().into_iter().collect();
+                                     //   let text = format!("try_fold build draught:{} solids:{}", draught, solids.len());  
+                                     //   dbg!(text);   
+
+                                        solids.iter().for_each(|elmnt| {
                                             let [.., elmnt_z] = elmnt.center().point();
-                                            let [.., waterline_z] = w_obj.center().point();
+                                            let [.., waterline_z] = obj.center().point();
                                             // Only calculate volume if volumed element is below waterline.
                                             // Put 0.0 if it's not for consistent.
-                                            dbg!("try_fold volumed", elmnt_z, waterline_z, elmnt.volume(), mb_volume_center);
-                                            if elmnt_z < waterline_z {
-                                                dbg!("try_fold volumed elmnt_z < waterline_z ", elmnt_z, waterline_z, elmnt.volume(), mb_volume_center);
-                                                volume += elmnt.volume();
-                                                match mb_volume_center.as_mut() {
-                                                    None => mb_volume_center = Some(elmnt.center().point()),
-                                                    Some(center) => {
-                                                        let [e_x, e_y, e_z] = elmnt.center().point();
-                                                        center[0] += e_x;
-                                                        center[1] += e_y;
-                                                        center[2] += e_z;
-                                                    }
-                                                }
+                                       //     dbg!("try_fold volumed", elmnt_z, waterline_z);
+                                       //     let text = format!("try_fold volumed draught:{} elmnt_z:{} waterline_z:{}", draught, elmnt_z, waterline_z);  
+                                       //     dbg!(text);   
+                                            if elmnt_z < waterline_z { 
+                                    //            let text = format!("try_fold volumed elmnt_z:{} < waterline_z elmnt_z:{}", elmnt_z, waterline_z);  
+                                     //           dbg!(text);                                             
+                                           /*     match Compound::build([obj], [], [elmnt]) {
+                                                    Ok(volumed) => {
+                                                        volumed.solids().into_iter().for_each(|elmnt| {*/
+                                                            let current_volume = elmnt.volume();
+                                                            let [e_x, e_y, e_z] = elmnt.center().point();
+                                                            let current_moment = [e_x*current_volume, e_y*current_volume, e_z*current_volume];
+                                                            volume += current_volume;
+                                                            match volume_moment.as_mut() {
+                                                                None => volume_moment = Some(current_moment),
+                                                                Some(volume_moment) => {
+                                                                    volume_moment[0] += current_moment[0];
+                                                                    volume_moment[1] += current_moment[1];
+                                                                    volume_moment[2] += current_moment[2];
+                                                                }
+                                                            }
+                                                            let text = format!("volumed current_volume:{} center:{:?}", current_volume, elmnt.center().point());
+                                                            dbg!(text);
+                                                /*        });
+                                                    },
+                                                    Err(err) => {
+                                                        log::error!("CalculatedFloatingPositionCache task: Compound::build volume error: {err}");
+                                                    },
+                                                }*/
                                             }
                                         });
-                                        (volume, mb_volume_center)
+                                  //      let text = format!("build.map volume:{} volume_moment:{:?}", volume, volume_moment);
+                                  //      dbg!(text);
+                                        (volume, volume_moment)
                                     })
                                 })
-                                .map(|(volume, mb_volume_center)|  {
+                                .map(|(volume, volume_moment)|  {
+                                    let volume_center = volume_moment
+                                        .map(|[x, y, z]| [x/(volume*1000.), y/(volume*1000.), z/(volume*1000.)]);
                                     let volume = volume/1000000000.; //mm^3 to m^3
-                                    let mb_volume_center = mb_volume_center
-                                        .map(|[x, y, z]| [x/1000., y/1000., z/1000.]);
-                                    let draught = draught/1000.;
-                                    (volume, mb_volume_center, heel, trim, draught)
+                                    let draught = draught/1000.; // mm to m
+                               //     let text = format!("map, volume:{volume}, volume_center:{:?}, heel:{heel}, trim:{trim}, draught:{draught}", volume_center);
+                               //     dbg!(text);
+                                    (volume, volume_center, heel, trim, draught)
                                 })
                         })
                         .map_err(|err| {
