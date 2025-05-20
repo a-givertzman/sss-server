@@ -20,11 +20,10 @@ use sal_core::{error::Error, dbg::Dbg};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
 
-use crate::model::local_cache::cache_key::CacheKey;
+use crate::model::local_cache::CacheKey;
 use std::path::PathBuf;
 use crate::algorithm::entities::model::ShipModel;
 use crate::algorithm::entities::model;
-use crate::algorithm::entities::model::local_cache::floating_position_cache::floating_position_cache_conf;
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,18 +40,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir = "src/assets/cache/";
     let center_coord = [65.22, 0., 0.];
     let center_mass = [59.837, -0.44, 7.81];
+
+    let thread_pool = ThreadPool::new(&dbg, Some(12));
     let mut model: model::ShipModel<()> = model::ShipModel::new(
         &dbg, 
         model::ship_model_conf::ShipModelConf {
             model_path: PathBuf::from(model_path),
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf {
+            floating_position_cache_conf: model::local_cache::FloatingPositionCacheConf {
                 waterline_position: center_coord,
                 heel_steps: vec![0.],//vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
                 trim_steps: vec![0.],//vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
                 draught_steps: vec![4.],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         
             },
-        }
+        },
+        thread_pool.scheduler(),
     );
     let _ = model.update_caches(&[&CacheKey::FloatingPostion]);
     let floating_position = model.floating_position(

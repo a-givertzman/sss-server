@@ -1,7 +1,8 @@
+use crate::algorithm::entities::model::local_cache::floating_position_cache::calculated_floating_position_cache::CalculatedFloatingPositionCache;
 #[cfg(test)]
 use crate::algorithm::entities::model::{
     local_cache::floating_position_cache::{
-        floating_position_cache_conf::FloatingPositionCacheConf, CalculatedFloatingPositionCache,
+        floating_position_cache_conf::FloatingPositionCacheConf,
         FloatingPositionCache,
     },
     ModelTree,
@@ -9,6 +10,7 @@ use crate::algorithm::entities::model::{
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_3dlib::{props::Center, topology::shape::Shape};
 use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::thread_pool::ThreadPool;
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Read},
@@ -47,6 +49,7 @@ fn calculated_floating_position_sofia() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
+    let thread_pool = ThreadPool::new(&dbg, Some(12));
     let model_path = "src/assets/sofia.stp";
     let result_path = "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/sofia_result";
     // create model tree with empty attribute for each model
@@ -71,12 +74,13 @@ fn calculated_floating_position_sofia() {
         &dbg,
         result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        FloatingPositionCache::new(&dbg, model_tree, result_path, conf)
+        FloatingPositionCache::new(&dbg, model_tree, result_path, conf, thread_pool.scheduler())
             .create_waterline()
             .unwrap_or_else(|err| panic!("Failed creating *waterline*: {}", err)),
         heel_steps,
         trim_steps,
         draught_steps,
+        thread_pool.scheduler(),
         Arc::default(),
     )
     .build();

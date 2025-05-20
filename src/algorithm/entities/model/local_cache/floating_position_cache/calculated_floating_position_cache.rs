@@ -10,7 +10,7 @@ use sal_3dlib::{
 };
 use std::thread::JoinHandle;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::service::ServiceHandles;
+use sal_sync::{services::service::ServiceHandles, thread_pool::Scheduler};
 use std::{
     fs::File,
     io::Write,
@@ -33,10 +33,7 @@ pub(super) struct CalculatedFloatingPositionCache<A> {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
-    ///
-    /// Used to stop started worker thread.
-    ///
-    /// See [CalculatedFloatingPositionCache::calculate] for details.
+    scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
 //
@@ -53,6 +50,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
+        scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
@@ -63,6 +61,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
             heel_steps,
             trim_steps,
             draught_steps,
+            scheduler,
             exit,
         }
     }
@@ -72,7 +71,7 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
     where
         A: Send + 'static,
     {
-        log::info!("{} | Starting build", &self.dbg);
+        log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut binding = File::create(&self.file_path).map_err(|err| {
             error.pass_with(
@@ -88,15 +87,14 @@ impl<A: Clone> CalculatedFloatingPositionCache<A> {
         };
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let mut spawn_errors = Vec::new();
-        for &draught in &self.draught_steps {
+        'draught: for &draught in &self.draught_steps {
             let draught = draught*1000.;
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
                     // Note that in this case the file may be partially filled.
                     if self.exit.load(Ordering::SeqCst) {
-                        log::warn!("{} | Interrupted: `exit` has got true", &self.dbg);
-                        return Vec::<Error>::new();
+                        break 'draught;
                     }
                     let mut obj = self.waterline.clone();
                     let elements = self.elements.clone();

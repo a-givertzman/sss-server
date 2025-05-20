@@ -1,4 +1,4 @@
-use super::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf;
+use super::local_cache::FloatingPositionCacheConf;
 use std::path::PathBuf;
 ///
 /// [super::ShipModel] configuration.

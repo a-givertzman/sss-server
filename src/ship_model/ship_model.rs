@@ -135,6 +135,7 @@ impl ShipModel {
                 Query::ComputeBalance(balance_src_data) => {
                     let bounds = bounds.clone();
                     let exit = exit.clone();
+                    let scheduler_ = scheduler.clone();
                     if let Err(err) = scheduler.spawn(move || {
                         let result = compute_balance(
                             model_key,
@@ -143,6 +144,7 @@ impl ShipModel {
                             bounds.clone(),
                             balance_src_data,
                             ship_id,
+                            scheduler_.clone(),
                             exit,
                         );
                         if let Err(err) = send.send(Reply::ComputeBalance(result)) {
@@ -306,6 +308,7 @@ fn compute_balance(
     bounds: Bounds,
     src_data: BalanceQuery,
     ship_id: usize,
+    scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 ) -> Result<BalanceCtx, Error> {
     let dbg = Dbg::new("ShipModel", "compute_balance");
@@ -315,13 +318,14 @@ fn compute_balance(
         model::ship_model_conf::ShipModelConf {
             model_path: PathBuf::from(model_path),
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::local_cache::floating_position_cache::floating_position_cache_conf::FloatingPositionCacheConf {
+            floating_position_cache_conf: model::local_cache::FloatingPositionCacheConf {
                 waterline_position: [0., 0., 0.],
                 heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
                 trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
                 draught_steps: vec![0.0, 0.25],
             },
-        }
+        },
+        scheduler.clone(),
     );
     let floating_position = model.floating_position(
         src_data.mass_sum/src_data.water_density,

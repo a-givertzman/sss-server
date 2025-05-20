@@ -1,4 +1,3 @@
-use super::local_cache::LocalCache;
 use sal_3dlib::{
     gmath::{point::Point, vector::Vector},
     ops::boolean::{Intersect, OpConf},
@@ -11,6 +10,7 @@ use sal_3dlib::{
     },
 };
 use sal_core::{dbg::Dbg, error::Error};
+use super::local_cache::LocalCache;
 //
 //
 pub struct EvaluatedFloatingPosition {

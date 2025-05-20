@@ -7,29 +7,10 @@
 //! - reload the stored dataset for the current cache,
 //! - calculate and get rows for given approximated values.
 //
-pub mod cache_key;
-pub mod floating_position_cache;
-use std::sync::{atomic::AtomicBool, Arc};
-use sal_core::error::Error;
-use sal_sync::services::service::ServiceHandles;
-///
-/// A common trait for caches, which work with file systems.
-pub(super) trait LocalCache {
-    ///
-    /// Builds and stores the cache dataset.
-    ///
-    /// This method spawns a worker thread internally and returns its handler.
-    /// Setting `exit` to _true_ at the caller side stops the worker.
-    fn calculate(
-        &self,
-        exit: Arc<AtomicBool>,
-    ) -> Vec<Error>;
-    ///
-    /// Returns approximated values based on given set.
-    fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>>;
-    ///
-    /// Reloads caches.
-    ///
-    /// Typicaly, calling of this method should follow a call of [LocalCache::calculate].
-    fn reload(&mut self);
-}
+mod cache_key;
+mod floating_position_cache;
+mod local_cache;
+
+pub(crate) use cache_key::*;
+pub(crate) use floating_position_cache::*;
+pub(crate) use local_cache::*;

@@ -11,7 +11,7 @@ use floating_position::FloatingPosition;
 use indexmap::{IndexMap, IndexSet};
 use sal_core::{dbg::Dbg, error::Error};
 use local_cache::{
-    CacheKey, FloatingPositionCache, LocalCache,
+    cache_key::CacheKey, floating_position_cache::FloatingPositionCache, LocalCache,
 };
 use model_tree::ModelTree;
 use relative_position::RelativePostion;
@@ -55,7 +55,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
             dbg: dbg.clone(),
             caches: IndexMap::new(),
             model_tree: model_tree.clone(),
-            scheduler: scheduler.clone(),
+            scheduler,
         };
         ship_model.caches.insert(
             CacheKey::FloatingPostion,
