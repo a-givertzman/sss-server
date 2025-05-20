@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let error = Error::new(&dbg, "compute_balance");
     let model_key = "/Sofiya_4work";
-    let model_path = "src/assets/sofia.stp";
+    let model_path = "src/assets/sofia2.stp";
 
    // let reader = sal_3dlib::fs::Reader::read_step(&model_path).unwrap();
    // dbg!(reader.into_vec::<()>().unwrap().len());
