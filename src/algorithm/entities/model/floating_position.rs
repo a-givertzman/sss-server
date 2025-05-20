@@ -10,7 +10,9 @@ use sal_3dlib::{
     },
 };
 use sal_core::{dbg::Dbg, error::Error};
-use super::local_cache::LocalCache;
+use crate::algorithm::entities::Position2d;
+
+use super::{local_cache::LocalCache};
 //
 //
 pub struct EvaluatedFloatingPosition {
@@ -22,25 +24,25 @@ pub struct EvaluatedFloatingPosition {
 }
 //
 //
-pub struct FloatingPosition<'cache, Attr> {
+pub struct FloatingPosition<'cache> {
     dbg: Dbg,
     cache: &'cache dyn LocalCache,
  //   centreline: Edge<Attr>,
  //   middle: Face<Attr>,
     displacement: f64,
-    disp_center: Vertex<Attr>,
+    mass_center: Position2d,
 }
 //
 //
 #[allow(clippy::too_many_arguments)]
-impl<'cache, Attr> FloatingPosition<'cache, Attr> {
+impl<'cache> FloatingPosition<'cache> {
     pub(super) fn new(
         parent: &Dbg,
         cache: &'cache dyn LocalCache,
   //      centreline: Edge<Attr>,
    //     middle: Face<Attr>,
         displacement: f64,
-        disp_center: Vertex<Attr>,
+        mass_center: Position2d,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "FloatingPosition"),
@@ -48,7 +50,7 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     //        centreline,
     //        middle,
             displacement,
-            disp_center,
+            mass_center,
         }
     }
     ///
@@ -57,13 +59,10 @@ impl<'cache, Attr> FloatingPosition<'cache, Attr> {
     /// # Panics
     /// Panic occurs if cached dataset is inconsistent. In particular, `disp_vol_center`,
     /// which read from the cache, _must be_ a point in 3-dimensional space.
-    pub fn eval(&self) -> Result<EvaluatedFloatingPosition, Error>
-    where
-        Attr: Clone,
-    {
+    pub fn eval(&self) -> Result<EvaluatedFloatingPosition, Error> {
  //       let error = Error::new(&self.dbg, "eval");
-        let x = self.disp_center.point()[0]; //convert meters to mm
-        let y = self.disp_center.point()[1];
+        let x = self.mass_center.x(); //convert meters to mm
+        let y = self.mass_center.y();
         let displacement = self.displacement;
         // Prepare values (key) to extract data from `self.cache`.
         // Note that 3rd parameter sets to None (as well as 5th and the rest).

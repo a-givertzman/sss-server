@@ -1,4 +1,4 @@
-use crate::algorithm::entities::{cache::Cache, model::{local_cache::LocalCache, ModelTree}};
+use crate::{algorithm::entities::{cache::Cache, model::{local_cache::LocalCache, ModelTree}}, kernel::types::RwLock};
 use sal_3dlib::topology::shape::{
     face::Face,
     vertex::Vertex,
@@ -8,17 +8,17 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
 };
 
-use super::{calculated_floating_position_cache::CalculatedFloatingPositionCache, FloatingPositionCacheConf};
+use super::{build_floating_position_cache::BuildFloatingPositionCache, FloatingPositionCacheConf};
 ///
 /// Pre-calculated cache for floating position algorithm.
 ///
 /// See [FloatingPositionCacheConf] for more details about the fields.
-pub struct FloatingPositionCache<A> {
+pub struct FloatingPositionCache {
     dbg: Dbg,
-    file_path: PathBuf,
+    path: PathBuf,
     //    model_keys: Vec<String>,
     waterline_position: [f64; 3],
     heel_steps: Vec<f64>,
@@ -26,15 +26,16 @@ pub struct FloatingPositionCache<A> {
     draught_steps: Vec<f64>,
     ///
     /// Model representation used for cache calculation.
-    model_tree: ModelTree<A>,
+    model_tree: ModelTree,
     ///
     /// Cache read from `self.file_path`.
-    cache: Cache<f64>,
+    cache: Arc<RwLock<Cache<f64>>>,
     scheduler: Scheduler,
+    exit: Arc<AtomicBool>,
 }
 //
 //
-impl<A> FloatingPositionCache<A> {
+impl FloatingPositionCache {
     //
     //
     const KEY: &'static str = "floating_position_cache";
@@ -43,32 +44,25 @@ impl<A> FloatingPositionCache<A> {
     /// - path - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        model_tree: ModelTree<A>,
+        model_tree: ModelTree,
         path: impl AsRef<Path>,
         conf: FloatingPositionCacheConf,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "FloatingPositionCache");
-        let file_path = path.as_ref().join(Self::KEY);
-        let waterline_position = conf
-            .waterline_position
-            .try_into()
-            .unwrap();
-        let draught_steps = conf
-            .draught_steps
-            .try_into()
-            .unwrap();
+        let path = path.as_ref().join(Self::KEY);
         Self {
             model_tree,
             //         model_keys: vec![],
             heel_steps: conf.heel_steps,
-            waterline_position,
+            waterline_position: conf.waterline_position,
             trim_steps: conf.trim_steps,
-            draught_steps,
-            cache: Cache::new(&dbg, &file_path),
-            file_path,
+            draught_steps: conf.draught_steps,
+            cache: Arc::new(RwLock::new(Cache::new(&dbg, &path))),
+            path,
             dbg,
             scheduler,
+            exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
@@ -100,13 +94,9 @@ impl<A> FloatingPositionCache<A> {
             }
         }
     }
-}
-//
-//
-impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
     ///
-    /// See [CalculatedFloatingPositionCache] for details.
-    fn calculate(&self, exit: Arc<AtomicBool>) -> Vec<Error> {
+    /// See [BuildFloatingPositionCache] for details.
+    fn calculate(&self) -> Vec<Error> {
         let waterline = match self.create_waterline() {
             Ok(waterline) => waterline,
             Err(err) => {
@@ -120,9 +110,9 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
                 return vec![Error::new(&self.dbg, "calculate").pass_with("model_tree", err)];
             }
         };
-        CalculatedFloatingPositionCache::new(
+        BuildFloatingPositionCache::new(
             &self.dbg,
-            self.file_path.clone(),
+            self.path.clone(),
             model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
             /* TODO зачем этот фильтр?
                     .iter()
@@ -137,18 +127,34 @@ impl<A: Clone + Send + 'static> LocalCache for FloatingPositionCache<A> {
             self.trim_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),
-            exit,
+            self.exit.clone(),
         )
         .build()
     }
+}
+//
+//
+impl LocalCache for FloatingPositionCache {
     ///
     /// See [Cache::get] for details.
     fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
-        self.cache.get(approx_vals)
+        self.cache.read().get(approx_vals)
     }
     //
     //
-    fn reload(&mut self) {
-        self.cache = Cache::new(&self.dbg, &self.file_path);
+    fn rebuild(&self) -> Result<(), Error> {
+        self.exit.store(false, Ordering::SeqCst);
+        match self.calculate().first() {
+            Some(err) => Err(Error::new(&self.dbg, "rebuild").pass(err.to_owned())),
+            None => {
+                *self.cache.write() = Cache::new(&self.dbg, &self.path);
+                Ok(())
+            }
+        }
+    }
+    //
+    //
+    fn exit(&self) {
+        self.exit.store(true, Ordering::SeqCst)
     }
 }

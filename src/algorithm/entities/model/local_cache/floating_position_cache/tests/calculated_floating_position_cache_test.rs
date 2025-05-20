@@ -1,4 +1,4 @@
-use crate::algorithm::entities::model::local_cache::floating_position_cache::calculated_floating_position_cache::CalculatedFloatingPositionCache;
+use crate::algorithm::entities::model::local_cache::floating_position_cache::build_floating_position_cache::BuildFloatingPositionCache;
 #[cfg(test)]
 use crate::algorithm::entities::model::{
     local_cache::floating_position_cache::{
@@ -58,7 +58,7 @@ fn calculated_floating_position_cache() {
     let result_path =
         "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/fpc_result";
     // create model tree with empty attribute for each model
-    let model_tree = ModelTree::<()>::new(&dbg, model_path)
+    let model_tree = ModelTree::new(&dbg, model_path)
         .load()
         .unwrap_or_else(|err| panic!("Failing building *model_tree*: {}", err));
     // set waterline init position to target model center
@@ -78,7 +78,7 @@ fn calculated_floating_position_cache() {
     let heel_steps = conf.heel_steps.clone();
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
-    let errors = CalculatedFloatingPositionCache::new(
+    let errors = BuildFloatingPositionCache::new(
         &dbg,
         result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),

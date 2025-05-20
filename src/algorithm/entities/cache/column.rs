@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use super::bound::Bound;
-use super::OwnedSet;
+use super::SyncVec;
 use std::{cmp::Ordering, ops::Deref};
 ///
 /// Analyzed dataset, column of a [super::Table] instance.
@@ -8,8 +8,8 @@ use std::{cmp::Ordering, ops::Deref};
 /// A dataset is _analyzed_ if all its inflection points are defined.
 #[derive(Clone, Debug)]
 pub struct Column<T> {
-    inflections: OwnedSet<usize>,
-    data: OwnedSet<T>,
+    extremums: SyncVec<usize>,
+    data: SyncVec<T>,
     dbg: Dbg,
 }
 //
@@ -22,10 +22,10 @@ impl<T: PartialOrd> Column<T> {
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
     pub fn new<S>(dbg: Dbg, values: S) -> Self
     where
-        S: Into<OwnedSet<T>> + Deref<Target = [T]>,
+        S: Into<SyncVec<T>> + Deref<Target = [T]>,
     {
         Self {
-            inflections: Self::get_inflections(&dbg, &values),
+            extremums: Self::get_extremums(&dbg, &values),
             data: values.into(),
             dbg,
         }
@@ -35,11 +35,11 @@ impl<T: PartialOrd> Column<T> {
     ///
     /// # Panics
     /// Panic occurs if `values` contains a non-comparable value (e. g. _NaN_).
-    pub fn get_inflections(dbg: &Dbg, values: &[T]) -> OwnedSet<usize> {
+    pub fn get_extremums(dbg: &Dbg, values: &[T]) -> SyncVec<usize> {
         use Ordering::*;
         //
         if values.is_empty() {
-            return OwnedSet::from([]);
+            return SyncVec::from([]);
         }
         let callee = "get_inflections";
         // inflection points
@@ -99,7 +99,7 @@ impl<T: PartialOrd> Column<T> {
         ids.into()
     }
     ///
-    /// Returns bounds of given value within internal dataset.
+    /// Returns bounds contains specified `val`
     ///
     /// # Panics
     /// Panic occurs if `val` is a non-comparable value (e. g. _NaN_).
@@ -112,7 +112,7 @@ impl<T: PartialOrd> Column<T> {
         let callee = "get_bounds";
         // walk through all middle values
         let iter = self
-            .inflections
+            .extremums
             .windows(2)
             .filter(|win| {
                 let first = &self.data[win[0]];

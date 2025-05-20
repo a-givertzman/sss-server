@@ -1,5 +1,6 @@
 //! Коллекция примитивов для математических операций
 pub mod vec;
+mod position_2d;
 pub mod position;
 pub mod moment;
 pub mod curve;
@@ -15,6 +16,7 @@ pub use vec::integral_cotes::IntegralCotes as IntegralCotes;
 #[allow(unused)]
 pub use vec::integral::Integral as Integral;
 pub use vec::*;
+pub use position_2d::*;
 pub use position::*;
 pub use moment::*;
 pub use curve::*;

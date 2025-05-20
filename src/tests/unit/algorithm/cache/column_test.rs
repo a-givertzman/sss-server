@@ -63,7 +63,7 @@ fn get_inflextion_test() {
     ];
     let dbg = Dbg::new(&dbg, "Column_0");
     for (step, (values, target)) in test_data.into_iter().enumerate() {
-        let result = Column::get_inflections(&dbg, &values);
+        let result = Column::get_extremums(&dbg, &values);
         println!(
             "step={} values={:?} result={:?} target={:?}",
             step, values, result, target

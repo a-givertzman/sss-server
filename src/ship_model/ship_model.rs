@@ -6,6 +6,7 @@ use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
+use crate::algorithm::entities::Position2d;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::entities::model;
 use crate::algorithm::eval::BalanceCtx;
@@ -313,12 +314,12 @@ fn compute_balance(
 ) -> Result<BalanceCtx, Error> {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let error = Error::new(&dbg, "compute_balance");
-    let model: model::ShipModel<()> = model::ShipModel::new(
+    let model: model::ShipModel = model::ShipModel::new(
         &dbg, 
-        model::ship_model_conf::ShipModelConf {
+        model::ShipModelConf {
             model_path: PathBuf::from(model_path),
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::local_cache::FloatingPositionCacheConf {
+            floating_position_cache_conf: model::FloatingPositionCacheConf {
                 waterline_position: [0., 0., 0.],
                 heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
                 trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
@@ -329,7 +330,7 @@ fn compute_balance(
     );
     let floating_position = model.floating_position(
         src_data.mass_sum/src_data.water_density,
-        src_data.mass_shift.values(),
+        Position2d::new(src_data.mass_shift.x(), src_data.mass_shift.y()),
     ).eval().map_err(|err| error.pass_with("floating_position", err))?;
 
     let result = BalanceCtx {

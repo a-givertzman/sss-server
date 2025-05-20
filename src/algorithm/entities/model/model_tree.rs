@@ -2,6 +2,8 @@ use indexmap::IndexMap;
 use sal_3dlib::topology::shape::Shape;
 use sal_core::{dbg::Dbg, error::Error};
 use std::path::{Path, PathBuf};
+
+use super::ShipModelMeta;
 ///
 /// Internal structure of [super::ShipModel], the collection of its 3D elements.
 ///
@@ -9,7 +11,7 @@ use std::path::{Path, PathBuf};
 /// Note though that `self.models` contains values, which attribute type is Option<A>.
 /// This allows to do lazy attribute assigment by demand.
 #[derive(Clone)]
-pub(super) struct ModelTree<A> {
+pub struct ModelTree {
     dbg: Dbg,
     ///
     /// Source file in STEP format.
@@ -20,11 +22,11 @@ pub(super) struct ModelTree<A> {
     /// In the current version the model is considered to have one or more elements.
     /// If an element has a name, this name concatinated with the full path from the root is used as the key.
     /// The model element itself becomes the value of the key.
-    elements: IndexMap<String, Shape<Option<A>>>,
+    elements: IndexMap<String, Shape<ShipModelMeta>>,
 }
 //
 //
-impl<A> ModelTree<A> {
+impl ModelTree {
     ///
     /// Creates a new instance.
     pub(super) fn new(parent: &Dbg, path: impl AsRef<Path>) -> Self {
@@ -48,21 +50,22 @@ impl<A> ModelTree<A> {
                     why
                 ))
             })?
-            .into_vec::<A>()
+            .into_vec::<ShipModelMeta>()
             .map_err(|why| error.err(format!("Failed reading model tree: {:?}", why)))?;
-        Ok(Self {
-            elements: elements.into_iter().collect(),
-            ..self
-        })
+        // Ok(Self {
+        //     elements: elements.into_iter().collect(),
+        //     ..self
+        // })
+        Err(error.err("Not implemented, fix: elements.into_iter().collect()"))
     }
     ///
     /// Return an iterator over the key-value pairs of the map, in their order.
-    pub(super) fn iter(&self) -> indexmap::map::Iter<'_, String, Shape<Option<A>>> {
+    pub(super) fn iter(&self) -> indexmap::map::Iter<'_, String, Shape<ShipModelMeta>> {
         self.elements.iter()
     }
     ///
     /// Return a reference to the value stored for `key`, if it is present, else `None`.
-    pub(super) fn get(&self, key: impl AsRef<str>) -> Option<&Shape<Option<A>>> {
+    pub(super) fn get(&self, key: impl AsRef<str>) -> Option<&Shape<ShipModelMeta>> {
         self.elements.get(key.as_ref())
     }
     ///

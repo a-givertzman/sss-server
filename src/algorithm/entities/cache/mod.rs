@@ -17,11 +17,11 @@ use std::{
     num::ParseFloatError,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::OnceLock,
+    sync::{Arc, OnceLock},
 };
 pub use table::Table;
 //
-type OwnedSet<T> = std::sync::Arc<[T]>;
+type SyncVec<T> = std::sync::Arc<[T]>;
 ///
 /// Cached dataset lazyly read from the file on the first access.
 ///
@@ -119,11 +119,9 @@ impl<T: PartialOrd> Cache<T> {
                     let dbg = Dbg::new(&self.dbg, &format!("Column_{}", id));
                     Column::new(dbg, vals)
                 });
-                OwnedSet::from_iter(iter_over_cols)
+                SyncVec::from_iter(iter_over_cols)
             })
             .unwrap_or_default();
-      //  self.table.set(Table::new(&self.dbg, cols))
-        //    .map_err(|_| Error::new("Cache", "init").err("self.table.set error!"))
         Ok(Table::new(&self.dbg, cols))
     }
 }

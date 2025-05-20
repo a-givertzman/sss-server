@@ -1,20 +1,5 @@
-//!
-//! The representation of the ship in terms of its 3D elements.
-//
-mod floating_position;
-pub mod local_cache;
-mod model_tree;
-pub mod relative_position;
-pub mod ship_model_conf;
-use floating_position::FloatingPosition;
-//
 use indexmap::{IndexMap, IndexSet};
 use sal_core::{dbg::Dbg, error::Error};
-use local_cache::{
-    cache_key::CacheKey, floating_position_cache::FloatingPositionCache, LocalCache,
-};
-use model_tree::ModelTree;
-use relative_position::RelativePostion;
 use sal_3dlib::{
     props::Center,
     topology::shape::{
@@ -26,17 +11,20 @@ use sal_3dlib::{
     },
 };
 use sal_sync::thread_pool::Scheduler;
-use ship_model_conf::ShipModelConf;
 use std::sync::Arc;
+use crate::algorithm::entities::Position2d;
+
+use super::{floating_position::FloatingPosition, model_tree::ModelTree, CacheKey, FloatingPositionCache, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
+
 ///
 /// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
-pub struct ShipModel<A> {
+pub struct ShipModel {
     dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element by keys.
-    model_tree: ModelTree<A>,
+    model_tree: ModelTree,
     ///
     /// Provides a number of calculations:
     /// - Floating position (see [FloatingPositionCache]).
@@ -45,7 +33,7 @@ pub struct ShipModel<A> {
 }
 //
 //
-impl<A: Clone + Send + 'static> ShipModel<A> {
+impl ShipModel {
     ///
     /// Creates a new instance.
     pub fn new(parent: &Dbg, conf: ShipModelConf, scheduler: Scheduler) -> Self {
@@ -55,7 +43,7 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
             dbg: dbg.clone(),
             caches: IndexMap::new(),
             model_tree: model_tree.clone(),
-            scheduler,
+            scheduler: scheduler.clone(),
         };
         ship_model.caches.insert(
             CacheKey::FloatingPostion,
@@ -102,9 +90,9 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     pub fn subvolume(
         &self,
         keys: &[&str],
-        waterline: &Face<Option<A>>,
+        waterline: &Face<ShipModelMeta>,
         relative_position: RelativePostion,
-    ) -> Result<Vec<Shape<Option<A>>>, Error> {
+    ) -> Result<Vec<Shape<ShipModelMeta>>, Error> {
         let error = Error::new(&self.dbg, "subvolume");
         // pop up warning if a key is not present in `self.model_key`
         for key in keys {
@@ -169,44 +157,31 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     ///     }
     /// }
     /// ```
-    pub fn update_caches(&mut self, caches: &[&CacheKey]) -> Result<(), Error> {
+    pub fn rebuild_caches(&mut self, caches: &[&CacheKey]) -> Result<(), Error> {
         // start wokers to calculate required caches
         let errors = {
             let mut errors = vec![];
             let calculate_all = caches.is_empty();
             for (cache_key, cache) in &self.caches {
                 if calculate_all || caches.contains(&cache_key) {
-                    errors.push((*cache_key, cache.calculate(Arc::default())));
+                    if let Err(err) = cache.rebuild() {
+                        errors.push((*cache_key, err));
+                    }
                 }
             }
             errors
         };
-        // Get keys of successfuly calculated caches.
-        // Return the full error if any worker fails.
-        let calculated = {
-            let error = Error::new(&self.dbg, "update_caches");
-            let mut calculated = IndexSet::new();
-            let mut filtered_errors = vec![];
-            for (cache_key, errors) in errors {
-                if errors.is_empty() {
-                    calculated.insert(cache_key);
-                } else {
-                    for err in &errors {
-                        let err_text = format!(" {} | Calculating cache: {:?} in thread error: {:?}", &self.dbg, cache_key, err);
-                        log::error!("{}", &err_text);
-                        filtered_errors.push(err_text);  
-                    }            
-                }
-            }
-            if !filtered_errors.is_empty() {
-                return Err(error.pass_with("calculated", filtered_errors.join("\n")));
-            }
-            calculated
-        };
-        for (cache_key, cache) in &mut self.caches {
-            if calculated.contains(cache_key) {
-                cache.reload();
-            }
+        let error = Error::new(&self.dbg, "rebuild_caches");
+        if !errors.is_empty() {
+            return Err(
+                error.pass_with(
+                    "calculated",
+                    errors.iter()
+                        .fold(String::new(), |acc, (key, err)| {
+                            format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                        })
+                ),
+            );
         }
         Ok(())
     }
@@ -215,8 +190,8 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
     pub fn floating_position(
         &self,
         displacement: f64,
-        displacement_center: [f64; 3],
-    ) -> FloatingPosition<A> {
+        mass_center: Position2d,
+    ) -> FloatingPosition {
         //
         FloatingPosition::new(
             &self.dbg,
@@ -232,17 +207,17 @@ impl<A: Clone + Send + 'static> ShipModel<A> {
      //       self.centreline(),
      //       self.middle(),
             displacement,
-            Vertex::new(displacement_center),
+            mass_center,
         )
     }
     ///
     /// Returns the centreline.
-    fn centreline(&self) -> Edge<A> {
+    fn centreline(&self) -> Edge<ShipModelMeta> {
         todo!("Return the centreline. Probably by building bounding box.")
     }
     ///
     /// Returns the middle plane.
-    fn middle(&self) -> Face<A> {
+    fn middle(&self) -> Face<ShipModelMeta> {
         todo!("Return the middle plane. Probably by building bounding box.")
     }
 }
