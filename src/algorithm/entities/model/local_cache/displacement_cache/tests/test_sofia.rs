@@ -1,9 +1,9 @@
-use crate::algorithm::entities::model::local_cache::floating_position_cache::build_floating_position_cache::BuildFloatingPositionCache;
+use crate::algorithm::entities::model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache;
 #[cfg(test)]
 use crate::algorithm::entities::model::{
-    local_cache::floating_position_cache::{
-        floating_position_cache_conf::FloatingPositionCacheConf,
-        FloatingPositionCache,
+    local_cache::displacement_cache::{
+        displacement_cache_conf::DisplacementCacheConf,
+        DisplacementCache,
     },
     ModelTree,
 };
@@ -41,17 +41,17 @@ fn init_each() -> () {}
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
 #[test]
-fn calculated_floating_position_sofia() {
+fn calculated_displacement_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test models", "calculated_floating_position_sofia");
+    let dbg = Dbg::new("test models", "calculated_displacement_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
     let thread_pool = ThreadPool::new(&dbg, Some(12));
     let model_path = "src/assets/sofia.stp";
-    let result_path = "src/algorithm/entities/model/local_cache/floating_position_cache/tests/assets/sofia_result";
+    let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/sofia_result";
     // create model tree with empty attribute for each model
     let model_tree = ModelTree::new(&dbg, model_path)
         .load()
@@ -61,7 +61,7 @@ fn calculated_floating_position_sofia() {
     // (2, 'TCG from CL', -0.44, 2),  
     // (2, 'VCG from BL', 7.81, 2),
     let waterline_position = [59.837, -0.44, 7.81];
-    let conf = FloatingPositionCacheConf {
+    let conf = DisplacementCacheConf {
         waterline_position,
         heel_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
         trim_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
@@ -70,11 +70,11 @@ fn calculated_floating_position_sofia() {
     let heel_steps = conf.heel_steps.clone();
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
-    let errors = BuildFloatingPositionCache::new(
+    let errors = BuildDisplacementCache::new(
         &dbg,
         result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        FloatingPositionCache::new(&dbg, model_tree, result_path, conf, thread_pool.scheduler())
+        DisplacementCache::new(&dbg, model_tree, result_path, conf, thread_pool.scheduler())
             .create_waterline()
             .unwrap_or_else(|err| panic!("Failed creating *waterline*: {}", err)),
         heel_steps,

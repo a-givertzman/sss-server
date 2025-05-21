@@ -11,16 +11,16 @@ use std::{
     sync::{atomic::{AtomicBool, Ordering}, Arc},
 };
 
-use super::{build_floating_position_cache::BuildFloatingPositionCache, FloatingPositionCacheConf};
+use super::{build_displacement_cache::BuildDisplacementCache, DisplacementCacheConf};
 ///
 /// Pre-calculated cache for floating position algorithm.
 ///
-/// See [FloatingPositionCacheConf] for more details about the fields.
-pub struct FloatingPositionCache {
+/// See [DisplacementCacheConf] for more details about the fields.
+pub struct DisplacementCache {
     dbg: Dbg,
     path: PathBuf,
     //    model_keys: Vec<String>,
-    waterline_position: [f64; 3],
+    waterline_position: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
@@ -35,7 +35,7 @@ pub struct FloatingPositionCache {
 }
 //
 //
-impl FloatingPositionCache {
+impl DisplacementCache {
     //
     //
     const KEY: &'static str = "floating_position_cache";
@@ -46,10 +46,10 @@ impl FloatingPositionCache {
         parent: &Dbg,
         model_tree: ModelTree,
         path: impl AsRef<Path>,
-        conf: FloatingPositionCacheConf,
+        conf: DisplacementCacheConf,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, "FloatingPositionCache");
+        let dbg = Dbg::new(parent, "DisplacementCache");
         let path = path.as_ref().join(Self::KEY);
         Self {
             model_tree,
@@ -66,43 +66,14 @@ impl FloatingPositionCache {
         }
     }
     ///
-    /// Creates a waterline object in 3D space centered at `self.waterline_position`.
-    ///
-    /// The result object is used for calculating cache algorithm (see [FloatingPositionCache::calculate]).
-    pub fn create_waterline<T>(&self) -> Result<Face<T>, Error> {
-        let error = Error::new(&self.dbg, "create_waterline");
-        let [x, y, z] = self.waterline_position;
-        let (x, y, z) = (x*1000., y*1000., z*1000.); // m to mm
-        // dynamic range could be built based on bounding box of target element behind self.model_keys,
-        // but now reserve big enough offsets, which should work with most elements
-        let dx = 1000000.0;  
-        let dy = 1000000.0;
-        //
-        match Wire::polygon(
-            [
-                Vertex::new([x + dx, y + dy, z]),
-                Vertex::new([x - dx, y + dy, z]),
-                Vertex::new([x - dx, y - dy, z]),
-                Vertex::new([x + dx, y - dy, z]),
-            ],
-            true,
-        ) {
-            Ok(ref polygon) => Face::try_from(polygon)
-                .map_err(|why| error.pass_with("Failed creating Face from *polygon*:", why)),
-            Err(why) => {
-                Err(error.pass_with("Failed creating *polygon* from Wire", why.to_string()))
-            }
-        }
-    }
-    ///
-    /// See [BuildFloatingPositionCache] for details.
+    /// See [BuildDisplacementCache] for details.
     fn calculate(&self) -> Vec<Error> {
-        let waterline = match self.create_waterline() {
+  /*      let waterline = match self.create_waterline() {
             Ok(waterline) => waterline,
             Err(err) => {
                 return vec![Error::new(&self.dbg, "calculate").pass_with("waterline", err)];
             }
-        };
+        };*/
         let model_tree = self.model_tree.clone();
         let model_tree = match model_tree.load() {
             Ok(model_tree) => model_tree,
@@ -110,10 +81,14 @@ impl FloatingPositionCache {
                 return vec![Error::new(&self.dbg, "calculate").pass_with("model_tree", err)];
             }
         };
-        BuildFloatingPositionCache::new(
+
+                    self.path.clone(),
+
+
+        let cache_data = BuildDisplacementCache::new(
             &self.dbg,
-            self.path.clone(),
             model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
+            self.waterline_position,
             /* TODO зачем этот фильтр?
                     .iter()
                        .filter_map(|(shape_key, shape)| {
@@ -122,19 +97,20 @@ impl FloatingPositionCache {
                        .cloned()
                         .collect(),
             */
-            waterline,
+     //       waterline,
             self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),
             self.exit.clone(),
         )
-        .build()
+        .build();
+
     }
 }
 //
 //
-impl LocalCache for FloatingPositionCache {
+impl LocalCache for DisplacementCache {
     ///
     /// See [Cache::get] for details.
     fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {

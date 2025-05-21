@@ -1,13 +1,9 @@
 use coco::Stack;
 //
 use sal_3dlib::{
-    gmath::vector::Vector,
-    props::{Center, Volume},
-    topology::shape::{
-        Shape,
-        compound::{AlgoMakerVolume, Compound, Solids},
-        face::{Face, Rotate, Translate},
-    },
+    gmath::vector::Vector, ops::transform::*, props::{Center, Volume}, topology::shape::{
+        compound::{AlgoMakerVolume, Compound, Solids}, face::*, Shape
+    }
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
@@ -21,16 +17,19 @@ use std::{
     },
 };
 
-use crate::algorithm::entities::model::ShipModelMeta;
+use crate::algorithm::entities::{model::ShipModelMeta, Position};
 ///
-/// Provides logic to calculate and store cache used by [super::FloatingPositionCache].
+/// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
-/// See [super::FloatingPositionCacheConf] for more details about the fields.
-pub struct BuildFloatingPositionCache {
+/// See [super::DisplacementCacheConf] for more details about the fields.
+// 
+// normalize meters to/from mm
+const SCALE: f64 = 1e3;
+
+pub struct SaveDisplacementCache {
     dbg: Dbg,
     file_path: PathBuf,
-    elements: Vec<Shape<ShipModelMeta>>,
-    waterline: Face<ShipModelMeta>,
+    waterline_position: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
@@ -39,7 +38,7 @@ pub struct BuildFloatingPositionCache {
 }
 //
 //
-impl BuildFloatingPositionCache {
+impl SaveDisplacementCache {
     ///
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
@@ -47,7 +46,7 @@ impl BuildFloatingPositionCache {
         parent: &Dbg,
         file_path: PathBuf,
         elements: Vec<Shape<ShipModelMeta>>,
-        waterline: Face<ShipModelMeta>,
+        waterline_position: Position,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
@@ -55,10 +54,10 @@ impl BuildFloatingPositionCache {
         exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
-            dbg: Dbg::new(parent, "BuildFloatingPositionCache"),
+            dbg: Dbg::new(parent, "SaveDisplacementCache"),
             file_path,
             elements,
-            waterline,
+            waterline_position,
             heel_steps,
             trim_steps,
             draught_steps,
@@ -67,7 +66,7 @@ impl BuildFloatingPositionCache {
         }
     }
     ///
-    /// Creates and starts worker for [FloatingPositionCache::calculate].
+    /// Creates and starts worker for [DisplacementCache::calculate].
     pub fn build(self) -> Vec<Error> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -77,17 +76,22 @@ impl BuildFloatingPositionCache {
                 err.to_string(),
             )
         });
-        let mut out_f = match &mut binding {
+        let mut file = match &mut binding {
             Ok(file) => file, 
             Err(err) => {
-                return vec![error.pass_with(format!("File::create, path: {:?}", self.file_path), err.to_string())];
+                return vec![error.pass_with(format!("File::create, path: {}", self.file_path.display()), err.to_string())];
             },
         };
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let results = Arc::new(Stack::new());
         let mut spawn_errors = Vec::new();
+
+        let origin = self.waterline_position.scale(SCALE).into();
+        let size = 1000.*SCALE;
+        let rect = Vector::new(  size, size, size);;
+        let mut waterline = Workplane::xy().translated(origin).rect(&rect).to_face().into_shape();
         'draught: for &draught in &self.draught_steps {
-            let draught = draught*1000.;
+            let draught = draught*SCALE;
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
@@ -95,7 +99,7 @@ impl BuildFloatingPositionCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    let mut obj = self.waterline.clone();
+                    let mut obj = waterline.clone();
                     let elements = self.elements.clone();
                     let dbg_ = self.dbg.clone();
                     let results_ = results.clone();
@@ -104,11 +108,10 @@ impl BuildFloatingPositionCache {
                         // according to heel, trim, and draught values
                         let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
                         let obj = &{
-                            let origin = obj.center();
                             let mut loc_y = Vector::unit_y();
                             if 0.0 != heel {
                                 let heel_in_rad = heel.to_radians();
-                                obj = obj.rotate(origin.clone(), Vector::unit_x(), heel_in_rad);
+                                obj = Face::<ShipModelMeta>::rotate(obj, origin, Vector::unit_x(), heel_in_rad);
                                 // once a rotation around oX happens, oY needs to get the rotation too,
                                 // overwise oY remains global and doesn't match new `obj`'s transformation
                                 loc_y = loc_y.rotate(Vector::unit_x(), heel_in_rad);
@@ -172,7 +175,7 @@ impl BuildFloatingPositionCache {
                                             /*        });
                                                 },
                                                 Err(err) => {
-                                                    log::error!("BuildFloatingPositionCache task: Compound::build volume error: {err}");
+                                                    log::error!("SaveDisplacementCache task: Compound::build volume error: {err}");
                                                 },
                                             }*/
                                         }
@@ -185,9 +188,9 @@ impl BuildFloatingPositionCache {
                             /// - Moment tranforms into Center of displaced valume (Mass center)
                             fn tranform(heel: f64, trim: f64, draught: f64, volume: f64, volume_moment: Option<[f64; 3]>) -> (f64, Option<[f64; 3]>, f64, f64, f64) {
                                 let volume_center = volume_moment
-                                    .map(|[x, y, z]| [x/(volume*1000.), y/(volume*1000.), z/(volume*1000.)]);
-                                let volume = volume / 1000000000.; //mm^3 to m^3
-                                let draught = draught / 1000.; // mm to m
+                                    .map(|[x, y, z]| [x/(volume*SCALE), y/(volume*SCALE), z/(volume*SCALE)]);
+                                let volume = volume / (SCALE*SCALE*SCALE); //mm^3 to m^3
+                                let draught = draught / SCALE; // mm to m
                             //     let text = format!("map, volume:{volume}, volume_center:{:?}, heel:{heel}, trim:{trim}, draught:{draught}", volume_center);
                             //     dbg!(text);
                                 (volume, volume_center, heel, trim, draught)
@@ -238,7 +241,7 @@ impl BuildFloatingPositionCache {
                     }
                     Some([x, y, z]) => {
                         if let Err(err) = writeln!(
-                            &mut out_f,
+                            &mut file,
                             "{} {} {} {} {} {} {}",
                             heel, trim, draught, volume, x, y, z
                         ) {

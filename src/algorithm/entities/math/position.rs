@@ -101,3 +101,9 @@ impl AddAssign for Position {
         };
     }
 }
+//
+impl Into<[f64; 3]> for Position {
+    fn into(self) -> [f64; 3] {
+        [self.x, self.y, self.z]
+    }
+}

@@ -12,12 +12,14 @@ pub use bound::Bound;
 pub use column::Column;
 use sal_core::{dbg::Dbg, error::Error};
 use std::{
-    fs::File,
-    io::{BufRead, BufReader},
     num::ParseFloatError,
-    path::{Path, PathBuf},
     str::FromStr,
     sync::{Arc, OnceLock},
+};
+use std::{
+    fs::File,
+    io::{Write, BufRead, BufReader, BufWriter},
+    path::{Path, PathBuf},
 };
 pub use table::Table;
 //
@@ -63,15 +65,15 @@ impl<T> Cache<T> {
 //
 impl<T: PartialOrd> Cache<T> {
     ///
-    /// Initializes Table reading `self.path` file.
+    /// read cache data from `self.path` file.
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    pub fn init(&self) -> Result<Table<T>, Error>
+    fn read_from_file(&self) -> Result<impl IntoIterator<Item = impl IntoIterator<Item = T>>, Error>
     where
         T: FromStr<Err = ParseFloatError> + Clone + Default,
     {
-        let callee = "init";
+        let callee = "read_from_file";
         let file = File::open(&self.path).map_err(|err| {
             format!(
                 "{}.{} | Failed reading file='{}': {}",
@@ -113,7 +115,40 @@ impl<T: PartialOrd> Cache<T> {
                 vals_mut[i].push(val);
             }
         }
+        Ok(vals)
+    }
+    ///
+    /// save cache data to `self.path` file.
+    ///
+    fn save_to_file(&self, vals: Vec<Vec<T>>) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "save_to_file");
+        let mut file = File::create(&self.path).map_err(|err| {
+            error.pass_with(
+                format!("File::create error! path:{}", self.path.display()),
+                err.to_string(),
+            )
+        })?;
+        for col in vals.iter() {
+            let cols_str: Vec<_> = col.iter().map(ToString::to_string).collect();
+            let line = cols_str.join("\t");
+            writeln!(&mut file, "{}", line).map_err(|err| error.pass_with(
+                format!("Writing to file, path:{}", self.path.display()), 
+                err.to_string(),
+            ))?;
+        }
+        Ok(())
+    }
+    ///
+    /// Initializes Table with cache data
+    ///
+    /// # Panics
+    /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
+    pub fn init(&self, vals: IntoIterator<Item = IntoIterator<Item = T>>) -> Result<Table<T>, Error>
+    where
+        T: FromStr<Err = ParseFloatError> + Clone + Default,
+    {
         let cols = vals
+            .into_iter()
             .map(|vals| {
                 let iter_over_cols = vals.into_iter().enumerate().map(|(id, vals)| {
                     let dbg = Dbg::new(&self.dbg, &format!("Column_{}", id));

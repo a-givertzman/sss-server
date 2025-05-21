@@ -30,6 +30,10 @@ impl<T: PartialOrd> Column<T> {
             dbg,
         }
     }
+    /// get raw data
+    pub fn data(&self) -> Vec<T> {
+        self.data.iter().collect()
+    }
     ///
     /// Returns inflection point IDs based on given values.
     ///

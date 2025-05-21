@@ -1,10 +1,12 @@
+use crate::algorithm::entities::Position;
+
 ///
-/// [super::FloatingPositionCache] configuration.
+/// [super::DisplacementCache] configuration.
 #[derive(Default)]
-pub struct FloatingPositionCacheConf {
+pub struct DisplacementCacheConf {
     ///
     /// Waterline initial position in 3D space.
-    pub waterline_position: [f64; 3],
+    pub waterline_position: Position,
     ///
     /// Angle in degrees.
     pub heel_steps: Vec<f64>,
