@@ -69,7 +69,7 @@ impl<T: PartialOrd> Cache<T> {
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    fn read_from_file(&self) -> Result<impl IntoIterator<Item = impl IntoIterator<Item = T>>, Error>
+    fn read(&self) -> Result<dyn IntoIterator<Item = dyn IntoIterator<T> + 'static> + 'static>, Error>
     where
         T: FromStr<Err = ParseFloatError> + Clone + Default,
     {
@@ -120,7 +120,7 @@ impl<T: PartialOrd> Cache<T> {
     ///
     /// save cache data to `self.path` file.
     ///
-    fn save_to_file(&self, vals: Vec<Vec<T>>) -> Result<(), Error> {
+    fn save(&self, vals: Vec<Vec<T>>) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "save_to_file");
         let mut file = File::create(&self.path).map_err(|err| {
             error.pass_with(
@@ -207,7 +207,10 @@ impl Cache<f64> {
     /// ```
     pub fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
         self.table
-            .get_or_init(|| self.init())
+            .get_or_init(|| {
+                let vals = self.read()?;
+                self.init(vals)
+            })
             .as_ref()
             .unwrap_or_else(|err| 
                  panic!("{}.{} | Failed initializing Table, error:{}", self.dbg, "get", err)
