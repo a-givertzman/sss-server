@@ -45,7 +45,7 @@ fn init_cache_table_from_file() {
         ([Some(0.7), Some(0.7), Some(4.7), Some(80.7)], Some(vec![vec![0.7, 0.7, 4.7, 80.7]])),
     ];
     let path = "src/tests/unit/algorithm/cache/assets/table-ok";
-    let cache = Cache::new(&dbg, path);
+    let cache = Cache::new(&dbg);
     let _ = cache.init();
     for (step, (vals, target)) in test_data.into_iter().enumerate() {
         let result = cache.get(&vals);

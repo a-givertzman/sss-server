@@ -60,7 +60,7 @@ impl<'cache> FloatingPosition<'cache> {
     /// Panic occurs if cached dataset is inconsistent. In particular, `disp_vol_center`,
     /// which read from the cache, _must be_ a point in 3-dimensional space.
     pub fn eval(&self) -> Result<EvaluatedFloatingPosition, Error> {
- //       let error = Error::new(&self.dbg, "eval");
+        let error = Error::new(&self.dbg, "eval");
         let x = self.mass_center.x(); //convert meters to mm
         let y = self.mass_center.y();
         let displacement = self.displacement;
@@ -101,12 +101,9 @@ impl<'cache> FloatingPosition<'cache> {
                     );
                 }
             })
-            .and_then(|rows| rows.into_iter().next())
-            .ok_or(format!(
-                "{} | No value found for approx_vals='{:?}'",
-                &self.dbg, approx_vals
-            ))
-            .map(|row| (row[0], row[1], row[2], row[6]))?;
+            .map_err(|err| error.pass_with("cache.get", err))?
+            .into_iter()
+            .map(|row| (row[0], row[1], row[2], row[6])).next().unwrap();
 
         return Ok(EvaluatedFloatingPosition {
             heel_angle: heel,

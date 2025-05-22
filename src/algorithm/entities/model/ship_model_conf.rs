@@ -1,4 +1,4 @@
-use super::local_cache::FloatingPositionCacheConf;
+use super::local_cache::DisplacementCacheConf;
 use std::path::PathBuf;
 ///
 /// [super::ShipModel] configuration.
@@ -12,6 +12,6 @@ pub struct ShipModelConf {
     /// Directory containing [super::ShipModel] caches.
     pub cache_dir: PathBuf,
     ///
-    /// [super::FloatingPositionCache] configuration.
-    pub floating_position_cache_conf: FloatingPositionCacheConf,
+    /// [super::DisplacementCache] configuration.
+    pub floating_position_cache_conf: DisplacementCacheConf,
 }

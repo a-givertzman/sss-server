@@ -1,4 +1,4 @@
-use crate::algorithm::entities::model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache;
+use crate::algorithm::entities::{model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache, Position};
 #[cfg(test)]
 use crate::algorithm::entities::model::{
     local_cache::displacement_cache::{
@@ -60,7 +60,7 @@ fn calculated_displacement_sofia() {
     //  (2, 'LCG from middle', 59.837, 2),
     // (2, 'TCG from CL', -0.44, 2),  
     // (2, 'VCG from BL', 7.81, 2),
-    let waterline_position = [59.837, -0.44, 7.81];
+    let waterline_position = Position::new(59.837, -0.44, 7.81);
     let conf = DisplacementCacheConf {
         waterline_position,
         heel_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
@@ -72,11 +72,8 @@ fn calculated_displacement_sofia() {
     let draught_steps = conf.draught_steps.clone();
     let errors = BuildDisplacementCache::new(
         &dbg,
-        result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        DisplacementCache::new(&dbg, model_tree, result_path, conf, thread_pool.scheduler())
-            .create_waterline()
-            .unwrap_or_else(|err| panic!("Failed creating *waterline*: {}", err)),
+        waterline_position,
         heel_steps,
         trim_steps,
         draught_steps,

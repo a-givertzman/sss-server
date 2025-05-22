@@ -1,8 +1,8 @@
 use coco::Stack;
 //
 use sal_3dlib::{
-    gmath::vector::Vector, ops::transform::*, props::{Center, Volume}, topology::shape::{
-        compound::{AlgoMakerVolume, Compound, Solids}, face::*, Shape
+    gmath::vector::Vector, ops::{transform::*, Polygon}, props::{Center, Volume}, topology::shape::{
+        compound::{AlgoMakerVolume, Compound, Solids}, face::*, vertex::Vertex, wire::Wire, Shape
     }
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -71,10 +71,26 @@ impl BuildDisplacementCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let origin = self.waterline_position.scale(SCALE).into();
+        let origin = self.waterline_position.scale(SCALE);
         let size = 1000.*SCALE;
-        let rect = Vector::new(  size, size, size);;
-        let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
+        let waterline = match Wire::polygon(
+            [
+                Vertex::new([origin.x() + size, origin.y() + size, origin.z()]),
+                Vertex::new([origin.x() - size, origin.y() + size, origin.z()]),
+                Vertex::new([origin.x() - size, origin.y() - size, origin.z()]),
+                Vertex::new([origin.x() + size, origin.y() - size, origin.z()]),
+            ],
+            true,
+        ) {
+            Ok(ref polygon) => Face::try_from(polygon)
+            .map_err(|err| error.pass_with("Failed creating Face from *polygon*", err)),
+            Err(err) => Err(error.pass_with("Failed creating *polygon* from Wire", err.to_string())),
+        };
+        let waterline = match waterline {
+            Ok(v) => v,
+            Err(err) => return vec![Err(err)],
+        };
+      //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
         'draught: for &draught in &self.draught_steps {
             let draught = draught*SCALE;
             for &heel in &self.heel_steps {
@@ -88,6 +104,7 @@ impl BuildDisplacementCache {
                     let elements = self.elements.clone();
                     let dbg_ = self.dbg.clone();
                     let task_results = task_results.clone();
+                    let origin = Vertex::new(origin.values());
                     let handle = self.scheduler.spawn(move || {
                         // make a clone of origin waterline and transform it
                         // according to heel, trim, and draught values
@@ -96,7 +113,7 @@ impl BuildDisplacementCache {
                             let mut loc_y = Vector::unit_y();
                             if 0.0 != heel {
                                 let heel_in_rad = heel.to_radians();
-                                obj = obj.rotate(origin, Vector::unit_x(), heel_in_rad);
+                                obj = obj.rotate(origin.clone(), Vector::unit_x(), heel_in_rad);
                                 // once a rotation around oX happens, oY needs to get the rotation too,
                                 // overwise oY remains global and doesn't match new `obj`'s transformation
                                 loc_y = loc_y.rotate(Vector::unit_x(), heel_in_rad);

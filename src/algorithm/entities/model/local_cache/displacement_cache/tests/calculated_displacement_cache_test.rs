@@ -1,4 +1,4 @@
-use crate::algorithm::entities::model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache;
+use crate::algorithm::entities::{model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache, Position};
 #[cfg(test)]
 use crate::algorithm::entities::model::{
     local_cache::displacement_cache::{
@@ -69,6 +69,7 @@ fn calculated_displacement_cache() {
             _ => None,
         })
         .unwrap_or_else(|| panic!("Expected Solid by model_key='{}'", model_key));
+    let waterline_position = Position::new(waterline_position[0], waterline_position[1], waterline_position[2]);
     let conf = DisplacementCacheConf {
         waterline_position,
         heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
@@ -80,11 +81,8 @@ fn calculated_displacement_cache() {
     let draught_steps = conf.draught_steps.clone();
     let errors = BuildDisplacementCache::new(
         &dbg,
-        result_path.into(),
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        DisplacementCache::new(&dbg, model_tree, result_path, conf, thread_pool.scheduler())
-            .create_waterline()
-            .unwrap_or_else(|err| panic!("Failed creating *waterline*: {}", err)),
+        waterline_position,
         heel_steps,
         trim_steps,
         draught_steps,

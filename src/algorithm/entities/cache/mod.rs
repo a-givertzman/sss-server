@@ -14,12 +14,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use std::{
     num::ParseFloatError,
     str::FromStr,
-    sync::{Arc, OnceLock},
-};
-use std::{
-    fs::File,
-    io::{Write, BufRead, BufReader, BufWriter},
-    path::{Path, PathBuf},
+    sync::OnceLock,
 };
 pub use table::Table;
 //
@@ -42,8 +37,7 @@ type SyncVec<T> = std::sync::Arc<[T]>;
 /// ```
 pub struct Cache<T> {
     dbg: Dbg,
-    path: PathBuf,
-    table: OnceLock<Result<Table<T>, Error>>,
+    table: OnceLock<Table<T>>,
 }
 //
 //
@@ -53,10 +47,9 @@ impl<T> Cache<T> {
     ///
     /// Note that this call doesn't read the file yet.
     /// The first access (see [Cache::get]) causes file reading.
-    pub fn new(parent: &Dbg, path: impl AsRef<Path>) -> Self {
+    pub fn new(parent: &Dbg) -> Self {
         Self {
             dbg: Dbg::new(parent, "Cache"),
-            path: path.as_ref().to_owned(),
             table: OnceLock::new(),
         }
     }
@@ -65,99 +58,23 @@ impl<T> Cache<T> {
 //
 impl<T: PartialOrd> Cache<T> {
     ///
-    /// read cache data from `self.path` file.
-    ///
-    /// # Panics
-    /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    fn read(&self) -> Result<dyn IntoIterator<Item = dyn IntoIterator<T> + 'static> + 'static>, Error>
-    where
-        T: FromStr<Err = ParseFloatError> + Clone + Default,
-    {
-        let callee = "read_from_file";
-        let file = File::open(&self.path).map_err(|err| {
-            format!(
-                "{}.{} | Failed reading file='{}': {}",
-                self.dbg,
-                callee,
-                self.path.display(),
-                err
-            )
-        })?;
-        let reader = BufReader::new(file);
-        let mut vals = None;
-        for (try_line, line_id) in reader.lines().zip(1..) {
-            let line = try_line.map_err(|err| {
-                format!(
-                    "{}.{} | Failed reading line={}: {}",
-                    self.dbg, callee, line_id, err
-                )
-            })?;
-            let ss = line.split_ascii_whitespace();
-            let ss_len = ss.clone().count();
-            let vals_mut = match vals.as_mut() {
-                None => vals.insert(vec![vec![]; ss_len]),
-                Some(vals) if vals.len() != ss_len => {
-                    return Err(format!(
-                        "{}.{} | Inconsistent dataset at line={}",
-                        self.dbg, callee, line_id
-                    )
-                    .into());
-                }
-                Some(vals) => vals,
-            };
-            for (i, s) in ss.enumerate() {
-                let val = s.parse().map_err(|err| {
-                    format!(
-                        "{}.{} | Failed parsing value at line={}: {}",
-                        self.dbg, callee, line_id, err
-                    )
-                })?;
-                vals_mut[i].push(val);
-            }
-        }
-        Ok(vals)
-    }
-    ///
-    /// save cache data to `self.path` file.
-    ///
-    fn save(&self, vals: Vec<Vec<T>>) -> Result<(), Error> {
-        let error = Error::new(&self.dbg, "save_to_file");
-        let mut file = File::create(&self.path).map_err(|err| {
-            error.pass_with(
-                format!("File::create error! path:{}", self.path.display()),
-                err.to_string(),
-            )
-        })?;
-        for col in vals.iter() {
-            let cols_str: Vec<_> = col.iter().map(ToString::to_string).collect();
-            let line = cols_str.join("\t");
-            writeln!(&mut file, "{}", line).map_err(|err| error.pass_with(
-                format!("Writing to file, path:{}", self.path.display()), 
-                err.to_string(),
-            ))?;
-        }
-        Ok(())
-    }
-    ///
     /// Initializes Table with cache data
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    pub fn init(&self, vals: IntoIterator<Item = IntoIterator<Item = T>>) -> Result<Table<T>, Error>
+    pub fn init(&self, vals: Vec<Vec<T>>) -> Result<(), Error>
     where
-        T: FromStr<Err = ParseFloatError> + Clone + Default,
+        T: FromStr<Err = ParseFloatError> + Clone + Default + std::fmt::Display
     {
-        let cols = vals
-            .into_iter()
-            .map(|vals| {
-                let iter_over_cols = vals.into_iter().enumerate().map(|(id, vals)| {
-                    let dbg = Dbg::new(&self.dbg, &format!("Column_{}", id));
-                    Column::new(dbg, vals)
-                });
-                SyncVec::from_iter(iter_over_cols)
-            })
-            .unwrap_or_default();
-        Ok(Table::new(&self.dbg, cols))
+        let iter_over_cols = vals.into_iter().enumerate().map(|(id, vals)| {
+            let dbg = Dbg::new(&self.dbg, &format!("Column_{}", id));
+            Column::new(dbg, vals)
+        });
+        let cols = SyncVec::from_iter(iter_over_cols);
+        self.table.set(Table::new(&self.dbg, cols)).map_err(|_| 
+            Error::new("Cache", "init").err("table.set")
+        )?;
+        Ok(())
     }
 }
 //
@@ -171,9 +88,8 @@ impl Cache<f64> {
     ///
     /// # Panics
     /// This method panics if at least one of the statements is true:
+    /// - self.table not init
     /// - `approx_vals` contains a non-comparable value (e. g. _NaN_),
-    /// - reading file at `self.path` failed,
-    /// - data of the `self.file` is inconsistent (parsing float error or missed data).
     ///
     /// # Examples
     /// ```
@@ -207,13 +123,10 @@ impl Cache<f64> {
     /// ```
     pub fn get(&self, approx_vals: &[Option<f64>]) -> Option<Vec<Vec<f64>>> {
         self.table
-            .get_or_init(|| {
-                let vals = self.read()?;
-                self.init(vals)
-            })
+            .get()
             .as_ref()
-            .unwrap_or_else(|err| 
-                 panic!("{}.{} | Failed initializing Table, error:{}", self.dbg, "get", err)
+            .unwrap_or_else( ||
+                panic!("{}.{} | Error: no table!", self.dbg, "get")
             )
             .get(approx_vals)
     }

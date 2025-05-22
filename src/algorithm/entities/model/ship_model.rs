@@ -1,4 +1,5 @@
 use indexmap::{IndexMap, IndexSet};
+use crate::model::DisplacementCache;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_3dlib::{
     props::Center,
@@ -14,7 +15,7 @@ use sal_sync::thread_pool::Scheduler;
 use std::sync::Arc;
 use crate::algorithm::entities::Position2d;
 
-use super::{floating_position::FloatingPosition, model_tree::ModelTree, CacheKey, FloatingPositionCache, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
+use super::{floating_position::FloatingPosition, model_tree::ModelTree, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
 
 ///
 /// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
@@ -27,7 +28,7 @@ pub struct ShipModel {
     model_tree: ModelTree,
     ///
     /// Provides a number of calculations:
-    /// - Floating position (see [FloatingPositionCache]).
+    /// - Floating position (see [DisplacementCache]).
     caches: IndexMap<CacheKey, Box<dyn LocalCache>>,
     scheduler: Scheduler,
 }
@@ -47,7 +48,7 @@ impl ShipModel {
         };
         ship_model.caches.insert(
             CacheKey::FloatingPostion,
-            Box::new(FloatingPositionCache::new(
+            Box::new(DisplacementCache::new(
                 &dbg,
                 model_tree,
                 conf.cache_dir,
@@ -199,7 +200,7 @@ impl ShipModel {
                 .get(&CacheKey::FloatingPostion)
                 .unwrap_or_else(|| {
                     panic!(
-                        "{} | Trying to access uninitialized FloatingPositionCache",
+                        "{} | Trying to access uninitialized DisplacementCache",
                         self.dbg
                     )
                 })

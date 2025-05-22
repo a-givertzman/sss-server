@@ -52,11 +52,14 @@ impl ModelTree {
             })?
             .into_vec::<ShipModelMeta>()
             .map_err(|why| error.err(format!("Failed reading model tree: {:?}", why)))?;
-        // Ok(Self {
-        //     elements: elements.into_iter().collect(),
-        //     ..self
-        // })
-        Err(error.err("Not implemented, fix: elements.into_iter().collect()"))
+        let mut index_map = IndexMap::new();
+        elements.into_iter()
+            .for_each(|(s, v)| { index_map.insert(s, v); });
+        Ok(Self {
+             elements: index_map,
+             ..self
+        })
+       // Err(error.err("Not implemented, fix: elements.into_iter().collect()"))
     }
     ///
     /// Return an iterator over the key-value pairs of the map, in their order.

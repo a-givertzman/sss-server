@@ -24,7 +24,7 @@ impl TryFrom<Point3> for Position {
     }
 }
 //
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
 #[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,
