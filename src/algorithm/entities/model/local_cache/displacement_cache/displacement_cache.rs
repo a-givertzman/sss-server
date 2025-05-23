@@ -1,4 +1,11 @@
-use crate::{algorithm::entities::{cache::{self, Cache}, model::{local_cache::LocalCache, ModelTree}, Position}, kernel::types::RwLock};
+use crate::{
+    algorithm::entities::{
+        Position,
+        cache::{self, Cache},
+        model::{ModelTree, local_cache::LocalCache},
+    },
+    kernel::types::RwLock,
+};
 use sal_3dlib::topology::shape::{
     face::Face,
     vertex::Vertex,
@@ -9,17 +16,21 @@ use sal_sync::thread_pool::Scheduler;
 use std::{
     fs::File,
     io::{BufRead, BufReader, BufWriter, Write},
-    path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc},
+    path::{Path, PathBuf},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
-use super::{build_displacement_cache::BuildDisplacementCache, DisplacementCacheConf};
+use super::{DisplacementCacheConf, build_displacement_cache::BuildDisplacementCache};
 ///
 /// Pre-calculated cache for floating position algorithm.
 ///
 /// See [DisplacementCacheConf] for more details about the fields.
 pub struct DisplacementCache {
     dbg: Dbg,
-    path: PathBuf,
+    cache_path: PathBuf,
     //    model_keys: Vec<String>,
     waterline_position: Position,
     heel_steps: Vec<f64>,
@@ -42,16 +53,16 @@ impl DisplacementCache {
     const KEY: &'static str = "floating_position_cache";
     ///
     /// Creates a new instance.
-    /// - path - folder contains all cache files
+    /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
         model_tree: ModelTree,
-        path: impl AsRef<Path>,
+        cache_dir: impl AsRef<Path>,
         conf: DisplacementCacheConf,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "DisplacementCache");
-        let path = path.as_ref().join(Self::KEY);
+        let path = cache_dir.as_ref().join(Self::KEY);
         Self {
             model_tree,
             //         model_keys: vec![],
@@ -60,7 +71,7 @@ impl DisplacementCache {
             trim_steps: conf.trim_steps,
             draught_steps: conf.draught_steps,
             cache: Arc::new(RwLock::new(None)),
-            path,
+            cache_path: path,
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
@@ -78,34 +89,26 @@ impl DisplacementCache {
             }
         };
         let cache_data = BuildDisplacementCache::new(
-                &self.dbg,
-                model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-                self.waterline_position,
-                /* TODO зачем этот фильтр?
-                        .iter()
-                        .filter_map(|(shape_key, shape)| {
-                                self.model_keys.contains(shape_key).then_some(shape)
-                            })
-                        .cloned()
-                            .collect(),
-                */
-                self.heel_steps.clone(),
-                self.trim_steps.clone(),
-                self.draught_steps.clone(),
-                self.scheduler.clone(),
-                self.exit.clone(),
-            )
-            .build();
-        let data: Vec<_> = 
-            cache_data
-            .iter()
-            .filter_map(|v| v.clone().ok())
-            .collect(); 
-        let mut errors: Vec<_> = 
-            cache_data
-            .into_iter()
-            .filter_map(|v| v.err())
-            .collect(); 
+            &self.dbg,
+            model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
+            self.waterline_position,
+            /* TODO зачем этот фильтр?
+                    .iter()
+                    .filter_map(|(shape_key, shape)| {
+                            self.model_keys.contains(shape_key).then_some(shape)
+                        })
+                    .cloned()
+                        .collect(),
+            */
+            self.heel_steps.clone(),
+            self.trim_steps.clone(),
+            self.draught_steps.clone(),
+            self.scheduler.clone(),
+            self.exit.clone(),
+        )
+        .build();
+        let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
+        let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
         if let Some(cache) = self.cache.write().as_ref() {
             if let Err(err) = cache.init(data.clone()) {
                 errors.push(error.pass_with("self.cache.get_mut", err));
@@ -119,20 +122,19 @@ impl DisplacementCache {
         errors
     }
 
-        ///
+    ///
     /// read cache data from `self.path` file.
     ///
     /// # Panics
     /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
-    fn read(&self) -> Result<Vec<Vec<f64>>, Error>
-    {
+    fn read(&self) -> Result<Vec<Vec<f64>>, Error> {
         let callee = "read_from_file";
-        let file = File::open(&self.path).map_err(|err| {
+        let file = File::open(&self.cache_path).map_err(|err| {
             format!(
                 "{}.{} | Failed reading file='{}': {}",
                 self.dbg,
                 callee,
-                self.path.display(),
+                self.cache_path.display(),
                 err
             )
         })?;
@@ -168,31 +170,28 @@ impl DisplacementCache {
                 vals_mut[i].push(val);
             }
         }
-        vals.ok_or(                
-            format!(
-            "{}.{} | Error: no vals",
-            self.dbg, callee,
-        ).into())
+        vals.ok_or(format!("{}.{} | Error: no vals", self.dbg, callee,).into())
     }
     ///
     /// save cache data to `self.path` file.
     ///
-    fn save(&self, vals: Vec<Vec<f64>>) -> Result<(), Error>
-    {
+    fn save(&self, vals: Vec<Vec<f64>>) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "save_to_file");
-        let mut file = File::create(&self.path).map_err(|err| {
+        let mut file = File::create(&self.cache_path).map_err(|err| {
             error.pass_with(
-                format!("File::create error! path:{}", self.path.display()),
+                format!("File::create error! path:{}", self.cache_path.display()),
                 err.to_string(),
             )
         })?;
         for col in vals.iter() {
             let cols_str: Vec<_> = col.iter().map(ToString::to_string).collect();
             let line = cols_str.join("\t");
-            writeln!(&mut file, "{}", line).map_err(|err| error.pass_with(
-                format!("Writing to file, path:{}", self.path.display()), 
-                err.to_string(),
-            ))?;
+            writeln!(&mut file, "{}", line).map_err(|err| {
+                error.pass_with(
+                    format!("Writing to file, path:{}", self.cache_path.display()),
+                    err.to_string(),
+                )
+            })?;
         }
         Ok(())
     }
@@ -206,13 +205,12 @@ impl LocalCache for DisplacementCache {
         let error = Error::new(&self.dbg, "get");
         if self.cache.read().is_none() {
             let cache = Cache::new(&self.dbg);
-            let vals = self.read()
-            .map_err(|err| 
-                error.pass_with("read cache data error", err)
-            )?;
-            cache.init(vals).map_err(|err| 
-                error.pass_with("cache.init error", err)
-            )?;
+            let vals = self
+                .read()
+                .map_err(|err| error.pass_with("read cache data error", err))?;
+            cache
+                .init(vals)
+                .map_err(|err| error.pass_with("cache.init error", err))?;
             self.cache.write().insert(cache);
         }
         self.cache
@@ -228,9 +226,7 @@ impl LocalCache for DisplacementCache {
         self.exit.store(false, Ordering::SeqCst);
         match self.calculate().first() {
             Some(err) => Err(Error::new(&self.dbg, "rebuild").pass(err.to_owned())),
-            None => {
-                Ok(())
-            }
+            None => Ok(()),
         }
     }
     //

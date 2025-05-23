@@ -1,4 +1,4 @@
-use crate::algorithm::entities::{model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache, Position};
+use crate::algorithm::entities::{model::{local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache, LocalCache}, Position};
 #[cfg(test)]
 use crate::algorithm::entities::model::{
     local_cache::displacement_cache::{
@@ -51,7 +51,7 @@ fn calculated_displacement_sofia() {
     test_duration.run().unwrap();
     let thread_pool = ThreadPool::new(&dbg, Some(12));
     let model_path = "src/assets/sofia.stp";
-    let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/sofia_result";
+    let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/";
     // create model tree with empty attribute for each model
     let model_tree = ModelTree::new(&dbg, model_path)
         .load()
@@ -67,7 +67,15 @@ fn calculated_displacement_sofia() {
         trim_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
         draught_steps: vec![4.],//vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(), 
     };
-    let heel_steps = conf.heel_steps.clone();
+    let error = DisplacementCache::new(
+        &dbg,
+        model_tree,
+        result_path,
+        conf,
+        thread_pool.scheduler(),
+    ).rebuild();
+    assert!(error.is_ok(), "*error*: {:?}", error);
+ /*   let heel_steps = conf.heel_steps.clone();
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
     let errors = BuildDisplacementCache::new(
@@ -81,7 +89,7 @@ fn calculated_displacement_sofia() {
         Arc::default(),
     )
     .build();
-    assert!(errors.is_empty(), "*errors*: {:?}", errors);
+    assert!(errors.is_empty(), "*errors*: {:?}", errors);*/
     // clean up
  /*   if let Err(why) = fs::remove_file(result_path) {
         log::warn!(

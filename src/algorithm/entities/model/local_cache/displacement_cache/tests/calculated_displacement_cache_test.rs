@@ -1,4 +1,4 @@
-use crate::algorithm::entities::{model::local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache, Position};
+use crate::algorithm::entities::{model::{local_cache::displacement_cache::build_displacement_cache::BuildDisplacementCache, LocalCache}, Position};
 #[cfg(test)]
 use crate::algorithm::entities::model::{
     local_cache::displacement_cache::{
@@ -55,8 +55,8 @@ fn calculated_displacement_cache() {
         "src/assets/cube_1_1_1.step";
     let target_path =
         "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/fpc_target";
-    let result_path =
-        "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/fpc_result";
+    let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets";
+  //      "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/fpc_result";
     // create model tree with empty attribute for each model
     let model_tree = ModelTree::new(&dbg, model_path)
         .load()
@@ -76,10 +76,15 @@ fn calculated_displacement_cache() {
         trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
         draught_steps: vec![0.0, 0.25],
     };
-    let heel_steps = conf.heel_steps.clone();
-    let trim_steps = conf.trim_steps.clone();
-    let draught_steps = conf.draught_steps.clone();
-    let errors = BuildDisplacementCache::new(
+    let error = DisplacementCache::new(
+        &dbg,
+        model_tree,
+        result_path,
+        conf,
+        thread_pool.scheduler(),
+    ).rebuild();
+    assert!(error.is_ok(), "*error*: {:?}", error);
+ /*   let errors = BuildDisplacementCache::new(
         &dbg,
         model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
         waterline_position,
@@ -90,7 +95,7 @@ fn calculated_displacement_cache() {
         Arc::default(),
     )
     .build();
-    assert!(errors.is_empty(), "*errors*: {:?}", errors);
+    assert!(errors.is_empty(), "*errors*: {:?}", errors);*/
     // read target file
     let mut target_reader = {
         let target_file = File::open(target_path)
@@ -98,6 +103,7 @@ fn calculated_displacement_cache() {
         BufReader::new(target_file)
     };
     // read result file
+    let result_path = result_path + "/floating_position_cache";
     let mut result_reader = {
         let result_file = File::open(result_path)
             .unwrap_or_else(|err| panic!("Failed opening result file='{}': {}", result_path, err));
