@@ -103,10 +103,10 @@ fn calculated_displacement_cache() {
         BufReader::new(target_file)
     };
     // read result file
-    let result_path = result_path + "/floating_position_cache";
+    let result_path = result_path.to_owned() + &"/floating_position_cache";
     let mut result_reader = {
-        let result_file = File::open(result_path)
-            .unwrap_or_else(|err| panic!("Failed opening result file='{}': {}", result_path, err));
+        let result_file = File::open(&result_path)
+            .unwrap_or_else(|err| panic!("Failed opening result file='{}': {}", &result_path, err));
         BufReader::new(result_file)
     };
     // check files line-by-line
@@ -138,10 +138,10 @@ fn calculated_displacement_cache() {
         "*result_file*.lines.count > *target_file*.lines.count"
     );
     // clean up
-    if let Err(why) = fs::remove_file(result_path) {
+    if let Err(why) = fs::remove_file(&result_path) {
         log::warn!(
             "Clean up (optional) | Failed removing result file='{}': {}",
-            result_path,
+            &result_path,
             why
         );
     }
