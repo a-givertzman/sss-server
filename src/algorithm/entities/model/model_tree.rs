@@ -42,6 +42,9 @@ impl ModelTree {
     /// Internally it reads `self.path` and converts the result to the target representation.
     pub(super) fn load(self) -> Result<Self, Error> {
         let error = Error::new(&self.dbg, "load");
+        let build_attributes = |_, _| -> ShipModelMeta {
+            ShipModelMeta {}
+        };
         let elements = sal_3dlib::fs::Reader::read_step(&self.path)
             .map_err(|why| {
                 error.err(format!(
@@ -50,7 +53,7 @@ impl ModelTree {
                     why
                 ))
             })?
-            .into_vec::<ShipModelMeta>()
+            .into_vec::<ShipModelMeta>(build_attributes)
             .map_err(|why| error.err(format!("Failed reading model tree: {:?}", why)))?;
         let mut index_map = IndexMap::new();
         elements.into_iter()

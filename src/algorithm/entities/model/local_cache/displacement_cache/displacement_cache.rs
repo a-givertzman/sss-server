@@ -109,10 +109,16 @@ impl DisplacementCache {
         .build();
         let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
         let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
-        if let Some(cache) = self.cache.write().as_ref() {
+        if let Some(mut guard) = self.cache.try_write() {
+            let cache = if let Some(cache) = guard.take() {
+                cache
+            } else {
+                Cache::<f64>::new(&self.dbg)
+            };
             if let Err(err) = cache.init(data.clone()) {
                 errors.push(error.pass_with("self.cache.get_mut", err));
             }
+            let _ = guard.insert(cache);
             if let Err(err) = self.save(data) {
                 errors.push(error.pass_with("save data", err));
             }

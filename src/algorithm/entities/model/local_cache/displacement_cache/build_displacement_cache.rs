@@ -248,6 +248,7 @@ impl BuildDisplacementCache {
                 }
             }
         }
+     //   dbg!(&results);
         results
     }
 }
