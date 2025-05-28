@@ -103,9 +103,12 @@ impl BuildDisplacementCache {
                     }
                     let mut obj = waterline.clone();
                     let elements = self.elements.clone();
-                    let dbg_ = self.dbg.clone();
+                  //  let dbg_ = self.dbg.clone();
                     let task_results = task_results.clone();
-                    let origin = Vertex::new(origin.values());
+                    // смещаем origin на осадку для фикса бага translate
+                    let origin_fixed = 
+                        Vertex::new([origin.values()[0], origin.values()[1], origin.values()[2] + draught]);
+                   // let origin = Vertex::new(origin.values());
                     let scale = self.scale;
                     let handle = self.scheduler.spawn(move || {
                         // make a clone of origin waterline and transform it
@@ -113,19 +116,21 @@ impl BuildDisplacementCache {
                        // let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
                         let obj = &{
                             let mut loc_y = Vector::unit_y();
+                            // translate сбрасывает вращение, поэтому сначала перемещаем, потом вращаем
+                            obj = obj.translate(Vector::new(0.0, 0.0, draught));
                             if 0.0 != heel {
                                 let heel_in_rad = heel.to_radians();
-                                obj = obj.rotate(origin.clone(), Vector::unit_x(), heel_in_rad);
+                                obj = obj.rotate(origin_fixed.clone(), Vector::unit_x(), heel_in_rad);
                                 // once a rotation around oX happens, oY needs to get the rotation too,
                                 // overwise oY remains global and doesn't match new `obj`'s transformation
                                 loc_y = loc_y.rotate(Vector::unit_x(), heel_in_rad);
                             }
                             if 0.0 != trim {
-                                obj = obj.rotate(origin, loc_y, trim.to_radians());
+                                obj = obj.rotate(origin_fixed, loc_y, trim.to_radians());
                             }
-                            if 0.0 != draught {
+                      /*      if 0.0 != draught {
                                 obj = obj.translate(Vector::new(0.0, 0.0, draught));
-                            }
+                            }*/
                             obj
                         };
                         let mut volume = 0.0;
@@ -170,8 +175,8 @@ impl BuildDisplacementCache {
                                                     volume_moment[2] += current_moment[2];
                                                 }
                                             }
-                                            let text = format!("volumed current_volume:{} center:{:?} heel:{heel}, trim:{trim}, draught:{draught}", current_volume, elmnt.center().point());
-                                            dbg!(text);
+                                       //     let text = format!("volumed current_volume:{} center:{:?} heel:{heel}, trim:{trim}, draught:{draught}", current_volume, elmnt.center().point());
+                                        //    dbg!(text);
                                         }
                                     });
                                 }
