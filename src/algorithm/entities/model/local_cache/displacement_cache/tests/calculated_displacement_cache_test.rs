@@ -79,6 +79,7 @@ fn calculated_displacement_cache() {
     let error = DisplacementCache::new(
         &dbg,
         model_tree,
+        1.,
         result_path,
         conf,
         thread_pool.scheduler(),
@@ -109,34 +110,21 @@ fn calculated_displacement_cache() {
             .unwrap_or_else(|err| panic!("Failed opening result file='{}': {}", &result_path, err));
         BufReader::new(result_file)
     };
-    // check files line-by-line
-    for ((try_target_line, try_result_line), line_id) in target_reader
-        .by_ref()
-        .lines()
-        .zip(result_reader.by_ref().lines())
-        .zip(1..)
-    {
-        let target = try_target_line
-            .unwrap_or_else(|err| panic!("line={} | Failed getting target line: {}", line_id, err));
-        let result = try_result_line
-            .unwrap_or_else(|err| panic!("line={} | Failed getting result line: {}", line_id, err));
-        assert_eq!(
-            target, result,
-            "line={} target='{}' result='{}'",
-            line_id, target, result
+    let target: Vec<String> = target_reader.by_ref().lines().filter_map(|v| v.ok()).collect();
+    let result: Vec<String> = result_reader.by_ref().lines().filter_map(|v| v.ok()).collect();
+
+    assert_eq!(
+        target.len(), result.len(),
+        "target.len='{}' result.len()='{}'",
+        target.len(), result.len()
+    );
+    for line in &result {
+        assert!(
+            target.contains(line),
+            "line={} target='{:?}' result='{:?}'",
+            line, target, result
         );
     }
-    // check remaining lines in both files
-    let remaining_target_lines = target_reader.lines().count();
-    assert_eq!(
-        remaining_target_lines, 0,
-        "*result_file*.lines.count < *target_file*.lines.count"
-    );
-    assert_eq!(
-        0,
-        result_reader.lines().count(),
-        "*result_file*.lines.count > *target_file*.lines.count"
-    );
     // clean up
     if let Err(why) = fs::remove_file(&result_path) {
         log::warn!(

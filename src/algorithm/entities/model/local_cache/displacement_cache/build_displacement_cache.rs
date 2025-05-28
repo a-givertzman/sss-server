@@ -23,8 +23,6 @@ use crate::algorithm::entities::{model::ShipModelMeta, Position};
 ///
 /// See [super::DisplacementCacheConf] for more details about the fields.
 // 
-// normalize meters to/from mm
-const SCALE: f64 = 1e3;
 
 pub struct BuildDisplacementCache {
     dbg: Dbg,
@@ -35,6 +33,7 @@ pub struct BuildDisplacementCache {
     draught_steps: Vec<f64>,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
+    scale: f64,
 }
 //
 //
@@ -51,6 +50,7 @@ impl BuildDisplacementCache {
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
+        scale: f64,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildDisplacementCache"),
@@ -61,6 +61,7 @@ impl BuildDisplacementCache {
             draught_steps,
             scheduler,
             exit,
+            scale,
         }
     }
     ///
@@ -71,8 +72,8 @@ impl BuildDisplacementCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let origin = self.waterline_position.scale(SCALE);
-        let size = 1000.*SCALE;
+        let origin = self.waterline_position.scale(self.scale);
+        let size = 1000.*self.scale;
         let waterline = match Wire::polygon(
             [
                 Vertex::new([origin.x() + size, origin.y() + size, origin.z()]),
@@ -92,7 +93,7 @@ impl BuildDisplacementCache {
         };
       //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
         'draught: for &draught in &self.draught_steps {
-            let draught = draught*SCALE;
+            let draught = draught*self.scale;
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
@@ -105,10 +106,11 @@ impl BuildDisplacementCache {
                     let dbg_ = self.dbg.clone();
                     let task_results = task_results.clone();
                     let origin = Vertex::new(origin.values());
+                    let scale = self.scale;
                     let handle = self.scheduler.spawn(move || {
                         // make a clone of origin waterline and transform it
                         // according to heel, trim, and draught values
-                        let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
+                       // let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
                         let obj = &{
                             let mut loc_y = Vector::unit_y();
                             if 0.0 != heel {
@@ -143,43 +145,33 @@ impl BuildDisplacementCache {
                             match volumed {
                                 Ok(volumed) => {
                                     let solids: Vec<_> = volumed.solids().into_iter().collect();
-                                    //   let text = format!("try_fold build draught:{} solids:{}", draught, solids.len());  
-                                    //   dbg!(text);   
-
+                                //    let text = format!("try_fold build heel:{heel}, trim:{trim}, draught:{draught} solids:{}", solids.len());  
+                                //    dbg!(text);  
                                     solids.iter().for_each(|elmnt| {
                                         let [.., elmnt_z] = elmnt.center().point();
                                         let [.., waterline_z] = obj.center().point();
                                         // Only calculate volume if volumed element is below waterline.
                                         // Put 0.0 if it's not for consistent.
                                         //     dbg!("try_fold volumed", elmnt_z, waterline_z);
-                                        //     let text = format!("try_fold volumed draught:{} elmnt_z:{} waterline_z:{}", draught, elmnt_z, waterline_z);  
+                                        //     let text = format!("try_fold volumed heel:{heel}, trim:{trim}, draught:{draught} elmnt_z:{} waterline_z:{}", elmnt_z, waterline_z);  
                                         //     dbg!(text);   
                                         if elmnt_z < waterline_z { 
-                                            //            let text = format!("try_fold volumed elmnt_z:{} < waterline_z elmnt_z:{}", elmnt_z, waterline_z);  
+                                            //            let text = format!("try_fold volumed elmnt_z:{} < waterline_z elmnt_z:{} heel:{heel}, trim:{trim}, draught:{draught}", elmnt_z, waterline_z);  
                                             //           dbg!(text);                                             
-                                        /*     match Compound::build([obj], [], [elmnt]) {
-                                                Ok(volumed) => {
-                                                    volumed.solids().into_iter().for_each(|elmnt| {*/
-                                                        let current_volume = elmnt.volume();
-                                                        let [e_x, e_y, e_z] = elmnt.center().point();
-                                                        let current_moment = [e_x*current_volume, e_y*current_volume, e_z*current_volume];
-                                                        volume += current_volume;
-                                                        match volume_moment.as_mut() {
-                                                            None => volume_moment = Some(current_moment),
-                                                            Some(volume_moment) => {
-                                                                volume_moment[0] += current_moment[0];
-                                                                volume_moment[1] += current_moment[1];
-                                                                volume_moment[2] += current_moment[2];
-                                                            }
-                                                        }
-                                                        let text = format!("volumed current_volume:{} center:{:?}", current_volume, elmnt.center().point());
-                                                        dbg!(text);
-                                            /*        });
-                                                },
-                                                Err(err) => {
-                                                    log::error!("BuildDisplacementCache task: Compound::build volume error: {err}");
-                                                },
-                                            }*/
+                                            let current_volume = elmnt.volume();
+                                            let [e_x, e_y, e_z] = elmnt.center().point();
+                                            let current_moment = [e_x*current_volume, e_y*current_volume, e_z*current_volume];
+                                            volume += current_volume;
+                                            match volume_moment.as_mut() {
+                                                None => volume_moment = Some(current_moment),
+                                                Some(volume_moment) => {
+                                                        volume_moment[0] += current_moment[0];
+                                                        volume_moment[1] += current_moment[1];
+                                                    volume_moment[2] += current_moment[2];
+                                                }
+                                            }
+                                            let text = format!("volumed current_volume:{} center:{:?} heel:{heel}, trim:{trim}, draught:{draught}", current_volume, elmnt.center().point());
+                                            dbg!(text);
                                         }
                                     });
                                 }
@@ -188,17 +180,17 @@ impl BuildDisplacementCache {
                             ///
                             /// - Transforms units
                             /// - Moment tranforms into Center of displaced valume (Mass center)
-                            fn tranform(heel: f64, trim: f64, draught: f64, volume: f64, volume_moment: Option<[f64; 3]>) -> (f64, Option<[f64; 3]>, f64, f64, f64) {
+                            fn tranform(heel: f64, trim: f64, draught: f64, volume: f64, volume_moment: Option<[f64; 3]>, scale: f64) -> (f64, Option<[f64; 3]>, f64, f64, f64) {
                                 let volume_center = volume_moment
-                                    .map(|[x, y, z]| [x/(volume*SCALE), y/(volume*SCALE), z/(volume*SCALE)]);
-                                let volume = volume / (SCALE*SCALE*SCALE); //mm^3 to m^3
-                                let draught = draught / SCALE; // mm to m
+                                    .map(|[x, y, z]| [x/(volume*scale), y/(volume*scale), z/(volume*scale)]);
+                                let volume = volume / (scale*scale*scale); //mm^3 to m^3
+                                let draught = draught / scale; // mm to m
                             //     let text = format!("map, volume:{volume}, volume_center:{:?}, heel:{heel}, trim:{trim}, draught:{draught}", volume_center);
                             //     dbg!(text);
                                 (volume, volume_center, heel, trim, draught)
                             }
                             task_results.push(
-                                tranform(heel, trim, draught, volume, volume_moment),
+                                tranform(heel, trim, draught, volume, volume_moment, scale),
                             );
                         }
                         Ok(())

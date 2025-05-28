@@ -9,6 +9,8 @@ pub struct ShipModelConf {
     /// File containing model structure (e. g. in STEP format).
     pub model_path: PathBuf,
     ///
+    pub model_scale: f64,
+    ///
     /// Directory containing [super::ShipModel] caches.
     pub cache_dir: PathBuf,
     ///

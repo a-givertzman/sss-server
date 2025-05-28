@@ -70,6 +70,7 @@ fn calculated_displacement_sofia() {
     let error = DisplacementCache::new(
         &dbg,
         model_tree,
+        1000.,
         result_path,
         conf,
         thread_pool.scheduler(),

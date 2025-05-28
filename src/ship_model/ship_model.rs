@@ -319,6 +319,7 @@ fn compute_balance(
         &dbg, 
         model::ShipModelConf {
             model_path: PathBuf::from(model_path),
+            model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
             floating_position_cache_conf: model::DisplacementCacheConf {
                 waterline_position: Position::new(0., 0., 0.),

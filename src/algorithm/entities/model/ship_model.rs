@@ -51,6 +51,7 @@ impl ShipModel {
             Box::new(DisplacementCache::new(
                 &dbg,
                 model_tree,
+                conf.model_scale,
                 conf.cache_dir,
                 conf.floating_position_cache_conf,
                 scheduler.clone(),

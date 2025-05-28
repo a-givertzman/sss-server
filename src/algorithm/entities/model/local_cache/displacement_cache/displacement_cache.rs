@@ -39,6 +39,7 @@ pub struct DisplacementCache {
     ///
     /// Model representation used for cache calculation.
     model_tree: ModelTree,
+    model_scale: f64,
     ///
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
@@ -57,6 +58,7 @@ impl DisplacementCache {
     pub fn new(
         parent: &Dbg,
         model_tree: ModelTree,
+        model_scale: f64,
         cache_dir: impl AsRef<Path>,
         conf: DisplacementCacheConf,
         scheduler: Scheduler,
@@ -65,6 +67,7 @@ impl DisplacementCache {
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
             model_tree,
+            model_scale,
             //         model_keys: vec![],
             heel_steps: conf.heel_steps,
             waterline_position: conf.waterline_position,
@@ -105,6 +108,7 @@ impl DisplacementCache {
             self.draught_steps.clone(),
             self.scheduler.clone(),
             self.exit.clone(),
+            self.model_scale,
         )
         .build();
         let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
