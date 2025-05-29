@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         thread_pool.scheduler(),
     );
-    let res = model.rebuild_caches(&[&CacheKey::FloatingPostion]);
+    let res = model.rebuild_caches();
  //   dbg!(&res);
  /*   let floating_position = model.floating_position(
         3230.55,

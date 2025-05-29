@@ -16,8 +16,19 @@ use std::sync::Arc;
 use crate::algorithm::entities::Position2d;
 
 //use super::floating_position::FloatingPosition;
-use super::{model_tree::ModelTree, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
+use super::{model_tree::ModelTree, BoundCache, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
 
+//
+    pub struct EvaluatedFloatingPosition {
+        pub heel_angle: f64,
+        pub trim_angle: f64,
+        pub draught_at_amidships: f64,
+        pub displacement: f64,
+        pub disp_center: Position,
+        bulk: Vec<BulkResult>,
+        liquid: Vec<LiquidResult>,
+        damage_compartment: Vec<CompartmentResult>,
+    }
 ///
 /// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
 ///
@@ -26,11 +37,14 @@ pub struct ShipModel {
     dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element by keys.
-    model_tree: ModelTree,
+ //   model_tree: ModelTree,
     ///
     /// Provides a number of calculations:
-    /// - Floating position (see [DisplacementCache]).
-    caches: IndexMap<CacheKey, Box<dyn LocalCache>>,
+    /// - cashe for model, [heel, trim, draught, volume, x, y, z]
+    model: DisplacementCache,
+    model_bounded: Vec<BoundCache>,
+    compartments: IndexMap<usize, CompartmentCache>,
+    compartment_bounded: IndexMap<usize, IndexMap<usize, BoundCache>>,
     scheduler: Scheduler,
 }
 //
@@ -44,7 +58,7 @@ impl ShipModel {
         let mut ship_model = Self {
             dbg: dbg.clone(),
             caches: IndexMap::new(),
-            model_tree: model_tree.clone(),
+    //        model_tree: model_tree.clone(),
             scheduler: scheduler.clone(),
         };
         ship_model.caches.insert(
@@ -90,7 +104,7 @@ impl ShipModel {
     ///
     /// [Shell]: sal_3dlib::topology::shape::Shell
     /// [Solid]: sal_3dlib::topology::shape::Solid
-    pub fn subvolume(
+ /*   pub fn subvolume(
         &self,
         keys: &[&str],
         waterline: &Face<ShipModelMeta>,
@@ -133,7 +147,7 @@ impl ShipModel {
                 }
                 Ok(elmnts)
             })
-    }
+    }*/
     ///
     /// Generates and reload the internal caches.
     ///
@@ -160,17 +174,14 @@ impl ShipModel {
     ///     }
     /// }
     /// ```
-    pub fn rebuild_caches(&mut self, caches: &[&CacheKey]) -> Result<(), Error> {
+    pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         // start wokers to calculate required caches
         let errors = {
             let mut errors = vec![];
-            let calculate_all = caches.is_empty();
             for (cache_key, cache) in &self.caches {
-                if calculate_all || caches.contains(&cache_key) {
                     if let Err(err) = cache.rebuild() {
                         errors.push((*cache_key, err));
                     }
-                }
             }
             errors
         };
@@ -190,17 +201,6 @@ impl ShipModel {
     }
     //
     //
-    //
-    pub struct EvaluatedFloatingPosition {
-        pub heel_angle: f64,
-        pub trim_angle: f64,
-        pub draught_at_amidships: f64,
-        pub displacement: f64,
-        pub disp_center: Position,
-        bulk: Vec<BulkResult>,
-        liquid: Vec<LiquidResult>,
-    }
-
     pub fn floating_position(
         &self,
         displacement: f64,
