@@ -24,7 +24,7 @@ impl TryFrom<Point3> for Position {
     }
 }
 //
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
 #[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,
@@ -99,5 +99,11 @@ impl AddAssign for Position {
             y: self.y + other.y,
             z: self.z + other.z,
         };
+    }
+}
+//
+impl Into<[f64; 3]> for Position {
+    fn into(self) -> [f64; 3] {
+        [self.x, self.y, self.z]
     }
 }

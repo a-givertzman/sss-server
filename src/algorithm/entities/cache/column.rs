@@ -14,7 +14,7 @@ pub struct Column<T> {
 }
 //
 //
-impl<T: PartialOrd> Column<T> {
+impl<T: PartialOrd + Clone> Column<T> {
     ///
     /// Returns an analyzed instance (see [Column] for details).
     ///
@@ -29,6 +29,10 @@ impl<T: PartialOrd> Column<T> {
             data: values.into(),
             dbg,
         }
+    }
+    /// get raw data
+    pub fn data(&self) -> Vec<T> {
+        self.data.iter().map(|v| v.clone()).collect()
     }
     ///
     /// Returns inflection point IDs based on given values.

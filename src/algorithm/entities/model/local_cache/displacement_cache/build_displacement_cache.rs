@@ -1,13 +1,9 @@
 use coco::Stack;
 //
 use sal_3dlib::{
-    gmath::vector::Vector,
-    props::{Center, Volume},
-    topology::shape::{
-        Shape,
-        compound::{AlgoMakerVolume, Compound, Solids},
-        face::{Face, Rotate, Translate},
-    },
+    gmath::vector::Vector, ops::{transform::*, Polygon}, props::{Center, Volume}, topology::shape::{
+        compound::{AlgoMakerVolume, Compound, Solids}, face::*, vertex::Vertex, wire::Wire, Shape
+    }
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
@@ -21,73 +17,83 @@ use std::{
     },
 };
 
-use crate::algorithm::entities::model::ShipModelMeta;
+use crate::algorithm::entities::{model::ShipModelMeta, Position};
 ///
-/// Provides logic to calculate and store cache used by [super::FloatingPositionCache].
+/// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
-/// See [super::FloatingPositionCacheConf] for more details about the fields.
-pub struct BuildFloatingPositionCache {
+/// See [super::DisplacementCacheConf] for more details about the fields.
+// 
+
+pub struct BuildDisplacementCache {
     dbg: Dbg,
-    file_path: PathBuf,
     elements: Vec<Shape<ShipModelMeta>>,
-    waterline: Face<ShipModelMeta>,
+    waterline_position: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
+    scale: f64,
 }
 //
 //
-impl BuildFloatingPositionCache {
+impl BuildDisplacementCache {
     ///
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        file_path: PathBuf,
         elements: Vec<Shape<ShipModelMeta>>,
-        waterline: Face<ShipModelMeta>,
+        waterline_position: Position,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
+        scale: f64,
     ) -> Self {
         Self {
-            dbg: Dbg::new(parent, "BuildFloatingPositionCache"),
-            file_path,
+            dbg: Dbg::new(parent, "BuildDisplacementCache"),
             elements,
-            waterline,
+            waterline_position,
             heel_steps,
             trim_steps,
             draught_steps,
             scheduler,
             exit,
+            scale,
         }
     }
     ///
-    /// Creates and starts worker for [FloatingPositionCache::calculate].
-    pub fn build(self) -> Vec<Error> {
+    /// Creates and starts worker for [DisplacementCache::calculate].
+    pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
-        let mut binding = File::create(&self.file_path).map_err(|err| {
-            error.pass_with(
-                format!("File::create error! path:{}", self.file_path.display()),
-                err.to_string(),
-            )
-        });
-        let mut out_f = match &mut binding {
-            Ok(file) => file, 
-            Err(err) => {
-                return vec![error.pass_with(format!("File::create, path: {:?}", self.file_path), err.to_string())];
-            },
-        };
         let mut tasks: Vec<JoinHandle<_>> = vec![];
-        let results = Arc::new(Stack::new());
-        let mut spawn_errors = Vec::new();
+        let task_results = Arc::new(Stack::new());
+        let mut results = Vec::new();
+        let origin = self.waterline_position.scale(self.scale);
+        let size = 1000.*self.scale;
+        let waterline = match Wire::polygon(
+            [
+                Vertex::new([origin.x() + size, origin.y() + size, origin.z()]),
+                Vertex::new([origin.x() - size, origin.y() + size, origin.z()]),
+                Vertex::new([origin.x() - size, origin.y() - size, origin.z()]),
+                Vertex::new([origin.x() + size, origin.y() - size, origin.z()]),
+            ],
+            true,
+        ) {
+            Ok(ref polygon) => Face::try_from(polygon)
+            .map_err(|err| error.pass_with("Failed creating Face from *polygon*", err)),
+            Err(err) => Err(error.pass_with("Failed creating *polygon* from Wire", err.to_string())),
+        };
+        let waterline = match waterline {
+            Ok(v) => v,
+            Err(err) => return vec![Err(err)],
+        };
+      //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
         'draught: for &draught in &self.draught_steps {
-            let draught = draught*1000.;
+            let draught = draught*self.scale;
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
@@ -95,30 +101,36 @@ impl BuildFloatingPositionCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    let mut obj = self.waterline.clone();
+                    let mut obj = waterline.clone();
                     let elements = self.elements.clone();
-                    let dbg_ = self.dbg.clone();
-                    let results_ = results.clone();
+                  //  let dbg_ = self.dbg.clone();
+                    let task_results = task_results.clone();
+                    // смещаем origin на осадку для фикса бага translate
+                    let origin_fixed = 
+                        Vertex::new([origin.values()[0], origin.values()[1], origin.values()[2] + draught]);
+                   // let origin = Vertex::new(origin.values());
+                    let scale = self.scale;
                     let handle = self.scheduler.spawn(move || {
                         // make a clone of origin waterline and transform it
                         // according to heel, trim, and draught values
-                        let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
+                       // let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
                         let obj = &{
-                            let origin = obj.center();
                             let mut loc_y = Vector::unit_y();
+                            // translate сбрасывает вращение, поэтому сначала перемещаем, потом вращаем
+                            obj = obj.translate(Vector::new(0.0, 0.0, draught));
                             if 0.0 != heel {
                                 let heel_in_rad = heel.to_radians();
-                                obj = obj.rotate(origin.clone(), Vector::unit_x(), heel_in_rad);
+                                obj = obj.rotate(origin_fixed.clone(), Vector::unit_x(), heel_in_rad);
                                 // once a rotation around oX happens, oY needs to get the rotation too,
                                 // overwise oY remains global and doesn't match new `obj`'s transformation
                                 loc_y = loc_y.rotate(Vector::unit_x(), heel_in_rad);
                             }
                             if 0.0 != trim {
-                                obj = obj.rotate(origin, loc_y, trim.to_radians());
+                                obj = obj.rotate(origin_fixed, loc_y, trim.to_radians());
                             }
-                            if 0.0 != draught {
+                      /*      if 0.0 != draught {
                                 obj = obj.translate(Vector::new(0.0, 0.0, draught));
-                            }
+                            }*/
                             obj
                         };
                         let mut volume = 0.0;
@@ -138,43 +150,33 @@ impl BuildFloatingPositionCache {
                             match volumed {
                                 Ok(volumed) => {
                                     let solids: Vec<_> = volumed.solids().into_iter().collect();
-                                    //   let text = format!("try_fold build draught:{} solids:{}", draught, solids.len());  
-                                    //   dbg!(text);   
-
+                                //    let text = format!("try_fold build heel:{heel}, trim:{trim}, draught:{draught} solids:{}", solids.len());  
+                                //    dbg!(text);  
                                     solids.iter().for_each(|elmnt| {
                                         let [.., elmnt_z] = elmnt.center().point();
                                         let [.., waterline_z] = obj.center().point();
                                         // Only calculate volume if volumed element is below waterline.
                                         // Put 0.0 if it's not for consistent.
                                         //     dbg!("try_fold volumed", elmnt_z, waterline_z);
-                                        //     let text = format!("try_fold volumed draught:{} elmnt_z:{} waterline_z:{}", draught, elmnt_z, waterline_z);  
+                                        //     let text = format!("try_fold volumed heel:{heel}, trim:{trim}, draught:{draught} elmnt_z:{} waterline_z:{}", elmnt_z, waterline_z);  
                                         //     dbg!(text);   
                                         if elmnt_z < waterline_z { 
-                                            //            let text = format!("try_fold volumed elmnt_z:{} < waterline_z elmnt_z:{}", elmnt_z, waterline_z);  
+                                            //            let text = format!("try_fold volumed elmnt_z:{} < waterline_z elmnt_z:{} heel:{heel}, trim:{trim}, draught:{draught}", elmnt_z, waterline_z);  
                                             //           dbg!(text);                                             
-                                        /*     match Compound::build([obj], [], [elmnt]) {
-                                                Ok(volumed) => {
-                                                    volumed.solids().into_iter().for_each(|elmnt| {*/
-                                                        let current_volume = elmnt.volume();
-                                                        let [e_x, e_y, e_z] = elmnt.center().point();
-                                                        let current_moment = [e_x*current_volume, e_y*current_volume, e_z*current_volume];
-                                                        volume += current_volume;
-                                                        match volume_moment.as_mut() {
-                                                            None => volume_moment = Some(current_moment),
-                                                            Some(volume_moment) => {
-                                                                volume_moment[0] += current_moment[0];
-                                                                volume_moment[1] += current_moment[1];
-                                                                volume_moment[2] += current_moment[2];
-                                                            }
-                                                        }
-                                                        let text = format!("volumed current_volume:{} center:{:?}", current_volume, elmnt.center().point());
-                                                        dbg!(text);
-                                            /*        });
-                                                },
-                                                Err(err) => {
-                                                    log::error!("BuildFloatingPositionCache task: Compound::build volume error: {err}");
-                                                },
-                                            }*/
+                                            let current_volume = elmnt.volume();
+                                            let [e_x, e_y, e_z] = elmnt.center().point();
+                                            let current_moment = [e_x*current_volume, e_y*current_volume, e_z*current_volume];
+                                            volume += current_volume;
+                                            match volume_moment.as_mut() {
+                                                None => volume_moment = Some(current_moment),
+                                                Some(volume_moment) => {
+                                                        volume_moment[0] += current_moment[0];
+                                                        volume_moment[1] += current_moment[1];
+                                                    volume_moment[2] += current_moment[2];
+                                                }
+                                            }
+                                       //     let text = format!("volumed current_volume:{} center:{:?} heel:{heel}, trim:{trim}, draught:{draught}", current_volume, elmnt.center().point());
+                                        //    dbg!(text);
                                         }
                                     });
                                 }
@@ -183,17 +185,17 @@ impl BuildFloatingPositionCache {
                             ///
                             /// - Transforms units
                             /// - Moment tranforms into Center of displaced valume (Mass center)
-                            fn tranform(heel: f64, trim: f64, draught: f64, volume: f64, volume_moment: Option<[f64; 3]>) -> (f64, Option<[f64; 3]>, f64, f64, f64) {
+                            fn tranform(heel: f64, trim: f64, draught: f64, volume: f64, volume_moment: Option<[f64; 3]>, scale: f64) -> (f64, Option<[f64; 3]>, f64, f64, f64) {
                                 let volume_center = volume_moment
-                                    .map(|[x, y, z]| [x/(volume*1000.), y/(volume*1000.), z/(volume*1000.)]);
-                                let volume = volume / 1000000000.; //mm^3 to m^3
-                                let draught = draught / 1000.; // mm to m
+                                    .map(|[x, y, z]| [x/(volume*scale), y/(volume*scale), z/(volume*scale)]);
+                                let volume = volume / (scale*scale*scale); //mm^3 to m^3
+                                let draught = draught / scale; // mm to m
                             //     let text = format!("map, volume:{volume}, volume_center:{:?}, heel:{heel}, trim:{trim}, draught:{draught}", volume_center);
                             //     dbg!(text);
                                 (volume, volume_center, heel, trim, draught)
                             }
-                            results_.push(
-                                tranform(heel, trim, draught, volume, volume_moment),
+                            task_results.push(
+                                tranform(heel, trim, draught, volume, volume_moment, scale),
                             );
                         }
                         Ok(())
@@ -209,26 +211,27 @@ impl BuildFloatingPositionCache {
                     });
                     match handle {
                         Ok(task) => tasks.push(task),
-                        Err(err) => spawn_errors.push(err),
+                        Err(err) => results.push(Err(err)),
                     };                    
                 }
             }
         }
-        let mut errors = vec![];
         for task in tasks {
             if let Err(err) = task.join() {
-                log::error!("{}.build | task join error: {err}", self.dbg);
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                results.push(Err(error));
             }
         }
-        while !results.is_empty() {
-            if let Some((volume, mb_volume_center, heel, trim, draught)) = results.pop() {
+        while !task_results.is_empty() {
+            if let Some((volume, mb_volume_center, heel, trim, draught)) = task_results.pop() {
                 match mb_volume_center {
                     None => {
                         if volume > 0.0 {
-                            errors.push(error.err(format!(
-                                "{} | no mb_volume_center, volume > 0.0, heel: {}, trim: {}, draught: {}",
-                                &self.dbg, heel, trim, draught,
-                            )))
+                            results.push(Err(error.err(format!(
+                                "no mb_volume_center, volume > 0.0, heel: {}, trim: {}, draught: {}",
+                                heel, trim, draught,
+                            ))))
                         } else {
                             log::warn!(
                                 "{} | no solids, volume <= 0.0, heel: {}, trim: {}, draught: {}",
@@ -237,22 +240,12 @@ impl BuildFloatingPositionCache {
                         }
                     }
                     Some([x, y, z]) => {
-                        if let Err(err) = writeln!(
-                            &mut out_f,
-                            "{} {} {} {} {} {} {}",
-                            heel, trim, draught, volume, x, y, z
-                        ) {
-                            errors.push(
-                                error.pass_with(
-                                    format!("Writing to file, path:{}", self.file_path.display()),
-                                    err.to_string(),
-                                )
-                            );
-                        }
+                       results.push(Ok(vec![heel, trim, draught, volume, x, y, z]));
                     }
                 }
             }
         }
-        errors
+     //   dbg!(&results);
+        results
     }
 }

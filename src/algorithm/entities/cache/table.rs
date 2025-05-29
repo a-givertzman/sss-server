@@ -34,6 +34,10 @@ impl Table<f64> {
             false => None,
         } 
     }
+    /// get raw data
+    pub fn data(&self) -> Vec<Vec<f64>> {
+        self.columns.iter().map(|c| c.data()).collect()
+    }
     ///
     /// Returns approximated values corresponding to specified keys
     ///

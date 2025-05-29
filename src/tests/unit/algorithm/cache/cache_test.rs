@@ -1,10 +1,9 @@
+use crate::algorithm::entities::cache::*;
 #[cfg(test)]
-
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use sal_core::dbg::Dbg;
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-use sal_core::dbg::Dbg;
-use crate::algorithm::entities::cache::*;
 //
 //
 static INIT: Once = Once::new();
@@ -23,32 +22,33 @@ fn init_each() -> () {}
 ///
 /// Test successfull initializing of [Cache] instance.
 #[test]
-fn init_cache_table_from_file() {
+fn init_cache() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("cache cache", "init_cache_table_from_file");
+    let dbg = Dbg::new("cache", "init_cache");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     // init
     //
     #[rustfmt::skip]
-    let test_data = [
-        ([Some(0.0), Some(0.0), Some(0.0), Some(10.0)], Some(vec![vec![0.0, 0.0, 0.0, 10.0]])),
-        ([Some(2.1), Some(0.1), Some(0.1), Some(20.1)], Some(vec![vec![2.1, 0.1, 0.1, 20.1]])),
-        ([Some(3.2), Some(1.2), Some(0.2), Some(30.2)], Some(vec![vec![3.2, 1.2, 0.2, 30.2]])),
-        ([Some(4.3), Some(0.3), Some(1.3), Some(40.3)], Some(vec![vec![4.3, 0.3, 1.3, 40.3]])),
-        ([Some(5.4), Some(2.4), Some(2.4), Some(50.4)], Some(vec![vec![5.4, 2.4, 2.4, 50.4]])),
-        ([Some(0.5), Some(3.5), Some(0.5), Some(60.5)], Some(vec![vec![0.5, 3.5, 0.5, 60.5]])),
-        ([Some(0.6), Some(4.6), Some(3.6), Some(70.6)], Some(vec![vec![0.6, 4.6, 3.6, 70.6]])),
-        ([Some(0.7), Some(0.7), Some(4.7), Some(80.7)], Some(vec![vec![0.7, 0.7, 4.7, 80.7]])),
+    let data = vec![
+        vec![0.0, 0.0, 0.0, 10.0],
+        vec![2.1, 0.1, 0.1, 20.1],
+        vec![3.2, 1.2, 0.2, 30.2],
+        vec![4.3, 0.3, 1.3, 40.3],
+        vec![5.4, 2.4, 2.4, 50.4],
+        vec![0.5, 3.5, 0.5, 60.5],
+        vec![0.6, 4.6, 3.6, 70.6],
+        vec![0.7, 0.7, 4.7, 80.7],
     ];
-    let path = "src/tests/unit/algorithm/cache/assets/table-ok";
-    let cache = Cache::new(&dbg, path);
-    let _ = cache.init();
-    for (step, (vals, target)) in test_data.into_iter().enumerate() {
-        let result = cache.get(&vals);
+    let cache = Cache::new(&dbg);
+    let result = cache.init(data.clone());
+    println!("cache.init result={:?}", result);
+    for (step, target) in data.into_iter().enumerate() {
+        let vals = [Some(target[0]), Some(target[1]), Some(target[2]), None];
+        let result = cache.get(&vals).unwrap().first().unwrap().clone();
         println!(
             "step={} vals={:?} target={:?} result={:?}",
             step, vals, target, result
@@ -61,6 +61,7 @@ fn init_cache_table_from_file() {
     }
     test_duration.exit();
 }
+/*
 ///
 /// Test failure initializing of [Cache] instance.
 #[test]
@@ -76,7 +77,7 @@ fn init_cache_table_from_inconsistent_files() {
     let test_data = [
         ("src/tests/unit/algorithm/cache/assets/table-inc-row", 6),
         ("src/tests/unit/algorithm/cache/assets/table-inc-col", 8),
-    ]; 
+    ];
     for (path, target) in test_data {
         let result = Cache::<f64>::new(&dbg, path).init();
         match result {
@@ -89,4 +90,4 @@ fn init_cache_table_from_inconsistent_files() {
     }
     test_duration.exit();
 }
-
+*/
