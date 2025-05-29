@@ -8,6 +8,7 @@ mod relative_position;
 mod ship_model_conf;
 mod ship_model_meta;
 mod ship_model;
+mod floating_position;
 
 pub(super) use model_tree::*;
 pub(crate) use local_cache::*;
