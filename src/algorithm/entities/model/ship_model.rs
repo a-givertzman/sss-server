@@ -15,7 +15,8 @@ use sal_sync::thread_pool::Scheduler;
 use std::sync::Arc;
 use crate::algorithm::entities::Position2d;
 
-use super::{floating_position::FloatingPosition, model_tree::ModelTree, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
+//use super::floating_position::FloatingPosition;
+use super::{model_tree::ModelTree, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
 
 ///
 /// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
@@ -189,6 +190,44 @@ impl ShipModel {
     }
     //
     //
+    //
+    pub struct EvaluatedFloatingPosition {
+        pub heel_angle: f64,
+        pub trim_angle: f64,
+        pub draught_at_amidships: f64,
+        pub displacement: f64,
+        pub disp_center: Position,
+        bulk: Vec<BulkResult>,
+        liquid: Vec<LiquidResult>,
+    }
+
+    pub fn floating_position(
+        &self,
+        displacement: f64,
+        mass_center: Position2d,
+        bulk: Vec<BulkLoad>,
+        liquid: Vec<LiquidLoad>,
+        damage_compartment: Vec<usize>,
+    ) -> EvaluatedFloatingPosition {
+        //
+        FloatingPosition::new(
+            &self.dbg,
+            self.caches
+                .get(&CacheKey::FloatingPostion)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "{} | Trying to access uninitialized DisplacementCache",
+                        self.dbg
+                    )
+                })
+                .as_ref(),
+     //       self.centreline(),
+     //       self.middle(),
+            displacement,
+            mass_center,
+        )
+    }
+    /*
     pub fn floating_position(
         &self,
         displacement: f64,
@@ -222,4 +261,5 @@ impl ShipModel {
     fn middle(&self) -> Face<ShipModelMeta> {
         todo!("Return the middle plane. Probably by building bounding box.")
     }
+    */    
 }
