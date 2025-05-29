@@ -66,12 +66,18 @@ impl<T: PartialOrd> Cache<T> {
     where
         T: FromStr<Err = ParseFloatError> + Clone + Default + std::fmt::Display
     {
-        let iter_over_cols = vals.into_iter().enumerate().map(|(id, vals)| {
-            let dbg = Dbg::new(&self.dbg, &format!("Column_{}", id));
-            Column::new(dbg, vals)
-        });
-        let cols = SyncVec::from_iter(iter_over_cols);
-        self.table.set(Table::new(&self.dbg, cols)).map_err(|_| 
+        let mut columns = vec![];
+        for col_id in 0..vals[0].len() {
+            let mut values = vec![];
+            (0..vals.len()).for_each(|row_id| {
+                let var_name = vals[row_id][col_id].clone();
+                values.push(var_name);
+            });
+            let dbg = Dbg::new(&self.dbg, &format!("Column_{}", col_id));
+            let column = Column::new(dbg, values);
+            columns.push(column);
+        }
+        self.table.set(Table::new(&self.dbg, columns)).map_err(|_| 
             Error::new("Cache", "init").err("table.set")
         )?;
         Ok(())

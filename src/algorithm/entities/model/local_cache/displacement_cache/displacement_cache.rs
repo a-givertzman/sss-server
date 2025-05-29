@@ -221,7 +221,7 @@ impl LocalCache for DisplacementCache {
             cache
                 .init(vals)
                 .map_err(|err| error.pass_with("cache.init error", err))?;
-            self.cache.write().insert(cache);
+            let _ = self.cache.write().insert(cache);
         }
         self.cache
             .read()

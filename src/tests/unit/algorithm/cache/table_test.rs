@@ -63,6 +63,7 @@ fn get_unchecked() {
     #[rustfmt::skip]
     let test_data = [
         // 0
+        ([Some(0.0), Some(0.0), Some(0.0), None].as_slice(),   vec![vec![0.0, 0.0, 0.0, 10.]],),
         ([Some(0.0), Some(1.0), Some(1.0)].as_slice(),   vec![vec![0.0, 1.0, 1.0, 11.1]],),
         (&[Some(0.0), Some(1.0), Some(1.0), None],       vec![vec![0.0, 1.0, 1.0, 11.1]],),
         (&[Some(0.0), Some(1.0), Some(1.0), Some(11.1)], vec![vec![0.0, 1.0, 1.0, 11.1]],),
