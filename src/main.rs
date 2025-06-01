@@ -60,7 +60,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 */
    
     let dbg = Dbg::new("ShipModel", "compute_balance");
-    let model_path = "src/assets/sofia3.stp";
+ //   let model_path = "src/assets/sofia3.stp";
+ let model_path = "src/assets/model_1510.stp";
     let cache_dir = "src/assets/cache/";
     let center_coord = Position::new(65.22, 0., 0.);
     let center_mass = Position2d::new(59.837, -0.44);
@@ -74,9 +75,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cache_dir: PathBuf::from(cache_dir),
             floating_position_cache_conf: model::DisplacementCacheConf {
                 waterline_position: center_coord,
-                heel_steps: vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
-                trim_steps: vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
-                draught_steps: vec![2., 3., 4., 5., 6., 7., 8.,],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         
+                heel_steps: vec![0.],//vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
+                trim_steps: vec![0.],//vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
+                draught_steps: vec![100.],//vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.,],//vec![2., 3., 4., 5., 6., 7., 8.,],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         
             },
         },
         thread_pool.scheduler(),

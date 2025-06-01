@@ -58,7 +58,9 @@ impl Table<f64> {
             self.columns.len(),
             keys.len()
         );
+        dbg!(&keys);
         let bounds = self.bound_intersection(keys);
+        dbg!(&bounds);
         log::debug!("{}.{} | Intersectioned bounds: {:?}", self.dbg, callee, bounds);
         bounds
             .into_iter()
@@ -73,6 +75,7 @@ impl Table<f64> {
                     Some(vals)
                 }
                 Bound::Range(start, end) => {
+                    dbg!(start, end);
                     let mut vals = Vec::with_capacity(self.columns.len());
                     let len = end - start + 1;
                     for (col_id, col) in self.columns.iter().enumerate() {
@@ -100,6 +103,7 @@ impl Table<f64> {
             .filter_map(|(idx, key)| key.map(|val| (idx, val)))
         {
             let bounds = self.columns[idx].get_bounds(&key);
+            dbg!(&idx, &key, &bounds);
             val_bounds.push(bounds);
         }
         log::debug!(
