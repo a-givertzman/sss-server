@@ -211,7 +211,7 @@ impl DisplacementCache {
 impl LocalCache for DisplacementCache {
     ///
     /// See [Cache::get] for details.
-    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<Vec<f64>>, Error> {
+    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "get");
         if self.cache.read().is_none() {
             let cache = Cache::new(&self.dbg);

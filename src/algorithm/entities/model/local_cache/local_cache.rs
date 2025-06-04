@@ -14,7 +14,7 @@ pub trait LocalCache {
     // ) -> Vec<Error>;
     ///
     /// Returns approximated values based on given set.
-    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<Vec<f64>>, Error>;
+    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<f64>, Error>;
     ///
     /// Rebuilds a cache
     /// - takes new model
