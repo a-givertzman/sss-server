@@ -115,7 +115,7 @@ fn calculated_displacement_cache() {
 
     assert_eq!(
         target.len(), result.len(),
-        "target.len='{}' result.len()='{}'",
+        "target.len='{}' result.len()='{}'", 
         target.len(), result.len()
     );
     for line in &result {
