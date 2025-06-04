@@ -211,7 +211,7 @@ impl CompartmentCache {
 impl LocalCache for CompartmentCache {
     ///
     /// See [Cache::get] for details.
-    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<Vec<f64>>, Error> {
+    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "get");
         if self.cache.read().is_none() {
             let cache = Cache::new(&self.dbg);
@@ -223,12 +223,11 @@ impl LocalCache for CompartmentCache {
                 .map_err(|err| error.pass_with("cache.init error", err))?;
             let _ = self.cache.write().insert(cache);
         }
-        self.cache
+        Ok(self.cache
             .read()
             .as_ref()
             .ok_or(error.pass("no cache"))?
-            .get(approx_vals)
-            .ok_or(error.pass("can't get values from cache"))
+            .get(approx_vals))
     }
     //
     //

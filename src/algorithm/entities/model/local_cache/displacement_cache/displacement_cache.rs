@@ -1,21 +1,16 @@
 use crate::{
     algorithm::entities::{
         Position,
-        cache::{self, Cache},
+        cache::Cache,
         model::{ModelTree, local_cache::LocalCache},
     },
     kernel::types::RwLock,
-};
-use sal_3dlib::topology::shape::{
-    face::Face,
-    vertex::Vertex,
-    wire::{Polygon, Wire},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
     fs::File,
-    io::{BufRead, BufReader, BufWriter, Write},
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -223,12 +218,12 @@ impl LocalCache for DisplacementCache {
                 .map_err(|err| error.pass_with("cache.init error", err))?;
             let _ = self.cache.write().insert(cache);
         }
-        self.cache
+        Ok(self
+            .cache
             .read()
             .as_ref()
             .ok_or(error.pass("no cache"))?
-            .get(approx_vals)
-            .ok_or(error.pass("can't get values from cache"))
+            .get(approx_vals))
     }
     //
     //

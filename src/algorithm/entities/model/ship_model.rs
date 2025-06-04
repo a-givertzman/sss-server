@@ -1,5 +1,5 @@
 use indexmap::{IndexMap, IndexSet};
-use crate::model::DisplacementCache;
+use crate::{algorithm::entities::model::floating_position::{EvaluatedFloatingPosition, FloatingPosition}, model::DisplacementCache};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_3dlib::{
     props::Center,
@@ -19,7 +19,7 @@ use crate::algorithm::entities::Position2d;
 use super::{model_tree::ModelTree, BoundCache, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
 
 //
-    pub struct EvaluatedFloatingPosition {
+  /*  pub struct EvaluatedFloatingPosition {
         pub heel_angle: f64,
         pub trim_angle: f64,
         pub draught_at_amidships: f64,
@@ -28,7 +28,7 @@ use super::{model_tree::ModelTree, BoundCache, CacheKey, LocalCache, RelativePos
         bulk: Vec<BulkResult>,
         liquid: Vec<LiquidResult>,
         damage_compartment: Vec<CompartmentResult>,
-    }
+    }*/
 ///
 /// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
 ///
@@ -42,9 +42,9 @@ pub struct ShipModel {
     /// Provides a number of calculations:
     /// - cashe for model, [heel, trim, draught, volume, x, y, z]
     model: DisplacementCache,
-    model_bounded: Vec<BoundCache>,
-    compartments: IndexMap<usize, CompartmentCache>,
-    compartment_bounded: IndexMap<usize, IndexMap<usize, BoundCache>>,
+  //  model_bounded: Vec<BoundCache>,
+ //   compartments: IndexMap<usize, CompartmentCache>,
+ //   compartment_bounded: IndexMap<usize, IndexMap<usize, BoundCache>>,
     scheduler: Scheduler,
 }
 //
@@ -55,23 +55,18 @@ impl ShipModel {
     pub fn new(parent: &Dbg, conf: ShipModelConf, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(parent, "ShipModel");
         let model_tree = ModelTree::new(&dbg, conf.model_path);
-        let mut ship_model = Self {
+        let ship_model = Self {
             dbg: dbg.clone(),
-            caches: IndexMap::new(),
-    //        model_tree: model_tree.clone(),
-            scheduler: scheduler.clone(),
-        };
-        ship_model.caches.insert(
-            CacheKey::FloatingPostion,
-            Box::new(DisplacementCache::new(
+            model: DisplacementCache::new(
                 &dbg,
                 model_tree,
                 conf.model_scale,
                 conf.cache_dir,
                 conf.floating_position_cache_conf,
                 scheduler.clone(),
-            )),
-        );
+            ),
+            scheduler: scheduler.clone(),
+        };
         ship_model
     }
     ///
@@ -176,20 +171,17 @@ impl ShipModel {
     /// ```
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         // start wokers to calculate required caches
-        let errors = {
-            let mut errors = vec![];
-            for (cache_key, cache) in &self.caches {
-                    if let Err(err) = cache.rebuild() {
-                        errors.push((*cache_key, err));
-                    }
-            }
-            errors
-        };
+        let mut errors = Vec::new();
+
+        if let Err(error ) = self.model.rebuild() {
+            errors.push(("model", error));
+        }
+
         let error = Error::new(&self.dbg, "rebuild_caches");
         if !errors.is_empty() {
             return Err(
                 error.pass_with(
-                    "calculated",
+                    "rebuild_caches",
                     errors.iter()
                         .fold(String::new(), |acc, (key, err)| {
                             format!("{acc}\n\tIn cache {:?} was error: {err}", key)
@@ -205,27 +197,17 @@ impl ShipModel {
         &self,
         displacement: f64,
         mass_center: Position2d,
-        bulk: Vec<BulkLoad>,
-        liquid: Vec<LiquidLoad>,
-        damage_compartment: Vec<usize>,
-    ) -> EvaluatedFloatingPosition {
+    //    bulk: Vec<BulkLoad>,
+    //    liquid: Vec<LiquidLoad>,
+    //    damage_compartment: Vec<usize>,
+    ) -> Result<EvaluatedFloatingPosition, Error> {
         //
         FloatingPosition::new(
             &self.dbg,
-            self.caches
-                .get(&CacheKey::FloatingPostion)
-                .unwrap_or_else(|| {
-                    panic!(
-                        "{} | Trying to access uninitialized DisplacementCache",
-                        self.dbg
-                    )
-                })
-                .as_ref(),
-     //       self.centreline(),
-     //       self.middle(),
+            &self.model,
             displacement,
             mass_center,
-        )
+        ).eval()
     }
     /*
     pub fn floating_position(

@@ -86,25 +86,11 @@ impl<'cache> FloatingPosition<'cache> {
         // - heel ~ theta,
         // - trim ~ psi.
         //
-        let (heel, trim, draught, z) = self
+        let row = self
             .cache
             .get(&approx_vals)
-            .inspect(|rows| {
-                // Normally, _one row_ for given `approx_vals` is expected,
-                // but in case of many rows, a warning is written to the log,
-                // and the algorithm continues consuming _only the first_ row.
-                if rows.len() > 1 {
-                    log::warn!(
-                        "{} | More than one cached row for approx_vals='{:?}'",
-                        &self.dbg,
-                        approx_vals
-                    );
-                }
-            })
-            .map_err(|err| error.pass_with("cache.get", err))?
-            .into_iter()
-            .map(|row| (row[0], row[1], row[2], row[6])).next().unwrap();
-
+            .map_err(|err| error.pass_with("cache.get", err))?;
+        let (heel, trim, draught, z) = (row[0], row[1], row[2], row[6]);
         return Ok(EvaluatedFloatingPosition {
             heel_angle: heel,
             trim_angle: trim,

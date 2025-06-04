@@ -48,7 +48,7 @@ fn init_cache() {
     println!("cache.init result={:?}", result);
     for (step, target) in data.into_iter().enumerate() {
         let vals = [Some(target[0]), Some(target[1]), Some(target[2]), None];
-        let result = cache.get(&vals).unwrap().first().unwrap().clone();
+        let result = cache.get(&vals);
         println!(
             "step={} vals={:?} target={:?} result={:?}",
             step, vals, target, result

@@ -333,7 +333,7 @@ fn compute_balance(
     let floating_position = model.floating_position(
         src_data.mass_sum/src_data.water_density,
         Position2d::new(src_data.mass_shift.x(), src_data.mass_shift.y()),
-    ).eval().map_err(|err| error.pass_with("floating_position", err))?;
+    ).map_err(|err| error.pass_with("floating_position", err))?;
 
     let result = BalanceCtx {
         trim: floating_position.trim_angle,
