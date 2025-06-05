@@ -2,10 +2,11 @@ use crate::{
     algorithm::entities::{
         Position,
         cache::Cache,
-        model::{ModelTree, local_cache::LocalCache},
+        model::local_cache::LocalCache,
     },
     kernel::types::RwLock,
 };
+use opencascade::primitives::Shape;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
@@ -27,13 +28,13 @@ pub struct DisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
     //    model_keys: Vec<String>,
-    waterline_position: Position,
+    center_coord: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
     /// Model representation used for cache calculation.
-    model_tree: ModelTree,
+    model_path: PathBuf,
     model_scale: f64,
     ///
     /// Cache read from `self.file_path`.
@@ -52,7 +53,7 @@ impl DisplacementCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        model_tree: ModelTree,
+        model_path: PathBuf,
         model_scale: f64,
         cache_dir: impl AsRef<Path>,
         conf: DisplacementCacheConf,
@@ -61,11 +62,11 @@ impl DisplacementCache {
         let dbg = Dbg::new(parent, "DisplacementCache");
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
-            model_tree,
+            model_path,
             model_scale,
             //         model_keys: vec![],
             heel_steps: conf.heel_steps,
-            waterline_position: conf.waterline_position,
+            center_coord: conf.center_coord,
             trim_steps: conf.trim_steps,
             draught_steps: conf.draught_steps,
             cache: Arc::new(RwLock::new(None)),
@@ -79,17 +80,16 @@ impl DisplacementCache {
     /// See [BuildDisplacementCache] for details.
     fn calculate(&self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let model_tree = self.model_tree.clone();
-        let model_tree = match model_tree.load() {
-            Ok(model_tree) => model_tree,
+        let shape = match Shape::read_step(self.model_path.clone()) {
+            Ok(model_shape) => model_shape,
             Err(err) => {
-                return vec![error.pass_with("model_tree", err)];
+                return vec![error.pass_with("model_shape", err.to_string())];
             }
         };
         let cache_data = BuildDisplacementCache::new(
             &self.dbg,
-            model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-            self.waterline_position,
+            shape,
+            self.center_coord,
             /* TODO зачем этот фильтр?
                     .iter()
                     .filter_map(|(shape_key, shape)| {

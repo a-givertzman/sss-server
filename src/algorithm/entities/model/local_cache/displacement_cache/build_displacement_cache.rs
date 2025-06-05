@@ -1,10 +1,13 @@
 use coco::Stack;
+use glam::DVec3;
+use opencascade::primitives::{IntoShape, Shape};
 //
+/*
 use sal_3dlib::{
     gmath::vector::Vector, ops::{transform::*, Polygon}, props::{Center, Volume}, topology::shape::{
         compound::{AlgoMakerVolume, Compound, Solids}, face::*, vertex::Vertex, wire::Wire, Shape
     }
-};
+};*/
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
 use std::{
@@ -17,7 +20,7 @@ use std::{
     },
 };
 
-use crate::algorithm::entities::{model::ShipModelMeta, Position};
+use crate::algorithm::entities::Position;
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
@@ -26,8 +29,8 @@ use crate::algorithm::entities::{model::ShipModelMeta, Position};
 
 pub struct BuildDisplacementCache {
     dbg: Dbg,
-    elements: Vec<Shape<ShipModelMeta>>,
-    waterline_position: Position,
+    shape: Arc<Shape>,
+    center_coord: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
@@ -43,8 +46,8 @@ impl BuildDisplacementCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        elements: Vec<Shape<ShipModelMeta>>,
-        waterline_position: Position,
+        shape: Shape,
+        center_coord: Position,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
@@ -54,8 +57,8 @@ impl BuildDisplacementCache {
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildDisplacementCache"),
-            elements,
-            waterline_position,
+            shape: Arc::new(shape),
+            center_coord,
             heel_steps,
             trim_steps,
             draught_steps,
@@ -72,25 +75,6 @@ impl BuildDisplacementCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let origin = self.waterline_position.scale(self.scale);
-        let size = 1000.*self.scale;
-        let waterline = match Wire::polygon(
-            [
-                Vertex::new([origin.x() + size, origin.y() + size, origin.z()]),
-                Vertex::new([origin.x() - size, origin.y() + size, origin.z()]),
-                Vertex::new([origin.x() - size, origin.y() - size, origin.z()]),
-                Vertex::new([origin.x() + size, origin.y() - size, origin.z()]),
-            ],
-            true,
-        ) {
-            Ok(ref polygon) => Face::try_from(polygon)
-            .map_err(|err| error.pass_with("Failed creating Face from *polygon*", err)),
-            Err(err) => Err(error.pass_with("Failed creating *polygon* from Wire", err.to_string())),
-        };
-        let waterline = match waterline {
-            Ok(v) => v,
-            Err(err) => return vec![Err(err)],
-        };
       //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
         'draught: for &draught in &self.draught_steps {
             let draught = draught*self.scale;
@@ -101,103 +85,26 @@ impl BuildDisplacementCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    let mut obj = waterline.clone();
-                    let elements = self.elements.clone();
                   //  let dbg_ = self.dbg.clone();
                     let task_results = task_results.clone();
-                    // смещаем origin на осадку для фикса бага translate
-                    let origin_fixed = 
-                        Vertex::new([origin.values()[0], origin.values()[1], origin.values()[2] + draught]);
-                   // let origin = Vertex::new(origin.values());
-                    let scale = self.scale;
-                    let handle = self.scheduler.spawn(move || {
+                    let handle = self.scheduler.spawn( move || {
                         // make a clone of origin waterline and transform it
                         // according to heel, trim, and draught values
                        // let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
-                        let obj = &{
-                            let mut loc_y = Vector::unit_y();
-                            // translate сбрасывает вращение, поэтому сначала перемещаем, потом вращаем
-                            obj = obj.translate(Vector::new(0.0, 0.0, draught));
-                            if 0.0 != heel {
-                                let heel_in_rad = heel.to_radians();
-                                obj = obj.rotate(origin_fixed.clone(), Vector::unit_x(), heel_in_rad);
-                                // once a rotation around oX happens, oY needs to get the rotation too,
-                                // overwise oY remains global and doesn't match new `obj`'s transformation
-                                loc_y = loc_y.rotate(Vector::unit_x(), heel_in_rad);
-                            }
-                            if 0.0 != trim {
-                                obj = obj.rotate(origin_fixed, loc_y, trim.to_radians());
-                            }
-                      /*      if 0.0 != draught {
-                                obj = obj.translate(Vector::new(0.0, 0.0, draught));
-                            }*/
-                            obj
-                        };
-                        let mut volume = 0.0;
-                        let mut volume_moment = None;
-                        for elmnt in elements {
-                            let volumed = match elmnt {
-                                Shape::Shell(elmnt) => {
-                                //                 dbg!("elmnt ", elmnt.center().point());
-                                    Compound::build([obj], [&elmnt], [])
-                                },
-                                Shape::Solid(elmnt) => {
-                                //                dbg!("elmnt ", elmnt.center().point());
-                                    Compound::build([obj], [], [&elmnt])
-                                },
-                                _ => continue,
-                            };
-                            match volumed {
-                                Ok(volumed) => {
-                                    let solids: Vec<_> = volumed.solids().into_iter().collect();
-                                //    let text = format!("try_fold build heel:{heel}, trim:{trim}, draught:{draught} solids:{}", solids.len());  
-                                //    dbg!(text);  
-                                    solids.iter().for_each(|elmnt| {
-                                        let [.., elmnt_z] = elmnt.center().point();
-                                        let [.., waterline_z] = obj.center().point();
-                                        // Only calculate volume if volumed element is below waterline.
-                                        // Put 0.0 if it's not for consistent.
-                                        //     dbg!("try_fold volumed", elmnt_z, waterline_z);
-                                        //     let text = format!("try_fold volumed heel:{heel}, trim:{trim}, draught:{draught} elmnt_z:{} waterline_z:{}", elmnt_z, waterline_z);  
-                                        //     dbg!(text);   
-                                        if elmnt_z < waterline_z { 
-                                            //            let text = format!("try_fold volumed elmnt_z:{} < waterline_z elmnt_z:{} heel:{heel}, trim:{trim}, draught:{draught}", elmnt_z, waterline_z);  
-                                            //           dbg!(text);                                             
-                                            let current_volume = elmnt.volume();
-                                            let [e_x, e_y, e_z] = elmnt.center().point();
-                                            let current_moment = [e_x*current_volume, e_y*current_volume, e_z*current_volume];
-                                            volume += current_volume;
-                                            match volume_moment.as_mut() {
-                                                None => volume_moment = Some(current_moment),
-                                                Some(volume_moment) => {
-                                                        volume_moment[0] += current_moment[0];
-                                                        volume_moment[1] += current_moment[1];
-                                                    volume_moment[2] += current_moment[2];
-                                                }
-                                            }
-                                       //     let text = format!("volumed current_volume:{} center:{:?} heel:{heel}, trim:{trim}, draught:{draught}", current_volume, elmnt.center().point());
-                                        //    dbg!(text);
-                                        }
-                                    });
-                                }
-                                Err(_) => todo!(),
-                            }
-                            ///
-                            /// - Transforms units
-                            /// - Moment tranforms into Center of displaced valume (Mass center)
-                            fn tranform(heel: f64, trim: f64, draught: f64, volume: f64, volume_moment: Option<[f64; 3]>, scale: f64) -> (f64, Option<[f64; 3]>, f64, f64, f64) {
-                                let volume_center = volume_moment
-                                    .map(|[x, y, z]| [x/(volume*scale), y/(volume*scale), z/(volume*scale)]);
-                                let volume = volume / (scale*scale*scale); //mm^3 to m^3
-                                let draught = draught / scale; // mm to m
-                            //     let text = format!("map, volume:{volume}, volume_center:{:?}, heel:{heel}, trim:{trim}, draught:{draught}", volume_center);
-                            //     dbg!(text);
-                                (volume, volume_center, heel, trim, draught)
-                            }
-                            task_results.push(
-                                tranform(heel, trim, draught, volume, volume_moment, scale),
-                            );
-                        }
+
+                        let (volume, volume_center) = Self::calc_volume(
+                            &self.shape,
+                            self.scale.clone(),
+                            self.center_coord.clone(),
+                            heel,
+                            trim,
+                            draught,
+                        );
+
+                        task_results.push(
+                            (volume, volume_center, heel, trim, draught),
+                        );
+
                         Ok(())
                     })
                     .map_err(|err| {
@@ -225,27 +132,41 @@ impl BuildDisplacementCache {
         }
         while !task_results.is_empty() {
             if let Some((volume, mb_volume_center, heel, trim, draught)) = task_results.pop() {
-                match mb_volume_center {
-                    None => {
-                        if volume > 0.0 {
-                            results.push(Err(error.err(format!(
-                                "no mb_volume_center, volume > 0.0, heel: {}, trim: {}, draught: {}",
-                                heel, trim, draught,
-                            ))))
-                        } else {
-                            log::warn!(
-                                "{} | no solids, volume <= 0.0, heel: {}, trim: {}, draught: {}",
-                                &self.dbg, heel, trim, draught,
-                            );
-                        }
-                    }
-                    Some([x, y, z]) => {
-                       results.push(Ok(vec![heel, trim, draught, volume, x, y, z]));
-                    }
-                }
+                    results.push(Ok(vec![heel, trim, draught, volume, mb_volume_center.x(), mb_volume_center.y(), mb_volume_center.z()]));
             }
         }
      //   dbg!(&results);
         results
+    }
+
+    fn calc_volume(
+        body: &Shape,
+        scale_from_m: f64,
+        center_coord: Position,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+    ) -> (f64, Position) {
+    //   let body = body.scale(DVec3::ZERO, 1. / scale_from_m);
+        // центр для построения сечения, через эту точку должна проходить ватерлиния
+        let origin = DVec3::new(center_coord.x()*scale_from_m, center_coord.y()*scale_from_m, (center_coord.z() + draught)*scale_from_m);
+        // строим коробку с центром в (0, 0, 0), которая будет отсекать погруженную в воду часть модели
+        let half_size = 1000.*scale_from_m;
+        let corner_1 = DVec3::new(half_size, half_size, half_size);
+        let corner_2 = DVec3::new(-half_size, -half_size, -half_size);
+        let mut water_box = Shape::box_from_corners(corner_1, corner_2);
+        water_box.translate(DVec3::new(origin.x, origin.y, origin.z - half_size));
+        if heel != 0. {
+            water_box = water_box.rotate(origin, DVec3::X, -heel);
+        }
+        if trim != 0. {
+            water_box = water_box.rotate(origin, DVec3::Y, -trim);
+        }
+        let intersect = body.intersect(&water_box);
+        let shape = intersect.into_shape();
+        // let time = Instant::now();
+        let (volume, center) = shape.volume_data();
+        //  let time_volume_data = time.elapsed();
+        (volume/(scale_from_m*scale_from_m*scale_from_m), Position::new(center.x/scale_from_m - center_coord.x(), -center.y/scale_from_m - center_coord.y(), center.z/scale_from_m - center_coord.z()))
     }
 }

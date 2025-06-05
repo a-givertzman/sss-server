@@ -5,7 +5,7 @@ use crate::algorithm::entities::model::{
         displacement_cache_conf::DisplacementCacheConf,
         DisplacementCache,
     },
-    ModelTree,
+    Shape,
 };
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_3dlib::{props::Center, topology::shape::Shape};
@@ -53,23 +53,23 @@ fn calculated_displacement_sofia() {
     let model_path = "src/assets/sofia.stp";
     let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/";
     // create model tree with empty attribute for each model
-    let model_tree = ModelTree::new(&dbg, model_path)
+    let model_shape = Shape::new(&dbg, model_path)
         .load()
-        .unwrap_or_else(|err| panic!("Failing building *model_tree*: {}", err));
+        .unwrap_or_else(|err| panic!("Failing building *model_shape*: {}", err));
     // set waterline init position to target model center
     //  (2, 'LCG from middle', 59.837, 2),
     // (2, 'TCG from CL', -0.44, 2),  
     // (2, 'VCG from BL', 7.81, 2),
-    let waterline_position = Position::new(59.837, -0.44, 7.81);
+    let center_coord = Position::new(59.837, -0.44, 7.81);
     let conf = DisplacementCacheConf {
-        waterline_position,
+        center_coord,
         heel_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
         trim_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
         draught_steps: vec![4.],//vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(), 
     };
     let error = DisplacementCache::new(
         &dbg,
-        model_tree,
+        model_shape,
         1000.,
         result_path,
         conf,
@@ -81,8 +81,8 @@ fn calculated_displacement_sofia() {
     let draught_steps = conf.draught_steps.clone();
     let errors = BuildDisplacementCache::new(
         &dbg,
-        model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        waterline_position,
+        model_shape.iter().map(|(_, shape)| shape).cloned().collect(),
+        center_coord,
         heel_steps,
         trim_steps,
         draught_steps,

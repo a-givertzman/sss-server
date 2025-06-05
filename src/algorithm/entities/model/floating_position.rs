@@ -1,14 +1,3 @@
-use sal_3dlib::{
-    gmath::{point::Point, vector::Vector},
-    ops::boolean::{Intersect, OpConf},
-    props::{Center, Length},
-    topology::shape::{
-        compound::Edges,
-        edge::{Direction, Edge, Rotate as _, Translate as _},
-        face::{Face, Normal, Project, Rectangle, Rotate as _, Translate as _},
-        vertex::Vertex,
-    },
-};
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::entities::Position2d;
 

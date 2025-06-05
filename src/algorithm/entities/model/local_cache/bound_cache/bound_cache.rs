@@ -2,15 +2,15 @@ use crate::{
     algorithm::entities::{
         Position,
         cache::{self, Cache},
-        model::{ModelTree, local_cache::LocalCache},
+        model::{Shape, local_cache::LocalCache},
     },
     kernel::types::RwLock,
 };
-use sal_3dlib::topology::shape::{
+/*use sal_3dlib::topology::shape::{
     face::Face,
     vertex::Vertex,
     wire::{Polygon, Wire},
-};
+};*/
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
@@ -32,12 +32,12 @@ pub struct BoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
     //    model_keys: Vec<String>,
-    waterline_position: Position,
+    center_coord: Position,
     heel_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
     /// Model representation used for cache calculation.
-    model_tree: ModelTree,
+    model_shape: Shape,
     model_scale: f64,
     ///
     /// Cache read from `self.file_path`.
@@ -56,7 +56,7 @@ impl BoundCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        model_tree: ModelTree,
+        model_shape: Shape,
         model_scale: f64,
         cache_dir: impl AsRef<Path>,
         conf: BoundCacheConf,
@@ -65,11 +65,11 @@ impl BoundCache {
         let dbg = Dbg::new(parent, "BoundCache");
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
-            model_tree,
+            model_shape,
             model_scale,
             //         model_keys: vec![],
             heel_steps: conf.heel_steps,
-            waterline_position: conf.waterline_position,
+            center_coord: conf.center_coord,
             draught_steps: conf.draught_steps,
             cache: Arc::new(RwLock::new(None)),
             cache_path: path,
@@ -82,17 +82,17 @@ impl BoundCache {
     /// See [BuildBoundCache] for details.
     fn calculate(&self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let model_tree = self.model_tree.clone();
-        let model_tree = match model_tree.load() {
-            Ok(model_tree) => model_tree,
+        let model_shape = self.model_shape.clone();
+        let model_shape = match model_shape.load() {
+            Ok(model_shape) => model_shape,
             Err(err) => {
-                return vec![error.pass_with("model_tree", err)];
+                return vec![error.pass_with("model_shape", err)];
             }
         };
         let cache_data = BuildBoundCache::new(
             &self.dbg,
-            model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-            self.waterline_position,
+            model_shape.iter().map(|(_, shape)| shape).cloned().collect(),
+            self.center_coord,
             self.heel_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),

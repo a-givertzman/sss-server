@@ -29,7 +29,7 @@ use crate::algorithm::entities::{Position, model::ShipModelMeta};
 pub struct BuildCompartmentCache {
     dbg: Dbg,
     elements: Vec<Shape<ShipModelMeta>>,
-    waterline_position: Position,
+    center_coord: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
@@ -46,7 +46,7 @@ impl BuildCompartmentCache {
     pub(super) fn new(
         parent: &Dbg,
         elements: Vec<Shape<ShipModelMeta>>,
-        waterline_position: Position,
+        center_coord: Position,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
@@ -57,7 +57,7 @@ impl BuildCompartmentCache {
         Self {
             dbg: Dbg::new(parent, "BuildCompartmentCache"),
             elements,
-            waterline_position,
+            center_coord,
             heel_steps,
             trim_steps,
             draught_steps,
@@ -74,7 +74,7 @@ impl BuildCompartmentCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let origin = self.waterline_position.scale(self.scale);
+        let origin = self.center_coord.scale(self.scale);
         let size = 1000. * self.scale;
         let waterline = match Wire::polygon(
             [

@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_scale: 1.,
             cache_dir: PathBuf::from(cache_dir),
             floating_position_cache_conf: model::DisplacementCacheConf {
-                waterline_position: center_coord,
+                center_coord: center_coord,
       //                  heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
       //  trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
       //  draught_steps: vec![0.0, 0.25],
@@ -73,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
             floating_position_cache_conf: model::DisplacementCacheConf {
-                waterline_position: center_coord,
+                center_coord: center_coord,
                 heel_steps: vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
                 trim_steps: vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
                 draught_steps: vec![2., 3., 4., 5., 6., 7., 8.,],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         

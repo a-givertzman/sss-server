@@ -5,7 +5,7 @@ use crate::algorithm::entities::model::{
         displacement_cache_conf::DisplacementCacheConf,
         DisplacementCache,
     },
-    ModelTree,
+    Shape,
 };
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_3dlib::{props::Center, topology::shape::Shape};
@@ -58,27 +58,27 @@ fn calculated_displacement_cache() {
     let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets";
   //      "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/fpc_result";
     // create model tree with empty attribute for each model
-    let model_tree = ModelTree::new(&dbg, model_path)
+    let model_shape = Shape::new(&dbg, model_path)
         .load()
-        .unwrap_or_else(|err| panic!("Failing building *model_tree*: {}", err));
+        .unwrap_or_else(|err| panic!("Failing building *model_shape*: {}", err));
     // set waterline init position to target model center
-    let waterline_position = model_tree
+    let center_coord = model_shape
         .get(model_key)
         .and_then(|shape| match shape {
             Shape::Solid(model) => Some(model.center().point()),
             _ => None,
         })
         .unwrap_or_else(|| panic!("Expected Solid by model_key='{}'", model_key));
-    let waterline_position = Position::new(waterline_position[0], waterline_position[1], waterline_position[2]);
+    let center_coord = Position::new(center_coord[0], center_coord[1], center_coord[2]);
     let conf = DisplacementCacheConf {
-        waterline_position,
+        center_coord,
         heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
         trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
         draught_steps: vec![0.0, 0.25],
     };
     let error = DisplacementCache::new(
         &dbg,
-        model_tree,
+        model_shape,
         1.,
         result_path,
         conf,
@@ -87,8 +87,8 @@ fn calculated_displacement_cache() {
     assert!(error.is_ok(), "*error*: {:?}", error);
  /*   let errors = BuildDisplacementCache::new(
         &dbg,
-        model_tree.iter().map(|(_, shape)| shape).cloned().collect(),
-        waterline_position,
+        model_shape.iter().map(|(_, shape)| shape).cloned().collect(),
+        center_coord,
         heel_steps,
         trim_steps,
         draught_steps,

@@ -1,7 +1,8 @@
 use indexmap::{IndexMap, IndexSet};
+use opencascade::primitives::Shape;
 use crate::{algorithm::entities::model::floating_position::{EvaluatedFloatingPosition, FloatingPosition}, model::DisplacementCache};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_3dlib::{
+/*use sal_3dlib::{
     props::Center,
     topology::shape::{
         compound::{AlgoMakerVolume, Compound},
@@ -10,13 +11,13 @@ use sal_3dlib::{
         vertex::Vertex,
         Shape,
     },
-};
+};*/
 use sal_sync::thread_pool::Scheduler;
 use std::sync::Arc;
 use crate::algorithm::entities::Position2d;
 
 //use super::floating_position::FloatingPosition;
-use super::{model_tree::ModelTree, BoundCache, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
+use super::{BoundCache, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
 
 //
   /*  pub struct EvaluatedFloatingPosition {
@@ -37,7 +38,7 @@ pub struct ShipModel {
     dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element by keys.
- //   model_tree: ModelTree,
+ //   model_shape: Shape,
     ///
     /// Provides a number of calculations:
     /// - cashe for model, [heel, trim, draught, volume, x, y, z]
@@ -54,12 +55,11 @@ impl ShipModel {
     /// Creates a new instance.
     pub fn new(parent: &Dbg, conf: ShipModelConf, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(parent, "ShipModel");
-        let model_tree = ModelTree::new(&dbg, conf.model_path);
         let ship_model = Self {
             dbg: dbg.clone(),
             model: DisplacementCache::new(
                 &dbg,
-                model_tree,
+                conf.model_path,
                 conf.model_scale,
                 conf.cache_dir,
                 conf.floating_position_cache_conf,
@@ -72,7 +72,7 @@ impl ShipModel {
     ///
     /// Returns model elements touched by `waterline` and filtered by [RelativePostion].
     ///
-    /// The algorithm uses those elements of the `self.model_tree`, which are specified in `keys`.
+    /// The algorithm uses those elements of the `self.model_shape`, which are specified in `keys`.
     /// If `keys` is empty it's considered to use all model elements.
     /// _Note_ that in the both cases only those elements are used, which types can make volume.
     /// In particular, these types are [Face]s, [Shell]s, and [Solid]s.
@@ -108,14 +108,14 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "subvolume");
         // pop up warning if a key is not present in `self.model_key`
         for key in keys {
-            if !self.model_tree.contains_key(key) {
+            if !self.model_shape.contains_key(key) {
                 log::warn!("{} subvolume | No element found for key='{}'", self.dbg, key);
             }
         }
         // defines whether the key should be taken
-        let should_volume = |key| keys.is_empty() || self.model_tree.contains_key(key);
+        let should_volume = |key| keys.is_empty() || self.model_shape.contains_key(key);
         let [.., waterline_z] = waterline.center().point();
-        self.model_tree
+        self.model_shape
             .iter()
             .filter_map(|(key, elmnt)| {
                 Some(match elmnt {
@@ -132,7 +132,7 @@ impl ShipModel {
                 })
             })
             .try_fold(vec![], |mut elmnts, build| {
-                let elmnt = build.map_err(|err| error.pass_with("self.model_tree error", err.to_string()))?;
+                let elmnt = build.map_err(|err| error.pass_with("self.model_shape error", err.to_string()))?;
                 let [.., elmnt_z] = elmnt.center().point();
                 if match relative_position {
                     RelativePostion::Above => elmnt_z > waterline_z,
