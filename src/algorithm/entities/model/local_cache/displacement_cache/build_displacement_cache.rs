@@ -11,9 +11,6 @@ use sal_3dlib::{
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
 use std::{
-    fs::File,
-    io::Write,
-    path::PathBuf,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -29,7 +26,7 @@ use crate::algorithm::entities::Position;
 
 pub struct BuildDisplacementCache {
     dbg: Dbg,
-    shape: Arc<Shape>,
+    shape: Shape,
     center_coord: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
@@ -57,7 +54,7 @@ impl BuildDisplacementCache {
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildDisplacementCache"),
-            shape: Arc::new(shape),
+            shape,
             center_coord,
             heel_steps,
             trim_steps,
@@ -77,7 +74,6 @@ impl BuildDisplacementCache {
         let mut results = Vec::new();
       //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
         'draught: for &draught in &self.draught_steps {
-            let draught = draught*self.scale;
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
@@ -87,24 +83,25 @@ impl BuildDisplacementCache {
                     }
                   //  let dbg_ = self.dbg.clone();
                     let task_results = task_results.clone();
+                    let shape = self.shape.clone();
+                    let scale = self.scale.clone();
+                    let center_coord = self.center_coord.clone();
                     let handle = self.scheduler.spawn( move || {
                         // make a clone of origin waterline and transform it
                         // according to heel, trim, and draught values
                        // let error = Error::new(&dbg_, format!("task {heel} {trim} {draught}"));
-
                         let (volume, volume_center) = Self::calc_volume(
-                            &self.shape,
-                            self.scale.clone(),
-                            self.center_coord.clone(),
+                            &shape,
+                            scale,
+                            center_coord,
                             heel,
                             trim,
                             draught,
                         );
-
+                    //    dbg!(&volume, &volume_center);
                         task_results.push(
                             (volume, volume_center, heel, trim, draught),
                         );
-
                         Ok(())
                     })
                     .map_err(|err| {
@@ -138,7 +135,7 @@ impl BuildDisplacementCache {
      //   dbg!(&results);
         results
     }
-
+    //
     fn calc_volume(
         body: &Shape,
         scale_from_m: f64,
@@ -147,7 +144,7 @@ impl BuildDisplacementCache {
         trim: f64,
         draught: f64,
     ) -> (f64, Position) {
-    //   let body = body.scale(DVec3::ZERO, 1. / scale_from_m);
+    //    dbg!(&scale_from_m, &center_coord, heel, trim, draught);
         // центр для построения сечения, через эту точку должна проходить ватерлиния
         let origin = DVec3::new(center_coord.x()*scale_from_m, center_coord.y()*scale_from_m, (center_coord.z() + draught)*scale_from_m);
         // строим коробку с центром в (0, 0, 0), которая будет отсекать погруженную в воду часть модели
@@ -167,6 +164,7 @@ impl BuildDisplacementCache {
         // let time = Instant::now();
         let (volume, center) = shape.volume_data();
         //  let time_volume_data = time.elapsed();
+       // (volume/(scale_from_m*scale_from_m*scale_from_m), Position::new(center.x/scale_from_m/* - center_coord.x()*/, -center.y/scale_from_m - center_coord.y(), center.z/scale_from_m - center_coord.z()))
         (volume/(scale_from_m*scale_from_m*scale_from_m), Position::new(center.x/scale_from_m - center_coord.x(), -center.y/scale_from_m - center_coord.y(), center.z/scale_from_m - center_coord.z()))
     }
 }

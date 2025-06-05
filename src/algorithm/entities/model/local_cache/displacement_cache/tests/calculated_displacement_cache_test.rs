@@ -5,10 +5,8 @@ use crate::algorithm::entities::model::{
         displacement_cache_conf::DisplacementCacheConf,
         DisplacementCache,
     },
-    Shape,
 };
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use sal_3dlib::{props::Center, topology::shape::Shape};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, ThreadPool};
 use std::{
@@ -57,19 +55,8 @@ fn calculated_displacement_cache() {
         "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/fpc_target";
     let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets";
   //      "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/fpc_result";
-    // create model tree with empty attribute for each model
-    let model_shape = Shape::new(&dbg, model_path)
-        .load()
-        .unwrap_or_else(|err| panic!("Failing building *model_shape*: {}", err));
     // set waterline init position to target model center
-    let center_coord = model_shape
-        .get(model_key)
-        .and_then(|shape| match shape {
-            Shape::Solid(model) => Some(model.center().point()),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("Expected Solid by model_key='{}'", model_key));
-    let center_coord = Position::new(center_coord[0], center_coord[1], center_coord[2]);
+    let center_coord = Position::new(5., 5., 5.);
     let conf = DisplacementCacheConf {
         center_coord,
         heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
@@ -78,7 +65,7 @@ fn calculated_displacement_cache() {
     };
     let error = DisplacementCache::new(
         &dbg,
-        model_shape,
+        model_path.into(),
         1.,
         result_path,
         conf,

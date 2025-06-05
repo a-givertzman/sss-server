@@ -16,9 +16,6 @@ use sal_3dlib::{
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
 use std::{
-    fs::File,
-    io::Write,
-    path::PathBuf,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},

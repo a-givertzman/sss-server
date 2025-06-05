@@ -5,10 +5,8 @@ use crate::algorithm::entities::model::{
         displacement_cache_conf::DisplacementCacheConf,
         DisplacementCache,
     },
-    Shape,
 };
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use sal_3dlib::{props::Center, topology::shape::Shape};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 use std::{
@@ -52,15 +50,7 @@ fn calculated_displacement_sofia() {
     let thread_pool = ThreadPool::new(&dbg, Some(12));
     let model_path = "src/assets/sofia.stp";
     let result_path = "src/algorithm/entities/model/local_cache/displacement_cache/tests/assets/";
-    // create model tree with empty attribute for each model
-    let model_shape = Shape::new(&dbg, model_path)
-        .load()
-        .unwrap_or_else(|err| panic!("Failing building *model_shape*: {}", err));
-    // set waterline init position to target model center
-    //  (2, 'LCG from middle', 59.837, 2),
-    // (2, 'TCG from CL', -0.44, 2),  
-    // (2, 'VCG from BL', 7.81, 2),
-    let center_coord = Position::new(59.837, -0.44, 7.81);
+    let center_coord = Position::new(59.837, 0., 0.);
     let conf = DisplacementCacheConf {
         center_coord,
         heel_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
@@ -69,7 +59,7 @@ fn calculated_displacement_sofia() {
     };
     let error = DisplacementCache::new(
         &dbg,
-        model_shape,
+        model_path.into(),
         1000.,
         result_path,
         conf,

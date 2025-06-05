@@ -13,11 +13,10 @@ use sal_core::{dbg::Dbg, error::Error};
     },
 };*/
 use sal_sync::thread_pool::Scheduler;
-use std::sync::Arc;
 use crate::algorithm::entities::Position2d;
 
 //use super::floating_position::FloatingPosition;
-use super::{BoundCache, CacheKey, LocalCache, RelativePostion, ShipModelConf, ShipModelMeta};
+use super::{LocalCache, ShipModelConf};
 
 //
   /*  pub struct EvaluatedFloatingPosition {
