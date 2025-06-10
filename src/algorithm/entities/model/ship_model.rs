@@ -1,6 +1,11 @@
+use crate::{
+    algorithm::entities::model::{
+        Shape,
+        floating_position::{EvaluatedFloatingPosition, FloatingPosition},
+    },
+    model::DisplacementCache,
+};
 use indexmap::{IndexMap, IndexSet};
-use opencascade::primitives::Shape;
-use crate::{algorithm::entities::model::floating_position::{EvaluatedFloatingPosition, FloatingPosition}, model::DisplacementCache};
 use sal_core::{dbg::Dbg, error::Error};
 /*use sal_3dlib::{
     props::Center,
@@ -12,23 +17,23 @@ use sal_core::{dbg::Dbg, error::Error};
         Shape,
     },
 };*/
-use sal_sync::thread_pool::Scheduler;
 use crate::algorithm::entities::Position2d;
+use sal_sync::thread_pool::Scheduler;
 
 //use super::floating_position::FloatingPosition;
 use super::{LocalCache, ShipModelConf};
 
 //
-  /*  pub struct EvaluatedFloatingPosition {
-        pub heel_angle: f64,
-        pub trim_angle: f64,
-        pub draught_at_amidships: f64,
-        pub displacement: f64,
-        pub disp_center: Position,
-        bulk: Vec<BulkResult>,
-        liquid: Vec<LiquidResult>,
-        damage_compartment: Vec<CompartmentResult>,
-    }*/
+/*  pub struct EvaluatedFloatingPosition {
+    pub heel_angle: f64,
+    pub trim_angle: f64,
+    pub draught_at_amidships: f64,
+    pub displacement: f64,
+    pub disp_center: Position,
+    bulk: Vec<BulkResult>,
+    liquid: Vec<LiquidResult>,
+    damage_compartment: Vec<CompartmentResult>,
+}*/
 ///
 /// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
 ///
@@ -37,14 +42,14 @@ pub struct ShipModel {
     dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element by keys.
- //   model_shape: Shape,
+    //   model_shape: Shape,
     ///
     /// Provides a number of calculations:
     /// - cashe for model, [heel, trim, draught, volume, x, y, z]
     model: DisplacementCache,
-  //  model_bounded: Vec<BoundCache>,
- //   compartments: IndexMap<usize, CompartmentCache>,
- //   compartment_bounded: IndexMap<usize, IndexMap<usize, BoundCache>>,
+    //  model_bounded: Vec<BoundCache>,
+    //   compartments: IndexMap<usize, CompartmentCache>,
+    //   compartment_bounded: IndexMap<usize, IndexMap<usize, BoundCache>>,
     scheduler: Scheduler,
 }
 //
@@ -58,10 +63,16 @@ impl ShipModel {
             dbg: dbg.clone(),
             model: DisplacementCache::new(
                 &dbg,
-                conf.model_path,
-                conf.model_scale,
+                Shape::new(
+                    &dbg,
+                    conf.model_path,
+                    conf.floating_position_cache_conf.center_coord.x(),
+                    conf.model_scale,
+                ),
                 conf.cache_dir,
-                conf.floating_position_cache_conf,
+                conf.floating_position_cache_conf.heel_steps,
+                conf.floating_position_cache_conf.trim_steps,
+                conf.floating_position_cache_conf.draught_steps,
                 scheduler.clone(),
             ),
             scheduler: scheduler.clone(),
@@ -98,7 +109,7 @@ impl ShipModel {
     ///
     /// [Shell]: sal_3dlib::topology::shape::Shell
     /// [Solid]: sal_3dlib::topology::shape::Solid
- /*   pub fn subvolume(
+    /*   pub fn subvolume(
         &self,
         keys: &[&str],
         waterline: &Face<ShipModelMeta>,
@@ -171,22 +182,17 @@ impl ShipModel {
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         // start wokers to calculate required caches
         let mut errors = Vec::new();
-
-        if let Err(error ) = self.model.rebuild() {
+        if let Err(error) = self.model.rebuild() {
             errors.push(("model", error));
         }
-
         let error = Error::new(&self.dbg, "rebuild_caches");
         if !errors.is_empty() {
-            return Err(
-                error.pass_with(
-                    "rebuild_caches",
-                    errors.iter()
-                        .fold(String::new(), |acc, (key, err)| {
-                            format!("{acc}\n\tIn cache {:?} was error: {err}", key)
-                        })
-                ),
-            );
+            return Err(error.pass_with(
+                "rebuild_caches",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
         }
         Ok(())
     }
@@ -196,17 +202,12 @@ impl ShipModel {
         &self,
         displacement: f64,
         mass_center: Position2d,
-    //    bulk: Vec<BulkLoad>,
-    //    liquid: Vec<LiquidLoad>,
-    //    damage_compartment: Vec<usize>,
+        //    bulk: Vec<BulkLoad>,
+        //    liquid: Vec<LiquidLoad>,
+        //    damage_compartment: Vec<usize>,
     ) -> Result<EvaluatedFloatingPosition, Error> {
         //
-        FloatingPosition::new(
-            &self.dbg,
-            &self.model,
-            displacement,
-            mass_center,
-        ).eval()
+        FloatingPosition::new(&self.dbg, &self.model, displacement, mass_center).eval()
     }
     /*
     pub fn floating_position(
@@ -242,5 +243,5 @@ impl ShipModel {
     fn middle(&self) -> Face<ShipModelMeta> {
         todo!("Return the middle plane. Probably by building bounding box.")
     }
-    */    
+    */
 }

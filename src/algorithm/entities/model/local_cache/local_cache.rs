@@ -21,7 +21,7 @@ pub trait LocalCache {
     /// - do calculations
     /// - stores calculated table
     /// - loads recalculated table
-    fn rebuild(&self) -> Result<(), Error>;
+    fn rebuild(&mut self) -> Result<(), Error>;
     ///
     /// Sends exit signal to hawy calculations
     fn exit(&self);
