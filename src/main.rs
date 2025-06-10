@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       let model_path = "src/assets/ark-Part3.obj";
     let cache_dir = "src/assets/cache/";
     let center_coord = Position::new(59.194, 0., 0.);
-    let thread_pool = ThreadPool::new(&dbg, Some(5));
+    let thread_pool = ThreadPool::new(&dbg, Some(30));
     let mut model: model::ShipModel = model::ShipModel::new(
         &dbg, 
         model::ShipModelConf {

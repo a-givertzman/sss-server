@@ -2,8 +2,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
 use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, Ordering}, Arc, RwLock
 };
 
 use crate::algorithm::entities::model::Shape;
@@ -57,6 +56,7 @@ impl BuildDisplacementCache {
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
+        let shape = Arc::new(RwLock::new(self.shape.clone()));
         'draught: for &draught in &self.draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -67,11 +67,12 @@ impl BuildDisplacementCache {
                     }
                     //  let dbg_ = self.dbg.clone();
                     let task_results = task_results.clone();
-                    let shape = self.shape.clone();
+                    let shape = shape.clone();
                     let handle = self
                         .scheduler
                         .spawn(move || {
-                            task_results.push(shape.displacement(heel, trim, draught));
+                            let guard = shape.read().expect("Unable to read");
+                            task_results.push(guard.displacement(heel, trim, draught));
                             Ok(())
                         })
                         .map_err(|err| {
