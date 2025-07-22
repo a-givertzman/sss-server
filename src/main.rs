@@ -7,14 +7,25 @@ mod ship_model;
 #[cfg(test)]
 mod tests;
 use algorithm::{
-    areas_strength::areas_strength::AreasStrength, context::context::Context, initial::{initial::Initial, initial_ctx::InitialCtx}
+    areas_strength::areas_strength::AreasStrength, 
+    context::context::Context, 
+    initial::{
+        initial::Initial, 
+        initial_ctx::InitialCtx
+    }
 };
 //
 use api_tools::debug::dbg_id::DbgId;
 use app::app::App;
 use conf::conf::Conf;
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use infrostructure::{api::client::api_client::ApiClient, query::restart_eval::RestartEvalQuery};
+use debugging::session::debug_session::{
+    Backtrace, 
+    DebugSession, 
+    LogLevel
+};
+use infrostructure::{
+    api::client::api_client::ApiClient, 
+    query::restart_eval::RestartEvalQuery};
 use kernel::{
     eval::Eval, run::Run,
 };
@@ -49,9 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &dbg,
             ApiClient::new(conf.api.database.clone(), conf.api.host.clone(), conf.api.port.clone()),
             Context::new(
-                InitialCtx::new(
-                    ship_id,
-                ),
+                InitialCtx::default(),
             ),
         ),
     )

@@ -1,12 +1,33 @@
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+/// Общая структура для ввода данных. Содержит все данные для расчетов.
 #[derive(Debug, Clone)]
 pub struct InitialCtx {
+    /// индентификатор судна в базе данных
     pub ship_id: usize,
     /// разбиение на шпации - фреймы
     pub bounds: Option<Vec<(f64, f64)>>,
-
+    /// Длина судна между перпендикулярами LBP в метрах
+    pub length_lbp: f64,
+    /// Ширина судна в метрах
+    pub b: f64,
+    /// Осадка судна на миделе в метрах
+    pub d: f64,
+    /// Поперечная метацентрическая высота судна h в метрах с учетом поправки на влияние свободных поверхностей жидкостей
+    pub h: f64,
+    /// Максимальная скорость хода судна в узлах
+    pub vmax: f64,
+    /// Курс судна в северо-восточной системе координат φ в градусах от 0∘до 360∘с
+    pub phi: f64,
+    /// Текущая скорость хода судна в узлах с шагом 0.1 узел
+    pub v: f64,
+    /// Курсовой угол волнения в северо-восточной системе координат в градусах от 0∘ до 360∘с шагом 0.1 градус 
+    pub betta: Option<f64>,
+    /// угол встречи с волной (относительно ДП судна) в градусах от 0∘ до 360∘ с шагом 0.1 градус
+    pub alpha: Option<f64>,
+    /// Период волнения в секундах в диапазоне от 1.0 до 15.0 секунд, с шагом 0.1 секунда
+    pub tw: Option<f64>,
+    /// длину волны λ в метрах в диапазоне от 1.6 до 351.0 метров с шагом 0.1 метр
+    pub lambda: Option<f64>,
     // /// Тип судна
     // pub ship_type: ShipType,
     // /// Параметры района плавания судна  
@@ -39,12 +60,8 @@ pub struct InitialCtx {
     // pub coefficient_k: CoefficientKArray,
     // /// Коэффициент k_theta учитывающий особенности качки судов смешанного типа
     // pub coefficient_k_theta: CoefficientKThetaArray,
-    // /// Длинна корпуса судна между перпендикулярами
-    // pub length_lbp: f64,
     // /// Длинна корпуса судна полная
     // pub length_loa: f64,
-    // /// Ширина корпуса судна
-    // pub width: f64,
     // /// Тип надводного борта
     // pub freeboard_type: String,
     // /// Суммарая площадь проекции носа судна на диаметральную плоскость
@@ -74,10 +91,6 @@ pub struct InitialCtx {
     // pub const_mass_shift_y: f64,
     // /// отстояние центра тяжести постоянной массы судна по z
     // pub const_mass_shift_z: f64,
-    // /// Минимальная осадка, м
-    // pub draught_min: f64,
-    // /// Высота борта, м
-    // pub moulded_depth: f64,
     // /// Коэффициент увеличения площади парусности несплощной
     // /// поверхности при учете обледенения
     // pub icing_coef_v_area_full: f64,
@@ -137,11 +150,34 @@ pub struct InitialCtx {
 impl InitialCtx {
     ///
     /// Struct constructor
-    /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize) -> Self {
+    pub fn new(
+        ship_id: usize, 
+        length_lbp: f64,
+        b: f64,
+        d: f64,
+        h: f64,
+        vmax: f64,
+        phi: f64,
+        v: f64,
+        betta: Option<f64>,
+        alpha: Option<f64>,
+        tw: Option<f64>,
+        lambda: Option<f64>,
+    ) -> Self {
         Self {
             ship_id,
             bounds: None,
+            length_lbp,
+            b,
+            d,
+            h,
+            vmax,
+            phi,
+            v,
+            betta,
+            alpha,
+            tw,
+            lambda,
         }
     }
 }
@@ -155,6 +191,17 @@ impl Default for InitialCtx {
         Self {
             ship_id: 0,
             bounds: None,
+            length_lbp: 0.0,
+            b: 0.0,
+            d: 0.0,
+            h: 0.0,
+            vmax: 0.0,
+            phi: 0.0,
+            v: 0.0,
+            betta: Some(0.0),
+            alpha: Some(0.0),
+            tw: Some(0.0),
+            lambda: Some(0.0),
         }
     }
 }
