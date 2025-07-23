@@ -19,7 +19,6 @@ use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.

@@ -1,7 +1,7 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{parameters::Parameters, *},
-    initial::initial_ctx::InitialCtx,
+    initial::initial_ctx::InitialCtx, period_natural_onboard_oscillations::PeriodNaturalOnBoardOscillationsCtx,
 };
 ///
 /// # Calculation context
@@ -84,6 +84,8 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
+    /// Расчет периода собственных бортовых колебаний судна
+    pub(super) period_natural_onboard_oscillations: Option<PeriodNaturalOnBoardOscillationsCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

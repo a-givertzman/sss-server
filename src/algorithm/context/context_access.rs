@@ -1,6 +1,13 @@
 use sal_core::error::Error;
 use super::context::Context;
-use crate::algorithm::{eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{
+    eval::{
+        parameters::*, 
+        *
+    }, 
+    initial::initial_ctx::InitialCtx, 
+    period_natural_onboard_oscillations::PeriodNaturalOnBoardOscillationsCtx
+};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -477,6 +484,18 @@ impl ContextWrite<DraftMarkCtx> for Context {
 impl ContextRead<DraftMarkCtx> for Context {
     fn read(&self) -> DraftMarkCtx {
         self.draft_mark.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<PeriodNaturalOnBoardOscillationsCtx> for Context {
+    fn write(mut self, value: PeriodNaturalOnBoardOscillationsCtx) -> Result<Self, Error> {
+        self.period_natural_onboard_oscillations = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<PeriodNaturalOnBoardOscillationsCtx> for Context {
+    fn read(&self) -> PeriodNaturalOnBoardOscillationsCtx {
+        self.period_natural_onboard_oscillations.clone().unwrap()
     }
 }
 
