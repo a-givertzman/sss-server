@@ -25,7 +25,8 @@ use debugging::session::debug_session::{
 };
 use infrostructure::{
     api::client::api_client::ApiClient, 
-    query::restart_eval::RestartEvalQuery};
+    query::restart_eval::RestartEvalQuery
+};
 use kernel::{
     eval::Eval, run::Run,
 };
