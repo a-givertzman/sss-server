@@ -55,6 +55,7 @@ pub use wind_eval::wind_ctx::WindCtx;
 pub use windage_eval::windage_eval::WindageEval;
 pub use windage_eval::windage_ctx::WindageCtx;
 
+pub use roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval;
 pub use roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
 
 pub use roll_period_eval::roll_period_eval::RollingPeriodEval;

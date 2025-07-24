@@ -16,7 +16,8 @@ mod roll_frequency {
             eval::{
                 RollingFrequencyCtx, 
                 RollingPeriodCtx, 
-                RollingPeriodEval, Zg
+                RollingFrequencyEval, 
+                Zg
             }
         }, 
         kernel::{
@@ -60,19 +61,19 @@ mod roll_frequency {
                 1,
                 1.0,
                 1.0,
-                6.28
+                6.283185307179586
             ),
             (
                 2,
                 2.0,
                 1.0,
-                3.14
+                3.141592653589793
             ),
             (
                 3,
                 6.28,
                 1.0,
-                1.0,
+                1.0005072145190423,
             )
         ];
         for (step, roll_period, c, target) in test_data.iter() {
@@ -86,9 +87,12 @@ mod roll_frequency {
             };
             ctx.ctx = ctx.ctx
             .clone()
-            .write(RollingPeriodCtx { roll_period: *roll_period, c: *c })
+            .write(RollingPeriodCtx { 
+                roll_period: *roll_period, 
+                c: *c 
+            })
             .unwrap();
-            let result = RollingPeriodEval::new("Test", ctx).eval(Zg::empty());
+            let result = RollingFrequencyEval::new("Test", ctx).eval(Zg::empty());
             match result {
                 Ok(ctx) => {
                     let result = ContextRead::<RollingFrequencyCtx>::read(&ctx).roll_frequency.clone();
