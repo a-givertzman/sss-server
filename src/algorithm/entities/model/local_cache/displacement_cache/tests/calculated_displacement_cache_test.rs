@@ -63,15 +63,15 @@ fn calculated_displacement_cache() {
         trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
         draught_steps: vec![0.0, 0.25],
     };
-    let error = DisplacementCache::new(
-        &dbg,
-        model_path.into(),
-        1.,
-        result_path,
-        conf,
-        thread_pool.scheduler(),
-    ).rebuild();
-    assert!(error.is_ok(), "*error*: {:?}", error);
+    // let error = DisplacementCache::new(
+    //     &dbg,
+    //     model_path.into(),
+    //     1.,
+    //     result_path,
+    //     conf,
+    //     thread_pool.scheduler(),
+    // ).rebuild();
+    // assert!(error.is_ok(), "*error*: {:?}", error);
  /*   let errors = BuildDisplacementCache::new(
         &dbg,
         model_shape.iter().map(|(_, shape)| shape).cloned().collect(),

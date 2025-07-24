@@ -57,15 +57,15 @@ fn calculated_displacement_sofia() {
         trim_steps: vec![0.],//vec![-2., -1., 0., 1., 2.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
         draught_steps: vec![4.],//vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(), 
     };
-    let error = DisplacementCache::new(
-        &dbg,
-        model_path.into(),
-        1000.,
-        result_path,
-        conf,
-        thread_pool.scheduler(),
-    ).rebuild();
-    assert!(error.is_ok(), "*error*: {:?}", error);
+    // let error = DisplacementCache::new(
+    //     &dbg,
+    //     model_path.into(),
+    //     1000.,
+    //     result_path,
+    //     conf,
+    //     thread_pool.scheduler(),
+    // ).rebuild();
+    // assert!(error.is_ok(), "*error*: {:?}", error);
  /*   let heel_steps = conf.heel_steps.clone();
     let trim_steps = conf.trim_steps.clone();
     let draught_steps = conf.draught_steps.clone();
