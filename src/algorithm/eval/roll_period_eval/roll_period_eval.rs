@@ -1,12 +1,29 @@
 use super::roll_period_ctx::RollingPeriodCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextRead}, eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx, MetacentricHeightCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite,
+        context::context_access::{
+            ContextParamsRead, 
+            ContextRead
+        }, 
+        eval::{
+            parameters::ParameterID, 
+            zg_eval::Zg, 
+            BalanceCtx, 
+            MetacentricHeightCtx
+        },
+    }, 
+    kernel::{
+        eval::Eval, 
+        types::eval_result::EvalResult
+    }, 
+    ContextWrite,
 };
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::{
+    dbg::Dbg, 
+    error::Error
+};
 ///
-/// Расчет периода качки судна 
+/// Расчет периода собственных бортовых колебаний судна  
 pub struct RollingPeriodEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
@@ -15,6 +32,7 @@ pub struct RollingPeriodEval {
 //
 impl RollingPeriodEval {
     ///
+    /// Новый экземпляр [RollingPeriodEval]
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,

@@ -40,8 +40,10 @@ pub struct Context {
     pub(super) wind: Option<WindCtx>,
     /// Парусность судна
     pub(super) windage: Option<WindageCtx>,
-    /// Период качки судна  
+    /// Период собственных бортовых колебаний судна 
     pub(super) roll_period: Option<RollingPeriodCtx>,
+    /// Частота собственных бортовых колебаний судна
+    pub(super) roll_frequency: Option<RollingFrequencyCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
     /// Критерий погоды К

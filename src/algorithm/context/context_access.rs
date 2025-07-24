@@ -228,6 +228,18 @@ impl ContextRead<RollingPeriodCtx> for Context {
     }
 }
 //
+impl ContextWrite<RollingFrequencyCtx> for Context {
+    fn write(mut self, value: RollingFrequencyCtx) -> Result<Self, Error> {
+        self.roll_frequency = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<RollingFrequencyCtx> for Context {
+    fn read(&self) -> RollingFrequencyCtx {
+        self.roll_frequency.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<RollingAmplitudeCtx> for Context {
     fn write(mut self, value: RollingAmplitudeCtx) -> Result<Self, Error> {
         self.roll_amplitude = Some(value);
