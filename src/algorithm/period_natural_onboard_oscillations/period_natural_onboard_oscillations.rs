@@ -48,10 +48,10 @@ impl Eval<(), EvalResult> for PeriodNaturalOnBoardOscillations {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial_ctx = ContextReadRef::<InitialCtx>::read_ref(&ctx);
+                let length_lbp = initial_ctx.length_lbp;
                 let b = initial_ctx.b;
                 let h = initial_ctx.h;
                 let d = initial_ctx.d;
-                let length_lbp = initial_ctx.length_lbp;
                 let c = 0.373 + 0.023 * b / d - 0.043 * length_lbp / 100.0;
                 let result = 2.0 * c * b / h.sqrt();
                 ctx.write(

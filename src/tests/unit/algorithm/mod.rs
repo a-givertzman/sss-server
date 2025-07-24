@@ -5,6 +5,7 @@ mod cache;
 //mod fake_model_link;
 //mod fake_ship_model;
 //mod icing;
+//mod loads;
+mod period_natural_onboard_oscillations_test;
 //mod strength_area;
 //mod wetting;
-//mod loads;

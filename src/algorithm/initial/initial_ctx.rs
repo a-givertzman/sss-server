@@ -80,10 +80,14 @@ impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize, project_id: &str) -> Self {
+    pub fn new(ship_id: usize, project_id: &str, length_lbp: f64, b: f64, h: f64, d: f64,) -> Self {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),
+            length_lbp: length_lbp,
+            b: b,
+            h: h,
+            d: d,
             ..Default::default()
         }
     }
