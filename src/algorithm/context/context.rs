@@ -1,6 +1,9 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
-    eval::{parameters::Parameters, *},
+    eval::{
+        parameters::Parameters, 
+        *
+    },
     initial::initial_ctx::InitialCtx,
 };
 ///
@@ -26,6 +29,8 @@ pub struct Context {
     pub(super) wetting: Option<WettingCtx>,
     /// Все грузы судна
     pub(super) loads: Option<LoadsCtx>,
+    /// Основная зона резонансной бортовой качки
+    pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
     pub(super) balance: Option<BalanceCtx>,
@@ -64,6 +69,8 @@ pub struct Context {
     pub(super) min_metacentric_height: Option<MinMetacentricHeightCtx>,
     /// Критерий метацентрической высоты
     pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
+    /// Параметрическая зона резонансной бортовой качки
+    pub(super) parametric_resonant_zone: Option<ParametricResonantZoneCtx>,
     /// Критерий ускорения 𝐾∗
     pub(super) acceleration: Option<AccelerationCtx>,
     /// Критерий крена на циркуляции

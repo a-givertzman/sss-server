@@ -5,10 +5,12 @@ mod icing_stab_eval;
 mod icing_eval;
 mod wetting_eval;
 mod loads_eval;
+mod main_resonant_zone;
 mod balance_eval;
 mod icing_timber_eval;
 mod stability_area_eval;
 mod metacentric_height_eval;
+mod parametric_resonant_zone;
 mod lever_diagram_eval;
 mod wind_eval;
 mod windage_eval;
@@ -31,6 +33,9 @@ pub use icing_eval::icing_ctx::IcingCtx;
 pub use loads_eval::loads_eval::LoadsEval;
 pub use loads_eval::loads_ctx::LoadsCtx;
 
+pub use main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval;
+pub use main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
+
 pub use wetting_eval::wetting_eval::WettingEval;
 pub use wetting_eval::wetting_ctx::WettingCtx;
 
@@ -45,6 +50,9 @@ pub use stability_area_eval::stability_area_ctx::StabilityAreaCtx;
 
 pub use metacentric_height_eval::metacentric_height_eval::MetacentricHeightEval;
 pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx;
+
+pub use parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval;
+pub use parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
 
 pub use lever_diagram_eval::lever_diagram_eval::LeverDiagramEval;
 pub use lever_diagram_eval::lever_diagram_ctx::LeverDiagramCtx;

@@ -6,6 +6,8 @@ mod cache;
 //mod fake_ship_model;
 //mod icing;
 //mod loads;
+mod main_resonant_zone_test;
+mod parametric_resonant_zone_test;
 mod roll_frequency_test;
 //mod strength_area;
 //mod wetting;

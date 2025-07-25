@@ -132,6 +132,18 @@ impl ContextRead<LoadsCtx> for Context {
     }
 }
 //
+impl ContextWrite<MainResonantZoneCtx> for Context {
+    fn write(mut self, value: MainResonantZoneCtx) -> Result<Self, Error> {
+        self.main_resonant_zone = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MainResonantZoneCtx> for Context {
+    fn read(&self) -> MainResonantZoneCtx {
+        self.main_resonant_zone.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<IcingTimberCtx> for Context {
     fn write(mut self, value: IcingTimberCtx) -> Result<Self, Error> {
         self.icing_timber = Some(value);
@@ -369,6 +381,18 @@ impl ContextWrite<MetacentricHeightSubdivisionCtx> for Context {
 impl ContextRead<MetacentricHeightSubdivisionCtx> for Context {
     fn read(&self) -> MetacentricHeightSubdivisionCtx {
         self.metacentric_height_subdivision.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ParametricResonantZoneCtx> for Context {
+    fn write(mut self, value: ParametricResonantZoneCtx) -> Result<Self, Error> {
+        self.parametric_resonant_zone = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ParametricResonantZoneCtx> for Context {
+    fn read(&self) -> ParametricResonantZoneCtx {
+        self.parametric_resonant_zone.clone().unwrap()
     }
 }
 //
