@@ -71,6 +71,8 @@ pub struct Context {
     pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
     /// Параметрическая зона резонансной бортовой качки
     pub(super) parametric_resonant_zone: Option<ParametricResonantZoneCtx>,
+    /// Период волнения
+    pub(super) period_exctiment: Option<PeriodExcitementCtx>,
     /// Критерий ускорения 𝐾∗
     pub(super) acceleration: Option<AccelerationCtx>,
     /// Критерий крена на циркуляции

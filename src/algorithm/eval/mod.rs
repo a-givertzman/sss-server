@@ -11,6 +11,7 @@ mod icing_timber_eval;
 mod stability_area_eval;
 mod metacentric_height_eval;
 mod parametric_resonant_zone;
+mod period_excitement;
 mod lever_diagram_eval;
 mod wind_eval;
 mod windage_eval;
@@ -53,6 +54,9 @@ pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx;
 
 pub use parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval;
 pub use parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
+
+pub use period_excitement::period_excitement_eval::PeriodExcitementEval;
+pub use period_excitement::period_excitement_ctx::PeriodExcitementCtx;
 
 pub use lever_diagram_eval::lever_diagram_eval::LeverDiagramEval;
 pub use lever_diagram_eval::lever_diagram_ctx::LeverDiagramCtx;

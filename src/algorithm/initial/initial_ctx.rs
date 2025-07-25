@@ -2,10 +2,9 @@ use std::collections::HashMap;
 use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
-
+use crate::algorithm::eval::PeriodExcitementCtx;
 ///
-/// Общая структура для ввода данных. Содержит все данные
-/// для расчетов.
+/// Общая структура для ввода данных. Содержит все данные для расчетов.
 #[derive(Debug, Clone, Default)]
 pub struct InitialCtx {
     pub ship_id: String,
@@ -26,6 +25,10 @@ pub struct InitialCtx {
     pub icing: Option<IcingArray>,
     /// Постоянная нагрузка на судно
     pub load_constant: Option<LoadConstantArray>,
+    /// Период волнения Tw в секундах в диапазоне от 1.0 до 15.0 секунд, с шагом 0.1 секунда
+    pub period_excitement: Option<PeriodExcitementCtx>,
+    /// Длина волны λ в метрах в диапазоне от 1.6 до 351.0 метров с шагом 0.1 метр.
+    pub wave_length: Option<f64>,
     /// Переменная нагрузка на судно
     pub bulk: Option<Vec::<LoadBulkData>>,
     pub liquid: Option<Vec::<LoadLiquidData>>,
@@ -58,7 +61,7 @@ impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize, project_id: &str) -> Self {
+    pub fn new(ship_id: usize, project_id: &str,) -> Self {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),

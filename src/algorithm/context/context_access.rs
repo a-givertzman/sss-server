@@ -396,6 +396,18 @@ impl ContextRead<ParametricResonantZoneCtx> for Context {
     }
 }
 //
+impl ContextWrite<PeriodExcitementCtx> for Context {
+    fn write(mut self, value: PeriodExcitementCtx) -> Result<Self, Error> {
+        self.period_exctiment = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<PeriodExcitementCtx> for Context {
+    fn read(&self) -> PeriodExcitementCtx {
+        self.period_exctiment.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<AccelerationCtx> for Context {
     fn write(mut self, value: AccelerationCtx) -> Result<Self, Error> {
         self.acceleration = Some(value);
