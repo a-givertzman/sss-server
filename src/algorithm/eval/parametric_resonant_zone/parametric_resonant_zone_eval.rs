@@ -16,7 +16,7 @@ use sal_core::{
     error::Error
 };
 ///
-/// Расчет параметрической зоны резонанса бортовой качки
+/// Расчет [параметрической зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub struct ParametricResonantZoneEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
@@ -25,6 +25,7 @@ pub struct ParametricResonantZoneEval {
 //
 impl ParametricResonantZoneEval {
     ///
+    /// Новый экземпляр [ParametricResonantZoneEval]
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "ParametricResonantZoneEval");
         Self {

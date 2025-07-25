@@ -8,7 +8,6 @@ mod prelude;
 mod ship_model;
 #[cfg(test)]
 mod tests;
-
 use algorithm::entities::{Position, Position2d};
 use algorithm::eval::*;
 use app::app::App;
