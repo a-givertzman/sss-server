@@ -9,6 +9,7 @@ mod loads_eval;
 mod main_resonant_zone;
 mod balance_eval;
 mod icing_timber_eval;
+mod length_lbp;
 mod stability_area_eval;
 mod metacentric_height_eval;
 mod parametric_resonant_zone;
@@ -20,6 +21,7 @@ mod roll_amplitude_eval;
 mod roll_frequency_eval;
 mod roll_period_eval;
 mod vessel_max_speed;
+mod vessel_move_broaching;
 mod vessel_speed_filter;
 mod criterion;
 mod zg_eval;
@@ -33,6 +35,8 @@ pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx;
 
 pub use icing_stab_eval::icing_stab_eval::IcingStabEval;
 pub use icing_stab_eval::icing_stab_ctx::IcingStabCtx;
+
+pub use length_lbp::length_lbp_ctx::LengthLBPCtx;
 
 pub use icing_eval::icing_eval::IcingEval;
 pub use icing_eval::icing_ctx::IcingCtx;
@@ -79,6 +83,9 @@ pub use roll_period_eval::roll_period_eval::RollingPeriodEval;
 pub use roll_period_eval::roll_period_ctx::RollingPeriodCtx;
 
 pub use vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
+
+pub use vessel_move_broaching::vessel_move_broching_eval::VesselMoveBroachingEval;
+pub use vessel_move_broaching::vessel_move_broching_ctx::VesselMoveBroachingCtx;
 
 pub use vessel_speed_filter::vessel_speed_filter_eval::VesselSpeedFilterEval;
 pub use vessel_speed_filter::vessel_speed_filter_ctx::VesselSpeedFilterCtx;

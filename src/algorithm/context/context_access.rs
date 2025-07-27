@@ -144,6 +144,18 @@ impl ContextRead<VesselMaxSpeedCtx> for Context {
     }
 }
 //
+impl ContextWrite<VesselMoveBroachingCtx> for Context {
+    fn write(mut self, value: VesselMoveBroachingCtx) -> Result<Self, Error> {
+        self.vessel_move_broching = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<VesselMoveBroachingCtx> for Context {
+    fn read(&self) -> VesselMoveBroachingCtx {
+        self.vessel_move_broching.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<VesselSpeedFilterCtx> for Context {
     fn write(mut self, value: VesselSpeedFilterCtx) -> Result<Self, Error> {
         self.vessel_speed_filter = Some(value);
@@ -189,6 +201,18 @@ impl ContextWrite<IcingTimberCtx> for Context {
 impl ContextRead<IcingTimberCtx> for Context {
     fn read(&self) -> IcingTimberCtx {
         self.icing_timber.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<LengthLBPCtx> for Context {
+    fn write(mut self, value: LengthLBPCtx) -> Result<Self, Error> {
+        self.length_lbp = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<LengthLBPCtx> for Context {
+    fn read(&self) -> LengthLBPCtx {
+        self.length_lbp.clone().unwrap()
     }
 }
 //

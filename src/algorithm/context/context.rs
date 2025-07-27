@@ -25,12 +25,16 @@ pub struct Context {
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
     pub(super) icing_timber: Option<IcingTimberCtx>,
+    /// Длина судна между перпендикулярами LBP в метрах
+    pub(super) length_lbp: Option<LengthLBPCtx>,
     /// Учет обледенения судна и  груза
     pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
     /// Максимальная скорость хода судна Vmax в узлах
     pub(super) vmax: Option<VesselMaxSpeedCtx>,
+    /// Массив скоростей хода, уз, при которых возникает движение судна на гребне волны и брочинг
+    pub(super) vessel_move_broching: Option<VesselMoveBroachingCtx>,
     /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне околорезонансных частот
     pub(super) vessel_speed_filter: Option<VesselSpeedFilterCtx>,
     /// Все грузы судна
