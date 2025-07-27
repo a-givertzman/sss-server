@@ -11,5 +11,6 @@ mod main_resonant_zone_test;
 mod parametric_resonant_zone_test;
 mod period_excitement_test;
 mod roll_frequency_test;
+mod vessel_speed_filter_test;
 //mod strength_area;
 //mod wetting;

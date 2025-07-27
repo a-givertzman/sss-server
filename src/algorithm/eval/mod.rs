@@ -20,6 +20,7 @@ mod roll_amplitude_eval;
 mod roll_frequency_eval;
 mod roll_period_eval;
 mod vessel_max_speed;
+mod vessel_speed_filter;
 mod criterion;
 mod zg_eval;
 mod draft_mark_eval;
@@ -78,6 +79,9 @@ pub use roll_period_eval::roll_period_eval::RollingPeriodEval;
 pub use roll_period_eval::roll_period_ctx::RollingPeriodCtx;
 
 pub use vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
+
+pub use vessel_speed_filter::vessel_speed_filter_eval::VesselSpeedFilterEval;
+pub use vessel_speed_filter::vessel_speed_filter_ctx::VesselSpeedFilterCtx;
 
 pub use roll_amplitude_eval::roll_amplitude_eval::RollingAmplitudeEval;
 pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;
