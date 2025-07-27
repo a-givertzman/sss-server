@@ -1,5 +1,6 @@
 //! Entities implemented the Eval trate
 //pub mod area_eval;
+mod apparent_frequencies;
 mod strength_area_eval;
 mod icing_stab_eval;
 mod icing_eval;
@@ -15,12 +16,16 @@ mod period_excitement;
 mod lever_diagram_eval;
 mod wind_eval;
 mod windage_eval;
+mod roll_amplitude_eval;
 mod roll_frequency_eval;
 mod roll_period_eval;
-mod roll_amplitude_eval;
+mod vessel_max_speed;
 mod criterion;
 mod zg_eval;
 mod draft_mark_eval;
+
+pub use apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval;
+pub use apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
 
 pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
 pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx; 
@@ -71,6 +76,8 @@ pub use roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
 
 pub use roll_period_eval::roll_period_eval::RollingPeriodEval;
 pub use roll_period_eval::roll_period_ctx::RollingPeriodCtx;
+
+pub use vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
 
 pub use roll_amplitude_eval::roll_amplitude_eval::RollingAmplitudeEval;
 pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;

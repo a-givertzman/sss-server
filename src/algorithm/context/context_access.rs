@@ -57,7 +57,6 @@ impl ContextParamsRead for Context {
         params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
     }
 }
-
 //
 //
 impl ContextWrite<InitialCtx> for Context {
@@ -69,6 +68,19 @@ impl ContextWrite<InitialCtx> for Context {
 impl ContextReadRef<InitialCtx> for Context {
     fn read_ref(&self) -> &InitialCtx {
         &self.initial
+    }
+}
+//
+//
+impl ContextWrite<ApparentFrequenciesCtx> for Context {
+    fn write(mut self, value: ApparentFrequenciesCtx) -> Result<Self, Error> {
+        self.apparent_frequencies = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ApparentFrequenciesCtx> for Context {
+    fn read(&self) -> ApparentFrequenciesCtx {
+        self.apparent_frequencies.clone().unwrap()
     }
 }
 //
@@ -117,6 +129,18 @@ impl ContextWrite<WettingCtx> for Context {
 impl ContextRead<WettingCtx> for Context {
     fn read(&self) -> WettingCtx {
         self.wetting.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<VesselMaxSpeedCtx> for Context {
+    fn write(mut self, value: VesselMaxSpeedCtx) -> Result<Self, Error> {
+        self.vmax = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<VesselMaxSpeedCtx> for Context {
+    fn read(&self) -> VesselMaxSpeedCtx {
+        self.vmax.clone().unwrap()
     }
 }
 //

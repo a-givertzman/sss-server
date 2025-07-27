@@ -1,5 +1,6 @@
-mod data;
 mod cache;
+mod data;
+mod apparent_frequencies_test;
 //mod models; // перенес тесты в папку с крейтом из-за проблем с видимостью методов
 //mod fake_initial;
 //mod fake_model_link;

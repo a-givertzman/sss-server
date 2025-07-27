@@ -14,6 +14,8 @@ use crate::algorithm::{
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
+    /// Массив [кажущихся частот волнения](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#порядок-расчета)
+    pub(super) apparent_frequencies: Option<ApparentFrequenciesCtx>,
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub(super) parameters: Option<Parameters>,
@@ -27,6 +29,8 @@ pub struct Context {
     pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
+    /// Максимальная скорость хода судна Vmax в узлах
+    pub(super) vmax: Option<VesselMaxSpeedCtx>,
     /// Все грузы судна
     pub(super) loads: Option<LoadsCtx>,
     /// Основная зона резонансной бортовой качки
