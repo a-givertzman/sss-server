@@ -1,7 +1,8 @@
 use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
-    ApparentFrequenciesCtx, LengthLBPCtx, MainResonantZoneCtx, ParametricResonantZoneCtx, VesselMoveBroachingCtx, VesselSpeedFilterCtx
+    VesselMoveBroachingCtx, 
+    VesselSpeedFilterCtx
 };
 use crate::prelude::InitialCtx;
 use crate::{
@@ -41,13 +42,20 @@ impl Eval<Zg, EvalResult> for VesselMoveBroachingEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
-                let length_lbp = ContextRead::<LengthLBPCtx>::read(&ctx).length_lbp.clone();
+                let initial: &InitialCtx = ctx.read_ref();
+                let ship_parameters = initial
+                    .ship_parameters
+                    .as_ref()
+                    .unwrap();
+                let ship_length_lbp = *ship_parameters
+                    .get("LBP")
+                    .ok_or(error.err("No LBP in ship_parameters"))?;
                 let vessel_speed_filter = ContextRead::<VesselSpeedFilterCtx>::read(&ctx).vessel_speed_filter.clone();
                 let mut result: Vec<(f64, f64)> = Vec::new();
                 let course_angle_of_wave: Vec<f64> = (135..=2250).map(|x| x as f64 / 10.0).collect();
                 for speed in vessel_speed_filter {
                     for angle in &course_angle_of_wave {
-                        let formula = 1.8 * length_lbp.sqrt() / (180.0 - angle).cos();
+                        let formula = 1.8 * ship_length_lbp.sqrt() / (180.0 - angle).cos();
                         if speed >= formula {
                             result.push(
                                 (*angle, speed)

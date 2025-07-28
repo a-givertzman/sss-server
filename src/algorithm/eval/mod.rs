@@ -9,7 +9,6 @@ mod loads_eval;
 mod main_resonant_zone;
 mod balance_eval;
 mod icing_timber_eval;
-mod length_lbp;
 mod stability_area_eval;
 mod metacentric_height_eval;
 mod parametric_resonant_zone;
@@ -35,8 +34,6 @@ pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx;
 
 pub use icing_stab_eval::icing_stab_eval::IcingStabEval;
 pub use icing_stab_eval::icing_stab_ctx::IcingStabCtx;
-
-pub use length_lbp::length_lbp_ctx::LengthLBPCtx;
 
 pub use icing_eval::icing_eval::IcingEval;
 pub use icing_eval::icing_ctx::IcingCtx;
@@ -77,6 +74,7 @@ pub use wind_eval::wind_ctx::WindCtx;
 pub use windage_eval::windage_eval::WindageEval;
 pub use windage_eval::windage_ctx::WindageCtx;
 
+pub use roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval;
 pub use roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
 
 pub use roll_period_eval::roll_period_eval::RollingPeriodEval;

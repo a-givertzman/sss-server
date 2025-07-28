@@ -13,7 +13,10 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ApparentFrequenciesCtx, ApparentFrequenciesEval, LengthLBPCtx, PeriodExcitementCtx, VesselMaxSpeedCtx, VesselMoveBroachingCtx, VesselMoveBroachingEval, VesselSpeedFilterCtx, Zg
+            VesselMoveBroachingCtx, 
+            VesselMoveBroachingEval, 
+            VesselSpeedFilterCtx, 
+            Zg
         }
     }, 
     kernel::{
@@ -55,9 +58,7 @@ fn eval() {
     let test_data = [
         (
             1,
-            LengthLBPCtx {
-                length_lbp: 10.0,
-            },
+            10.0,
             VesselSpeedFilterCtx {
                 vessel_speed_filter: vec![
                     6.283185307179586, 
@@ -78,18 +79,22 @@ fn eval() {
         ),
     ];
     for (step, length_lbp, vessel_speed_filter, target) in test_data.iter() {
+        let initial_data = InitialCtx::new(
+                0,
+                "Unit-test",
+        );
+        initial_data.ship_parameters
+        .clone()
+        .unwrap()
+        .insert(
+            "LBP".to_owned(),
+            *length_lbp
+        );
         let mut ctx = MocEval {
             ctx: Context::new(
-                InitialCtx::new(
-                    0,
-                    "Unit-test",
-                )
+                initial_data,
             ),
         };
-        ctx.ctx = ctx.ctx
-        .clone()
-        .write(length_lbp.clone())
-        .unwrap();
         ctx.ctx = ctx.ctx
         .clone()
         .write(vessel_speed_filter.clone())

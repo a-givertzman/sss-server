@@ -204,18 +204,6 @@ impl ContextRead<IcingTimberCtx> for Context {
     }
 }
 //
-impl ContextWrite<LengthLBPCtx> for Context {
-    fn write(mut self, value: LengthLBPCtx) -> Result<Self, Error> {
-        self.length_lbp = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<LengthLBPCtx> for Context {
-    fn read(&self) -> LengthLBPCtx {
-        self.length_lbp.clone().unwrap()
-    }
-}
-//
 impl ContextWrite<BalanceCtx> for Context {
     fn write(mut self, value: BalanceCtx) -> Result<Self, Error> {
         self.balance = Some(value);

@@ -25,8 +25,6 @@ pub struct Context {
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
     pub(super) icing_timber: Option<IcingTimberCtx>,
-    /// Длина судна между перпендикулярами LBP в метрах
-    pub(super) length_lbp: Option<LengthLBPCtx>,
     /// Учет обледенения судна и  груза
     pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
