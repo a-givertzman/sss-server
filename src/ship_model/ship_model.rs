@@ -19,6 +19,7 @@ use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
 use sal_sync::services::future::Future;
+use sal_sync::sync::Handles;
 use sal_sync::sync::Owner;
 use sal_sync::thread_pool::Scheduler;
 use std::path::PathBuf;
@@ -43,6 +44,7 @@ pub struct ShipModel {
     scheduler: Scheduler,
     timeout: Duration,
     api_client: Arc<RwLock<ApiClient>>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -77,6 +79,7 @@ impl ShipModel {
             scheduler,
             timeout: Self::DEFAULT_TIMEOUT,
             api_client: Arc::new(RwLock::new(api_client)),
+            handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
@@ -193,7 +196,7 @@ impl ShipModel {
         let cache_dir = "src/assets/cashe/";
         match self.bounds() {
             Ok(bounds) => {
-                if let Err(err) = self.scheduler.spawn(move || {
+                let handle = self.scheduler.spawn(move || {
                     let result = compute_balance(
                         model_key,
                         model_path,
@@ -206,16 +209,13 @@ impl ShipModel {
                     );
                     sink_clone.add(result);
                     Ok(())
-                }) {
-                    let err = error.pass(err);
-                    // log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                    sink.add(Err(err));
+                });
+                match handle {
+                    Ok(handle) => self.handles.push(handle),
+                    Err(err) => sink.add(Err(error.pass(err))),
                 }
             },
-            Err(err) => {
-                let err = error.pass(err);
-                sink.add(Err(err));
-            },
+            Err(err) => sink.add(Err(error.pass(err))),
         };
         result
     }
