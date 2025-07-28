@@ -1,5 +1,3 @@
-use coco::Stack;
-//
 /*
 use sal_3dlib::{
     gmath::vector::Vector,
@@ -21,7 +19,6 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
-
 use crate::algorithm::entities::{Position, model::ShipModelMeta};
 ///
 /// Provides logic to calculate and store cache used by [super::BoundCache].

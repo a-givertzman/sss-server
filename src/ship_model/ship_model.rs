@@ -14,11 +14,11 @@ use crate::algorithm::eval::BalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
 use crate::kernel::sync::Hub;
 use crate::kernel::sync::Link;
-use coco::Stack;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
+use sal_sync::sync::Owner;
 use sal_sync::thread_pool::Scheduler;
 use std::path::PathBuf;
 use std::thread::JoinHandle;
@@ -39,9 +39,9 @@ pub struct ShipModel {
     project_id: String,
     n_parts: usize,
     hub: Hub,
-    scheduler: Stack<Scheduler>,
+    scheduler: Scheduler,
     timeout: Duration,
-    api_client: Stack<ApiClient>,
+    api_client: Owner<ApiClient>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -65,10 +65,6 @@ impl ShipModel {
     ) -> Self {
         let name = Name::new(parent, "ShipModel");
         let hub = Hub::new(&name);
-        let sheduler_stk = Stack::new();
-        sheduler_stk.push(scheduler);
-        let client = Stack::new();
-        client.push(api_client);
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
@@ -77,8 +73,8 @@ impl ShipModel {
             n_parts,
             hub,
             timeout: Self::DEFAULT_TIMEOUT,
-            api_client: client,
-            scheduler: sheduler_stk,
+            api_client: Owner::new(api_client),
+            scheduler,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -95,7 +91,7 @@ impl ShipModel {
         log::info!("{}.run | Starting...", dbg);
         // let timeout = self.timeout;
         // let interval = self.timeout; //Duration::from_millis(1000);
-        let api_client = self.api_client.pop().unwrap();
+        let api_client = self.api_client.take().unwrap();
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
         // TODO read key by ship_id
@@ -105,7 +101,7 @@ impl ShipModel {
         let project_id = self.project_id.clone();
         let n_parts = self.n_parts;
         let cache_dir = "src/assets/cashe/";
-        let scheduler = self.scheduler.pop().unwrap();
+        let scheduler = self.scheduler.clone();
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
             Err(err) => return Err(error.pass_with("get_bounds error", err)),

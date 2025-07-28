@@ -5,10 +5,8 @@ use crate::{
         eval::*,
     }, kernel::{eval::Eval, types::{eval_result::EvalResult, Arc, RwLock}}, prelude::{Context, ContextWrite, InitialCtx}
 };
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{JoinHandle, Scheduler};
-
+use sal_sync::{sync::Stack, thread_pool::{JoinHandle, Scheduler}};
 use super::{zg_ctx::ZgCtx, Zg};
 
 // unsafe impl Send for StabilityAreaEval {}

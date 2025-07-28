@@ -1,5 +1,3 @@
-use coco::Stack;
-//
 use sal_3dlib::{
     gmath::vector::Vector,
     ops::{Polygon, transform::*},
@@ -18,7 +16,6 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-
 use crate::algorithm::entities::{Position, model::ShipModelMeta};
 ///
 /// Provides logic to calculate and store cache used by [super::CompartmentCache].

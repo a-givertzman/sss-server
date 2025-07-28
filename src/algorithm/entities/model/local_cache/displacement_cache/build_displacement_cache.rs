@@ -1,10 +1,8 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{JoinHandle, Scheduler};
+use sal_sync::{sync::Stack, thread_pool::{JoinHandle, Scheduler}};
 use std::sync::{
     atomic::{AtomicBool, Ordering}, Arc, RwLock
 };
-
 use crate::algorithm::entities::model::Shape;
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
