@@ -7,11 +7,13 @@ mod icing_eval;
 mod wetting_eval;
 mod loads_eval;
 mod main_resonant_zone;
+mod main_resonant_zone_speed_filter;
 mod balance_eval;
 mod icing_timber_eval;
 mod stability_area_eval;
 mod metacentric_height_eval;
 mod parametric_resonant_zone;
+mod parametric_resonant_zone_speed_filter;
 mod period_excitement;
 mod lever_diagram_eval;
 mod wind_eval;
@@ -43,6 +45,9 @@ pub use loads_eval::loads_ctx::LoadsCtx;
 pub use main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval;
 pub use main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
 
+pub use main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval;
+pub use main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx;
+
 pub use wetting_eval::wetting_eval::WettingEval;
 pub use wetting_eval::wetting_ctx::WettingCtx;
 
@@ -60,6 +65,9 @@ pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx;
 
 pub use parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval;
 pub use parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
+
+pub use parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval;
+pub use parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx;
 
 pub use period_excitement::period_excitement_eval::PeriodExcitementEval;
 pub use period_excitement::period_excitement_ctx::PeriodExcitementCtx;
