@@ -22,7 +22,7 @@ mod main_parametric_resonant_complex {
         algorithm::{
             context::context_access::ContextRead, 
             eval::{
-                ApparentFrequenciesCtx, ApparentFrequenciesEval, MainResonantZoneCtx, MainResonantZoneEval, ParametricResonantZoneCtx, ParametricResonantZoneEval, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, VesselSpeedFilterCtx, VesselSpeedFilterEval, Zg
+                ApparentFrequenciesCtx, ApparentFrequenciesEval, MainResonantZoneCtx, MainResonantZoneEval, MainResonantZoneSpeedFilterEval, ParametricResonantZoneCtx, ParametricResonantZoneEval, ParametricResonantZoneSpeedFilterEval, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, Zg
             }
         }, 
         kernel::eval::Eval, 
@@ -94,20 +94,23 @@ mod main_parametric_resonant_complex {
                 }
             ).unwrap();
             let dbg = "ComplexTest";
-            let result = VesselSpeedFilterEval::new(
+            let result = ParametricResonantZoneSpeedFilterEval::new(
                 dbg, 
-                ApparentFrequenciesEval::new(
+                    MainResonantZoneSpeedFilterEval::new(
                     dbg, 
-                    PeriodExcitementEval::new(
+                    ApparentFrequenciesEval::new(
                         dbg, 
-                        MainResonantZoneEval::new(
+                        PeriodExcitementEval::new(
                             dbg, 
-                            ParametricResonantZoneEval::new(
+                            MainResonantZoneEval::new(
                                 dbg, 
-                                    RollingFrequencyEval::new(
-                                        dbg,
-                                        ctx,
-                                    )
+                                ParametricResonantZoneEval::new(
+                                    dbg, 
+                                        RollingFrequencyEval::new(
+                                            dbg,
+                                            ctx,
+                                        )
+                                )
                             )
                         )
                     )
@@ -117,10 +120,6 @@ mod main_parametric_resonant_complex {
                 Ok(ctx) => {
                     let app_freq = ContextRead::<MainResonantZoneCtx>::read(&ctx).clone();
                     println!("{:?}", app_freq);
-                    let app_freq = ContextRead::<ParametricResonantZoneCtx>::read(&ctx).clone();
-                    println!("{:?}", app_freq);
-                    let result = ContextRead::<ApparentFrequenciesCtx>::read(&ctx).apparent_frequencies.clone();
-                    println!("{:?}", &result[0..10]);
                 },
                 Err(err) => panic!("step {} \nerror: {:#?}", step, err),
             }

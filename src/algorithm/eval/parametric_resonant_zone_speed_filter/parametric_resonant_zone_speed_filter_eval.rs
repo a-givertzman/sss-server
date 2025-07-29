@@ -2,8 +2,7 @@ use crate::algorithm::context::context_access::ContextRead;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
     ApparentFrequenciesCtx, 
-    ParametricResonantZoneCtx, 
-    VesselSpeedFilterCtx
+    ParametricResonantZoneCtx, ParametricResonantZoneSpeedFilterCtx, 
 };
 use crate::{
     ContextWrite,
@@ -53,8 +52,8 @@ impl Eval<Zg, EvalResult> for ParametricResonantZoneSpeedFilterEval {
                     }
                 }
                 ctx.write(
-                    VesselSpeedFilterCtx {
-                        vessel_speed_filter: result
+                    ParametricResonantZoneSpeedFilterCtx {
+                        parametric_resonant_zone_speed_filter: result
                     }
                 )
             }

@@ -144,30 +144,6 @@ impl ContextRead<VesselMaxSpeedCtx> for Context {
     }
 }
 //
-impl ContextWrite<VesselMoveBroachingCtx> for Context {
-    fn write(mut self, value: VesselMoveBroachingCtx) -> Result<Self, Error> {
-        self.vessel_move_broching = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<VesselMoveBroachingCtx> for Context {
-    fn read(&self) -> VesselMoveBroachingCtx {
-        self.vessel_move_broching.clone().unwrap()
-    }
-}
-//
-impl ContextWrite<VesselSpeedFilterCtx> for Context {
-    fn write(mut self, value: VesselSpeedFilterCtx) -> Result<Self, Error> {
-        self.vessel_speed_filter = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<VesselSpeedFilterCtx> for Context {
-    fn read(&self) -> VesselSpeedFilterCtx {
-        self.vessel_speed_filter.clone().unwrap()
-    }
-}
-//
 impl ContextWrite<LoadsCtx> for Context {
     fn write(mut self, value: LoadsCtx) -> Result<Self, Error> {
         self.loads = Some(value);
@@ -189,6 +165,18 @@ impl ContextWrite<MainResonantZoneCtx> for Context {
 impl ContextRead<MainResonantZoneCtx> for Context {
     fn read(&self) -> MainResonantZoneCtx {
         self.main_resonant_zone.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<MainResonantZoneSpeedFilterCtx> for Context {
+    fn write(mut self, value: MainResonantZoneSpeedFilterCtx) -> Result<Self, Error> {
+        self.main_resonant_zone_speed_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MainResonantZoneSpeedFilterCtx> for Context {
+    fn read(&self) -> MainResonantZoneSpeedFilterCtx {
+        self.main_resonant_zone_speed_filter.clone().unwrap()
     }
 }
 //
@@ -441,6 +429,18 @@ impl ContextWrite<ParametricResonantZoneCtx> for Context {
 impl ContextRead<ParametricResonantZoneCtx> for Context {
     fn read(&self) -> ParametricResonantZoneCtx {
         self.parametric_resonant_zone.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ParametricResonantZoneSpeedFilterCtx> for Context {
+    fn write(mut self, value: ParametricResonantZoneSpeedFilterCtx) -> Result<Self, Error> {
+        self.parametric_resonant_zone_speed_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ParametricResonantZoneSpeedFilterCtx> for Context {
+    fn read(&self) -> ParametricResonantZoneSpeedFilterCtx {
+        self.parametric_resonant_zone_speed_filter.clone().unwrap()
     }
 }
 //

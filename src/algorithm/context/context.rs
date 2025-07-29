@@ -31,14 +31,12 @@ pub struct Context {
     pub(super) wetting: Option<WettingCtx>,
     /// Максимальная скорость хода судна Vmax в узлах
     pub(super) vmax: Option<VesselMaxSpeedCtx>,
-    /// Массив скоростей хода, уз, при которых возникает движение судна на гребне волны и брочинг
-    pub(super) vessel_move_broching: Option<VesselMoveBroachingCtx>,
-    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне околорезонансных частот
-    pub(super) vessel_speed_filter: Option<VesselSpeedFilterCtx>,
     /// Все грузы судна
     pub(super) loads: Option<LoadsCtx>,
     /// Основная зона резонансной бортовой качки
     pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
+    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основного резонанса
+    pub(super) main_resonant_zone_speed_filter: Option<MainResonantZoneSpeedFilterCtx>,
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
     pub(super) balance: Option<BalanceCtx>,
@@ -79,6 +77,8 @@ pub struct Context {
     pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
     /// Параметрическая зона резонансной бортовой качки
     pub(super) parametric_resonant_zone: Option<ParametricResonantZoneCtx>,
+    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне параметрического резонанса
+    pub(super) parametric_resonant_zone_speed_filter: Option<ParametricResonantZoneSpeedFilterCtx>,
     /// Период волнения
     pub(super) period_exctiment: Option<PeriodExcitementCtx>,
     /// Критерий ускорения 𝐾∗

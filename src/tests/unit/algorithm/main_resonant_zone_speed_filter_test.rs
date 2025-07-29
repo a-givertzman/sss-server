@@ -13,11 +13,10 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ApparentFrequenciesCtx,
+            ApparentFrequenciesCtx, 
             MainResonantZoneCtx, 
-            ParametricResonantZoneCtx, 
-            VesselSpeedFilterCtx, 
-            VesselSpeedFilterEval, 
+            MainResonantZoneSpeedFilterCtx, 
+            MainResonantZoneSpeedFilterEval, 
             Zg
         }
     }, 
@@ -62,10 +61,6 @@ fn eval() {
             1,
             MainResonantZoneCtx {
                 left_side:  1.0,
-                right_side: 10.0,
-            },
-            ParametricResonantZoneCtx {
-                left_side:  5.0,
                 right_side: 7.0,
             },
             ApparentFrequenciesCtx {
@@ -90,12 +85,8 @@ fn eval() {
             ] 
         ),
         (
-            1,
+            2,
             MainResonantZoneCtx {
-                left_side:  7.0,
-                right_side: 10.0,
-            },
-            ParametricResonantZoneCtx {
                 left_side:  7.0,
                 right_side: 10.0,
             },
@@ -123,7 +114,7 @@ fn eval() {
             ] 
         ),
     ];
-    for (step, main_resonant_zone, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+    for (step, main_resonant_zone, apparent_frequencies, target) in test_data.iter() {
         let mut ctx = MocEval {
             ctx: Context::new(
                 InitialCtx::new(
@@ -138,16 +129,12 @@ fn eval() {
         .unwrap();
         ctx.ctx = ctx.ctx
         .clone()
-        .write(parametric_resonant_zone.clone())
-        .unwrap();
-            ctx.ctx = ctx.ctx
-        .clone()
         .write(apparent_frequencies.clone())
         .unwrap();
-        let result = VesselSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
+        let result = MainResonantZoneSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<VesselSpeedFilterCtx>::read(&ctx).vessel_speed_filter.clone();
+                let result = ContextRead::<MainResonantZoneSpeedFilterCtx>::read(&ctx).main_resonant_zone_speed_filter.clone();
                 assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
