@@ -52,7 +52,7 @@ impl Eval<Zg, EvalResult> for ApparentFrequenciesEval {
                         / 3.0 * period_excitement.powf(2.0);
                         result.push(
                             (
-                                angle, 
+                                *speed, 
                                 apparent_frequency,
                             )
                         );
