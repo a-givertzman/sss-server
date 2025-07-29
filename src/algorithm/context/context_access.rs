@@ -228,6 +228,18 @@ impl ContextRead<MetacentricHeightCtx> for Context {
     }
 }
 //
+impl ContextWrite<MoveBrochingFilterCtx> for Context {
+    fn write(mut self, value: MoveBrochingFilterCtx) -> Result<Self, Error> {
+        self.move_broching_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MoveBrochingFilterCtx> for Context {
+    fn read(&self) -> MoveBrochingFilterCtx {
+        self.move_broching_filter.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<LeverDiagramCtx> for Context {
     fn write(mut self, value: LeverDiagramCtx) -> Result<Self, Error> {
         self.lever_diagram = Some(value);

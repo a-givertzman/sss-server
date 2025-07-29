@@ -45,6 +45,8 @@ pub struct Context {
     pub(super) stability_area: Option<StabilityAreaCtx>,
     /// Исправленная метацентрическая высота
     pub(super) metacentric_height: Option<MetacentricHeightCtx>,
+    /// Массив скоростей хода, уз, при которых возникает движение судна на гребне волны и брочинг
+    pub(super) move_broching_filter: Option<MoveBrochingFilterCtx>,
     /// Диаграмма плеч статической и динамической остойчивости
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
     /// Расчет плеча кренящего момента от давления ветра

@@ -12,6 +12,7 @@ mod balance_eval;
 mod icing_timber_eval;
 mod stability_area_eval;
 mod metacentric_height_eval;
+mod move_broching_filter;
 mod parametric_resonant_zone;
 mod parametric_resonant_zone_speed_filter;
 mod period_excitement;
@@ -61,6 +62,9 @@ pub use stability_area_eval::stability_area_ctx::StabilityAreaCtx;
 
 pub use metacentric_height_eval::metacentric_height_eval::MetacentricHeightEval;
 pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx;
+
+pub use move_broching_filter::move_broching_filter_eval::MoveBrochingFilterEval;
+pub use move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx;
 
 pub use parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval;
 pub use parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
