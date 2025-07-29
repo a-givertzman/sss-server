@@ -44,7 +44,7 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
-            Ok(ctx) => {
+            Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial
                     .ship_parameters
@@ -70,6 +70,14 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                         }
                     }
                 }
+                // reassign Vmax by last member of result
+                ctx = ctx
+                .clone()
+                .write(
+                    VesselMaxSpeedCtx { 
+                        vmax: result.last().unwrap().1 
+                    }
+                ).unwrap();
                 ctx.write(
                     MoveBrochingFilterCtx {
                         move_broching_filter: result
