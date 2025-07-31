@@ -17,7 +17,9 @@ api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = 
 #opencascade = { path = "../opencascade-rs/crates/opencascade/" }
 nalgebra = "0.33.2"
 obj = "0.10.2"
+stl_io = "0.8.5"
 parry3d-f64 = "~0.22"
+parry2d-f64 = "~0.22"
 
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
 #sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.10" }

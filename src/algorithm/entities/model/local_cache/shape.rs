@@ -12,6 +12,8 @@ pub struct Shape {
     mesh: Option<TriMesh>,
     dx: f64,
     scale: f64,
+    epsilon: f64,
+    resolution: u32,
 }
 
 unsafe impl Send for Shape {}
@@ -25,76 +27,240 @@ impl Shape {
             mesh: None,
             dx,
             scale,
+            epsilon: 0.0000001,
+            resolution: 10000,
         }
     }
     /// Init shape, load geometry
     pub fn init(&mut self) -> Result<(), Error> {
         if self.mesh.is_none() {
             let error = Error::new(&self.dbg, "init");
-            let mesh =
-                load(self.path.clone()).map_err(|err| error.pass_with("load", err.to_string()))?;
+            let mesh = load_stl(self.path.clone())
+                .map_err(|err| error.pass_with("load", err.to_string()))?;
             let scale = 1. / self.scale;
             self.mesh = Some(mesh.scaled(&Vector3::new(scale, scale, scale)));
         }
         Ok(())
     }
-    /// calculate displacement data
-    /// result: [heel, trim, draught, volume, x, y, z]
-    pub fn displacement(&self, heel: f64, trim: f64, draught: f64) -> Result<Vec<f64>, Error> {
-        let error = Error::new(&self.dbg, "intersect");
-        let mesh = match self.intersect(heel, trim, draught) {
-            Ok(mesh) => mesh,
-            Err(err) => return Err(error.pass_with("self.intersect", err)),
-        };
-        let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
-        let local_com = properties.local_com;
-        Ok(vec![
-            heel,
-            trim,
-            draught,
-            1. / properties.inv_mass,
-            local_com.x - self.dx,
-            local_com.y,
-            local_com.z,
-        ])
-    }
-    /// intersect shape with water line
-    fn intersect(&self, heel: f64, trim: f64, draught: f64) -> Result<TriMesh, Error> {
-        let error = Error::new(&self.dbg, "intersect");
-        let Some(mesh) = self.mesh.clone() else {
-            dbg!("shape intersect error: no mesh", heel, trim, draught);
-            return Err(error.err("self.mesh is none!"));
-        };
-        let heel_rad = heel.to_radians();
-        let trim_rad = -trim.to_radians();
-        let center = Translation3::new(self.dx, 0., draught);
+    ///
+    /// Расчет водоизмещения судна и положение его центра в связанной с судной системой координат
+    /// result: [volume, x, y, z]
+    pub fn displacement(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+    ) -> Result<(f64, f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "displacement");
+        let position = self.position(heel, trim, draught);
         let cuboid_half_size = 1000.;
         let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
-        let cuboid_rotation = UnitQuaternion::from_euler_angles(heel_rad, trim_rad, 0.);
-        let point = Point3::new(0.0, 0.0, -cuboid_half_size);
-        let point = (center * cuboid_rotation).transform_point(&point);
-        let cuboid_translation = Translation3::new(point.x, point.y, point.z);
-        let result = mesh.intersection_with_local_cuboid(
-            false,
-            &cuboid,
-            &Isometry::from_parts(cuboid_translation, cuboid_rotation),
-            false,
-            0.0000001,
-        );
-        match result {
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_cuboid(
+                &position,
+                false,
+                &cuboid,
+                &Isometry::from_parts(
+                    Translation3::new(0., 0., -cuboid_half_size),
+                    UnitQuaternion::identity(),
+                ),
+                false,
+                self.epsilon,
+            );
+        let mesh = match result {
             Ok(mesh) => match mesh {
-                Some(mesh) => return Ok(mesh),
-                None => return Err(error.err(format!("mesh.intersection_with_local_cuboid: no mesh for heel:{heel}, trim:{trim}, draught:{draught}"))),
+                Some(mesh) => mesh,
+                None => {
+                    return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                }
             },
-            Err(err) => {
-                return Err(error.pass_with(format!("mesh.intersection_with_local_cuboid heel:{heel}, trim:{trim}, draught:{draught}"), err.to_string()));
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+        };
+        let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
+        Ok((
+            1. / properties.inv_mass,
+            properties.local_com.x - self.dx,
+            properties.local_com.y,
+            properties.local_com.z,
+        ))
+    }
+    ///
+    /// Расчет площади ватерлинии судна и положение ее центра в связанной с судной системой координат
+    /// result: [area, x, y, z]
+    pub fn area(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64, f64, f64), Error> {
+        let error = Error::new("Shape", "area");
+        let position = self.position(heel, trim, draught);
+        let cuboid_half_size = 1000.;
+        let hdz = 0.005;
+        let cuboid = Cuboid::new(Vector3::new(cuboid_half_size, cuboid_half_size, hdz));
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_cuboid(
+                &position,
+                false,
+                &cuboid,
+                &Isometry::identity(),
+                false,
+                self.epsilon,
+            );
+        let mesh = match result {
+            Ok(mesh) => match mesh {
+                Some(mesh) => mesh,
+                None => {
+                    return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                }
+            },
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+        };
+        let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 0.5 / hdz);
+        Ok((
+            1. / properties.inv_mass,
+            properties.local_com.x - self.dx,
+            properties.local_com.y,
+            properties.local_com.z,
+        ))
+    }
+    ///
+    /// Расчет длинны и ширины по ватерлинии, делается без учета крена и дифферента
+    pub fn aabb(&self, draught: f64) -> Result<(f64, f64), Error> {
+        let error = Error::new("Shape", "aabb");
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_plane(
+                &Isometry::identity(),
+                &Vector3::z_axis(),
+                draught,
+                self.epsilon,
+            );
+        match result {
+            parry3d_f64::query::IntersectResult::Intersect(polyline) => {
+                let vertices: Vec<_> = polyline
+                    .vertices()
+                    .iter()
+                    .map(|p| Point2::new(p.x, p.y))
+                    .collect();
+                let (vx, vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
+                let min_x = vx
+                    .iter()
+                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+                let max_x = vx
+                    .iter()
+                    .max_by(|&a, &b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+                let min_y = vy
+                    .iter()
+                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+                let max_y = vy
+                    .iter()
+                    .max_by(|&a, &b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+                let dx = max_x - min_x;
+                let dy = max_y - min_y;
+                return Ok((dx, dy));
             }
+            _ => return Err(error.err("mesh.intersection_with_plane error!")),
         };
     }
+    ///
+    /// Расчет [момента инерции свободной поверхности жидкости](https://github.com/a-givertzman/sss/blob/cdef1e9a2133adeb2fe8abcda6229b206c28493c/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md#%D0%B2%D0%BB%D0%B8%D1%8F%D0%BD%D0%B8%D0%B5-%D1%81%D0%B2%D0%BE%D0%B1%D0%BE%D0%B4%D0%BD%D0%BE%D0%B9-%D0%BF%D0%BE%D0%B2%D0%B5%D1%80%D1%85%D0%BD%D0%BE%D1%81%D1%82%D0%B8)
+    pub fn inertia(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
+        let error = Error::new("Shape", "inertia");
+        let position = self.position(heel, trim, draught);
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_plane(&position, &Vector3::z_axis(), 0., self.epsilon);
+        match result {
+            parry3d_f64::query::IntersectResult::Intersect(polyline) => {
+                let vertices: Vec<_> = polyline
+                    .vertices()
+                    .iter()
+                    .map(|p| position.transform_point(&p))
+                    .map(|p| Point2::new(p.x, p.y))
+                    .collect();
+                let indices = polyline.indices().to_owned();
+                let mut voxel_set = parry2d_f64::transformation::voxelization::VoxelSet::voxelize(
+                    &vertices,
+                    &indices,
+                    self.resolution,
+                    parry2d_f64::transformation::voxelization::FillMode::FloodFill {
+                        detect_cavities: true,
+                        detect_self_intersections: false,
+                    },
+                    false,
+                );
+                let scale = voxel_set.scale;
+                let qrt_scale = scale * scale;
+                let voxels_volume = voxel_set.compute_volume();
+                let voxel_volume = voxel_set.voxel_volume();
+                let (v_x, v_y) = voxel_set
+                    .voxels()
+                    .iter()
+                    .fold((0., 0.), |(v_x, v_y), voxel| {
+                        (v_x + voxel.coords.x as f64, v_y + voxel.coords.y as f64)
+                    });
+                let voxel_area_center_x = v_x * voxel_volume / voxels_volume;
+                let voxel_area_center_y = v_y * voxel_volume / voxels_volume;
+                voxel_set.compute_bb();
+                let max_bb = voxel_set.max_bb_voxels();
+                let x_array: Vec<_> = (0..=max_bb.x)
+                    .map(|v| v as f64 - voxel_area_center_x)
+                    .map(|v| v * v)
+                    .collect();
+                let y_array: Vec<_> = (0..=max_bb.y)
+                    .map(|v| v as f64 - voxel_area_center_y)
+                    .map(|v| v * v)
+                    .collect();
+                let (i_x, i_y) = voxel_set
+                    .voxels()
+                    .iter()
+                    .fold((0., 0.), |(i_x, i_y), voxel| {
+                        (
+                            i_x + y_array[voxel.coords.y as usize].clone(),
+                            i_y + x_array[voxel.coords.x as usize],
+                        )
+                    });
+                let i_x = i_x * qrt_scale * voxel_volume;
+                let i_y = i_y * qrt_scale * voxel_volume;
+                return Ok((i_x, i_y));
+            }
+            _ => return Err(error.err("mesh.intersection_with_plane error!")),
+        };
+    }
+    ///
+    /// Расчет положения корпуса
+    fn position(&self, heel: f64, trim: f64, draught: f64) -> Isometry3<f64> {
+        let heel_rad = -heel.to_radians();
+        let trim_rad = trim.to_radians();
+        let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+        let transformed_x_axis = trim_rotation.transform_point(&Point3::new(1., 0., 0.));
+        let transformed_x_axis = UnitVector3::new_normalize(Vector3::new(
+            transformed_x_axis.x,
+            transformed_x_axis.y,
+            transformed_x_axis.z,
+        ));
+        let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+        let rotation = heel_rotation * trim_rotation;
+        let center = Point3::new(self.dx, 0., draught);
+        let point = rotation.transform_point(&center);
+        let translation = Translation3::new(-point.x, -point.y, -point.z);
+        Isometry::from_parts(translation, rotation)
+    }
 }
-// load data from .obj file
-fn load(path: PathBuf) -> Result<TriMesh, Error> {
-    let error = Error::new("Shape", "load");
+///
+/// Load data from .obj file
+fn load_obj(path: PathBuf) -> Result<TriMesh, Error> {
+    let error = Error::new("Shape", "load_obj");
     let Obj {
         data: ObjData {
             position, objects, ..
@@ -104,17 +270,43 @@ fn load(path: PathBuf) -> Result<TriMesh, Error> {
         Ok(obj) => obj,
         Err(err) => return Err(error.pass_with("Obj::load(path)", err.to_string())),
     };
-    let position = position
+    let vertices = position
         .iter()
         .map(|v| Point3::new(v[0] as f64, v[1] as f64, v[2] as f64))
         .collect::<Vec<_>>();
-    let objects = objects[0].groups[0]
+    let indices = objects[0].groups[0]
         .polys
         .iter()
         .map(|p| [p.0[0].0 as u32, p.0[1].0 as u32, p.0[2].0 as u32])
         .collect::<Vec<_>>();
-    match TriMesh::with_flags(position, objects, TriMeshFlags::all()) {
-        Ok(mesh) => Ok(mesh),
-        Err(err) => return Err(error.pass_with("TriMesh::with_flags", err.to_string())),
-    }
+    TriMesh::with_flags(vertices, indices, TriMeshFlags::all())
+        .map_err(|err| error.pass_with("TriMesh::with_flags", err.to_string()))
+}
+///
+/// Load data from .stl file
+fn load_stl(path: PathBuf) -> Result<TriMesh, Error> {
+    let error = Error::new("Shape", "load_obj");
+    let file =
+        std::fs::File::open(path).map_err(|err| error.pass_with("File::open", err.to_string()))?;
+    let mut reader = std::io::BufReader::new(file);
+    let stl_mesh = stl_io::read_stl(&mut reader)
+        .map_err(|err| error.pass_with("stl_io::read_stl", err.to_string()))?;
+    let vertices = stl_mesh
+        .vertices
+        .into_iter()
+        .map(|v| Point3::new(v[0] as f64, v[1] as f64, v[2] as f64))
+        .collect::<Vec<_>>();
+    let indices = stl_mesh
+        .faces
+        .into_iter()
+        .map(|f| {
+            [
+                f.vertices[0] as u32,
+                f.vertices[1] as u32,
+                f.vertices[2] as u32,
+            ]
+        })
+        .collect::<Vec<_>>();
+    TriMesh::with_flags(vertices, indices, TriMeshFlags::all())
+        .map_err(|err| error.pass_with("TriMesh::with_flags", err.to_string()))
 }
