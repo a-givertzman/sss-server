@@ -44,9 +44,9 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing 'eval'
+/// Testing [parametric_resonant_zone_eval](src/algorithm/eval/parametric_resonant_zone)
 #[test]
-fn eval() {
+fn parametric_resonant_zone() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
