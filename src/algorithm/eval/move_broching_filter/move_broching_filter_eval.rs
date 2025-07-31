@@ -73,14 +73,8 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                     |a, b| 
                     a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
                 );
-                // reassign Vmax by last member of result
-                ctx = ctx
-                .clone()
-                .write(
-                    VesselMaxSpeedCtx { 
-                        vmax: new_vmax,
-                    }
-                ).unwrap();
+                // reassign last member of result by Vmax
+                result.last_mut().unwrap().1 = vmax;
                 ctx.write(
                     MoveBrochingFilterCtx {
                         move_broching_filter: result
