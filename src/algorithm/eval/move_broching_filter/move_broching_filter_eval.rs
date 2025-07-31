@@ -56,21 +56,29 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                 let course_angle_of_wave: Vec<f64> = (1350..=2250).map(|x| x as f64 / 10.0).collect();
                 let vmax = ContextRead::<VesselMaxSpeedCtx>::read(&ctx).vmax.clone();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize)).map(|x| x as f64 / 10.0).collect();
-                let mut result: Vec<(f64, Vec<f64>)> = Vec::new();
-                for angle in &course_angle_of_wave {
-                    let formula = 1.8 - ship_length_lbp.sqrt() / (180.0 - angle).cos();
-                    let speeds: Vec<f64> = vessel_speeds
-                    .iter()
-                    .filter(|speed| **speed >= formula)
-                    .map(|v| *v)
-                    .collect();
-                }
+                let mut new_vmax = 0.0;
+                let mut result = 
+                   course_angle_of_wave.iter().flat_map(|&a| {
+                        let formula = 1.8 - ship_length_lbp.sqrt() / (180.0 - a).cos();
+                        vessel_speeds
+                        .iter()
+                        .filter(|&&v| v >= formula)
+                        .map(|&v| {
+                            if v > new_vmax { new_vmax = v }
+                            (a, v)
+                        })
+                        .collect::<Vec<_>>()
+                }).collect::<Vec<_>>();
+                result.sort_by(
+                    |a, b| 
+                    a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
+                );
                 // reassign Vmax by last member of result
                 ctx = ctx
                 .clone()
                 .write(
                     VesselMaxSpeedCtx { 
-                        vmax: todo!("получить макс скорость")
+                        vmax: new_vmax,
                     }
                 ).unwrap();
                 ctx.write(

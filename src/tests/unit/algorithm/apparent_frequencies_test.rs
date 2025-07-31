@@ -13,7 +13,11 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ApparentFrequenciesCtx, ApparentFrequenciesEval, PeriodExcitementCtx, RollingFrequencyCtx, RollingPeriodCtx, RollingPeriodEval, VesselMaxSpeedCtx, Zg
+            ApparentFrequenciesCtx, 
+            ApparentFrequenciesEval, 
+            PeriodExcitementCtx, 
+            VesselMaxSpeedCtx, 
+            Zg
         }
     }, 
     kernel::{
@@ -43,7 +47,7 @@ fn init_each() -> () {}
 ///
 /// Testing 'eval'
 #[test]
-fn eval() {
+fn apparent_frequencies() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();

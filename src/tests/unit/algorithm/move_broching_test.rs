@@ -45,9 +45,9 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing 'eval'
+/// Testing [move_broching_filter](src/algorithm/eval/move_broching_filter)
 #[test]
-fn eval() {
+fn move_broching_filter() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();

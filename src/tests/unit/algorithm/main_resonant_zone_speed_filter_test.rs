@@ -47,7 +47,7 @@ fn init_each() -> () {}
 ///
 /// Testing 'eval'
 #[test]
-fn eval() {
+fn main_resonant_zone_speed_filter() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
