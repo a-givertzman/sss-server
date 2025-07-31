@@ -180,6 +180,18 @@ impl ContextRead<MainResonantZoneCtx> for Context {
     }
 }
 //
+impl ContextWrite<MainResonantZoneSpeedFilterCtx> for Context {
+    fn write(mut self, value: MainResonantZoneSpeedFilterCtx) -> Result<Self, Error> {
+        self.main_resonant_zone_speed_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MainResonantZoneSpeedFilterCtx> for Context {
+    fn read(&self) -> MainResonantZoneSpeedFilterCtx {
+        self.main_resonant_zone_speed_filter.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<IcingTimberCtx> for Context {
     fn write(mut self, value: IcingTimberCtx) -> Result<Self, Error> {
         self.icing_timber = Some(value);
@@ -429,6 +441,18 @@ impl ContextWrite<ParametricResonantZoneCtx> for Context {
 impl ContextRead<ParametricResonantZoneCtx> for Context {
     fn read(&self) -> ParametricResonantZoneCtx {
         self.parametric_resonant_zone.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ParametricResonantZoneSpeedFilterCtx> for Context {
+    fn write(mut self, value: ParametricResonantZoneSpeedFilterCtx) -> Result<Self, Error> {
+        self.parametric_resonant_zone_speed_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ParametricResonantZoneSpeedFilterCtx> for Context {
+    fn read(&self) -> ParametricResonantZoneSpeedFilterCtx {
+        self.parametric_resonant_zone_speed_filter.clone().unwrap()
     }
 }
 //
