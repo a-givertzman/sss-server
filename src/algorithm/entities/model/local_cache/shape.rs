@@ -19,17 +19,38 @@ pub struct Shape {
 unsafe impl Send for Shape {}
 
 impl Shape {
-    pub fn new(parent: &Dbg, path: PathBuf, dx: f64, scale: f64) -> Self {
+    /// Конструктор
+    /// * parent - Dbg родителя
+    /// * path - путь к файлу, содержащему модель
+    /// * mesh - модель
+    /// * dx - смещение миделя относительно центра координат модели
+    /// * scale - масштаб модели для ее приведения к метрам (1000: модель в мм)
+    /// * epsilon - точность расчета сечений
+    /// * resolution - точность расчета момента инерции
+    pub fn new(
+        parent: &Dbg,
+        path: PathBuf,
+        mesh: Option<TriMesh>,
+        dx: f64,
+        scale: f64,
+        epsilon: f64,
+        resolution: u32,
+    ) -> Self {
         let dbg = Dbg::new(parent, "Shape");
         Self {
             dbg,
-            path: path.into(),
-            mesh: None,
+            path,
+            mesh,
             dx,
             scale,
-            epsilon: 0.0000001,
-            resolution: 10000,
+            epsilon,
+            resolution,
         }
+    }
+    /// Конструктор для создания "ленивого" экземпляра.
+    /// После создания обязателен вызов метода "init".
+    pub fn new_uninit(parent: &Dbg, path: PathBuf, dx: f64, scale: f64) -> Self {
+        Self::new(parent, path, None, dx, scale, 0.0000001, 10000)
     }
     /// Init shape, load geometry
     pub fn init(&mut self) -> Result<(), Error> {

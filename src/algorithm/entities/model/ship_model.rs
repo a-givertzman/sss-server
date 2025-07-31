@@ -45,7 +45,7 @@ pub struct ShipModel {
     //   model_shape: Shape,
     ///
     /// Provides a number of calculations:
-    /// - cashe for model, [heel, trim, draught, volume, x, y, z]
+    /// - cashe for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
     model: DisplacementCache,
     //  model_bounded: Vec<BoundCache>,
     //   compartments: IndexMap<usize, CompartmentCache>,
@@ -63,7 +63,7 @@ impl ShipModel {
             dbg: dbg.clone(),
             model: DisplacementCache::new(
                 &dbg,
-                Shape::new(
+                Shape::new_uninit(
                     &dbg,
                     conf.model_path,
                     conf.floating_position_cache_conf.center_coord.x(),

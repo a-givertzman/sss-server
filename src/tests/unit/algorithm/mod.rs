@@ -9,3 +9,4 @@ mod cache;
 mod roll_frequency_test;
 //mod strength_area;
 //mod wetting;
+mod shape;

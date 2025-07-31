@@ -16,11 +16,9 @@ use std::{
     },
 };
 
-use super::{DisplacementCacheConf, build_displacement_cache::BuildDisplacementCache};
+use super::{build_displacement_cache::BuildDisplacementCache};
 ///
 /// Pre-calculated cache for floating position algorithm.
-///
-/// See [DisplacementCacheConf] for more details about the fields.
 pub struct DisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
