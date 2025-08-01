@@ -40,20 +40,20 @@ impl Eval<Zg, EvalResult> for PeriodExcitementEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let initial_data = ContextReadRef::<InitialCtx>::read_ref(&ctx).clone();
-                let mut result = PeriodExcitementCtx {
-                    period_excitement: 0.0,
-                };
                 if initial_data.period_excitement.is_none() {
                     let length_wave = initial_data.wave_length.unwrap();
-                    result = PeriodExcitementCtx {
-                        period_excitement: (length_wave / 1.56).sqrt(),
-                    };
+                    ctx.write(
+                        PeriodExcitementCtx {
+                            period_excitement: (length_wave / 1.56).sqrt(),
+                        }
+                    )
                 } else {
-                    result = PeriodExcitementCtx {
-                        period_excitement: initial_data.period_excitement.unwrap().period_excitement.clone(),
-                    };
+                    ctx.write(
+                        PeriodExcitementCtx {
+                            period_excitement: initial_data.period_excitement.unwrap().period_excitement.clone(),
+                        }
+                    )
                 }
-                ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
         }
