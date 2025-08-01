@@ -9,6 +9,7 @@ mod apparent_frequencies_test;
 //mod loads;
 mod main_resonant_zone_speed_filter_test;
 mod main_resonant_zone_test;
+mod parametric_resonant_zone_speed_filter_test;
 mod parametric_resonant_zone_test;
 mod period_excitement_test;
 mod roll_frequency_test;

@@ -14,11 +14,10 @@ use crate::{
         context::context_access::ContextRead, 
         eval::{
             ApparentFrequenciesCtx, 
-            MainResonantZoneCtx, 
-            MainResonantZoneSpeedFilterCtx, 
-            MainResonantZoneSpeedFilterEval, 
             ParametricResonantZoneCtx, 
-            Zg,
+            ParametricResonantZoneSpeedFilterCtx, 
+            ParametricResonantZoneSpeedFilterEval, 
+            Zg
         }
     }, 
     kernel::{
@@ -46,22 +45,22 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [main_resonant_zone_speed_filter](src/algorithm/eval/main_resonant_zone_speed_filter)
+/// Testing [parametric_resonant_zone_speed_filter](src/algorithm/eval/parametric_resonant_zone_speed_filter)
 #[test]
-fn main_resonant_zone_speed_filter() {
+fn parametric_resonant_zone_speed_filter() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = "MainResonantZoneSpeedFilterEval";
+    let dbg = "ParametricResonantZoneSpeedFilterEval";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
         (
             1,
-            MainResonantZoneCtx {
-                left_side:  1.0,
+            ParametricResonantZoneCtx {
+                left_side:  5.0,
                 right_side: 7.0,
             },
             ApparentFrequenciesCtx {
@@ -87,7 +86,7 @@ fn main_resonant_zone_speed_filter() {
         ),
         (
             1,
-            MainResonantZoneCtx {
+            ParametricResonantZoneCtx {
                 left_side:  7.0,
                 right_side: 10.0,
             },
@@ -115,7 +114,7 @@ fn main_resonant_zone_speed_filter() {
             ] 
         ),
     ];
-    for (step, main_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+    for (step, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
         let mut ctx = MocEval {
             ctx: Context::new(
                 InitialCtx::new(
@@ -126,16 +125,16 @@ fn main_resonant_zone_speed_filter() {
         };
         ctx.ctx = ctx.ctx
         .clone()
-        .write(main_resonant_zone.clone())
+        .write(parametric_resonant_zone.clone())
         .unwrap();
         ctx.ctx = ctx.ctx
         .clone()
         .write(apparent_frequencies.clone())
         .unwrap();
-        let result = MainResonantZoneSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
+        let result = ParametricResonantZoneSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<MainResonantZoneSpeedFilterCtx>::read(&ctx).main_resonant_zone_speed_filter.clone();
+                let result = ContextRead::<ParametricResonantZoneSpeedFilterCtx>::read(&ctx).parametric_resonant_zone_speed_filter.clone();
                 assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
