@@ -144,18 +144,6 @@ impl ContextRead<VesselMaxSpeedCtx> for Context {
     }
 }
 //
-impl ContextWrite<VesselSpeedFilterCtx> for Context {
-    fn write(mut self, value: VesselSpeedFilterCtx) -> Result<Self, Error> {
-        self.vessel_speed_filter = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<VesselSpeedFilterCtx> for Context {
-    fn read(&self) -> VesselSpeedFilterCtx {
-        self.vessel_speed_filter.clone().unwrap()
-    }
-}
-//
 impl ContextWrite<LoadsCtx> for Context {
     fn write(mut self, value: LoadsCtx) -> Result<Self, Error> {
         self.loads = Some(value);

@@ -13,12 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ApparentFrequenciesCtx,
-            MainResonantZoneCtx, 
-            ParametricResonantZoneCtx, 
-            VesselSpeedFilterCtx, 
-            VesselSpeedFilterEval, 
-            Zg
+            ApparentFrequenciesCtx, MainResonantZoneCtx, MainResonantZoneSpeedFilterCtx, MainResonantZoneSpeedFilterEval, ParametricResonantZoneCtx, Zg
         }
     }, 
     kernel::{
@@ -46,14 +41,14 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing 'eval'
+/// Testing [main_resonant_zone_speed_filter](src/algorithm/eval/main_resonant_zone_speed_filter)
 #[test]
-fn eval() {
+fn main_resonant_zone_speed_filter() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = "eval";
+    let dbg = "MainResonantZoneSpeedFilterEval";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
@@ -62,7 +57,7 @@ fn eval() {
             1,
             MainResonantZoneCtx {
                 left_side:  1.0,
-                right_side: 10.0,
+                right_side: 7.0,
             },
             ParametricResonantZoneCtx {
                 left_side:  5.0,
@@ -70,23 +65,23 @@ fn eval() {
             },
             ApparentFrequenciesCtx {
                 apparent_frequencies: vec![
-                    (0.0, 6.283185307179586), 
-                    (0.0, 6.492624817418906), 
-                    (0.0, 6.702064327658225), 
-                    (0.0, 6.911503837897545), 
-                    (0.0, 7.120943348136865), 
-                    (0.0, 7.330382858376184), 
-                    (0.0, 7.5398223686155035), 
-                    (0.0, 7.749261878854823), 
-                    (0.0, 7.958701389094142), 
-                    (0.0, 8.168140899333462)
+                    (0.0, 0.1, 6.283185307179586), 
+                    (0.0, 0.2, 6.492624817418906), 
+                    (0.0, 0.3, 6.702064327658225), 
+                    (0.0, 0.4, 6.911503837897545), 
+                    (0.0, 0.0, 7.120943348136865), 
+                    (0.0, 0.0, 7.330382858376184), 
+                    (0.0, 0.0, 7.5398223686155035), 
+                    (0.0, 0.0, 7.749261878854823), 
+                    (0.0, 0.0, 7.958701389094142), 
+                    (0.0, 0.0, 8.168140899333462)
                 ],
             },
             vec![
-                6.283185307179586, 
-                6.492624817418906, 
-                6.702064327658225, 
-                6.911503837897545,             
+                (0.0, 0.1),
+                (0.0, 0.2),
+                (0.0, 0.3),
+                (0.0, 0.4),
             ] 
         ),
         (
@@ -101,25 +96,25 @@ fn eval() {
             },
             ApparentFrequenciesCtx {
                 apparent_frequencies: vec![
-                    (0.0, 6.283185307179586), 
-                    (0.0, 6.492624817418906), 
-                    (0.0, 6.702064327658225), 
-                    (0.0, 6.911503837897545), 
-                    (0.0, 7.120943348136865), 
-                    (0.0, 7.330382858376184), 
-                    (0.0, 7.5398223686155035), 
-                    (0.0, 7.749261878854823), 
-                    (0.0, 7.958701389094142), 
-                    (0.0, 8.168140899333462)
+                    (0.0, 0.0, 6.283185307179586), 
+                    (0.0, 0.0, 6.492624817418906), 
+                    (0.0, 0.0, 6.702064327658225), 
+                    (0.0, 0.0, 6.911503837897545), 
+                    (0.0, 0.1, 7.120943348136865), 
+                    (0.0, 0.2, 7.330382858376184), 
+                    (0.0, 0.3, 7.5398223686155035), 
+                    (0.0, 0.4, 7.749261878854823), 
+                    (0.0, 0.5, 7.958701389094142), 
+                    (0.0, 0.6, 8.168140899333462)
                 ],
             },
             vec![
-                7.120943348136865,
-                7.330382858376184,
-                7.5398223686155035,
-                7.749261878854823,
-                7.958701389094142,
-                8.168140899333462,             
+                (0.0, 0.1),
+                (0.0, 0.2),
+                (0.0, 0.3),
+                (0.0, 0.4),
+                (0.0, 0.5),
+                (0.0, 0.6),           
             ] 
         ),
     ];
@@ -144,10 +139,10 @@ fn eval() {
         .clone()
         .write(apparent_frequencies.clone())
         .unwrap();
-        let result = VesselSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
+        let result = MainResonantZoneSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<VesselSpeedFilterCtx>::read(&ctx).vessel_speed_filter.clone();
+                let result = ContextRead::<MainResonantZoneSpeedFilterCtx>::read(&ctx).main_resonant_zone_speed_filter.clone();
                 assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),

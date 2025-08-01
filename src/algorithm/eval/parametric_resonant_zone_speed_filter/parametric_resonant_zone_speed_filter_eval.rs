@@ -1,7 +1,9 @@
 use crate::algorithm::context::context_access::ContextRead;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
-    ApparentFrequenciesCtx, ParametricResonantZoneCtx, ParametricResonantZoneSpeedFilterCtx, VesselSpeedFilterCtx
+    ApparentFrequenciesCtx, 
+    ParametricResonantZoneCtx, 
+    ParametricResonantZoneSpeedFilterCtx,
 };
 use crate::{
     ContextWrite,
@@ -43,12 +45,12 @@ impl Eval<Zg, EvalResult> for ParametricResonantZoneSpeedFilterEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let ParametricResonantZoneCtx { left_side, right_side } = ContextRead::read(&ctx);
-                let result: Vec<f64> = ContextRead::<ApparentFrequenciesCtx>::read(&ctx)
+                let result: Vec<(f64, f64)> = ContextRead::<ApparentFrequenciesCtx>::read(&ctx)
                 .apparent_frequencies
                 .iter()
                 .filter(
-                    |(_, freq)| left_side <= *freq && *freq <= right_side
-                ).map(|(_,freq)| *freq)
+                    |(_, _, freq)| left_side <= *freq && *freq <= right_side
+                ).map(|(angle, speed, _)| (*angle, *speed))
                 .collect();
                 ctx.write(
                     ParametricResonantZoneSpeedFilterCtx {

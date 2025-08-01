@@ -31,8 +31,6 @@ pub struct Context {
     pub(super) wetting: Option<WettingCtx>,
     /// Максимальная скорость хода судна Vmax в узлах
     pub(super) vmax: Option<VesselMaxSpeedCtx>,
-    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне околорезонансных частот
-    pub(super) vessel_speed_filter: Option<VesselSpeedFilterCtx>,
     /// Все грузы судна
     pub(super) loads: Option<LoadsCtx>,
     /// Основная зона резонансной бортовой качки
