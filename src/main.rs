@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_path: PathBuf::from(model_path),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::DisplacementCacheConf {
+            displacement_cache_conf: model::DisplacementCacheConf {
                 center_coord: center_coord,
         //        heel_steps: vec![-20.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
         //        trim_steps: vec![-20.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),

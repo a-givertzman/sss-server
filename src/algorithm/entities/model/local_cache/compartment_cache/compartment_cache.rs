@@ -1,45 +1,31 @@
 use crate::{
     algorithm::entities::{
-        Position,
-        cache::{self, Cache},
-        model::{Shape, local_cache::LocalCache},
+        cache::Cache, model::{local_cache::LocalCache, Shape}, Position
     },
     kernel::types::RwLock,
-};
-use sal_3dlib::topology::shape::{
-    face::Face,
-    vertex::Vertex,
-    wire::{Polygon, Wire},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
     fs::File,
-    io::{BufRead, BufReader, BufWriter, Write},
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
 };
-
-use super::{CompartmentCacheConf, build_compartment_cache::BuildCompartmentCache};
 ///
 /// Pre-calculated cache for floating position algorithm.
-///
-/// See [CompartmentCacheConf] for more details about the fields.
 pub struct CompartmentCache {
     dbg: Dbg,
     cache_path: PathBuf,
-    //    model_keys: Vec<String>,
-    center_coord: Position,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
     /// Model representation used for cache calculation.
-    model_shape: Shape,
-    model_scale: f64,
+    shape: Shape,
     ///
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
@@ -51,28 +37,26 @@ pub struct CompartmentCache {
 impl CompartmentCache {
     //
     //
-    const KEY: &'static str = "floating_position_cache";
+    const KEY: &'static str = "compartment_cache";
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        model_shape: Shape,
-        model_scale: f64,
+        shape: Shape,
         cache_dir: impl AsRef<Path>,
-        conf: CompartmentCacheConf,
+        heel_steps: Vec<f64>,
+        trim_steps: Vec<f64>,
+        draught_steps: Vec<f64>,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "CompartmentCache");
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
-            model_shape,
-            model_scale,
-            //         model_keys: vec![],
-            heel_steps: conf.heel_steps,
-            center_coord: conf.center_coord,
-            trim_steps: conf.trim_steps,
-            draught_steps: conf.draught_steps,
+            shape,
+            heel_steps,
+            trim_steps,
+            draught_steps,
             cache: Arc::new(RwLock::new(None)),
             cache_path: path,
             dbg,
@@ -82,33 +66,19 @@ impl CompartmentCache {
     }
     ///
     /// See [BuildCompartmentCache] for details.
-    fn calculate(&self) -> Vec<Error> {
+    fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let model_shape = self.model_shape.clone();
-        let model_shape = match model_shape.load() {
-            Ok(model_shape) => model_shape,
-            Err(err) => {
-                return vec![error.pass_with("model_shape", err)];
-            }
+        if let Err(err) = self.shape.init() {
+            return vec![error.pass_with("self.shape.init()", err.to_string())];
         };
-        let cache_data = BuildCompartmentCache::new(
+        let cache_data = super::build_compartment_cache::BuildCompartmentCache::new(
             &self.dbg,
-            model_shape.iter().map(|(_, shape)| shape).cloned().collect(),
-            self.center_coord,
-            /* TODO зачем этот фильтр?
-                    .iter()
-                    .filter_map(|(shape_key, shape)| {
-                            self.model_keys.contains(shape_key).then_some(shape)
-                        })
-                    .cloned()
-                        .collect(),
-            */
+            self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),
             self.exit.clone(),
-            self.model_scale,
         )
         .build();
         let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
@@ -223,7 +193,8 @@ impl LocalCache for CompartmentCache {
                 .map_err(|err| error.pass_with("cache.init error", err))?;
             let _ = self.cache.write().insert(cache);
         }
-        Ok(self.cache
+        Ok(self
+            .cache
             .read()
             .as_ref()
             .ok_or(error.pass("no cache"))?
@@ -231,7 +202,7 @@ impl LocalCache for CompartmentCache {
     }
     //
     //
-    fn rebuild(&self) -> Result<(), Error> {
+    fn rebuild(&mut self) -> Result<(), Error> {
         self.exit.store(false, Ordering::SeqCst);
         match self.calculate().first() {
             Some(err) => Err(Error::new(&self.dbg, "rebuild").pass(err.to_owned())),

@@ -103,7 +103,7 @@ impl Shape {
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
         Ok((
             1. / properties.inv_mass,
-            properties.local_com.x - self.dx,
+            properties.local_com.x,
             properties.local_com.y,
             properties.local_com.z,
         ))
@@ -141,7 +141,7 @@ impl Shape {
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 0.5 / hdz);
         Ok((
             1. / properties.inv_mass,
-            properties.local_com.x - self.dx,
+            properties.local_com.x,
             properties.local_com.y,
             properties.local_com.z,
         ))

@@ -373,7 +373,7 @@ fn compute_balance(
             model_path: PathBuf::from(model_path),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::DisplacementCacheConf {
+            displacement_cache_conf: model::DisplacementCacheConf {
                 center_coord: Position::new(0., 0., 0.),
                 heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
                 trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),

@@ -15,5 +15,5 @@ pub struct ShipModelConf {
     pub cache_dir: PathBuf,
     ///
     /// [super::DisplacementCache] configuration.
-    pub floating_position_cache_conf: DisplacementCacheConf,
+    pub displacement_cache_conf: DisplacementCacheConf,
 }

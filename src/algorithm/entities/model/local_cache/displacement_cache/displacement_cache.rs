@@ -15,8 +15,6 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
-
-use super::{build_displacement_cache::BuildDisplacementCache};
 ///
 /// Pre-calculated cache for floating position algorithm.
 pub struct DisplacementCache {
@@ -73,7 +71,7 @@ impl DisplacementCache {
         if let Err(err) = self.shape.init() {
             return vec![error.pass_with("self.shape.init()", err.to_string())];
         };
-        let cache_data = BuildDisplacementCache::new(
+        let cache_data = super::build_displacement_cache::BuildDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
             self.heel_steps.clone(),

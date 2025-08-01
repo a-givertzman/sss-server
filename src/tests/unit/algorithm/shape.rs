@@ -29,7 +29,7 @@ mod tests {
         let epsilon = 0.0000001;
         let shape = Shape::new(&dbg, "".into(), mesh, 1., 1., 0.0000001, 1000);
         let result = shape.displacement(0., 0., 0.).unwrap();
-        let target = (0.5, -1., 0., -0.125);
+        let target = (0.5, 0., 0., -0.125);
         assert!(
             (result.0 - target.0).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
@@ -55,7 +55,7 @@ mod tests {
             target
         );
         let result = shape.displacement(30., -45., 0.1).unwrap();
-        let target = (0.9788957917996584, -1.019511592635051, 0.006684388264638706, -0.003025428479409796);
+        let target = (0.9788957917996584, -0.01951159263505106, 0.006684388264638706, -0.003025428479409796);
         assert!(
             (result.0 - target.0).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
@@ -104,7 +104,7 @@ mod tests {
         let epsilon = 0.0000001;
         let shape = Shape::new(&dbg, "".into(), mesh, 1., 1., 0.0000001, 1000);
         let result = shape.area(0., 0., 0.).unwrap();
-        let target = (2.0, -1.0, 0., 0.);
+        let target = (2.0, 0., 0., 0.);
         assert!(
             (result.0 - target.0).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
@@ -130,7 +130,7 @@ mod tests {
             target
         );
         let result = shape.area(30., -45., 0.1).unwrap();
-        let target = (0.2357120659516771, -0.1266638473148889, -0.24667230537003976, 0.10374118731217521);
+        let target = (0.2357120659516771, 0.8733361526851109, -0.24667230537003976, 0.10374118731217521);
         assert!(
             (result.0 - target.0).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",

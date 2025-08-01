@@ -4,9 +4,9 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::{collections::HashMap, sync::{
+use std::sync::{
     atomic::{AtomicBool, Ordering}, Arc, RwLock
-}};
+};
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
@@ -49,7 +49,7 @@ impl BuildDisplacementCache {
     }
     ///
     /// Creates and starts worker for [DisplacementCache::calculate].
-    /// results: [[heel, trim, draught, volume, x, y, z, area, x, y, z, inertia_x, inertia_y, waterline_x, waterline_y]]
+    /// results: [[heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -57,7 +57,6 @@ impl BuildDisplacementCache {
         let aabb_results = Arc::new(Stack::new());
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        //  let mut waterline: Face<ShipModelMeta> = Workplane::xy().translated(origin).rect(&rect).to_face();
         let shape = Arc::new(RwLock::new(self.shape.clone()));
         'draught: for &draught in &self.draught_steps {
             if self.exit.load(Ordering::SeqCst) {
