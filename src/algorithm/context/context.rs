@@ -35,7 +35,7 @@ pub struct Context {
     pub(super) loads: Option<LoadsCtx>,
     /// Основная зона резонансной бортовой качки
     pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
-    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основного резонанса
+    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основого резонанса частот
     pub(super) main_resonant_zone_speed_filter: Option<MainResonantZoneSpeedFilterCtx>,
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
@@ -79,7 +79,7 @@ pub struct Context {
     pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
     /// Параметрическая зона резонансной бортовой качки
     pub(super) parametric_resonant_zone: Option<ParametricResonantZoneCtx>,
-    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне параметрического резонанса
+    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне параметрического резонанса частот
     pub(super) parametric_resonant_zone_speed_filter: Option<ParametricResonantZoneSpeedFilterCtx>,
     /// Период волнения
     pub(super) period_exctiment: Option<PeriodExcitementCtx>,

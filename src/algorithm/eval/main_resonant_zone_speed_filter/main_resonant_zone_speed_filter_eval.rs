@@ -1,8 +1,9 @@
 use crate::algorithm::context::context_access::ContextRead;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
-    ApparentFrequenciesCtx, 
-    MainResonantZoneCtx, MainResonantZoneSpeedFilterCtx, 
+    ApparentFrequenciesCtx,
+    MainResonantZoneCtx, 
+    MainResonantZoneSpeedFilterCtx,
 };
 use crate::{
     ContextWrite,
@@ -43,14 +44,14 @@ impl Eval<Zg, EvalResult> for MainResonantZoneSpeedFilterEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
-                let main_resonant_zone = ContextRead::<MainResonantZoneCtx>::read(&ctx).clone();
-                let apparent_frequencies = ContextRead::<ApparentFrequenciesCtx>::read(&ctx).apparent_frequencies.clone();
-                let mut result = Vec::new();
-                for freq in apparent_frequencies {
-                    if main_resonant_zone.left_side <= freq.1 && freq.1 <= main_resonant_zone.right_side {
-                        result.push(freq.1);
-                    }
-                }
+                let MainResonantZoneCtx { left_side, right_side } = ContextRead::read(&ctx);
+                let result: Vec<(f64, f64)> = ContextRead::<ApparentFrequenciesCtx>::read(&ctx)
+                .apparent_frequencies
+                .iter()
+                .filter(
+                    |(_, _, freq)| left_side <= *freq && *freq <= right_side
+                ).map(|(angle, speed, _)| (*angle, *speed))
+                .collect();
                 ctx.write(
                     MainResonantZoneSpeedFilterCtx {
                         main_resonant_zone_speed_filter: result

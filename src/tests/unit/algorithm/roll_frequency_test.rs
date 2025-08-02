@@ -44,7 +44,7 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing 'eval'
+/// Testing [roll_frequency_eval](src/algorithm/eval/roll_frequency_eval)
 #[test]
 fn roll_frequency() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);

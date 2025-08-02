@@ -42,7 +42,7 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing 'eval'
+/// Testing [period_excitement_eval](src/algorithm/eval/period_excitement)
 #[test]
 fn period_excitement() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);

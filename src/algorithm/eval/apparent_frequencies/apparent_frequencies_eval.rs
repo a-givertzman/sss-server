@@ -44,20 +44,24 @@ impl Eval<Zg, EvalResult> for ApparentFrequenciesEval {
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();
                 let course_angle_of_wave: Vec<f64> = (0..=3600).map(|x| x as f64 / 10.0).collect();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize * 10)).map(|x| x as f64 / 10.0).collect();
-                let mut result: Vec<(f64,f64)> = Vec::new();
-                for angle in course_angle_of_wave {
-                    for speed in &vessel_speeds {
-                        let apparent_frequency = 2.0 * std::f64::consts::PI 
-                        * (3.0 * period_excitement + speed * angle.cos()).abs() 
-                        / 3.0 * period_excitement.powf(2.0);
-                        result.push(
-                            (
-                                *speed, 
-                                apparent_frequency,
-                            )
-                        );
-                    }
-                }
+                let result: Vec<(f64, f64, f64)> = course_angle_of_wave
+                    .iter()
+                    .flat_map(|&angle| {
+                        vessel_speeds
+                            .iter()
+                            .map(move |&speed| {
+                                let apparent_frequency = 2.0 * std::f64::consts::PI 
+                                    * (3.0 * period_excitement + speed * angle.cos()).abs() 
+                                    / (3.0 * period_excitement.powf(2.0));
+                                (
+                                    angle,
+                                    speed,
+                                    apparent_frequency
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                .collect();
                 ctx.write(
                     ApparentFrequenciesCtx {
                         apparent_frequencies: result,
