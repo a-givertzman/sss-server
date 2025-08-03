@@ -25,6 +25,8 @@ pub struct Context {
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
     pub(super) icing_timber: Option<IcingTimberCtx>,
+    /// Массив скоростей движения, при которых происходит явление последовательных ударов высоких волн
+    pub(super) impacts_high_waves: Option<ImpactsHighWavesCtx>, 
     /// Учет обледенения судна и  груза
     pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза

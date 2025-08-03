@@ -10,6 +10,7 @@ mod main_resonant_zone;
 mod main_resonant_zone_speed_filter;
 mod balance_eval;
 mod icing_timber_eval;
+mod impacts_high_waves;
 mod stability_area_eval;
 mod metacentric_height_eval;
 mod move_broching_filter;
@@ -56,6 +57,9 @@ pub use balance_eval::balance_ctx::BalanceCtx;
 
 pub use icing_timber_eval::icing_timber_eval::IcingTimberEval;
 pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;
+
+pub use impacts_high_waves::impacts_high_waves_eval::ImpactsHighWavesEval;
+pub use impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx;
 
 pub use stability_area_eval::stability_area_eval::StabilityAreaEval;
 pub use stability_area_eval::stability_area_ctx::StabilityAreaCtx;

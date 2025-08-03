@@ -192,6 +192,18 @@ impl ContextRead<IcingTimberCtx> for Context {
     }
 }
 //
+impl ContextWrite<ImpactsHighWavesCtx> for Context {
+    fn write(mut self, value: ImpactsHighWavesCtx) -> Result<Self, Error> {
+        self.impacts_high_waves = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ImpactsHighWavesCtx> for Context {
+    fn read(&self) -> ImpactsHighWavesCtx {
+        self.impacts_high_waves.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<BalanceCtx> for Context {
     fn write(mut self, value: BalanceCtx) -> Result<Self, Error> {
         self.balance = Some(value);

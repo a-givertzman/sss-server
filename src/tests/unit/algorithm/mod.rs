@@ -6,6 +6,7 @@ mod apparent_frequencies_test;
 //mod fake_model_link;
 //mod fake_ship_model;
 //mod icing;
+mod impacts_high_waves_test;
 //mod loads;
 mod main_resonant_zone_speed_filter_test;
 mod main_resonant_zone_test;
