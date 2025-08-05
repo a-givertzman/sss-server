@@ -17,7 +17,7 @@ use std::{
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
-pub struct BoundCache {
+pub struct BoundCache { 
     dbg: Dbg,
     cache_path: PathBuf,
     heel_steps: Vec<f64>,
