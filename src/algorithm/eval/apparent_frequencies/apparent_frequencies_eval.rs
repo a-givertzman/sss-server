@@ -42,6 +42,7 @@ impl Eval<Zg, EvalResult> for ApparentFrequenciesEval {
             Ok(ctx) => {
                 let vmax = ContextRead::<VesselMaxSpeedCtx>::read(&ctx).vmax.clone();
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();
+                println!("Period excitement {}", period_excitement);
                 let course_angle_of_wave: Vec<f64> = (0..=3600).map(|x| x as f64 / 10.0).collect();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize * 10)).map(|x| x as f64 / 10.0).collect();
                 let result: Vec<(f64, f64, f64)> = course_angle_of_wave

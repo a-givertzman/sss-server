@@ -45,6 +45,7 @@ impl Eval<Zg, EvalResult> for ParametricResonantZoneSpeedFilterEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let ParametricResonantZoneCtx { left_side, right_side } = ContextRead::read(&ctx);
+                println!("PARAMETRIC ZONE [{} {}]", left_side, right_side);
                 let result: Vec<(f64, f64)> = ContextRead::<ApparentFrequenciesCtx>::read(&ctx)
                 .apparent_frequencies
                 .iter()

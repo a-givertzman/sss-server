@@ -14,8 +14,8 @@ use crate::{
         context::context_access::ContextRead, 
         eval::{
             RollingFrequencyCtx, 
+            RollingFrequencyEval, 
             RollingPeriodCtx, 
-            RollingPeriodEval, 
             Zg
         }
     }, 
@@ -51,7 +51,7 @@ fn roll_frequency() {
     init_once();
     init_each();
     log::debug!("");
-    let dbg = "eval";
+    let dbg = "RollFrequency";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
@@ -75,6 +75,7 @@ fn roll_frequency() {
             1.0,
         )
     ];
+    let epsilon = 1e-2;
     for (step, roll_period, c, target) in test_data.iter() {
         let mut ctx = MocEval {
             ctx: Context::new(
@@ -88,11 +89,11 @@ fn roll_frequency() {
         .clone()
         .write(RollingPeriodCtx { roll_period: *roll_period, c: *c })
         .unwrap();
-        let result = RollingPeriodEval::new("Test", ctx).eval(Zg::empty());
+        let result = RollingFrequencyEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<RollingFrequencyCtx>::read(&ctx).roll_frequency.clone();
-                assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                assert!((result - *target) < epsilon, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
 

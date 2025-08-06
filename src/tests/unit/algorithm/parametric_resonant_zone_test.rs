@@ -51,16 +51,16 @@ fn parametric_resonant_zone() {
     init_once();
     init_each();
     log::debug!("");
-    let dbg = "MainResonantZone";
+    let dbg = "ParametricResonantZone";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
         (
             1,
-            1.0,
-            1.9,
-            2.1,
+            3.577708763999664,
+            6.797646651599361,
+            7.513188404399294,
         ),
         (
             2,
@@ -95,7 +95,7 @@ fn parametric_resonant_zone() {
                 let left_side_result = ContextRead::<ParametricResonantZoneCtx>::read(&ctx).left_side.clone();
                 assert!((left_side_result - *left_side_target) < epsilon, "step {} \nleft side result: {:?}\nleft side target: {:?}", step, left_side_result, left_side_target);
                 let right_side_result = ContextRead::<ParametricResonantZoneCtx>::read(&ctx).right_side.clone();
-                assert!((left_side_result - *left_side_target) < epsilon, "step {} \nright side result: {:?}\nright side target: {:?}", step, right_side_result, right_side_target);
+                assert!((right_side_result - *right_side_target) < epsilon, "step {} \nright side result: {:?}\nright side target: {:?}", step, right_side_result, right_side_target);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
 

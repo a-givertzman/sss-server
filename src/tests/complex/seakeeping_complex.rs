@@ -1,0 +1,166 @@
+use crate::{
+    algorithm::eval::Zg, 
+    kernel::{
+        eval::Eval, 
+        types::eval_result::EvalResult
+    }, 
+    prelude::Context
+};
+#[cfg(test)]
+mod seakeeping {
+    use std::{
+        collections::HashMap, fs::File, sync::Once, time::Duration
+    };
+    use serde_json::to_writer;
+    use testing::stuff::max_test_duration::TestDuration;
+    use debugging::session::debug_session::{
+        DebugSession, 
+        LogLevel, 
+        Backtrace
+    };
+    use crate::{
+        algorithm::{
+            context::context_access::ContextRead, 
+            eval::{
+                ApparentFrequenciesCtx, ApparentFrequenciesEval, ImpactsHighWavesEval, MainResonantZoneEval, MainResonantZoneSpeedFilterEval, MoveBrochingFilterEval, ParametricResonantZoneEval, ParametricResonantZoneSpeedFilterCtx, ParametricResonantZoneSpeedFilterEval, PeriodExcitementCtx, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, Zg
+            }
+        }, 
+        kernel::eval::Eval, prelude::{
+            Context, 
+            ContextWrite, 
+            InitialCtx
+        }, 
+        tests::complex::seakeeping_complex::MocEval
+    };
+    ///
+    ///
+    static INIT: Once = Once::new();
+    ///
+    /// once called initialisation
+    fn init_once() {
+        INIT.call_once(|| {
+            // implement your initialisation code to be called only once for current test file
+        })
+    }
+    ///
+    /// returns:
+    ///  - ...
+    fn init_each() -> () {}
+    fn write_json(path: &str, data: &[(f64, f64, f64)]) -> std::io::Result<()> {
+        let file = File::create(path)?;
+        to_writer(file, data)?;
+        Ok(())
+    }
+    ///
+    /// Testing 'eval'
+    #[test]
+    fn eval() {
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        init_once();
+        init_each();
+        log::debug!("");
+        let dbg = "ComplexTest | eval";
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        let test_data = [
+            (
+                1,
+                7.933569184169254,
+                0.4435,
+                6.0,
+                20.0,
+                50.0,
+                vec![
+                    (
+
+                    )
+                ]
+            )
+        ];
+        for (step, roll_period, c, period_excitement, vmax, length_lbp, target) in test_data.iter() {
+            let mut initial_data= InitialCtx::new(
+                0,
+                "Unit-test",
+            );
+            initial_data.period_excitement = Some(
+                PeriodExcitementCtx { 
+                    period_excitement: *period_excitement 
+                }
+            );
+            let mut ship_params = HashMap::new();
+            ship_params.insert("LBP".to_owned(), *length_lbp);
+            initial_data.ship_parameters = Some(ship_params);
+            let mut ctx = MocEval {
+                ctx: Context::new(
+                    initial_data,
+                ),
+            };
+            ctx.ctx = ctx.ctx
+            .clone()
+            .write(
+                RollingPeriodCtx { 
+                    roll_period: *roll_period,
+                    c: *c, 
+                }
+            ).unwrap();
+            ctx.ctx = ctx.ctx
+            .clone()
+            .write(
+                VesselMaxSpeedCtx { 
+                    vmax: *vmax,
+                }
+            ).unwrap();
+            let result = ImpactsHighWavesEval::new(
+                dbg, 
+                MoveBrochingFilterEval::new(
+                    dbg, 
+                    MainResonantZoneSpeedFilterEval::new(
+                        dbg, 
+                        ParametricResonantZoneSpeedFilterEval::new(
+                            dbg, 
+                            ApparentFrequenciesEval::new(
+                                dbg, 
+                                PeriodExcitementEval::new(
+                                    dbg, 
+                                    MainResonantZoneEval::new(
+                                        dbg, 
+                                        ParametricResonantZoneEval::new(
+                                            dbg, 
+                                            RollingFrequencyEval::new(
+                                                dbg,
+                                                ctx
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            ).eval(Zg::empty());
+            match result {
+                Ok(ctx) => {
+                    let result = ContextRead::<ApparentFrequenciesCtx>::read(&ctx).apparent_frequencies.clone();
+                    //write_json("output.json", &result).expect("error");
+                    //assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                },
+                Err(err) => panic!("step {} \nerror: {:#?}", step, err),
+            }
+        }
+        test_duration.exit();
+    }
+}
+///
+///
+#[derive(Debug, Clone)]
+struct MocEval {
+    pub ctx: Context,
+}
+//
+//
+impl Eval<Zg, EvalResult> for MocEval {
+    fn eval(&self, _zg: Zg) -> EvalResult {
+        Result::Ok(self.ctx.clone())
+    }
+}
