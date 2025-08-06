@@ -31,4 +31,5 @@ Cargo.lock
 desktop.ini
 
 # too heavy
-/src/assets/ark-Part3.obj
+/src/assets/*.obj
+/src/assets/*.stl

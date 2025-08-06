@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::initial_ctx::InitialCtx;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
@@ -10,6 +12,7 @@ use crate::algorithm::entities::data::{
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::sync::Link;
 use crate::ship_model::query;
+use crate::ship_model::ship_model::ShipModel;
 use crate::{
     algorithm::context::{
         context::Context,
@@ -26,7 +29,7 @@ use sal_core::{dbg::Dbg, error::Error};
 #[derive(Debug)]
 pub struct Initial {
     dbg: Dbg,
-    model: Link,
+    model: Arc<ShipModel>,
     api_client: ApiClient,
     ctx: Context,
 }
@@ -37,7 +40,7 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Link,
+        model: Arc<ShipModel>,
         api_client: ApiClient,
         ctx: Context,
     ) -> Self {
@@ -57,7 +60,7 @@ impl Eval<(), EvalResult> for Initial {
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
         // Расчет баланса в модели
-        let bounds: Bounds = match self.model.call(query::Query::Bounds) {
+        let bounds: Bounds = match self.model.bounds() {
             Ok(bounds) => bounds,
             Err(err) => return Err(error.pass_with("model.bounds error", err)),
         };
