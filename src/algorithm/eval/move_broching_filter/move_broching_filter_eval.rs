@@ -2,6 +2,7 @@ use crate::algorithm::context::context_access::{
     ContextRead, 
     ContextReadRef
 };
+use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
     MoveBrochingFilterCtx, 
@@ -44,7 +45,8 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
-            Ok(ctx) => {
+            Ok(mut ctx) => {
+                let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial
                     .ship_parameters
@@ -57,8 +59,9 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                 let vmax = ContextRead::<VesselMaxSpeedCtx>::read(&ctx).vmax.clone();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize)).map(|x| x as f64 / 10.0).collect();
                 let mut new_vmax = 0.0;
-                let mut result = 
-                   course_angle_of_wave.iter().flat_map(|&a| {
+                let mut result = RecalculationCourseAngular::to_northeastern(
+                    course_angle, 
+                    course_angle_of_wave.iter().flat_map(|&a| {
                         let formula = 1.8 - ship_length_lbp.sqrt() / (180.0 - a).cos();
                         vessel_speeds
                         .iter()
@@ -68,7 +71,8 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                             (a, v)
                         })
                         .collect::<Vec<_>>()
-                }).collect::<Vec<_>>();
+                    }).collect::<Vec<_>>()
+                );
                 result.sort_by(
                     |a, b| 
                     a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)

@@ -59,6 +59,7 @@ fn parametric_resonant_zone_speed_filter() {
     let test_data = [
         (
             1,
+            0.0,
             ParametricResonantZoneCtx {
                 left_side:  6.797646651599361,
                 right_side: 7.513188404399294,
@@ -82,6 +83,7 @@ fn parametric_resonant_zone_speed_filter() {
         ),
         (
             1,
+            0.0,
             ParametricResonantZoneCtx {
                 left_side:  7.0,
                 right_side: 10.0,
@@ -110,13 +112,15 @@ fn parametric_resonant_zone_speed_filter() {
             ] 
         ),
     ];
-    for (step, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+    for (step, course_angle, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+        let mut initial_data = InitialCtx::new(
+            0,
+            "Unit-test",
+        );
+        initial_data.course_angle = Some(*course_angle);
         let mut ctx = MocEval {
             ctx: Context::new(
-                InitialCtx::new(
-                    0,
-                    "Unit-test",
-                )
+                initial_data,
             ),
         };
         ctx.ctx = ctx.ctx

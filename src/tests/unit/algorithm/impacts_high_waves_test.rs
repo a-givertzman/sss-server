@@ -58,6 +58,7 @@ fn impacts_high_waves() {
     let test_data = [
         (
             1,
+            0.0,
             10.0,
             vec![
                 (135.0, 13.0), 
@@ -74,6 +75,7 @@ fn impacts_high_waves() {
         ),
         (
             2,
+            0.0,
             1.0,
             vec![
                 (135.0, 1.3), 
@@ -89,13 +91,15 @@ fn impacts_high_waves() {
             ]   
         ),
     ];
-    for (step, period_excitement, target) in test_data.iter() {
+    for (step, course_angle, period_excitement, target) in test_data.iter() {
+        let mut initial_data = InitialCtx::new(
+            0,
+            "Unit-test",
+        );
+        initial_data.course_angle = Some(*course_angle);
         let mut ctx = MocEval {
             ctx: Context::new(
-                InitialCtx::new(
-                    0,
-                    "Unit-test",
-                )
+                initial_data
             ),
         };
         ctx.ctx = ctx.ctx

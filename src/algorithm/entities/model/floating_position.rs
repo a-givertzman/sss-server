@@ -50,7 +50,7 @@ impl<'cache> FloatingPosition<'cache> {
     /// which read from the cache, _must be_ a point in 3-dimensional space.
     pub fn eval(&self) -> Result<EvaluatedFloatingPosition, Error> {
         let error = Error::new(&self.dbg, "eval");
-        let x = self.mass_center.x(); //convert meters to mm
+        let x = self.mass_center.x(); 
         let y = self.mass_center.y();
         let displacement = self.displacement;
         // Prepare values (key) to extract data from `self.cache`.

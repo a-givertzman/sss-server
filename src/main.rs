@@ -62,9 +62,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
  //   let model_path = "src/assets/sofia3.stp";
  //    let center_coord = Position::new(65.22, 0., 0.);
   //  let model_path = "src/assets/model_1510.stp";
-      let model_path = "src/assets/ark-Part3.obj";
+  //    let model_path = "src/assets/ark-Part3.obj";
+    let model_path = "src/assets/ark.stl";
     let cache_dir = "src/assets/cache/";
-    let center_coord = Position::new(59.194, 0., 0.);
+    let center_coord = Position::new(59.195, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(30));
     let mut model: model::ShipModel = model::ShipModel::new(
         &dbg, 
@@ -72,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_path: PathBuf::from(model_path),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::DisplacementCacheConf {
+            displacement_cache_conf: model::DisplacementCacheConf {
                 center_coord: center_coord,
         //        heel_steps: vec![-20.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
         //        trim_steps: vec![-20.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),

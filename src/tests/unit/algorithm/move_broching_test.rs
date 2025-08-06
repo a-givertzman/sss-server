@@ -59,6 +59,7 @@ fn move_broching_filter() {
     let test_data = [
         (
             1,
+            0.0,
             1.0,
             1.0,
             vec![
@@ -76,6 +77,7 @@ fn move_broching_filter() {
         ),
         (
             2,
+            0.0,
             0.1,
             1.0,
             vec![
@@ -92,11 +94,12 @@ fn move_broching_filter() {
             ],
         ),
     ];
-    for (step, length_lbp, vmax,target) in test_data.iter() {
+    for (step, course_angle, length_lbp, vmax,target) in test_data.iter() {
         let mut initial = InitialCtx::new(
-            0, 
-            "Unit-test"
+            0,
+            "Unit-test",
         );
+        initial.course_angle = Some(*course_angle);
         let mut ship_params = HashMap::new();
         ship_params.insert("LBP".to_owned(), *length_lbp);
         initial.ship_parameters = Some(ship_params);
