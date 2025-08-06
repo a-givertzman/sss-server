@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use sal_core::{dbg::Dbg, error::Error};
 
 use crate::{
@@ -5,7 +7,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::Moment,
         eval::{IcingCtx, LoadsCtx, WettingCtx},
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::query::{BalanceQuery, Query}, ContextWrite
+    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::{BalanceQuery, Query}, ship_model::ShipModel}, ContextWrite
 };
 use super::balance_ctx::BalanceCtx;
 
@@ -13,7 +15,7 @@ use super::balance_ctx::BalanceCtx;
 /// Расчет равновесного положения судна
 pub struct BalanceEval {
     dbg: Dbg,
-    model: Link,
+    model: Arc<ShipModel>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -22,7 +24,7 @@ impl BalanceEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: Link,
+        model: Arc<ShipModel>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "BalanceEval");
@@ -73,8 +75,10 @@ impl Eval<(), EvalResult> for BalanceEval {
                     grain_bulkhead: loads.grain_bulkhead,
                 };
                 // Расчет баланса в модели
-                let result_data: BalanceCtx = self.model.call(Query::ComputeBalance(balance_query))
-                    .map_err(|err| error.pass_with("result_data model.call", err))?;    
+                let result_data: BalanceCtx = match self.model.compute_balance(balance_query).wait() {
+                    Ok(result) => result.map_err(|err| error.pass_with("model.compute_balance", err)),
+                    Err(err) => Err(error.pass_with("model.compute_balance", err)),
+                }?;
 
           /*      let center_waterline_shift = self.center_waterline_shift;
                 let bow_x = self.ship_length - self.midship;

@@ -6,11 +6,6 @@ use crate::{
     },
     kernel::types::RwLock,
 };
-/*use sal_3dlib::topology::shape::{
-    face::Face,
-    vertex::Vertex,
-    wire::{Polygon, Wire},
-};*/
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{

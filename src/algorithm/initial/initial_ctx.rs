@@ -27,6 +27,8 @@ pub struct InitialCtx {
     pub load_constant: Option<LoadConstantArray>,
     /// Период волнения Tw в секундах в диапазоне от 1.0 до 15.0 секунд, с шагом 0.1 секунда
     pub period_excitement: Option<PeriodExcitementCtx>,
+    /// Курс судна в северо-восточной системе координат
+    pub course_angle: Option<f64>,
     /// Длина волны λ в метрах в диапазоне от 1.6 до 351.0 метров с шагом 0.1 метр.
     pub wave_length: Option<f64>,
     /// Переменная нагрузка на судно
