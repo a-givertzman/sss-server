@@ -1,8 +1,11 @@
+use crate::algorithm::context::context_access::ContextReadRef;
+use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
     ImpactsHighWavesCtx, 
     PeriodExcitementCtx
 };
+use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite,
     algorithm::context::context_access::ContextRead,
@@ -47,25 +50,29 @@ impl Eval<Zg, EvalResult> for ImpactsHighWavesEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
+                let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();
                 let speed_min = 1.3 * period_excitement;
                 let speed_max = 2.8 * period_excitement;
                 let course_angle_of_wave: Vec<f64> = (1350..=2250).map(|x| x as f64 / 10.0).collect();
                 let angle_min = *course_angle_of_wave.first().unwrap(); 
                 let angle_max = *course_angle_of_wave.last().unwrap();
-                let result = course_angle_of_wave.iter().map(| &angle_curr| {
-                    let speed = Self::linear_interpolation(
-                        speed_min, 
-                        speed_max,  
-                        angle_min,
-                        angle_max,
-                        angle_curr
-                    );
-                    (
-                        angle_curr,
-                        speed,
-                    )
-                }).collect::<Vec<(f64, f64)>>();
+                let result = RecalculationCourseAngular::to_northeastern(
+                    course_angle, 
+                    course_angle_of_wave.iter().map(| &angle_curr| {
+                        let speed = Self::linear_interpolation(
+                            speed_min, 
+                            speed_max,  
+                            angle_min,
+                            angle_max,
+                            angle_curr
+                        );
+                        (
+                            angle_curr,
+                            speed,
+                        )
+                    }).collect::<Vec<(f64, f64)>>()
+                );
                 let result = ImpactsHighWavesCtx {
                     impacts_high_waves: result,
                 };
