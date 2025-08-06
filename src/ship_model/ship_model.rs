@@ -13,12 +13,14 @@ use crate::algorithm::entities::model;
 use crate::algorithm::eval::BalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
 use crate::kernel::sync::Hub;
-use crate::kernel::sync::Link;
-use coco::Stack;
+use crate::kernel::types::RwLock;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
+use sal_sync::services::future::Future;
+use sal_sync::sync::Handles;
+use sal_sync::sync::Owner;
 use sal_sync::thread_pool::Scheduler;
 use std::path::PathBuf;
 use std::thread::JoinHandle;
@@ -38,11 +40,13 @@ pub struct ShipModel {
     ship_id: usize,
     project_id: String,
     n_parts: usize,
-    hub: Hub,
-    scheduler: Stack<Scheduler>,
+    bounds: Option<Bounds>,
+    scheduler: Scheduler,
     timeout: Duration,
-    api_client: Stack<ApiClient>,
+    api_client: Arc<RwLock<ApiClient>>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
+    dbg: Dbg,
 }
 //
 //
@@ -64,113 +68,161 @@ impl ShipModel {
         scheduler: Scheduler,
     ) -> Self {
         let name = Name::new(parent, "ShipModel");
-        let hub = Hub::new(&name);
-        let sheduler_stk = Stack::new();
-        sheduler_stk.push(scheduler);
-        let client = Stack::new();
-        client.push(api_client);
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
             ship_id,
             project_id,
             n_parts,
-            hub,
+            bounds: None,
+            scheduler,
             timeout: Self::DEFAULT_TIMEOUT,
-            api_client: client,
-            scheduler: sheduler_stk,
+            api_client: Arc::new(RwLock::new(api_client)),
+            handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
+        }
+    }
+    // ///
+    // /// Entry point
+    // pub fn run(&self) -> Result<JoinHandle<()>, Error> {
+    //     let dbg = self.name.join();
+    //     let error = Error::new(&dbg, "run");
+    //     log::info!("{}.run | Starting...", dbg);
+    //     // let timeout = self.timeout;
+    //     // let interval = self.timeout; //Duration::from_millis(1000);
+    //     let api_client = self.api_client.take().unwrap();
+    //     let exit = self.exit.clone();
+    //     let ship_id = self.ship_id;
+    //     // TODO read key by ship_id
+    //     let model_key = "/cube_1_1_1_centered";
+    //     // TODO read path by ship_id
+    //     let model_path = "src/assets/cube_1_1_1.step";
+    //     let project_id = self.project_id.clone();
+    //     let n_parts = self.n_parts;
+    //     let cache_dir = "src/assets/cashe/";
+    //     let scheduler = self.scheduler.clone();
+    //     let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
+    //         Ok(data) => data,
+    //         Err(err) => return Err(error.pass_with("get_bounds error", err)),
+    //     };
+    //     let handle = self.hub.listen(move |query, send| {
+    //         let error = Error::new(&dbg, "hub.listen");
+    //         log::trace!("{}.run | Received query: {:?}", dbg, query);
+    //         match query {
+    //             Query::Bounds => {
+    //                 if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
+    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
+    //                 }
+    //             }
+    //             Query::BoundAreas => {
+    //                 let bounds = bounds.clone();
+    //                 let api_client = api_client.clone();
+    //                 let exit = exit.clone();
+    //                 if let Err(err) = scheduler.spawn(move || {
+    //                     let result = bound_areas(bounds, ship_id, &api_client, exit);
+    //                     if let Err(err) = send.send(Reply::BoundAreas(result)) {
+    //                         let err = error.pass_with("Send error", err);
+    //                         log::warn!("{}", err);
+    //                     }
+    //                     Ok(())
+    //                 }) {
+    //                     log::warn!("{}.run | Schedule error: {:?}", dbg, err);
+    //                 }
+    //             }
+    //             Query::ComputeBalance(balance_src_data) => {
+    //                 let bounds = bounds.clone();
+    //                 let exit = exit.clone();
+    //                 let scheduler_ = scheduler.clone();
+    //                 if let Err(err) = scheduler.spawn(move || {
+    //                     let result = compute_balance(
+    //                         model_key,
+    //                         model_path,
+    //                         cache_dir,
+    //                         bounds.clone(),
+    //                         balance_src_data,
+    //                         ship_id,
+    //                         scheduler_.clone(),
+    //                         exit,
+    //                     );
+    //                     if let Err(err) = send.send(Reply::ComputeBalance(result)) {
+    //                         let err = error.pass_with("Send error", err);
+    //                         log::warn!("{}", err);
+    //                     };
+    //                     Ok(())
+    //                 }) {
+    //                     log::warn!("{}.run | Schedule error: {:?}", dbg, err);
+    //                 }
+    //             } //          Query::StabilityAreas => todo!(),
+    //               //          Query::ComputePantocaren => todo!(),
+    //         };
+    //         None::<()>
+    //     });
+    //     let dbg = self.name.join();
+    //     log::info!("{}.run | Starting - Ok", dbg);
+    //     handle.map_err(|err| error.pass(err.to_string()))
+    // }
+    ///
+    /// TODO: Doc
+    pub fn bounds(&self) -> Result<Bounds, Error> {
+        match &self.bounds {
+            Some(bounds) => Ok(bounds.clone()),
+            None => get_bounds(&self.api_client.read(), self.ship_id, self.project_id.clone(), self.n_parts),
         }
     }
     ///
-    /// Returns connected `Link`
-    pub fn link(&self) -> Link {
-        self.hub.link()
+    /// TODO: Doc
+    pub fn bound_areas(&self) -> Result<BoundArea, Error> {
+        let error = Error::new(&self.dbg, "bound_areas");
+        match self.bounds() {
+            Ok(bounds) => bound_areas(bounds, self.ship_id, &self.api_client.read(), self.exit.clone()),
+            Err(err) => Err(error.pass(err)),
+        }
     }
     ///
-    /// Entry point
-    pub fn run(&self) -> Result<JoinHandle<()>, Error> {
-        let dbg = self.name.join();
-        let error = Error::new(&dbg, "run");
-        log::info!("{}.run | Starting...", dbg);
-        // let timeout = self.timeout;
-        // let interval = self.timeout; //Duration::from_millis(1000);
-        let api_client = self.api_client.pop().unwrap();
+    /// TODO: Doc
+    pub fn compute_balance(&self, query: BalanceQuery) -> Future<Result<BalanceCtx, Error>> {
+        let error = Error::new(&self.dbg, "compute_balance");
+        let (result, sink) = Future::new();
+        let scheduler = self.scheduler.clone();
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
+        let sink_clone = sink.clone();
         // TODO read key by ship_id
         let model_key = "/cube_1_1_1_centered";
         // TODO read path by ship_id
         let model_path = "src/assets/cube_1_1_1.step";
-        let project_id = self.project_id.clone();
-        let n_parts = self.n_parts;
         let cache_dir = "src/assets/cashe/";
-        let scheduler = self.scheduler.pop().unwrap();
-        let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
-            Ok(data) => data,
-            Err(err) => return Err(error.pass_with("get_bounds error", err)),
+        match self.bounds() {
+            Ok(bounds) => {
+                let handle = self.scheduler.spawn(move || {
+                    let result = compute_balance(
+                        model_key,
+                        model_path,
+                        cache_dir,
+                        bounds.clone(),
+                        query,
+                        ship_id,
+                        scheduler,
+                        exit,
+                    );
+                    sink_clone.add(result);
+                    Ok(())
+                });
+                match handle {
+                    Ok(handle) => self.handles.push(handle),
+                    Err(err) => sink.add(Err(error.pass(err))),
+                }
+            },
+            Err(err) => sink.add(Err(error.pass(err))),
         };
-        let handle = self.hub.listen(move |query, send| {
-            let error = Error::new(&dbg, "hub.listen");
-            log::trace!("{}.run | Received query: {:?}", dbg, query);
-            match query {
-                Query::Bounds => {
-                    if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-                        log::warn!("{}.run | Send error: {:?}", dbg, err);
-                    }
-                }
-                Query::BoundAreas => {
-                    let bounds = bounds.clone();
-                    let api_client = api_client.clone();
-                    let exit = exit.clone();
-                    if let Err(err) = scheduler.spawn(move || {
-                        let result = bound_areas(bounds, ship_id, &api_client, exit);
-                        if let Err(err) = send.send(Reply::BoundAreas(result)) {
-                            let err = error.pass_with("Send error", err);
-                            log::warn!("{}", err);
-                        }
-                        Ok(())
-                    }) {
-                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                    }
-                }
-                Query::ComputeBalance(balance_src_data) => {
-                    let bounds = bounds.clone();
-                    let exit = exit.clone();
-                    let scheduler_ = scheduler.clone();
-                    if let Err(err) = scheduler.spawn(move || {
-                        let result = compute_balance(
-                            model_key,
-                            model_path,
-                            cache_dir,
-                            bounds.clone(),
-                            balance_src_data,
-                            ship_id,
-                            scheduler_.clone(),
-                            exit,
-                        );
-                        if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-                            let err = error.pass_with("Send error", err);
-                            log::warn!("{}", err);
-                        };
-                        Ok(())
-                    }) {
-                        log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-                    }
-                } //          Query::StabilityAreas => todo!(),
-                  //          Query::ComputePantocaren => todo!(),
-            };
-            None::<()>
-        });
-        let dbg = self.name.join();
-        log::info!("{}.run | Starting - Ok", dbg);
-        handle.map_err(|err| error.pass(err.to_string()))
+        result
     }
     ///
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-        self.hub.exit();
     }
 }
 //
@@ -321,7 +373,7 @@ fn compute_balance(
             model_path: PathBuf::from(model_path),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::DisplacementCacheConf {
+            displacement_cache_conf: model::DisplacementCacheConf {
                 center_coord: Position::new(0., 0., 0.),
                 heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
                 trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),

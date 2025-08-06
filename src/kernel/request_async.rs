@@ -1,4 +1,3 @@
-use coco::Stack;
 use futures::future::BoxFuture;
 use super::sync::link::Link;
 ///
