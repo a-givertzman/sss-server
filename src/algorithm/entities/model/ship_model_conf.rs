@@ -6,7 +6,7 @@ use std::path::PathBuf;
 /// It can be used to wrap configuration getting from an external source.
 pub struct ShipModelConf {
     ///
-    /// File containing model structure (e. g. in STEP format).
+    /// File containing model structure (e. g. in STL format).
     pub model_path: PathBuf,
     ///
     pub model_scale: f64,

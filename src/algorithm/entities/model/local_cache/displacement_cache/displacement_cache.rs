@@ -1,6 +1,8 @@
 use crate::{
     algorithm::entities::{
-        cache::Cache, model::{local_cache::LocalCache, Shape}, Position
+        Position,
+        cache::Cache,
+        model::{Shape, local_cache::LocalCache},
     },
     kernel::types::RwLock,
 };

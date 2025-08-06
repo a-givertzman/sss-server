@@ -17,8 +17,6 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
-
-use super::{BoundCacheConf, build_bound_cache::BuildBoundCache};
 ///
 /// Pre-calculated cache for floating position algorithm.
 ///
@@ -26,14 +24,11 @@ use super::{BoundCacheConf, build_bound_cache::BuildBoundCache};
 pub struct BoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
-    //    model_keys: Vec<String>,
-    center_coord: Position,
     heel_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
     /// Model representation used for cache calculation.
-    model_shape: Shape,
-    model_scale: f64,
+    shape: Shape,
     ///
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
@@ -51,21 +46,19 @@ impl BoundCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        model_shape: Shape,
-        model_scale: f64,
+        shape: Shape,
         cache_dir: impl AsRef<Path>,
-        conf: BoundCacheConf,
+        bounds_qnt: u32,
+        trim_steps: Vec<f64>,
+        draught_steps: Vec<f64>,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "BoundCache");
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
-            model_shape,
-            model_scale,
-            //         model_keys: vec![],
-            heel_steps: conf.heel_steps,
-            center_coord: conf.center_coord,
-            draught_steps: conf.draught_steps,
+            shape,
+            trim_steps,
+            draught_steps,
             cache: Arc::new(RwLock::new(None)),
             cache_path: path,
             dbg,
@@ -86,7 +79,11 @@ impl BoundCache {
         };
         let cache_data = BuildBoundCache::new(
             &self.dbg,
-            model_shape.iter().map(|(_, shape)| shape).cloned().collect(),
+            model_shape
+                .iter()
+                .map(|(_, shape)| shape)
+                .cloned()
+                .collect(),
             self.center_coord,
             self.heel_steps.clone(),
             self.draught_steps.clone(),
@@ -207,7 +204,8 @@ impl LocalCache for BoundCache {
                 .map_err(|err| error.pass_with("cache.init error", err))?;
             let _ = self.cache.write().insert(cache);
         }
-        Ok(self.cache
+        Ok(self
+            .cache
             .read()
             .as_ref()
             .ok_or(error.pass("no cache"))?
