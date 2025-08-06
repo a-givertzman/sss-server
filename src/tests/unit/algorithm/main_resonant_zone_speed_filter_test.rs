@@ -17,7 +17,6 @@ use crate::{
             MainResonantZoneCtx, 
             MainResonantZoneSpeedFilterCtx, 
             MainResonantZoneSpeedFilterEval, 
-            ParametricResonantZoneCtx, 
             Zg,
         }
     }, 
@@ -60,6 +59,7 @@ fn main_resonant_zone_speed_filter() {
     let test_data = [
         (
             1,
+            0.0,
             MainResonantZoneCtx {
                 left_side:  1.0,
                 right_side: 7.0,
@@ -87,6 +87,7 @@ fn main_resonant_zone_speed_filter() {
         ),
         (
             1,
+            0.0,
             MainResonantZoneCtx {
                 left_side:  7.0,
                 right_side: 10.0,
@@ -115,13 +116,15 @@ fn main_resonant_zone_speed_filter() {
             ] 
         ),
     ];
-    for (step, main_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+    for (step, course_angle, main_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+        let mut initial_data = InitialCtx::new(
+            0,
+            "Unit-test",
+        );
+        initial_data.course_angle = Some(*course_angle);
         let mut ctx = MocEval {
             ctx: Context::new(
-                InitialCtx::new(
-                    0,
-                    "Unit-test",
-                )
+                initial_data,
             ),
         };
         ctx.ctx = ctx.ctx

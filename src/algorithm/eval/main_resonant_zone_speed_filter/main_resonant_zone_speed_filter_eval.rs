@@ -1,10 +1,12 @@
-use crate::algorithm::context::context_access::ContextRead;
+use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
+use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{
     ApparentFrequenciesCtx, 
     MainResonantZoneCtx, 
     MainResonantZoneSpeedFilterCtx,
 };
+use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite,
     kernel::{
@@ -44,14 +46,18 @@ impl Eval<Zg, EvalResult> for MainResonantZoneSpeedFilterEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
+                let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let MainResonantZoneCtx { left_side, right_side } = ContextRead::read(&ctx);
-                let result: Vec<(f64, f64)> = ContextRead::<ApparentFrequenciesCtx>::read(&ctx)
-                .apparent_frequencies
-                .iter()
-                .filter(
-                    |(_, _, freq)| left_side <= *freq && *freq <= right_side
-                ).map(|(angle, speed, _)| (*angle, *speed))
-                .collect();
+                let result: Vec<(f64, f64)> = RecalculationCourseAngular::to_northeastern(
+                    course_angle, 
+                    ContextRead::<ApparentFrequenciesCtx>::read(&ctx)
+                        .apparent_frequencies
+                        .iter()
+                        .filter(
+                        |(_, _, freq)| left_side <= *freq && *freq <= right_side
+                        ).map(|(angle, speed, _)| (*angle, *speed))
+                    .collect()
+                );
                 ctx.write(
                     MainResonantZoneSpeedFilterCtx {
                         main_resonant_zone_speed_filter: result
