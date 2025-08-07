@@ -22,7 +22,7 @@ mod seakeeping {
         algorithm::{
             context::context_access::ContextRead, 
             eval::{
-                ApparentFrequenciesCtx, ApparentFrequenciesEval, ImpactsHighWavesEval, MainResonantZoneEval, MainResonantZoneSpeedFilterEval, MoveBrochingFilterEval, ParametricResonantZoneEval, ParametricResonantZoneSpeedFilterCtx, ParametricResonantZoneSpeedFilterEval, PeriodExcitementCtx, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, Zg
+                ApparentFrequenciesCtx, ApparentFrequenciesEval, ImpactsHighWavesCtx, ImpactsHighWavesEval, MainResonantZoneEval, MainResonantZoneSpeedFilterCtx, MainResonantZoneSpeedFilterEval, MoveBrochingFilterCtx, MoveBrochingFilterEval, ParametricResonantZoneEval, ParametricResonantZoneSpeedFilterCtx, ParametricResonantZoneSpeedFilterEval, PeriodExcitementCtx, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, Zg
             }
         }, 
         kernel::eval::Eval, prelude::{
@@ -46,7 +46,7 @@ mod seakeeping {
     /// returns:
     ///  - ...
     fn init_each() -> () {}
-    fn write_json(path: &str, data: &[(f64, f64, f64)]) -> std::io::Result<()> {
+    fn write_json(path: &str, data: &[(f64, f64)]) -> std::io::Result<()> {
         let file = File::create(path)?;
         to_writer(file, data)?;
         Ok(())
@@ -66,6 +66,7 @@ mod seakeeping {
         let test_data = [
             (
                 1,
+                270.0,
                 7.933569184169254,
                 0.4435,
                 6.0,
@@ -78,11 +79,12 @@ mod seakeeping {
                 ]
             )
         ];
-        for (step, roll_period, c, period_excitement, vmax, length_lbp, target) in test_data.iter() {
+        for (step, course_angle, roll_period, c, period_excitement, vmax, length_lbp, target) in test_data.iter() {
             let mut initial_data= InitialCtx::new(
                 0,
                 "Unit-test",
             );
+            initial_data.course_angle = Some(*course_angle);
             initial_data.period_excitement = Some(
                 PeriodExcitementCtx { 
                     period_excitement: *period_excitement 
@@ -141,7 +143,8 @@ mod seakeeping {
             ).eval(Zg::empty());
             match result {
                 Ok(ctx) => {
-                    let result = ContextRead::<ApparentFrequenciesCtx>::read(&ctx).apparent_frequencies.clone();
+                    let result = ContextRead::<ImpactsHighWavesCtx>::read(&ctx).impacts_high_waves.clone();
+                    write_json("high_waves.json", &result).expect("error");
                     //write_json("output.json", &result).expect("error");
                     //assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 },

@@ -37,10 +37,17 @@ impl ImpactsHighWavesEval {
         }
     }
     ///
-    /// [Linear interpolation](https://en.wikipedia.org/wiki/Linear_interpolation)
-    fn linear_interpolation(speed_min: f64, speed_max: f64, angle_min: f64, angle_max: f64, angle_curr: f64 ) -> f64{
-        (speed_min * (angle_max - angle_curr) + speed_max * (angle_curr - angle_min)) /
-        (angle_max - angle_min)
+    /// Array of vessel speed
+    fn vessel_speed() -> Vec<f64> {
+        let mut start = 1.29;
+        let end = 2.0;
+        let step = 0.0071;
+        let mut result: Vec<f64> = Vec::new();
+        while start < end {
+            result.push(start);
+            start += step;
+        }
+        result
     }
 }
 //
@@ -52,29 +59,24 @@ impl Eval<Zg, EvalResult> for ImpactsHighWavesEval {
             Ok(ctx) => {
                 let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();
-                let speed_min = 1.3 * period_excitement;
-                let speed_max = 2.8 * period_excitement;
-                let course_angle_of_wave: Vec<f64> = (1350..=2250).map(|x| x as f64 / 10.0).collect();
-                let angle_min = *course_angle_of_wave.first().unwrap(); 
-                let angle_max = *course_angle_of_wave.last().unwrap();
-                let result = RecalculationCourseAngular::to_northeastern(
-                    course_angle, 
-                    course_angle_of_wave.iter().map(| &angle_curr| {
-                        let speed = Self::linear_interpolation(
-                            speed_min, 
-                            speed_max,  
-                            angle_min,
-                            angle_max,
-                            angle_curr
-                        );
+                let course_angle_of_wave: Vec<f64> = (1350..=2250).map(|x| x as f64 / 10.0).collect(); 
+                let vessel_speed = Self::vessel_speed();  
+                let result = course_angle_of_wave.iter()
+                .flat_map(|angle| {
+                    vessel_speed.iter()
+                    .map(move |speed| {
+                        let speed = (speed / (angle * std::f64::consts::PI / 180.0).cos().abs()) * period_excitement;
                         (
-                            angle_curr,
+                            *angle,
                             speed,
                         )
-                    }).collect::<Vec<(f64, f64)>>()
-                );
+                    }).collect::<Vec<_>>()
+                }).collect::<Vec<_>>();
                 let result = ImpactsHighWavesCtx {
-                    impacts_high_waves: result,
+                    impacts_high_waves: RecalculationCourseAngular::to_northeastern(
+                        course_angle, 
+                        result
+                    ),
                 };
                 ctx.write(result)
             }

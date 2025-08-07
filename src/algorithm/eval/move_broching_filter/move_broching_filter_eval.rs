@@ -57,28 +57,28 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                     .ok_or(error.err("No LBP in ship_parameters"))?;
                 let course_angle_of_wave: Vec<f64> = (1350..=2250).map(|x| x as f64 / 10.0).collect();
                 let vmax = ContextRead::<VesselMaxSpeedCtx>::read(&ctx).vmax.clone();
-                let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize)).map(|x| x as f64 / 10.0).collect();
-                let mut new_vmax = 0.0;
+                let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize * 10)).map(|x| x as f64 / 10.0).collect();
                 let mut result = RecalculationCourseAngular::to_northeastern(
                     course_angle, 
                     course_angle_of_wave.iter().flat_map(|&a| {
-                        let formula = 1.8 - ship_length_lbp.sqrt() / (180.0 - a).cos();
-                        vessel_speeds
+                        let formula = 1.8 * ship_length_lbp.sqrt() / ((180.0 - a) * std::f64::consts::PI / 180.0).cos();
+                        let mut res = vessel_speeds
                         .iter()
                         .filter(|&&v| v >= formula)
                         .map(|&v| {
-                            if v > new_vmax { new_vmax = v }
                             (a, v)
                         })
-                        .collect::<Vec<_>>()
+                        .collect::<Vec<_>>();
+                        if let Some(last) = res.last_mut() {
+                            *last = (a, vmax);
+                        }
+                        res
                     }).collect::<Vec<_>>()
                 );
                 result.sort_by(
                     |a, b| 
                     a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
                 );
-                // reassign last member of result by Vmax
-                result.last_mut().unwrap().1 = vmax;
                 ctx.write(
                     MoveBrochingFilterCtx {
                         move_broching_filter: result
