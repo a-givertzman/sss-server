@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
-use crate::algorithm::eval::PeriodExcitementCtx;
+use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
 ///
 /// Общая структура для ввода данных. Содержит все данные для расчетов.
 #[derive(Debug, Clone, Default)]

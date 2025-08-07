@@ -1,6 +1,6 @@
 use crate::algorithm::context::context_access::ContextReadRef;
+use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::PeriodExcitementCtx;
 use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite,

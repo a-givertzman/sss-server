@@ -1,10 +1,8 @@
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
+use crate::algorithm::eval::impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx;
+use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{
-    ImpactsHighWavesCtx, 
-    PeriodExcitementCtx
-};
 use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite,

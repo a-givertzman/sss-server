@@ -13,11 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ApparentFrequenciesCtx,
-            ApparentFrequenciesEval, 
-            PeriodExcitementCtx, 
-            VesselMaxSpeedCtx, 
-            Zg
+            apparent_frequencies::{apparent_frequencies_ctx::ApparentFrequenciesCtx, apparent_frequencies_eval::ApparentFrequenciesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, Zg
         }
     }, 
     kernel::{

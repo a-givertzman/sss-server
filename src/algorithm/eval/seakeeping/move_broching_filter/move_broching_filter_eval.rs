@@ -3,11 +3,9 @@ use crate::algorithm::context::context_access::{
     ContextReadRef
 };
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
+use crate::algorithm::eval::move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx;
+use crate::algorithm::eval::vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{
-    MoveBrochingFilterCtx, 
-    VesselMaxSpeedCtx 
-};
 use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite,

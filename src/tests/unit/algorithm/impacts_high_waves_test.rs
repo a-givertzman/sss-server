@@ -13,10 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ImpactsHighWavesCtx, 
-            ImpactsHighWavesEval, 
-            PeriodExcitementCtx, 
-            Zg,
+            impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx, Zg
         }
     }, 
     kernel::{

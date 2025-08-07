@@ -21,9 +21,7 @@ mod main_parametric_resonant_complex {
     use crate::{
         algorithm::{
             context::context_access::ContextRead, 
-            eval::{
-                ApparentFrequenciesCtx, ApparentFrequenciesEval, MainResonantZoneCtx, MainResonantZoneEval, MainResonantZoneSpeedFilterEval, ParametricResonantZoneCtx, ParametricResonantZoneEval, ParametricResonantZoneSpeedFilterEval, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, Zg
-            }
+            eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::{main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_eval::MainResonantZoneEval}, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
         }, 
         kernel::eval::Eval, 
         prelude::{

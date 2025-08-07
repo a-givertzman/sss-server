@@ -13,9 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            PeriodExcitementCtx, 
-            PeriodExcitementEval, 
-            Zg
+            period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}, Zg
         }
     }, 
     kernel::{

@@ -21,9 +21,7 @@ mod seakeeping {
     use crate::{
         algorithm::{
             context::context_access::ContextRead, 
-            eval::{
-                ApparentFrequenciesCtx, ApparentFrequenciesEval, ImpactsHighWavesCtx, ImpactsHighWavesEval, MainResonantZoneEval, MainResonantZoneSpeedFilterCtx, MainResonantZoneSpeedFilterEval, MoveBrochingFilterCtx, MoveBrochingFilterEval, ParametricResonantZoneEval, ParametricResonantZoneSpeedFilterCtx, ParametricResonantZoneSpeedFilterEval, PeriodExcitementCtx, PeriodExcitementEval, RollingFrequencyEval, RollingPeriodCtx, VesselMaxSpeedCtx, Zg
-            }
+            eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, move_broching_filter::move_broching_filter_eval::MoveBrochingFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
         }, 
         kernel::eval::Eval, prelude::{
             Context, 

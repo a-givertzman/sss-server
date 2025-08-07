@@ -13,10 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            ParametricResonantZoneCtx, 
-            ParametricResonantZoneEval, 
-            RollingFrequencyCtx, 
-            Zg
+            parametric_resonant_zone::{parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_eval::ParametricResonantZoneEval}, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, Zg
         }
     }, 
     kernel::{

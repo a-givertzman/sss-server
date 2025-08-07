@@ -1,35 +1,23 @@
 //! Entities implemented the Eval trate
 //pub mod area_eval;
-mod apparent_frequencies;
 mod strength_area_eval;
 mod icing_stab_eval;
 mod icing_eval;
 mod wetting_eval;
 mod loads_eval;
-mod main_resonant_zone;
-mod main_resonant_zone_speed_filter;
 mod balance_eval;
 mod icing_timber_eval;
-mod impacts_high_waves;
 mod stability_area_eval;
 mod metacentric_height_eval;
-mod move_broching_filter;
-mod parametric_resonant_zone;
-mod parametric_resonant_zone_speed_filter;
-mod period_excitement;
 mod lever_diagram_eval;
 mod wind_eval;
 mod windage_eval;
 mod roll_amplitude_eval;
-mod roll_frequency_eval;
 mod roll_period_eval;
-mod vessel_max_speed;
+mod seakeeping;
 mod criterion;
 mod zg_eval;
 mod draft_mark_eval;
-
-pub use apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval;
-pub use apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
 
 pub use strength_area_eval::strength_area_eval::StrengthAreaEval;
 pub use strength_area_eval::strength_area_ctx::StrengthAreaCtx; 
@@ -43,12 +31,6 @@ pub use icing_eval::icing_ctx::IcingCtx;
 pub use loads_eval::loads_eval::LoadsEval;
 pub use loads_eval::loads_ctx::LoadsCtx;
 
-pub use main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval;
-pub use main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
-
-pub use main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval;
-pub use main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx;
-
 pub use wetting_eval::wetting_eval::WettingEval;
 pub use wetting_eval::wetting_ctx::WettingCtx;
 
@@ -58,26 +40,11 @@ pub use balance_eval::balance_ctx::BalanceCtx;
 pub use icing_timber_eval::icing_timber_eval::IcingTimberEval;
 pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;
 
-pub use impacts_high_waves::impacts_high_waves_eval::ImpactsHighWavesEval;
-pub use impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx;
-
 pub use stability_area_eval::stability_area_eval::StabilityAreaEval;
 pub use stability_area_eval::stability_area_ctx::StabilityAreaCtx;
 
 pub use metacentric_height_eval::metacentric_height_eval::MetacentricHeightEval;
 pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx;
-
-pub use move_broching_filter::move_broching_filter_eval::MoveBrochingFilterEval;
-pub use move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx;
-
-pub use parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval;
-pub use parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
-
-pub use parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval;
-pub use parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx;
-
-pub use period_excitement::period_excitement_eval::PeriodExcitementEval;
-pub use period_excitement::period_excitement_ctx::PeriodExcitementCtx;
 
 pub use lever_diagram_eval::lever_diagram_eval::LeverDiagramEval;
 pub use lever_diagram_eval::lever_diagram_ctx::LeverDiagramCtx;
@@ -88,16 +55,13 @@ pub use wind_eval::wind_ctx::WindCtx;
 pub use windage_eval::windage_eval::WindageEval;
 pub use windage_eval::windage_ctx::WindageCtx;
 
-pub use roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval;
-pub use roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
+pub use roll_amplitude_eval::roll_amplitude_eval::RollingAmplitudeEval;
+pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;
 
 pub use roll_period_eval::roll_period_eval::RollingPeriodEval;
 pub use roll_period_eval::roll_period_ctx::RollingPeriodCtx;
 
-pub use vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
-
-pub use roll_amplitude_eval::roll_amplitude_eval::RollingAmplitudeEval;
-pub use roll_amplitude_eval::roll_amplitude_ctx::RollingAmplitudeCtx;
+pub use seakeeping::*;
 
 pub use criterion::criterion_stability_eval::*;
 pub use criterion::criterion_draught_eval::*;
