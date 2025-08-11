@@ -44,14 +44,16 @@ pub struct ShipModel {
     //   model_shape: Shape,
     ///
     /// Provides a number of calculations:
-    /// - cashe for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
+    /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
     model: DisplacementCache,
-    /// - cashe for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
+    /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<usize, CompartmentCache>,
-    /// - cashe for bounds of model, [index of bound, [trim, draught, volume ]]
+    /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
     model_bounded: IndexMap<usize, Vec<BoundCache>>,    
-    /// - cashe for bounds of compartments,  [index of bound, TODO]
+    /// - cache for bounds of compartments,  [index of bound, TODO]
     compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
+    /// - cache for vertical area
+    vertical_area: AreaCache,
     scheduler: Scheduler,
 }
 //
