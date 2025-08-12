@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::model::{
-        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, BoundCache, CompartmentCache, Shape
+        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, AreaCache, BoundCache, CompartmentCache, Shape
     },
     model::DisplacementCache,
 };
@@ -45,7 +45,7 @@ pub struct ShipModel {
     ///
     /// Provides a number of calculations:
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
-    model: DisplacementCache,
+    displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<usize, CompartmentCache>,
     /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
@@ -65,7 +65,7 @@ impl ShipModel {
         let dbg = Dbg::new(parent, "ShipModel");
         let ship_model = Self {
             dbg: dbg.clone(),
-            model: DisplacementCache::new(
+            displacement: DisplacementCache::new(
                 &dbg,
                 Shape::new_uninit(
                     &dbg,
@@ -80,6 +80,10 @@ impl ShipModel {
                 scheduler.clone(),
             ),
             scheduler: scheduler.clone(),
+            compartments: todo!(),
+            model_bounded: todo!(),
+            compartments_bounded: todo!(),
+            vertical_area: todo!(),
         };
         ship_model
     }
@@ -186,7 +190,7 @@ impl ShipModel {
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         // start wokers to calculate required caches
         let mut errors = Vec::new();
-        if let Err(error) = self.model.rebuild() {
+        if let Err(error) = self.displacement.rebuild() {
             errors.push(("model", error));
         }
         let error = Error::new(&self.dbg, "rebuild_caches");
@@ -211,7 +215,7 @@ impl ShipModel {
         //    damage_compartment: Vec<usize>,
     ) -> Result<EvaluatedFloatingPosition, Error> {
         //
-        FloatingPosition::new(&self.dbg, &self.model, displacement, mass_center).eval()
+        FloatingPosition::new(&self.dbg, &self.displacement, displacement, mass_center).eval()
     }
     /*
     pub fn floating_position(

@@ -103,7 +103,7 @@ mod tests {
         .ok();
         let epsilon = 0.0000001;
         let shape = Shape::new(&dbg, "".into(), mesh, 1., 1., 0.0000001, 1000);
-        let result = shape.area(0., 0., 0.).unwrap();
+        let result = shape.waterline_area(0., 0., 0.).unwrap();
         let target = (2.0, 0., 0., 0.);
         assert!(
             (result.0 - target.0).abs() < epsilon,
@@ -129,7 +129,7 @@ mod tests {
             result,
             target
         );
-        let result = shape.area(30., -45., 0.1).unwrap();
+        let result = shape.waterline_area(30., -45., 0.1).unwrap();
         let target = (0.2357120659516771, 0.8733361526851109, -0.24667230537003976, 0.10374118731217521);
         assert!(
             (result.0 - target.0).abs() < epsilon,

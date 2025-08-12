@@ -102,7 +102,7 @@ impl BuildDisplacementCache {
                                 trim,
                                 draught,
                                 guard.displacement(heel, trim, draught),
-                                guard.area(heel, trim, draught),
+                                guard.waterline_area(heel, trim, draught),
                                 guard.inertia(heel, trim, draught),
                             ));
                             Ok(())

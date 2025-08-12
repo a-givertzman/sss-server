@@ -11,6 +11,7 @@ mod cache_key;
 mod displacement_cache;
 mod bound_cache;
 mod compartment_cache;
+mod area_cache;
 mod local_cache;
 mod shape;
 
@@ -18,5 +19,6 @@ pub(crate) use cache_key::*;
 pub(crate) use bound_cache::*;
 pub(crate) use displacement_cache::*;
 pub(crate) use compartment_cache::*;
+pub(crate) use area_cache::*;
 pub(crate) use local_cache::*;
 pub(crate) use shape::*;
