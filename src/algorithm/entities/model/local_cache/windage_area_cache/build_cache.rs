@@ -13,7 +13,6 @@ use std::sync::{
 ///
 /// See [super::AreaCacheConf] for more details about the fields.
 //
-
 pub struct BuildAreaCache {
     dbg: Dbg,
     shape: Shape,
@@ -47,13 +46,13 @@ impl BuildAreaCache {
     }
     ///
     /// Creates and starts worker for [AreaCache::calculate].
-    /// results: [[trim, draught, area, x, z]]
+    /// results: [[trim, draught, area, x]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
-        let results = Arc::new(Stack::new());
-        let mut errors = Vec::new();
+        let task_results = Arc::new(Stack::new());
+        let mut results = Vec::new();
         let shape = Arc::new(RwLock::new(self.shape.clone()));
         'draught: for &draught in &self.draught_steps {
             for &trim in &self.trim_steps {
@@ -63,13 +62,13 @@ impl BuildAreaCache {
                     break 'draught;
                 }
                 //  let dbg_ = self.dbg.clone();
-                let results = results.clone();
+                let task_results = task_results.clone();
                 let shape = shape.clone();
                 let handle = self
                     .scheduler
                     .spawn(move || {
                         let guard = shape.read().expect("Unable to read");
-                        results.push((
+                        task_results.push((
                             trim,
                             draught,
                             guard.windage_area(trim, draught),
@@ -84,7 +83,7 @@ impl BuildAreaCache {
                     });
                 match handle {
                     Ok(task) => tasks.push(task),
-                    Err(err) => errors.push(Err(err)),
+                    Err(err) => results.push(Err(err)),
                 };
             }
         }
@@ -92,40 +91,19 @@ impl BuildAreaCache {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                errors.push(Err(error));
+                results.push(Err(error));
             }
         }
-        while !results.is_empty() {
-            if let Some((heel, trim, draught, volume, area, inertia)) = results.pop() {
-                if let Some((_, (l_x, l_y))) = aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
-                    let (volume, vx, vy, vz) = match volume {
-                        Ok((volume, x, y, z)) => (volume, x, y, z),
+        while !task_results.is_empty() {
+            if let Some((trim, draught, area)) = task_results.pop() {
+                    let (area, x) = match area {
+                        Ok((area, x)) => (area, x),
                         Err(err) => {
-                            results.push(Err(error.pass_with("results volume", err)));
+                            results.push(Err(error.pass_with("results area", err)));
                             continue;
                         }
                     };
-                    let (area, ax, ay, az) = match area {
-                        Ok((area, x, y, z)) => (area, x, y, z),
-                        Err(err) => {
-                            results.push(Err(error.pass_with("draft_results area", err)));
-                            continue;
-                        }
-                    };
-                    let (i_x, i_y) = match inertia {
-                        Ok((x, y)) => (x, y),
-                        Err(err) => {
-                            results.push(Err(error.pass_with("draft_results inertia", err)));
-                            continue;
-                        }
-                    };
-                    results.push(Ok(vec![
-                        heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, i_x, i_y, *l_x,
-                        *l_y,
-                    ]));
-                } else {
-                    results.push(Err(error.err(format!("no aabb for draught:{draught}"))));
-                }
+                    results.push(Ok(vec![trim, draught, area, x]));
             }
         }
         //   dbg!(&results);

@@ -46,7 +46,7 @@ fn calculated_displacement_ark() {
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cashe = DisplacementCache::new(
         &dbg,
-        Shape::new_uninit(&dbg, model_path.into(), center_coord.x(), 1000.),
+        Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.),
         cache_dir,
         vec![0., 20.],
         vec![-20., 0., 20.],

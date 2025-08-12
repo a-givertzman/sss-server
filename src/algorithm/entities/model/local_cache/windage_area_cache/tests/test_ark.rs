@@ -31,22 +31,22 @@ fn init_each() -> () {}
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
 #[ignore = "too slow, run only in release mode"]
 #[test]
-fn calculated_displacement_ark() {
+fn calculated_windage_area_ark() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test models", "calculated_displacement_ark");
+    let dbg = Dbg::new("test models", "calculated_windage_area_ark");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let model_path = "src/assets/ark.stl";
-    let cache_dir = "src/algorithm/entities/model/local_cache/displacement_cache/tests/cache/";
+    let cache_dir = "src/algorithm/entities/model/local_cache/windage_area_cache/tests/cache/";
     let center_coord = Position::new(59.195, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cashe = DisplacementCache::new(
         &dbg,
-        Shape::new_uninit(&dbg, model_path.into(), center_coord.x(), 1000.),
+        Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.),
         cache_dir,
         vec![0., 20.],
         vec![-20., 0., 20.],

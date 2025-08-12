@@ -1,5 +1,5 @@
-use super::local_cache::DisplacementCacheConf;
 use std::path::PathBuf;
+use crate::algorithm::entities::model::CacheConf;
 ///
 /// [super::ShipModel] configuration.
 ///
@@ -8,12 +8,14 @@ pub struct ShipModelConf {
     ///
     /// File containing model structure (e. g. in STL format).
     pub model_path: PathBuf,
+    /// Directory containing files with model additional structures (e. g. in STL format).
+    pub additional_path: Option<PathBuf>,
     ///
     pub model_scale: f64,
     ///
     /// Directory containing [super::ShipModel] caches.
     pub cache_dir: PathBuf,
     ///
-    /// [super::DisplacementCache] configuration.
-    pub displacement_cache_conf: DisplacementCacheConf,
+    /// Cache configuration.
+    pub cache_conf: CacheConf,
 }

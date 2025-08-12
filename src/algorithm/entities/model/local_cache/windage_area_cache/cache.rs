@@ -1,6 +1,5 @@
 use crate::{
     algorithm::entities::{
-        Position,
         cache::Cache,
         model::{Shape, local_cache::LocalCache},
     },
@@ -22,7 +21,6 @@ use std::{
 pub struct AreaCache {
     dbg: Dbg,
     cache_path: PathBuf,
-    heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
@@ -47,7 +45,6 @@ impl AreaCache {
         parent: &Dbg,
         shape: Shape,
         cache_dir: impl AsRef<Path>,
-        heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
@@ -56,7 +53,6 @@ impl AreaCache {
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
             shape,
-            heel_steps,
             trim_steps,
             draught_steps,
             cache: Arc::new(RwLock::new(None)),
@@ -73,10 +69,9 @@ impl AreaCache {
         if let Err(err) = self.shape.init() {
             return vec![error.pass_with("self.shape.init()", err.to_string())];
         };
-        let cache_data = super::build_displacement_cache::BuildAreaCache::new(
+        let cache_data = super::build_cache::BuildAreaCache::new(
             &self.dbg,
             self.shape.clone(),
-            self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),

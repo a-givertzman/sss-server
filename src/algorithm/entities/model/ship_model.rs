@@ -47,12 +47,12 @@ pub struct ShipModel {
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
-    compartments: IndexMap<usize, CompartmentCache>,
+//    compartments: IndexMap<usize, CompartmentCache>,
     /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
-    model_bounded: IndexMap<usize, Vec<BoundCache>>,    
+ //   model_bounded: IndexMap<usize, Vec<BoundCache>>,    
     /// - cache for bounds of compartments,  [index of bound, TODO]
-    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
-    /// - cache for vertical area
+//    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
+    /// - cache for windage area
     vertical_area: AreaCache,
     scheduler: Scheduler,
 }
@@ -70,20 +70,22 @@ impl ShipModel {
                 Shape::new_uninit(
                     &dbg,
                     conf.model_path,
-                    conf.displacement_cache_conf.center_coord.x(),
+                    conf.additional_path,
+                    conf.cache_conf.center_coord.x(),
                     conf.model_scale,
                 ),
                 conf.cache_dir,
-                conf.displacement_cache_conf.heel_steps,
-                conf.displacement_cache_conf.trim_steps,
-                conf.displacement_cache_conf.draught_steps,
+                conf.cache_conf.heel_steps,
+                conf.cache_conf.trim_steps,
+                conf.cache_conf.draught_steps,
                 scheduler.clone(),
             ),
+            vertical_area: todo!(),            
             scheduler: scheduler.clone(),
-            compartments: todo!(),
-            model_bounded: todo!(),
-            compartments_bounded: todo!(),
-            vertical_area: todo!(),
+     //       compartments: todo!(),
+    //        model_bounded: todo!(),
+     //       compartments_bounded: todo!(),
+
         };
         ship_model
     }

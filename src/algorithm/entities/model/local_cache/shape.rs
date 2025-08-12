@@ -59,7 +59,7 @@ impl Shape {
     /// После создания обязателен вызов метода "init".
     pub fn new_uninit(
         parent: &Dbg,
-        path: Option<PathBuf>,
+        path: PathBuf,
         additional_path: Option<PathBuf>,
         dx: f64,
         scale: f64,
@@ -67,7 +67,7 @@ impl Shape {
         Self::new(
             parent,
             None,
-            path,
+            Some(path),
             additional_path,
             dx,
             scale,
