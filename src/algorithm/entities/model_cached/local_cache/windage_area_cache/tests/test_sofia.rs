@@ -4,8 +4,8 @@ use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
-use crate::algorithm::entities::model::local_cache::displacement_cache::DisplacementCache;
-use crate::algorithm::entities::{model::{AreaCache, LocalCache, Shape}, Position};
+use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
+use crate::algorithm::entities::{model_cached::{AreaCache, LocalCache, Shape}, Position};
 use std::{fs, sync::Once, time::Duration};
 //
 //

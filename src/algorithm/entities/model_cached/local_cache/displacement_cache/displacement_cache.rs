@@ -1,7 +1,8 @@
 use crate::{
     algorithm::entities::{
+        Position,
         cache::Cache,
-        model::{Shape, local_cache::LocalCache},
+        model_cached::{Shape, local_cache::LocalCache},
     },
     kernel::types::RwLock,
 };
@@ -18,9 +19,10 @@ use std::{
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
-pub struct AreaCache {
+pub struct DisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
+    heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
@@ -34,7 +36,7 @@ pub struct AreaCache {
 }
 //
 //
-impl AreaCache {
+impl DisplacementCache {
     //
     //
     const KEY: &'static str = "floating_position_cache";
@@ -45,14 +47,16 @@ impl AreaCache {
         parent: &Dbg,
         shape: Shape,
         cache_dir: impl AsRef<Path>,
+        heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, "AreaCache");
+        let dbg = Dbg::new(parent, "DisplacementCache");
         let path = cache_dir.as_ref().join(Self::KEY);
         Self {
             shape,
+            heel_steps,
             trim_steps,
             draught_steps,
             cache: Arc::new(RwLock::new(None)),
@@ -63,15 +67,16 @@ impl AreaCache {
         }
     }
     ///
-    /// See [BuildAreaCache] for details.
+    /// See [BuildDisplacementCache] for details.
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
         if let Err(err) = self.shape.init() {
             return vec![error.pass_with("self.shape.init()", err.to_string())];
         };
-        let cache_data = super::build_cache::BuildAreaCache::new(
+        let cache_data = super::build_displacement_cache::BuildDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
+            self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),
@@ -175,7 +180,7 @@ impl AreaCache {
 }
 //
 //
-impl LocalCache for AreaCache {
+impl LocalCache for DisplacementCache {
     ///
     /// See [Cache::get] for details.
     fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<f64>, Error> {

@@ -1,10 +1,10 @@
 use std::path::PathBuf;
-use crate::algorithm::entities::model::CacheConf;
+use crate::algorithm::entities::model_cached::CacheConf;
 ///
-/// [super::ShipModel] configuration.
+/// [super::ModelCached] configuration.
 ///
 /// It can be used to wrap configuration getting from an external source.
-pub struct ShipModelConf {
+pub struct ModelCachedConf {
     ///
     /// File containing model structure (e. g. in STL format).
     pub model_path: PathBuf,
@@ -13,7 +13,7 @@ pub struct ShipModelConf {
     ///
     pub model_scale: f64,
     ///
-    /// Directory containing [super::ShipModel] caches.
+    /// Directory containing [super::ModelCached] caches.
     pub cache_dir: PathBuf,
     ///
     /// Cache configuration.

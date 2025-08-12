@@ -1,4 +1,3 @@
-use crate::algorithm::entities::model::Shape;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -7,6 +6,8 @@ use sal_sync::{
 use std::sync::{
     atomic::{AtomicBool, Ordering}, Arc, RwLock
 };
+
+use crate::algorithm::entities::model_cached::Shape;
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///

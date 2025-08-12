@@ -19,12 +19,9 @@ use kernel::{eval::Eval, run::Run};
 use prelude::*;
 use sal_core::{error::Error, dbg::Dbg};
 use sal_sync::thread_pool::ThreadPool;
-//use ship_model::ship_model::ShipModel;
-
-use crate::model::CacheKey;
+use ship_model::ship_model::ShipModel;
 use std::path::PathBuf;
-use crate::algorithm::entities::model::ShipModel;
-use crate::algorithm::entities::model;
+use crate::algorithm::entities::model_cached;
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -64,18 +61,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
  //    let center_coord = Position::new(65.22, 0., 0.);
   //  let model_path = "src/assets/model_1510.stp";
   //    let model_path = "src/assets/ark-Part3.obj";
-    let model_path = "src/assets/ark.stl";
+  //  let model_path = "src/assets/ark.stl";
+    let model_path = "src/assets/sofia.stl";
+    let additional_path = "src/assets/sofia_additionals/";
     let cache_dir = "src/assets/cache/";
     let center_coord = Position::new(59.195, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(30));
-    let mut model: model::ShipModel = model::ShipModel::new(
+    let mut model = model_cached::ModelCached::new(
         &dbg, 
-        model::ShipModelConf {
+        model_cached::ModelCachedConf {
             model_path: PathBuf::from(model_path),
+            additional_path: Some(PathBuf::from(additional_path)),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
-            displacement_cache_conf: model::DisplacementCacheConf {
-                center_coord: center_coord,
+            cache_conf: model_cached::CacheConf {
+                center_coord,
         //        heel_steps: vec![-20.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
         //        trim_steps: vec![-20.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
         //        draught_steps: vec![4.,],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(), 

@@ -1,4 +1,4 @@
-use crate::algorithm::entities::model::Shape;
+use crate::algorithm::entities::model_cached::Shape;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
