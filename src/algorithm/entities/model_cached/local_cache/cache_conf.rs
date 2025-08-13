@@ -1,9 +1,9 @@
 use crate::algorithm::entities::Position;
 
 ///
-/// [super::DisplacementCache] configuration.
+/// Cache configuration.
 #[derive(Default)]
-pub struct DisplacementCacheConf {
+pub struct CacheConf {
     ///
     /// Waterline initial position in 3D space.
     pub center_coord: Position,

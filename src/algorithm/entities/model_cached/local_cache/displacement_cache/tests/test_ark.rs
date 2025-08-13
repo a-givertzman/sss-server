@@ -4,8 +4,8 @@ use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
-use crate::algorithm::entities::model::local_cache::displacement_cache::DisplacementCache;
-use crate::algorithm::entities::{model::{LocalCache, Shape}, Position};
+use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
+use crate::algorithm::entities::{model_cached::{LocalCache, Shape}, Position};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -46,7 +46,7 @@ fn calculated_displacement_ark() {
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cashe = DisplacementCache::new(
         &dbg,
-        Shape::new_uninit(&dbg, model_path.into(), center_coord.x(), 1000.),
+        Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.),
         cache_dir,
         vec![0., 20.],
         vec![-20., 0., 20.],

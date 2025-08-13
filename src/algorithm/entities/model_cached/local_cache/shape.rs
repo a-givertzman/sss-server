@@ -8,12 +8,14 @@ use std::path::PathBuf;
 #[derive(Clone)]
 pub struct Shape {
     dbg: Dbg,
-    path: PathBuf,
     mesh: Option<TriMesh>,
+    path: Option<PathBuf>,
+    additional_path: Option<PathBuf>,
     dx: f64,
     scale: f64,
     epsilon: f64,
-    resolution: u32,
+    resolution_inertia: u32,
+    resolution_vertical_area: u32,
 }
 
 unsafe impl Send for Shape {}
@@ -21,43 +23,82 @@ unsafe impl Send for Shape {}
 impl Shape {
     /// Конструктор
     /// * parent - Dbg родителя
-    /// * path - путь к файлу, содержащему модель
     /// * mesh - модель
+    /// * path - путь к файлу, содержащему модель
+    /// * additional_path - путь к директории, содержащей дополнительные модели
     /// * dx - смещение миделя относительно центра координат модели
     /// * scale - масштаб модели для ее приведения к метрам (1000: модель в мм)
     /// * epsilon - точность расчета сечений
-    /// * resolution - точность расчета момента инерции
+    /// * resolution_inertia - точность расчета момента инерции
+    /// * resolution_vertical_area - точность расчета площади парусности
     pub fn new(
         parent: &Dbg,
-        path: PathBuf,
         mesh: Option<TriMesh>,
+        path: Option<PathBuf>,
+        additional_path: Option<PathBuf>,
         dx: f64,
         scale: f64,
         epsilon: f64,
-        resolution: u32,
+        resolution_inertia: u32,
+        resolution_vertical_area: u32,
     ) -> Self {
         let dbg = Dbg::new(parent, "Shape");
         Self {
             dbg,
-            path,
             mesh,
+            path,
+            additional_path,
             dx,
             scale,
             epsilon,
-            resolution,
+            resolution_inertia,
+            resolution_vertical_area,
         }
     }
     /// Конструктор для создания "ленивого" экземпляра.
     /// После создания обязателен вызов метода "init".
-    pub fn new_uninit(parent: &Dbg, path: PathBuf, dx: f64, scale: f64) -> Self {
-        Self::new(parent, path, None, dx, scale, 0.0000001, 10000)
+    pub fn new_uninit(
+        parent: &Dbg,
+        path: PathBuf,
+        additional_path: Option<PathBuf>,
+        dx: f64,
+        scale: f64,
+    ) -> Self {
+        Self::new(
+            parent,
+            None,
+            Some(path),
+            additional_path,
+            dx,
+            scale,
+            0.0000001,
+            10000,
+            2000,
+        )
     }
     /// Init shape, load geometry
     pub fn init(&mut self) -> Result<(), Error> {
         if self.mesh.is_none() {
             let error = Error::new(&self.dbg, "init");
-            let mesh = load_stl(self.path.clone())
+            let mut mesh = load_stl(self.path.clone().ok_or(error.err("empty path"))?)
                 .map_err(|err| error.pass_with("load", err.to_string()))?;
+            if let Some(additional_path) = self.additional_path.clone() {
+                let dir = std::fs::read_dir(additional_path)
+                    .map_err(|err| error.pass_with("read additional dir", err.to_string()))?;
+                let pathes: Vec<_> = dir
+                    .into_iter()
+                    .filter_map(|f| f.ok())
+                    .map(|f| f.path())
+                    .collect();
+                let (
+                    meshes,
+                    _errors, // TODO: подумать, что делать с этими ошибками
+                ): (Vec<_>, Vec<_>) = pathes
+                    .into_iter()
+                    .map(|p| load_stl(p))
+                    .partition(|r| r.is_ok());
+                meshes.into_iter().for_each(|m| mesh.append(&m.unwrap()));
+            }
             let scale = 1. / self.scale;
             self.mesh = Some(mesh.scaled(&Vector3::new(scale, scale, scale)));
         }
@@ -111,7 +152,12 @@ impl Shape {
     ///
     /// Расчет площади ватерлинии судна и положение ее центра в связанной с судной системой координат
     /// result: [area, x, y, z]
-    pub fn area(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64, f64, f64), Error> {
+    pub fn waterline_area(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+    ) -> Result<(f64, f64, f64, f64), Error> {
         let error = Error::new("Shape", "area");
         let position = self.position(heel, trim, draught);
         let cuboid_half_size = 1000.;
@@ -213,7 +259,7 @@ impl Shape {
                 let mut voxel_set = parry2d_f64::transformation::voxelization::VoxelSet::voxelize(
                     &vertices,
                     &indices,
-                    self.resolution,
+                    self.resolution_inertia,
                     parry2d_f64::transformation::voxelization::FillMode::FloodFill {
                         detect_cavities: true,
                         detect_self_intersections: false,
@@ -257,6 +303,70 @@ impl Shape {
             }
             _ => return Err(error.err("mesh.intersection_with_plane error!")),
         };
+    }
+    /// Расчет площади парусности
+    /// Возвращает [площадь, смещение площади по x]
+    pub fn windage_area(&self, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
+        let error = Error::new("Shape", "windage_area");
+        let position = self.position(0., trim, draught);
+        let cuboid_half_size = 1000.;
+        let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_cuboid(
+                &position,
+                false,
+                &cuboid,
+                &Isometry::from_parts(
+                    Translation3::new(0., 0., cuboid_half_size),
+                    UnitQuaternion::identity(),
+                ),
+                false,
+                self.epsilon,
+            );
+        let mesh = match result {
+            Ok(mesh) => match mesh {
+                Some(mesh) => mesh,
+                None => {
+                    return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                }
+            },
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+        };
+        let aabb = mesh.local_aabb();
+        let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
+            &mesh.vertices(),
+            &mesh.indices(),
+            self.resolution_vertical_area,
+            parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
+            false,
+        );
+        let mut voxels = voxel_set.voxels().to_vec();
+        voxels.sort_by(|a, b| a.coords.x.cmp(&b.coords.x));    
+        let mut current_max_x = 0;
+        let mut result_z = Vec::new();
+        let mut current_z = Vec::new();
+        for p in voxels.iter() {
+            if p.coords.x > current_max_x {
+                current_z.sort();
+                current_z.dedup();
+                result_z.push(current_z.len());
+                current_z = Vec::new();
+                current_max_x += 1;
+            }
+            current_z.push(p.coords.z);
+        }
+        let mut area = 0;
+        let mut moment = 0;
+        for (x, &dz) in result_z.iter().enumerate() {
+            moment += x * dz;
+            area += dz;
+        }
+        let center_x = (moment as f64 / area as f64 * voxel_set.scale) + aabb.mins.x;
+        let area = area as f64 * voxel_set.scale * voxel_set.scale;
+        Ok((area, center_x))
     }
     ///
     /// Расчет положения корпуса

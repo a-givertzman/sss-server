@@ -9,7 +9,7 @@ use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::Position2d;
 use crate::algorithm::entities::{Bound, Bounds};
-use crate::algorithm::entities::model;
+use crate::algorithm::entities::model_cached;
 use crate::algorithm::eval::BalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
 use crate::kernel::sync::Hub;
@@ -200,6 +200,7 @@ impl ShipModel {
                     let result = compute_balance(
                         model_key,
                         model_path,
+                        None,
                         cache_dir,
                         bounds.clone(),
                         query,
@@ -358,6 +359,7 @@ fn bound_areas(
 fn compute_balance(
     model_key: &str,
     model_path: &str,
+    additional_path: Option<&str>,
     cache_dir: &str,
     bounds: Bounds,
     src_data: BalanceQuery,
@@ -367,17 +369,18 @@ fn compute_balance(
 ) -> Result<BalanceCtx, Error> {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let error = Error::new(&dbg, "compute_balance");
-    let model: model::ShipModel = model::ShipModel::new(
+    let model = model_cached::ModelCached::new(
         &dbg, 
-        model::ShipModelConf {
+        model_cached::ModelCachedConf {
             model_path: PathBuf::from(model_path),
+            additional_path: additional_path.map(|p| PathBuf::from(p)),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
-            displacement_cache_conf: model::DisplacementCacheConf {
+            cache_conf: model_cached::CacheConf {
                 center_coord: Position::new(0., 0., 0.),
-                heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
-                trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
-                draught_steps: vec![0.0, 0.25],
+                heel_steps: (-20..=20).step_by(5).map(|n| n as f64).collect(),
+                trim_steps: (-20..=20).step_by(5).map(|n| n as f64).collect(),
+                draught_steps: (2..=12).step_by(1).map(|n| n as f64).collect(),
             },
         },
         scheduler.clone(),
