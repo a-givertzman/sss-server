@@ -1,16 +1,15 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{Shape, local_cache::LocalCache, save},
+        model_cached::{local_cache::LocalCache, save, Shape},
     },
-    kernel::types::RwLock,
+    kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
     path::{Path, PathBuf},
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
     },
 };
@@ -23,7 +22,7 @@ pub struct AreaCache {
     draught_steps: Vec<f64>,
     ///
     /// Model representation used for cache calculation.
-    shape: Shape,
+    shape: Arc<RwLock<Shape>>,
     ///
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
@@ -38,7 +37,7 @@ impl AreaCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        shape: Shape,
+        shape: Arc<RwLock<Shape>>,
         cache_dir: impl AsRef<Path>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
@@ -64,9 +63,6 @@ impl LocalCache for AreaCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        if let Err(err) = self.shape.init() {
-            return vec![error.pass_with("self.shape.init()", err.to_string())];
-        };
         let cache_data = super::build_cache::BuildAreaCache::new(
             &self.dbg,
             self.shape.clone(),

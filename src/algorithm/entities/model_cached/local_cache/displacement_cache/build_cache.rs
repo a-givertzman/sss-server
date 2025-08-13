@@ -3,11 +3,9 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::sync::{
-    atomic::{AtomicBool, Ordering}, Arc, RwLock
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::algorithm::entities::model_cached::Shape;
+use crate::{algorithm::entities::model_cached::Shape, kernel::types::{Arc, RwLock}};
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
@@ -16,7 +14,7 @@ use crate::algorithm::entities::model_cached::Shape;
 
 pub struct BuildDisplacementCache {
     dbg: Dbg,
-    shape: Shape,
+    shape: Arc<RwLock<Shape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
@@ -31,7 +29,7 @@ impl BuildDisplacementCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Shape,
+        shape: Arc<RwLock<Shape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
@@ -40,7 +38,7 @@ impl BuildDisplacementCache {
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildDisplacementCache"),
-            shape,
+            shape: shape.clone(),
             heel_steps,
             trim_steps,
             draught_steps,
@@ -58,7 +56,7 @@ impl BuildDisplacementCache {
         let aabb_results = Arc::new(Stack::new());
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let shape = Arc::new(RwLock::new(self.shape.clone()));
+        let shape = self.shape.clone();
         'draught: for &draught in &self.draught_steps {
             if self.exit.load(Ordering::SeqCst) {
                 break 'draught;
@@ -69,7 +67,7 @@ impl BuildDisplacementCache {
                 let handle = self
                     .scheduler
                     .spawn(move || {
-                        let guard = shape.read().expect("Unable to read");
+                        let guard = shape.read();
                         aabb_results.push((draught, guard.aabb(draught)));
                         Ok(())
                     })
@@ -97,7 +95,7 @@ impl BuildDisplacementCache {
                     let handle = self
                         .scheduler
                         .spawn(move || {
-                            let guard = shape.read().expect("Unable to read");
+                            let guard = shape.read();
                             draft_results.push((
                                 heel,
                                 trim,

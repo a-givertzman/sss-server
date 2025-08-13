@@ -1,13 +1,10 @@
-use crate::algorithm::entities::model_cached::Shape;
+use crate::{algorithm::entities::model_cached::Shape, kernel::types::{Arc, RwLock}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::sync::{
-    Arc, RwLock,
-    atomic::{AtomicBool, Ordering},
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 ///
 /// Provides logic to calculate and store cache used by [super::AreaCache].
 ///
@@ -15,7 +12,7 @@ use std::sync::{
 //
 pub struct BuildAreaCache {
     dbg: Dbg,
-    shape: Shape,
+    shape: Arc<RwLock<Shape>>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     scheduler: Scheduler,
@@ -29,7 +26,7 @@ impl BuildAreaCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Shape,
+        shape: Arc<RwLock<Shape>>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
@@ -37,7 +34,7 @@ impl BuildAreaCache {
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildAreaCache"),
-            shape,
+            shape: shape.clone(),
             trim_steps,
             draught_steps,
             scheduler,
@@ -53,7 +50,7 @@ impl BuildAreaCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let shape = Arc::new(RwLock::new(self.shape.clone()));
+        let shape = self.shape.clone();
         'draught: for &draught in &self.draught_steps {
             for &trim in &self.trim_steps {
                 // _true_ if the caller has requisted to exit.
@@ -67,7 +64,7 @@ impl BuildAreaCache {
                 let handle = self
                     .scheduler
                     .spawn(move || {
-                        let guard = shape.read().expect("Unable to read");
+                        let guard = shape.read();
                         task_results.push((
                             trim,
                             draught,

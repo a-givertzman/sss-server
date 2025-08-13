@@ -41,16 +41,18 @@ fn calculated_windage_area_ark() {
     test_duration.run().unwrap();
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let model_path = "src/assets/ark.stl";
+    let additionals_path = "src/assets/ark_additionals/";
     let cache_dir = "src/algorithm/entities/model/local_cache/windage_area_cache/tests/cache/";
     let center_coord = Position::new(59.195, 0., 0.);
+    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord.x(), 1000.);
+    shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cashe = DisplacementCache::new(
+   let mut cashe = AreaCache::new(
         &dbg,
-        Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.),
+        Arc::new(RwLock::new(shape)),
         cache_dir,
-        vec![0., 20.],
-        vec![-20., 0., 20.],
-        vec![4.],
+        vec![0.],
+        vec![0., 2.],
         thread_pool.scheduler().clone(),
     );
     let error = cashe.rebuild();
@@ -58,19 +60,13 @@ fn calculated_windage_area_ark() {
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
     let target = [
-        [20., 20., 4.,  5779.8, 87.914, 0.222, 3.886,     268., 57.713, 0., 3.426,     3649., 11870.],
-        [20., -20., 4., 5411.7, 31.3577, 0.237182, 3.365, 268., 60.677, 0., 3.426,     3649., 11870.],
-        [0., 0., 4.,    5802.3, 57.979, 0., 2.057,        1553., 56.615, 0., 4.000,    22715., 1744000.],
-        [20., 0., 4.,   5830.8, 57.899, 1.402, 2.321,     1629., 57.286, 0.102, 4.037, 26726., 1783000.],
-        [0., 20., 4.,   5788.4, 87.945, 0., 3.875,        268., 57.618, 0., 3.426,     3994., 8920.],
-  //      [0., -20., 4.,  5420.3, 31.548, 0., 3.426,        268., 60.772, 0., 3.354,     3994., 8920.], 
-  // TODO: целевое значение 3.426 сильно отличается от расчетного 3.366
+        [0., 0., 1871.534, 63.109], // TODO
+        [0., 2., 1619.008, 62501.799], // TODO
     ];
     for target in target {
-        let mut key = [None; 13];
+        let mut key = [None; 4];
         key[0] = Some(target[0]);
         key[1] = Some(target[1]);
-        key[2] = Some(target[2]);
         let result: Result<Vec<f64>, Error> = cashe.get(&key);
         assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
         let result = result.unwrap();
@@ -78,7 +74,7 @@ fn calculated_windage_area_ark() {
             let delta = (r - t).abs();
             assert!(
                 delta < epsilon_p * (r.abs().max(t.abs())) || delta < epsilon_abs,
-                "\ncurrent_result:{r} current_target:{t}\nresult: {:?}\ntarget: {:?}",
+                "\nresult: {:?}\ntarget: {:?}",
                 result,
                 target
             );

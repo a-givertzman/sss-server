@@ -5,7 +5,7 @@ use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
 use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::algorithm::entities::{model_cached::{LocalCache, Shape}, Position};
+use crate::{algorithm::entities::{model_cached::{LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -43,10 +43,12 @@ fn calculated_displacement_sofia() {
     let model_path = "src/assets/sofia.stl";
     let cache_dir = "src/algorithm/entities/model/local_cache/displacement_cache/tests/cache/";
     let center_coord = Position::new(65.250, 0., 0.);
+    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.);
+    shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cashe = DisplacementCache::new(
         &dbg,
-        Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.),
+        Arc::new(RwLock::new(shape)),
         cache_dir,
         vec![-20., 0., 20.],
         vec![-20., 0., 20.],

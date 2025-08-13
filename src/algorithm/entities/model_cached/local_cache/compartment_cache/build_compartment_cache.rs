@@ -5,7 +5,6 @@ use sal_sync::{
     thread_pool::{JoinHandle, Scheduler},
 };
 use std::sync::{
-    Arc, RwLock,
     atomic::{AtomicBool, Ordering},
 };
 ///
