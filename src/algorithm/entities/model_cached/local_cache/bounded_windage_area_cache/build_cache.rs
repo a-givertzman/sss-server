@@ -6,8 +6,9 @@ use sal_sync::{
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 ///
-/// Provides logic to calculate and store cache used by [super::AreaCache].
-pub struct BuildAreaCache {
+/// Provides logic to calculate and store cache used by [super::BoundedAreaCache].
+///
+pub struct BuildBoundedAreaCache {
     dbg: Dbg,
     shape: Arc<RwLock<Shape>>,
     trim_steps: Vec<f64>,
@@ -17,7 +18,7 @@ pub struct BuildAreaCache {
 }
 //
 //
-impl BuildAreaCache {
+impl BuildBoundedAreaCache {
     ///
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
@@ -39,7 +40,7 @@ impl BuildAreaCache {
         }
     }
     ///
-    /// Creates and starts worker for [AreaCache::calculate].
+    /// Creates and starts worker
     /// results: [[trim, draught, area, x]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
@@ -65,7 +66,7 @@ impl BuildAreaCache {
                         task_results.push((
                             trim,
                             draught,
-                            guard.windage_area(trim, draught),
+                            guard.bounded_windage_area(trim, draught),
                         ));
                         Ok(())
                     })
@@ -90,14 +91,16 @@ impl BuildAreaCache {
         }
         while !task_results.is_empty() {
             if let Some((trim, draught, area)) = task_results.pop() {
-                    let (area, x) = match area {
-                        Ok((area, x)) => (area, x),
+                    let (_, _, mut values) = match area {
+                        Ok((start_x, end_x, values)) => (start_x, end_x, values),
                         Err(err) => {
                             results.push(Err(error.pass_with("results area", err)));
                             continue;
                         }
                     };
-                    results.push(Ok(vec![trim, draught, area, x]));
+                    let mut result = vec![trim, draught];
+                    result.append(&mut values);
+                    results.push(Ok(result));
             }
         }
         //   dbg!(&results);
