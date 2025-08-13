@@ -51,7 +51,7 @@ pub struct ModelCached {
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
-    //    compartments: IndexMap<usize, CompartmentCache>,
+    compartments: IndexMap<usize, CompartmentCache>,
     /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
     //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
