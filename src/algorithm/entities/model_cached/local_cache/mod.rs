@@ -9,6 +9,7 @@
 //
 mod cache_key;
 mod cache_conf;
+mod file_io;
 mod displacement_cache;
 //mod bound_cache;
 //mod compartment_cache;
@@ -18,6 +19,7 @@ mod shape;
 
 pub(crate) use cache_key::*;
 pub(crate) use cache_conf::*;
+pub(crate) use file_io::*;
 //pub(crate) use bound_cache::*;
 pub(crate) use displacement_cache::*;
 //pub(crate) use compartment_cache::*;
