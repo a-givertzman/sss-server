@@ -13,7 +13,7 @@ use std::{
 };
 ///
 /// Pre-calculated cache
-pub struct AreaCache {
+pub struct BoundedAreaCache {
     dbg: Dbg,
     cache_path: PathBuf,
     trim_steps: Vec<f64>,
@@ -29,7 +29,7 @@ pub struct AreaCache {
 }
 //
 //
-impl AreaCache {
+impl BoundedAreaCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
@@ -41,7 +41,7 @@ impl AreaCache {
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, "AreaCache");
+        let dbg = Dbg::new(parent, "BoundedAreaCache");
         let path = cache_dir.as_ref().join("floating_position_cache");
         Self {
             shape,
@@ -57,11 +57,11 @@ impl AreaCache {
 }
 //
 //
-impl LocalCache for AreaCache {
+impl LocalCache for BoundedAreaCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildAreaCache::new(
+        let cache_data = super::build_cache::BuildBoundedAreaCache::new(
             &self.dbg,
             self.shape.clone(),
             self.trim_steps.clone(),

@@ -1,9 +1,13 @@
 use nalgebra::*;
 use obj::{Obj, ObjData};
+use parry3d_f64::bounding_volume::Aabb;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
+use std::collections::HashMap;
 use std::path::PathBuf;
+
+use crate::algorithm::entities::Bounds;
 
 #[derive(Clone)]
 pub struct Shape {
@@ -15,7 +19,7 @@ pub struct Shape {
     scale: f64,
     epsilon: f64,
     resolution_inertia: u32,
-    resolution_vertical_area: u32,
+    resolution_windage_area: u32,
 }
 
 unsafe impl Send for Shape {}
@@ -52,7 +56,7 @@ impl Shape {
             scale,
             epsilon,
             resolution_inertia,
-            resolution_vertical_area,
+            resolution_windage_area: resolution_vertical_area,
         }
     }
     /// Конструктор для создания "ленивого" экземпляра.
@@ -304,13 +308,14 @@ impl Shape {
             _ => return Err(error.err("mesh.intersection_with_plane error!")),
         };
     }
-    /// Расчет площади парусности
-    /// Возвращает [площадь, смещение площади по x]
-    pub fn windage_area(&self, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new("Shape", "windage_area");
+    /// Расчет поверхности парусности
+    /// Возвращает [шкала, баундбокс, разбиение с количеством вокселей по х]
+    fn _windage_area(&self, trim: f64, draught: f64) -> Result<(f64, Aabb, Vec<usize>), Error> {
+        let error = Error::new("Shape", "_windage_area");
         let position = self.position(0., trim, draught);
         let cuboid_half_size = 1000.;
         let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
+        // берем часть корпса над водой как перечечение модели и кубика, имитирующего воду
         let result = self
             .mesh
             .as_ref()
@@ -336,18 +341,22 @@ impl Shape {
             Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
         };
         let aabb = mesh.local_aabb();
+        // разбиваем поверхность полученного над водой объема на воксели
         let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
             &mesh.vertices(),
             &mesh.indices(),
-            self.resolution_vertical_area,
+            self.resolution_windage_area,
             parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
             false,
         );
         let mut voxels = voxel_set.voxels().to_vec();
-        voxels.sort_by(|a, b| a.coords.x.cmp(&b.coords.x));    
+        // сортируем воксели по х
+        voxels.sort_by(|a, b| a.coords.x.cmp(&b.coords.x));
         let mut current_max_x = 0;
         let mut result_z = Vec::new();
         let mut current_z = Vec::new();
+        // проходим по вокселям по порядку и берем воксели с одинаковой координатой по x,
+        // отбрасываем с одинаковой координатой по y, полчаем боковую поверхность
         for p in voxels.iter() {
             if p.coords.x > current_max_x {
                 current_z.sort();
@@ -355,18 +364,72 @@ impl Shape {
                 result_z.push(current_z.len());
                 current_z = Vec::new();
                 current_max_x += 1;
+                while p.coords.x > current_max_x {
+                    current_max_x += 1;
+                    result_z.push(0);
+                }
             }
             current_z.push(p.coords.z);
         }
+        Ok((voxel_set.scale, aabb, result_z))
+    }
+    /// Расчет площади и центра площади парусности
+    /// Возвращает [площадь, смещение площади по x]
+    pub fn windage_area(&self, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
+        let error = Error::new("Shape", "windage_area");
+        let (scale, aabb, result_z) = self
+            ._windage_area(trim, draught)
+            .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
         let mut area = 0;
         let mut moment = 0;
         for (x, &dz) in result_z.iter().enumerate() {
             moment += x * dz;
             area += dz;
         }
-        let center_x = (moment as f64 / area as f64 * voxel_set.scale) + aabb.mins.x;
-        let area = area as f64 * voxel_set.scale * voxel_set.scale;
+        let center_x = (moment as f64 / area as f64 * scale) + aabb.mins.x;
+        let area = area as f64 * scale * scale;
         Ok((area, center_x))
+    }
+    // TODO: можно как-то объеденить с расчетом поверхности, но возникают сложности с кэшами
+    /// Расчет распределения площади парусности
+    /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
+    pub fn bounded_windage_area(
+        &self,
+        trim: f64,
+        draught: f64,
+    ) -> Result<(f64, f64, Vec<f64>), Error> {
+        let error = Error::new("Shape", "bounded_windage_area");
+        let base_aabb = self.mesh.clone().ok_or(error.err("no mesh"))?.local_aabb();
+        // набор значений площади в разбиении по площади части модели над водой
+        let (scale, result_aabb, result_z) = self
+            ._windage_area(trim, draught)
+            .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
+        let base_bounds = Bounds::from_min_max(base_aabb.mins.coords.x, base_aabb.maxs.coords.x, self.resolution_windage_area as usize)
+            .map_err(|e| error.pass_with("Bounds::from_min_max", e))?;
+        let area_bounds = Bounds::from_min_max(result_aabb.mins.coords.x, result_aabb.maxs.coords.x, result_z.len())
+            .map_err(|e| error.pass_with("Bounds::from_min_max", e))?;
+        let mut area_bounds_map = HashMap::new();
+        for (index, (area_bound, area)) in area_bounds.iter().zip(result_z.iter()).enumerate()  {
+            area_bounds_map.insert(index, (area_bound, area));            
+        }
+        let area_scale = scale*scale;
+        let mut base_area_result = Vec::new();
+        // пересчет разбиения относительно исходной модели
+        // проходим по разбиению исходной модели и проверяем попадание частей разбиения по модели над поверхностью воды 
+        for base_bound in base_bounds.iter() {
+            let mut base_area = 0.;
+            let mut last_index = 0;
+            for index in last_index..result_z.len() {
+                let (area_bound, area) = area_bounds_map.get(&index).ok_or(error.err("area_bounds_map.get(index)"))?;
+                if area_bound.start() >= base_bound.end() {
+                    last_index = index;
+                    break;
+                }                
+                base_area += **area as f64 * base_bound.part_ratio(area_bound).map_err(|e| error.pass_with("base_bound.part_ratio", e))?;
+            }
+            base_area_result.push(base_area*area_scale);
+        }    
+        Ok((base_aabb.mins.coords.x, base_aabb.maxs.coords.x, base_area_result))
     }
     ///
     /// Расчет положения корпуса

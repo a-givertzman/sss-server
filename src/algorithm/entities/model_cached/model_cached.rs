@@ -1,7 +1,6 @@
 use crate::{
     algorithm::entities::model_cached::{
-        AreaCache, DisplacementCache, Shape,
-        floating_position::{EvaluatedFloatingPosition, FloatingPosition},
+        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, AreaCache, BoundedAreaCache, DisplacementCache, Shape
     },
     kernel::types::{Arc, RwLock},
 };
@@ -58,7 +57,9 @@ pub struct ModelCached {
     /// - cache for bounds of compartments,  [index of bound, TODO]
     //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
     /// - cache for windage area
-    vertical_area: AreaCache,
+    windage_area: AreaCache,
+    /// - cache for bounded windage area
+    bounded_windage_area: BoundedAreaCache,
     scheduler: Scheduler,
 }
 //
@@ -93,7 +94,15 @@ impl ModelCached {
                 conf.cache_conf.draught_steps.clone(),
                 scheduler.clone(),
             ),
-            vertical_area: AreaCache::new(
+            windage_area: AreaCache::new(
+                &dbg,
+                windage_shape.clone(),
+                conf.cache_dir.clone(),
+                conf.cache_conf.trim_steps.clone(),
+                conf.cache_conf.draught_steps.clone(),
+                scheduler.clone(),
+            ),
+            bounded_windage_area: BoundedAreaCache::new(
                 &dbg,
                 windage_shape.clone(),
                 conf.cache_dir.clone(),
@@ -176,8 +185,11 @@ impl ModelCached {
         if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement", error));
         }
-        if let Err(error) = self.vertical_area.rebuild() {
-            errors.push(("vertical_area", error));
+        if let Err(error) = self.windage_area.rebuild() {
+            errors.push(("windage_area", error));
+        }
+        if let Err(error) = self.bounded_windage_area.rebuild() {
+            errors.push(("bounded_windage_area", error));
         }
         if !errors.is_empty() {
             return Err(error.pass_with(
