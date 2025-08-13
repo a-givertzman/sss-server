@@ -50,7 +50,7 @@ impl AreaCache {
             shape,
             trim_steps,
             draught_steps,
-            cache: Arc::new(RwLock::new(None)),
+            cache: Arc::new(RwLock::new(None)), 
             cache_path: path,
             dbg,
             scheduler,
