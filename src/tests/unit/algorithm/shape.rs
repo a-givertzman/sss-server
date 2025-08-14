@@ -3,7 +3,7 @@
 mod tests {
     use crate::algorithm::entities::model_cached::Shape;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use nalgebra::Vector3;
+    use nalgebra::{Point3, Vector3};
     use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
@@ -27,7 +27,7 @@ mod tests {
         )
         .ok();
         let epsilon = 0.0000001;
-        let shape = Shape::new(&dbg, mesh, None, None, 1., 1., 0.0000001, 1000, 1000);
+        let shape = Shape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000, 1000);
         let result = shape.displacement(0., 0., 0.).unwrap();
         let target = (0.5, 0., 0., -0.125);
         assert!(
@@ -102,7 +102,7 @@ mod tests {
         )
         .ok();
         let epsilon = 0.0000001;
-        let shape = Shape::new(&dbg, mesh, None, None, 1., 1., 0.0000001, 1000, 1000);
+        let shape = Shape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000, 1000);
         let result = shape.waterline_area(0., 0., 0.).unwrap();
         let target = (2.0, 0., 0., 0.);
         assert!(
@@ -177,7 +177,7 @@ mod tests {
         )
         .ok();
         let epsilon = 0.0000001;
-        let shape = Shape::new(&dbg, mesh, None, None, 1., 1., 0.0000001, 1000, 1000);
+        let shape = Shape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000, 1000);
         let result = shape.inertia(0., 0., 0.).unwrap();
         let target = (0.003086434965341909, 0.008008016032056088);
         assert!(
@@ -228,7 +228,7 @@ mod tests {
         )
         .ok();
         let epsilon = 0.0000001;
-        let shape = Shape::new(&dbg, mesh, None, None, 1., 1., 0.0000001, 1000, 1000);
+        let shape = Shape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000, 1000);
         let result = shape.aabb(0.).unwrap();
         let target = (2.0, 1.0);
         assert!(
@@ -265,7 +265,7 @@ mod tests {
         )
         .ok();
         let epsilon = 0.0000001;
-        let shape = Shape::new(&dbg, mesh, None, None, 1., 1., 0.0000001, 1000, 1000);
+        let shape = Shape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000, 1000);
         let result = shape.windage_area(0., 0.,).unwrap();
         let target = (1.0, 1.0);
         assert!(

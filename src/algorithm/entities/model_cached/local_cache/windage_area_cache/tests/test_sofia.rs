@@ -42,9 +42,9 @@ fn calculated_windage_area_sofia() {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let model_path = "src/assets/sofia.stl";
     let additionals_path = "src/assets/sofia_additionals/";
-    let cache_dir = "src/algorithm/entities/model/local_cache/windage_area/tests/cache/";
-    let center_coord = Position::new(65.250, 0., 0.);
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord.x(), 1000.);
+    let cache_dir = "src/algorithm/entities/cache/tests/";
+    let center_coord = Some(Position::new(65.250, 0., 0.));
+    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cashe = AreaCache::new(
@@ -61,7 +61,7 @@ fn calculated_windage_area_sofia() {
     let epsilon_abs = 0.01; //1см
     let target = [
         [0., 0., 1871.534, 63.109],
-        [0., 2., 1619.008, 62501.799],
+        [0., 2., 1619.008, 62.501],
     ];
     for target in target {
         let mut key = [None; 4];

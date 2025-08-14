@@ -9,9 +9,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
     path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
@@ -33,9 +31,6 @@ pub struct DisplacementCache {
 //
 //
 impl DisplacementCache {
-    //
-    //
-    const KEY: &'static str = "floating_position_cache";
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
@@ -49,7 +44,7 @@ impl DisplacementCache {
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "DisplacementCache");
-        let path = cache_dir.as_ref().join(Self::KEY);
+        let path = cache_dir.as_ref().join("displacement_cache");
         Self {
             shape,
             heel_steps,

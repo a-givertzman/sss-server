@@ -29,7 +29,7 @@ fn init_each() -> () {}
 /// During the test a file called `fpc_result` is created in ./tmpdir/.
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
-#[ignore = "too slow, run only in release mode"]
+#[ignore = "no target values"]
 #[test]
 fn calculated_windage_area_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -42,9 +42,9 @@ fn calculated_windage_area_sofia() {
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let model_path = "src/assets/sofia.stl";
     let additionals_path = "src/assets/sofia_additionals/";
-    let cache_dir = "src/algorithm/entities/model/local_cache/windage_area/tests/cache/";
-    let center_coord = Position::new(65.250, 0., 0.);
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord.x(), 1000.);
+    let cache_dir = "src/algorithm/entities/cache/tests/";
+    let center_coord = Some(Position::new(65.250, 0., 0.));
+    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cashe = AreaCache::new(

@@ -42,7 +42,7 @@ impl BoundedAreaCache {
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "BoundedAreaCache");
-        let path = cache_dir.as_ref().join("floating_position_cache");
+        let path = cache_dir.as_ref().join("bounded_area_cache");
         Self {
             shape,
             trim_steps,

@@ -9,9 +9,6 @@ use crate::{algorithm::entities::model_cached::Shape, kernel::types::{Arc, RwLoc
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
-/// See [super::DisplacementCacheConf] for more details about the fields.
-//
-
 pub struct BuildDisplacementCache {
     dbg: Dbg,
     shape: Arc<RwLock<Shape>>,
@@ -102,7 +99,6 @@ impl BuildDisplacementCache {
                                 draught,
                                 guard.displacement(heel, trim, draught),
                                 guard.waterline_area(heel, trim, draught),
-                                guard.inertia(heel, trim, draught),
                             ));
                             Ok(())
                         })
@@ -139,7 +135,7 @@ impl BuildDisplacementCache {
             }
         }
         while !draft_results.is_empty() {
-            if let Some((heel, trim, draught, volume, area, inertia)) = draft_results.pop() {
+            if let Some((heel, trim, draught, volume, area)) = draft_results.pop() {
                 if let Some((_, (l_x, l_y))) = aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
                     let (volume, vx, vy, vz) = match volume {
                         Ok((volume, x, y, z)) => (volume, x, y, z),
@@ -155,14 +151,7 @@ impl BuildDisplacementCache {
                             continue;
                         }
                     };
-                    let (i_x, i_y) = match inertia {
-                        Ok((x, y)) => (x, y),
-                        Err(err) => {
-                            results.push(Err(error.pass_with("draft_results inertia", err)));
-                            continue;
-                        }
-                    };
-                    results.push(Ok(vec!(heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, i_x, i_y, *l_x, *l_y)));
+                    results.push(Ok(vec!(heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, *l_x, *l_y)));
                 } else {
                     results.push(Err(error.err(format!("no aabb for draught:{draught}"))));
                 }

@@ -12,10 +12,11 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 ///
-/// Pre-calculated cache
-pub struct AreaCache {
+/// Pre-calculated cache for floating position algorithm.
+pub struct CompartmentCache {
     dbg: Dbg,
     cache_path: PathBuf,
+    heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     draught_steps: Vec<f64>,
     ///
@@ -29,7 +30,7 @@ pub struct AreaCache {
 }
 //
 //
-impl AreaCache {
+impl CompartmentCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
@@ -37,17 +38,20 @@ impl AreaCache {
         parent: &Dbg,
         shape: Arc<RwLock<Shape>>,
         cache_dir: impl AsRef<Path>,
+        compartment_id: String,
+        heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_steps: Vec<f64>,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, "AreaCache");
-        let path = cache_dir.as_ref().join("area_cache");
+        let dbg = Dbg::new(parent, format!("Compartment{compartment_id}Cache"));
+        let path = cache_dir.as_ref().join(compartment_id);
         Self {
             shape,
+            heel_steps,
             trim_steps,
             draught_steps,
-            cache: Arc::new(RwLock::new(None)), 
+            cache: Arc::new(RwLock::new(None)),
             cache_path: path,
             dbg,
             scheduler,
@@ -57,13 +61,14 @@ impl AreaCache {
 }
 //
 //
-impl LocalCache for AreaCache {
+impl LocalCache for CompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildAreaCache::new(
+        let cache_data = super::build_cache::BuildCompartmentCache::new(
             &self.dbg,
             self.shape.clone(),
+            self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_steps.clone(),
             self.scheduler.clone(),

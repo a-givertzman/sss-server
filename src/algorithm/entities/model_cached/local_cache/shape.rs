@@ -7,7 +7,7 @@ use sal_core::error::Error;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::algorithm::entities::Bounds;
+use crate::algorithm::entities::{Bounds, Position};
 
 #[derive(Clone)]
 pub struct Shape {
@@ -15,7 +15,7 @@ pub struct Shape {
     mesh: Option<TriMesh>,
     path: Option<PathBuf>,
     additional_path: Option<PathBuf>,
-    dx: f64,
+    delta_pos: Option<Point3<f64>>,
     scale: f64,
     epsilon: f64,
     resolution_inertia: u32,
@@ -40,7 +40,7 @@ impl Shape {
         mesh: Option<TriMesh>,
         path: Option<PathBuf>,
         additional_path: Option<PathBuf>,
-        dx: f64,
+        delta_pos: Option<Point3<f64>>,
         scale: f64,
         epsilon: f64,
         resolution_inertia: u32,
@@ -52,7 +52,7 @@ impl Shape {
             mesh,
             path,
             additional_path,
-            dx,
+            delta_pos,
             scale,
             epsilon,
             resolution_inertia,
@@ -61,11 +61,12 @@ impl Shape {
     }
     /// Конструктор для создания "ленивого" экземпляра.
     /// После создания обязателен вызов метода "init".
+    /// delta_pos - смещение центра координат, для отсеков задается как None и считается автоматом
     pub fn new_uninit(
         parent: &Dbg,
         path: PathBuf,
         additional_path: Option<PathBuf>,
-        dx: f64,
+        delta_pos: Option<Position>,
         scale: f64,
     ) -> Self {
         Self::new(
@@ -73,7 +74,7 @@ impl Shape {
             None,
             Some(path),
             additional_path,
-            dx,
+            delta_pos.map(|p| Point3::new(p.x(), p.y(), p.z())),
             scale,
             0.0000001,
             10000,
@@ -104,7 +105,11 @@ impl Shape {
                 meshes.into_iter().for_each(|m| mesh.append(&m.unwrap()));
             }
             let scale = 1. / self.scale;
-            self.mesh = Some(mesh.scaled(&Vector3::new(scale, scale, scale)));
+            mesh = mesh.scaled(&Vector3::new(scale, scale, scale));
+            if self.delta_pos.is_none() {
+                self.delta_pos = Some(compartment_center(&mesh));
+            }
+            self.mesh = Some(mesh);
         }
         Ok(())
     }
@@ -126,7 +131,7 @@ impl Shape {
             .as_ref()
             .ok_or(error.err("no mesh"))?
             .intersection_with_cuboid(
-                &position,
+                &position.map_err(|err| error.pass_with("position", err))?,
                 false,
                 &cuboid,
                 &Isometry::from_parts(
@@ -162,7 +167,7 @@ impl Shape {
         trim: f64,
         draught: f64,
     ) -> Result<(f64, f64, f64, f64), Error> {
-        let error = Error::new("Shape", "area");
+        let error = Error::new(&self.dbg, "area");
         let position = self.position(heel, trim, draught);
         let cuboid_half_size = 1000.;
         let hdz = 0.005;
@@ -172,7 +177,7 @@ impl Shape {
             .as_ref()
             .ok_or(error.err("no mesh"))?
             .intersection_with_cuboid(
-                &position,
+                &position.map_err(|err| error.pass_with("position", err))?,
                 false,
                 &cuboid,
                 &Isometry::identity(),
@@ -199,7 +204,7 @@ impl Shape {
     ///
     /// Расчет [длинны и ширины по ватерлинии](https://github.com/a-givertzman/sss/blob/6d91fb09de073995c3a165ebaaa76e4f1e202f36/design/algorithm/part04_stability/chapter05_criteria/section02_weatherCriteria.md)
     pub fn aabb(&self, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new("Shape", "aabb");
+        let error = Error::new(&self.dbg, "aabb");
         let result = self
             .mesh
             .as_ref()
@@ -244,8 +249,10 @@ impl Shape {
     ///
     /// Расчет [момента инерции свободной поверхности жидкости](https://github.com/a-givertzman/sss/blob/cdef1e9a2133adeb2fe8abcda6229b206c28493c/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md#%D0%B2%D0%BB%D0%B8%D1%8F%D0%BD%D0%B8%D0%B5-%D1%81%D0%B2%D0%BE%D0%B1%D0%BE%D0%B4%D0%BD%D0%BE%D0%B9-%D0%BF%D0%BE%D0%B2%D0%B5%D1%80%D1%85%D0%BD%D0%BE%D1%81%D1%82%D0%B8)
     pub fn inertia(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new("Shape", "inertia");
-        let position = self.position(heel, trim, draught);
+        let error = Error::new(&self.dbg, "inertia");
+        let position = self
+            .position(heel, trim, draught)
+            .map_err(|err| error.pass_with("position", err))?;
         let result = self
             .mesh
             .as_ref()
@@ -311,8 +318,10 @@ impl Shape {
     /// Расчет поверхности парусности
     /// Возвращает [шкала, баундбокс, разбиение с количеством вокселей по х]
     fn _windage_area(&self, trim: f64, draught: f64) -> Result<(f64, Aabb, Vec<usize>), Error> {
-        let error = Error::new("Shape", "_windage_area");
-        let position = self.position(0., trim, draught);
+        let error = Error::new(&self.dbg, "_windage_area");
+        let position = self
+            .position(0., trim, draught)
+            .map_err(|err| error.pass_with("position", err))?;
         let cuboid_half_size = 1000.;
         let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
         // берем часть корпса над водой как перечечение модели и кубика, имитирующего воду
@@ -376,7 +385,7 @@ impl Shape {
     /// Расчет площади и центра площади парусности
     /// Возвращает [площадь, смещение площади по x]
     pub fn windage_area(&self, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new("Shape", "windage_area");
+        let error = Error::new(&self.dbg, "windage_area");
         let (scale, aabb, result_z) = self
             ._windage_area(trim, draught)
             .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
@@ -398,42 +407,60 @@ impl Shape {
         trim: f64,
         draught: f64,
     ) -> Result<(f64, f64, Vec<f64>), Error> {
-        let error = Error::new("Shape", "bounded_windage_area");
+        let error = Error::new(&self.dbg, "bounded_windage_area");
         let base_aabb = self.mesh.clone().ok_or(error.err("no mesh"))?.local_aabb();
         // набор значений площади в разбиении по площади части модели над водой
         let (scale, result_aabb, result_z) = self
             ._windage_area(trim, draught)
             .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
-        let base_bounds = Bounds::from_min_max(base_aabb.mins.coords.x, base_aabb.maxs.coords.x, self.resolution_windage_area as usize)
-            .map_err(|e| error.pass_with("Bounds::from_min_max", e))?;
-        let area_bounds = Bounds::from_min_max(result_aabb.mins.coords.x, result_aabb.maxs.coords.x, result_z.len())
-            .map_err(|e| error.pass_with("Bounds::from_min_max", e))?;
+        let base_bounds = Bounds::from_min_max(
+            base_aabb.mins.coords.x,
+            base_aabb.maxs.coords.x,
+            self.resolution_windage_area as usize,
+        )
+        .map_err(|e| error.pass_with("Bounds::from_min_max", e))?;
+        let area_bounds = Bounds::from_min_max(
+            result_aabb.mins.coords.x,
+            result_aabb.maxs.coords.x,
+            result_z.len(),
+        )
+        .map_err(|e| error.pass_with("Bounds::from_min_max", e))?;
         let mut area_bounds_map = HashMap::new();
-        for (index, (area_bound, area)) in area_bounds.iter().zip(result_z.iter()).enumerate()  {
-            area_bounds_map.insert(index, (area_bound, area));            
+        for (index, (area_bound, area)) in area_bounds.iter().zip(result_z.iter()).enumerate() {
+            area_bounds_map.insert(index, (area_bound, area));
         }
-        let area_scale = scale*scale;
+        let area_scale = scale * scale;
         let mut base_area_result = Vec::new();
         // пересчет разбиения относительно исходной модели
-        // проходим по разбиению исходной модели и проверяем попадание частей разбиения по модели над поверхностью воды 
+        // проходим по разбиению исходной модели и проверяем попадание частей разбиения по модели над поверхностью воды
         for base_bound in base_bounds.iter() {
             let mut base_area = 0.;
             let mut last_index = 0;
             for index in last_index..result_z.len() {
-                let (area_bound, area) = area_bounds_map.get(&index).ok_or(error.err("area_bounds_map.get(index)"))?;
+                let (area_bound, area) = area_bounds_map
+                    .get(&index)
+                    .ok_or(error.err("area_bounds_map.get(index)"))?;
                 if area_bound.start() >= base_bound.end() {
                     last_index = index;
                     break;
-                }                
-                base_area += **area as f64 * base_bound.part_ratio(area_bound).map_err(|e| error.pass_with("base_bound.part_ratio", e))?;
+                }
+                base_area += **area as f64
+                    * base_bound
+                        .part_ratio(area_bound)
+                        .map_err(|e| error.pass_with("base_bound.part_ratio", e))?;
             }
-            base_area_result.push(base_area*area_scale);
-        }    
-        Ok((base_aabb.mins.coords.x, base_aabb.maxs.coords.x, base_area_result))
+            base_area_result.push(base_area * area_scale);
+        }
+        Ok((
+            base_aabb.mins.coords.x,
+            base_aabb.maxs.coords.x,
+            base_area_result,
+        ))
     }
     ///
     /// Расчет положения корпуса
-    fn position(&self, heel: f64, trim: f64, draught: f64) -> Isometry3<f64> {
+    fn position(&self, heel: f64, trim: f64, draught: f64) -> Result<Isometry3<f64>, Error> {
+        let error = Error::new(&self.dbg, "position");
         let heel_rad = -heel.to_radians();
         let trim_rad = trim.to_radians();
         let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
@@ -445,11 +472,20 @@ impl Shape {
         ));
         let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
         let rotation = heel_rotation * trim_rotation;
-        let center = Point3::new(self.dx, 0., draught);
+        let mut center = self.delta_pos.ok_or(error.err("no delta_pos"))?;
+        center.z += draught;
         let point = rotation.transform_point(&center);
         let translation = Translation3::new(-point.x, -point.y, -point.z);
-        Isometry::from_parts(translation, rotation)
+        Ok(Isometry::from_parts(translation, rotation))
     }
+}
+///
+/// Расчет начала координат для отсеков как
+/// проекции центра объема модели на ее нижнюю плоскость
+fn compartment_center(mesh: &TriMesh) -> Point3<f64> {
+    let properties = parry3d_f64::shape::Shape::mass_properties(mesh, 1.);
+    let aabb: Aabb = mesh.local_aabb();
+    Point3::new(properties.local_com.x, properties.local_com.y, aabb.mins.z)
 }
 ///
 /// Load data from .obj file
