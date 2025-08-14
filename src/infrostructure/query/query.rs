@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-
 use super::restart_eval::RestartEvalQuery;
 ///
 /// List of all possible requests in Client-Server interface

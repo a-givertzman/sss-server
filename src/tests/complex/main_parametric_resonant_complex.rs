@@ -9,7 +9,7 @@ use crate::{
 #[cfg(test)]
 mod main_parametric_resonant_complex {
     use std::{
-        sync::Once, 
+        sync::{Arc, Once}, 
         time::Duration
     };
     use testing::stuff::max_test_duration::TestDuration;
@@ -22,9 +22,7 @@ mod main_parametric_resonant_complex {
         algorithm::{
             context::context_access::ContextRead, 
             eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::{main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_eval::MainResonantZoneEval}, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
-        }, 
-        kernel::eval::Eval, 
-        prelude::{
+        }, infrostructure::api::client::api_client::ApiClient, kernel::{eval::Eval}, prelude::{
             Context, 
             ContextWrite, 
             InitialCtx
@@ -66,6 +64,12 @@ mod main_parametric_resonant_complex {
             )
         ];
         for (step, wave_length, roll_period, vmax, c) in test_data.iter() {
+            let api_client = Arc::new(ApiClient::new(
+                "db_logger".to_owned(), 
+                "ship_database".to_owned(), 
+                "api.example.com".to_owned(), 
+                "5432".to_owned()
+            ));
             let mut initial_data= InitialCtx::new(
                         0,
                         "Unit-test",
@@ -93,26 +97,30 @@ mod main_parametric_resonant_complex {
             ).unwrap();
             let dbg = "ComplexTest";
             let result = ParametricResonantZoneSpeedFilterEval::new(
+                dbg,
+                MainResonantZoneSpeedFilterEval::new(
                 dbg, 
-                    MainResonantZoneSpeedFilterEval::new(
+                ApparentFrequenciesEval::new(
                     dbg, 
-                    ApparentFrequenciesEval::new(
+                    PeriodExcitementEval::new(
                         dbg, 
-                        PeriodExcitementEval::new(
+                        MainResonantZoneEval::new(
                             dbg, 
-                            MainResonantZoneEval::new(
+                            ParametricResonantZoneEval::new(
                                 dbg, 
-                                ParametricResonantZoneEval::new(
-                                    dbg, 
-                                        RollingFrequencyEval::new(
-                                            dbg,
-                                            ctx,
-                                        )
+                                    RollingFrequencyEval::new(
+                                        dbg,
+                                        ctx,
+                                    )
                                 )
                             )
                         )
                     )
-                )
+                ),
+                Box::new(move |sql| {
+                    let client = Arc::clone(&api_client); // Теперь корректно
+                    client.fetch(sql)
+                })
             ).eval(Zg::empty());
             match result {
                 Ok(ctx) => {
