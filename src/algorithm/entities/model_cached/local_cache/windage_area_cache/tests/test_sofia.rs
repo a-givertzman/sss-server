@@ -39,7 +39,7 @@ fn calculated_windage_area_sofia() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
-    let dbg = Dbg::new("ShipModel", "compute_balance");
+    let dbg = Dbg::new("ShipModel", "calculated_windage_area_sofia");
     let model_path = "src/assets/sofia.stl";
     let additionals_path = "src/assets/sofia_additionals/";
     let cache_dir = "src/algorithm/entities/cache/tests/";

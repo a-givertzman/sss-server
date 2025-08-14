@@ -194,6 +194,7 @@ impl ShipModel {
         // TODO read path by ship_id
         let model_path = "src/assets/cube_1_1_1.step";
         let cache_dir = "src/assets/cashe/";
+        let compartment_path = TODO
         match self.bounds() {
             Ok(bounds) => {
                 let handle = self.scheduler.spawn(move || {
@@ -360,6 +361,7 @@ fn compute_balance(
     model_key: &str,
     model_path: &str,
     additional_path: Option<&str>,
+    compartment_path: &str,
     cache_dir: &str,
     bounds: Bounds,
     src_data: BalanceQuery,
@@ -374,6 +376,7 @@ fn compute_balance(
         model_cached::ModelCachedConf {
             model_path: PathBuf::from(model_path),
             additional_path: additional_path.map(|p| PathBuf::from(p)),
+            compartment_path: PathBuf::from(compartment_path),
             model_scale: 1000.,
             cache_dir: PathBuf::from(cache_dir),
             cache_conf: model_cached::CacheConf {
@@ -382,9 +385,10 @@ fn compute_balance(
                 trim_steps: (-20..=20).step_by(5).map(|n| n as f64).collect(),
                 draught_steps: (2..=12).step_by(1).map(|n| n as f64).collect(),
             },
+            compartment_level_steps_qnt: 20,
         },
         scheduler.clone(),
-    );
+    ).map_err(|err| error.pass_with("model_cached::ModelCached::new", err))?;
     let floating_position = model.floating_position(
         src_data.mass_sum/src_data.water_density,
         Position2d::new(src_data.mass_shift.x(), src_data.mass_shift.y()),

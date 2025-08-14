@@ -39,7 +39,7 @@ fn calculated_displacement_sofia() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
-    let dbg = Dbg::new("ShipModel", "compute_balance");
+    let dbg = Dbg::new("ShipModel", "calculated_displacement_sofia");
     let model_path = "src/assets/sofia.stl";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(Position::new(65.250, 0., 0.));

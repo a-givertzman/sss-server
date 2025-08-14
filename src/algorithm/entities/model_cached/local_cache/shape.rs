@@ -478,6 +478,12 @@ impl Shape {
         let translation = Translation3::new(-point.x, -point.y, -point.z);
         Ok(Isometry::from_parts(translation, rotation))
     }
+    /// Высота меша
+    pub fn height(&self) -> Result<f64, Error> {
+        let error = Error::new(&self.dbg, "height");
+        let aabb = self.mesh.clone().ok_or(error.err("no mesh"))?.local_aabb();
+        Ok(aabb.maxs.z - aabb.mins.z)
+    }
 }
 ///
 /// Расчет начала координат для отсеков как
@@ -514,7 +520,7 @@ fn load_obj(path: PathBuf) -> Result<TriMesh, Error> {
 }
 ///
 /// Load data from .stl file
-fn load_stl(path: PathBuf) -> Result<TriMesh, Error> {
+pub fn load_stl(path: PathBuf) -> Result<TriMesh, Error> {
     let error = Error::new("Shape", "load_obj");
     let file =
         std::fs::File::open(path).map_err(|err| error.pass_with("File::open", err.to_string()))?;

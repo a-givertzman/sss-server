@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::model_cached::{
-        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, AreaCache, BoundedAreaCache, DisplacementCache, Shape
+        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, load_stl, AreaCache, BoundedAreaCache, CompartmentCache, DisplacementCache, Shape
     },
     kernel::types::{Arc, RwLock},
 };
@@ -44,14 +44,12 @@ pub struct ModelCached {
     dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element
-    displacement_shape: Arc<RwLock<Shape>>,
-    windage_shape: Arc<RwLock<Shape>>,
-    ///
+    shapes: Vec<Arc<RwLock<Shape>>>,
     /// Provides a number of calculations:
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
-//    compartments: IndexMap<String, CompartmentCache>,
+    compartments: IndexMap<String, CompartmentCache>,
     /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
     //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
@@ -67,8 +65,10 @@ pub struct ModelCached {
 impl ModelCached {
     ///
     /// Creates a new instance.
-    pub fn new(parent: &Dbg, conf: ModelCachedConf, scheduler: Scheduler) -> Self {
-        let dbg = Dbg::new(parent, "ModelCached");
+    pub fn new(parent: &Dbg, conf: ModelCachedConf, scheduler: Scheduler) -> Result<Self, Error> {
+        let dbg = Dbg::new(parent, "ModelCached");    
+        let error = Error::new(&dbg, "new");   
+        let mut shapes = Vec::new();
         let displacement_shape = Arc::new(RwLock::new(Shape::new_uninit(
             &dbg,
             conf.model_path.clone(),
@@ -76,6 +76,7 @@ impl ModelCached {
             Some(conf.cache_conf.center_coord),
             conf.model_scale,
         )));
+        shapes.push(displacement_shape.clone());
         let windage_shape = Arc::new(RwLock::new(Shape::new_uninit(
             &dbg,
             conf.model_path.clone(),
@@ -83,10 +84,51 @@ impl ModelCached {
             Some(conf.cache_conf.center_coord),
             conf.model_scale,
         )));
+        shapes.push(windage_shape.clone());
+        let dir = std::fs::read_dir(conf.compartment_path)
+                    .map_err(|err| error.pass_with("read additional dir", err.to_string()))?;
+        let pathes: Vec<_> = dir
+                    .into_iter()
+                    .filter_map(|f| f.ok())
+                    .map(|f| f.path())
+                    .collect();
+        // TODO: подумать, что делать с этими ошибками
+    /*    let (result, _errors): (Vec<_>, Vec<_>) = pathes
+            .into_iter()
+            .map(|p| (p.file_name(), p))
+            .partition(|(s, r)| s.is_some());
+*/
+        let compartments = pathes.into_iter().filter(|path| path.file_name().is_some()).map(|path| {
+            let Some(name) = path.file_name() else {
+                return None;
+            };
+            let Some(name) = name.to_str() else {
+                return None;
+            };  
+            let name = name.to_string();
+            let shape = Arc::new(RwLock::new(Shape::new_uninit(
+                &dbg,
+                path,
+                None,
+                None,
+                conf.model_scale,
+            )));
+            shapes.push(shape.clone());
+            Some((name.clone(), CompartmentCache::new(
+                &dbg,
+                shape.clone(),
+                conf.cache_dir.clone(),
+                name,
+                conf.cache_conf.heel_steps.clone(),
+                conf.cache_conf.trim_steps.clone(),
+                conf.compartment_level_steps_qnt,
+                scheduler.clone(),
+            )))
+        }).flat_map(|v| v).collect();
+
         let model_cached = Self {
             dbg: dbg.clone(),
-            displacement_shape: displacement_shape.clone(),
-            windage_shape: windage_shape.clone(),
+            shapes,
             displacement: DisplacementCache::new(
                 &dbg,
                 displacement_shape.clone(),
@@ -112,13 +154,10 @@ impl ModelCached {
                 conf.cache_conf.draught_steps.clone(),
                 scheduler.clone(),
             ),
-        //    compartments: 
+            compartments,
             scheduler: scheduler.clone(),
-            //       compartments: todo!(),
-            //        model_bounded: todo!(),
-            //       compartments_bounded: todo!(),
         };
-        model_cached
+        Ok(model_cached)
     }
     ///
     ///
@@ -139,7 +178,7 @@ impl ModelCached {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut results: Vec<Result<(), Error>> = Vec::new();
-        { // Сначала считаем модели в разных потоках
+        // Сначала считаем модели в разных потоках
      /*       if let Some(guard) = self.displacement_shape.try_write() {
                 let mut shape = guard.clone();
                 let task_results = task_results.clone();
@@ -160,7 +199,9 @@ impl ModelCached {
                 results.push(Err(error.err("self.displacement_shape.try_write")));
             }
     */
-            let shape = self.displacement_shape.clone();
+    // Сначала считаем модели в разных потоках
+        for shape in &self.shapes {
+            let shape = shape.clone();
             let task_results = task_results.clone();
             let handle = self
                 .scheduler
@@ -170,25 +211,7 @@ impl ModelCached {
                     Ok(())
                 })
                 .map_err(|err| {
-                    error.pass_with(format!("spawn task displacement_shape"), err.to_string())
-                });
-            match handle {
-                Ok(task) => tasks.push(task),
-                Err(err) => results.push(Err(err)),
-            };
-        }
-        {
-            let shape = self.windage_shape.clone();
-            let task_results = task_results.clone();
-            let handle = self
-                .scheduler
-                .spawn(move || {
-                    let mut guard = shape.write();
-                    task_results.push(guard.init());
-                    Ok(())
-                })
-                .map_err(|err| {
-                    error.pass_with(format!("spawn task windage_shape"), err.to_string())
+                    error.pass_with(format!("spawn task shape"), err.to_string())
                 });
             match handle {
                 Ok(task) => tasks.push(task),

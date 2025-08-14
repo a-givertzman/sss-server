@@ -4,8 +4,7 @@ use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
-use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::{algorithm::entities::{model_cached::{LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::{model_cached::{CompartmentCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -29,7 +28,7 @@ fn init_each() -> () {}
 /// During the test a file called `fpc_result` is created in ./tmpdir/.
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
-#[ignore = "too slow, run only in release mode"]
+#[ignore = "TODO"]
 #[test]
 fn calculated_displacement_ark() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -41,18 +40,19 @@ fn calculated_displacement_ark() {
     test_duration.run().unwrap();
     let dbg = Dbg::new("ShipModel", "compute_balance");
     let model_path = "src/assets/ark.stl";
-    let cache_dir = "src/algorithm/entities/model/local_cache/displacement_cache/tests/cache/";
-    let center_coord = Position::new(59.195, 0., 0.);
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.);
+    let cache_dir = "src/algorithm/entities/cache/tests/";
+    let center_coord = Some(Position::new(59.195, 0., 0.));
+    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cashe = DisplacementCache::new(
+    let mut cashe = CompartmentCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,
-        vec![0., 20.],
+        String::from("201"),
         vec![-20., 0., 20.],
         vec![4.],
+        1,
         thread_pool.scheduler().clone(),
     );
     let error = cashe.rebuild();
@@ -60,12 +60,12 @@ fn calculated_displacement_ark() {
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
     let target = [
-        [20., 20., 4.,  5779.8, 87.914, 0.222, 3.886,     268., 57.713, 0., 3.426,     3649., 11870.],
-        [20., -20., 4., 5411.7, 31.3577, 0.237182, 3.365, 268., 60.677, 0., 3.426,     3649., 11870.],
-        [0., 0., 4.,    5802.3, 57.979, 0., 2.057,        1553., 56.615, 0., 4.000,    22715., 1744000.],
-        [20., 0., 4.,   5830.8, 57.899, 1.402, 2.321,     1629., 57.286, 0.102, 4.037, 26726., 1783000.],
-        [0., 20., 4.,   5788.4, 87.945, 0., 3.875,        268., 57.618, 0., 3.426,     3994., 8920.],
-  //      [0., -20., 4.,  5420.3, 31.548, 0., 3.426,        268., 60.772, 0., 3.354,     3994., 8920.], 
+        [20., 20., 4.,  5779.8, 87.914, 0.222, 3.886,     268., 57.713, 0., 3.426,     119.30, 13.4],
+        [20., -20., 4., 5411.7, 31.3577, 0.237182, 3.365, 268., 60.677, 0., 3.426,     119.30, 13.4],
+        [0., 0., 4.,    5802.3, 57.979, 0., 2.057,        1553., 56.615, 0., 4.000,    119.30, 13.4],
+        [20., 0., 4.,   5830.8, 57.899, 1.402, 2.321,     1629., 57.286, 0.102, 4.037, 119.30, 13.4],
+        [0., 20., 4.,   5788.4, 87.945, 0., 3.875,        268., 57.618, 0., 3.426,     119.30, 13.4],
+  //      [0., -20., 4.,  5420.3, 31.548, 0., 3.426,        268., 60.772, 0., 3.354,     119.30, 13.4], 
   // TODO: целевое значение 3.426 сильно отличается от расчетного 3.366
     ];
     for target in target {

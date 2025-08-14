@@ -4,8 +4,7 @@ use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
-use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::{algorithm::entities::{model_cached::{LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::{model_cached::{CompartmentCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -29,30 +28,31 @@ fn init_each() -> () {}
 /// During the test a file called `fpc_result` is created in ./tmpdir/.
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
-#[ignore = "too slow, run only in release mode"]
+#[ignore = "TODO"]
 #[test]
-fn calculated_displacement_sofia() {
+fn calculated_compartments_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test models", "calculated_displacement_sofia");
+    let dbg = Dbg::new("test models", "calculated_compartments_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
-    let dbg = Dbg::new("ShipModel", "compute_balance");
+    let dbg = Dbg::new("ShipModel", "calculated_compartments_sofia");
     let model_path = "src/assets/sofia.stl";
-    let cache_dir = "src/algorithm/entities/model/local_cache/displacement_cache/tests/cache/";
-    let center_coord = Position::new(65.250, 0., 0.);
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord.x(), 1000.);
+    let cache_dir = "src/algorithm/entities/cache/tests/";
+    let center_coord = Some(Position::new(65.250, 0., 0.));
+    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cashe = DisplacementCache::new(
+    let mut cashe = CompartmentCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,
-        vec![-20., 0., 20.],
+        String::from("201"),
         vec![-20., 0., 20.],
         vec![4.],
+        1,
         thread_pool.scheduler().clone(),
     );
     let error = cashe.rebuild();
@@ -60,15 +60,15 @@ fn calculated_displacement_sofia() {
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
     let target = [
-        [20., 20., 4.,   9758.8, 96.072, 0.369, 5.662,  546.5, 70.229, 0., 5.929,      10635., 59150.],
-        [20., -20., 4.,  9809.0, 33.856, 0.367, 5.787,  546.5, 60.271, 0., 5.929,      10635., 59150.],
-        [-20., -20., 4., 9809.0, 33.856, -0.367, 5.787, 546.5, 60.271, 0., 5.929,      10635., 59150.],
-        [-20., 20., 4.,  9758.9, 96.072, -0.369, 5.662, 546.5, 70.229, 0., 5.929,      10635., 59150.],
-        [0., 0., 4.,     6456.3, 66.877, 0., 2.053,     1703.9, 66.605, 0., 4.000,     31649., 1726000.],
-        [20., 0., 4.,    6527.4, 66.603, 1.769, 2.397,  1823.5, 66.261, 0.235, 4.086,  38334., 1880000.],
-        [-20., 0., 4.,   6527.4, 66.603, -1.769, 2.397, 1823.5, 66.261, -0.235, 4.086, 38334., 1880000.],
-        [0., 20., 4.,    9699.2, 96.306, 0., 5.623,     546.5, 70.549, 0., 5.929,      11202., 54299.],
-        [0., -20., 4.,   9749.2, 33.620, 0., 5.749,     546.5, 59.951, 0., 5.929,      11202., 54299.],
+        [20., 20., 4.,   9758.8, 96.072, 0.369, 5.662,  546.5, 70.229, 0., 5.929,      130.18, 15.87],
+        [20., -20., 4.,  9809.0, 33.856, 0.367, 5.787,  546.5, 60.271, 0., 5.929,      130.18, 15.87],
+        [-20., -20., 4., 9809.0, 33.856, -0.367, 5.787, 546.5, 60.271, 0., 5.929,      130.18, 15.87],
+        [-20., 20., 4.,  9758.9, 96.072, -0.369, 5.662, 546.5, 70.229, 0., 5.929,      130.18, 15.87],
+        [0., 0., 4.,     6456.3, 66.877, 0., 2.053,     1703.9, 66.605, 0., 4.000,     130.18, 15.87],
+        [20., 0., 4.,    6527.4, 66.603, 1.769, 2.397,  1823.5, 66.261, 0.235, 4.086,  130.18, 15.87],
+        [-20., 0., 4.,   6527.4, 66.603, -1.769, 2.397, 1823.5, 66.261, -0.235, 4.086, 130.18, 15.87],
+        [0., 20., 4.,    9699.2, 96.306, 0., 5.623,     546.5, 70.549, 0., 5.929,      130.18, 15.87],
+        [0., -20., 4.,   9749.2, 33.620, 0., 5.749,     546.5, 59.951, 0., 5.929,      130.18, 15.87],
     ];
     for target in target {
         let mut key = [None; 13];

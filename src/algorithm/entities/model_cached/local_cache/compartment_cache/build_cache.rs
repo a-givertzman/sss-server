@@ -16,7 +16,7 @@ pub struct BuildCompartmentCache {
     shape: Arc<RwLock<Shape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
+    level_steps_qnt: usize,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -31,7 +31,7 @@ impl BuildCompartmentCache {
         shape: Arc<RwLock<Shape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        level_steps_qnt: usize,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -40,7 +40,7 @@ impl BuildCompartmentCache {
             shape: shape.clone(),
             heel_steps,
             trim_steps,
-            draught_steps,
+            level_steps_qnt,
             scheduler,
             exit,
         }
@@ -55,7 +55,12 @@ impl BuildCompartmentCache {
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        'draught: for &draught in &self.draught_steps {
+        let height = match shape.read().height() {
+            Ok(height) => height,
+            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
+        };
+        let draught_steps: Vec<_> = (0..=self.level_steps_qnt).map(|v| (v as f64)*height/(self.level_steps_qnt as f64)).collect();
+        'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.

@@ -18,7 +18,7 @@ pub struct CompartmentCache {
     cache_path: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
+    level_steps_qnt: usize,
     ///
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<Shape>>,
@@ -41,7 +41,7 @@ impl CompartmentCache {
         compartment_id: String,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        level_steps_qnt: usize,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("Compartment{compartment_id}Cache"));
@@ -50,7 +50,7 @@ impl CompartmentCache {
             shape,
             heel_steps,
             trim_steps,
-            draught_steps,
+            level_steps_qnt,
             cache: Arc::new(RwLock::new(None)),
             cache_path: path,
             dbg,
@@ -70,7 +70,7 @@ impl LocalCache for CompartmentCache {
             self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
-            self.draught_steps.clone(),
+            self.level_steps_qnt,
             self.scheduler.clone(),
             self.exit.clone(),
         )
