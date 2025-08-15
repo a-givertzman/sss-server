@@ -14,7 +14,10 @@ pub struct BuildDisplacementCache {
     shape: Arc<RwLock<Shape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
+    /// Draught in meters
+    draught_min: f64,
+    /// qnt draught steps for hull
+    draught_step: f64,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -29,7 +32,8 @@ impl BuildDisplacementCache {
         shape: Arc<RwLock<Shape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        draught_min: f64,
+        draught_step: f64,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -38,7 +42,8 @@ impl BuildDisplacementCache {
             shape: shape.clone(),
             heel_steps,
             trim_steps,
-            draught_steps,
+            draught_min,
+            draught_step,
             scheduler,
             exit,
         }
@@ -54,7 +59,11 @@ impl BuildDisplacementCache {
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        'draught: for &draught in &self.draught_steps {
+        let draught_steps = match shape.read().draught_steps(self.draught_min, self.draught_step) {
+            Ok(draught_steps) => draught_steps,
+            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
+        };
+        'draught: for draught in draught_steps {
             if self.exit.load(Ordering::SeqCst) {
                 break 'draught;
             }

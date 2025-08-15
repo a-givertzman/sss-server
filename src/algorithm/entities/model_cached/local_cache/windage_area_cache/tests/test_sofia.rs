@@ -52,7 +52,8 @@ fn calculated_windage_area_sofia() {
         Arc::new(RwLock::new(shape)),
         cache_dir,
         vec![0.],
-        vec![0., 2.],
+        0.,
+        2.,
         thread_pool.scheduler().clone(),
     );
     let error = cashe.rebuild();

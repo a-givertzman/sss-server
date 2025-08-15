@@ -52,7 +52,7 @@ fn calculated_compartments_sofia() {
         String::from("201"),
         vec![-20., 0., 20.],
         vec![4.],
-        1,
+        1.,
         thread_pool.scheduler().clone(),
     );
     let error = cashe.rebuild();

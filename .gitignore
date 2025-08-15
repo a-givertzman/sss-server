@@ -31,6 +31,4 @@ Cargo.lock
 desktop.ini
 
 # too heavy
-/src/assets/*.obj
-/src/assets/*.stl
-/src/assets/sofia_additionals/*.*
+/src/assets/*

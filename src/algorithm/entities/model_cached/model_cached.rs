@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     algorithm::entities::model_cached::{
         floating_position::{EvaluatedFloatingPosition, FloatingPosition}, load_stl, AreaCache, BoundedAreaCache, CompartmentCache, DisplacementCache, Shape
@@ -69,24 +71,26 @@ impl ModelCached {
         let dbg = Dbg::new(parent, "ModelCached");    
         let error = Error::new(&dbg, "new");   
         let mut shapes = Vec::new();
+        let delta_pos = Some(conf.model_center_coord.clone());
         let displacement_shape = Arc::new(RwLock::new(Shape::new_uninit(
             &dbg,
-            conf.model_path.clone(),
+            conf.model_dir.clone().join(PathBuf::from("hull.stl")),
             None,
-            Some(conf.cache_conf.center_coord),
+            delta_pos,
             conf.model_scale,
         )));
         shapes.push(displacement_shape.clone());
         let windage_shape = Arc::new(RwLock::new(Shape::new_uninit(
             &dbg,
-            conf.model_path.clone(),
-            conf.additional_path.clone(),
-            Some(conf.cache_conf.center_coord),
+            conf.model_dir.clone().join(PathBuf::from("hull.stl")),
+            Some(conf.model_dir.clone().join(PathBuf::from("additionals"))), 
+            delta_pos,
             conf.model_scale,
         )));
         shapes.push(windage_shape.clone());
-        let dir = std::fs::read_dir(conf.compartment_path)
-                    .map_err(|err| error.pass_with("read additional dir", err.to_string()))?;
+        let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
+        let dir = std::fs::read_dir(&path)
+                    .map_err(|err| error.pass_with(format!("read additional dir {:?}", path.to_str()), err.to_string()))?;
         let pathes: Vec<_> = dir
                     .into_iter()
                     .filter_map(|f| f.ok())
@@ -117,11 +121,11 @@ impl ModelCached {
             Some((name.clone(), CompartmentCache::new(
                 &dbg,
                 shape.clone(),
-                conf.cache_dir.clone(),
+                conf.cache_dir.clone().join(PathBuf::from("compartments")),
                 name,
-                conf.cache_conf.heel_steps.clone(),
-                conf.cache_conf.trim_steps.clone(),
-                conf.compartment_level_steps_qnt,
+                conf.heel_steps.clone(),
+                conf.trim_steps.clone(),
+                conf.compartment_level_step,
                 scheduler.clone(),
             )))
         }).flat_map(|v| v).collect();
@@ -133,25 +137,28 @@ impl ModelCached {
                 &dbg,
                 displacement_shape.clone(),
                 conf.cache_dir.clone(),
-                conf.cache_conf.heel_steps.clone(),
-                conf.cache_conf.trim_steps.clone(),
-                conf.cache_conf.draught_steps.clone(),
+                conf.heel_steps.clone(),
+                conf.trim_steps.clone(),
+                conf.draught_min,
+                conf.hull_draught_step,
                 scheduler.clone(),
             ),
             windage_area: AreaCache::new(
                 &dbg,
                 windage_shape.clone(),
                 conf.cache_dir.clone(),
-                conf.cache_conf.trim_steps.clone(),
-                conf.cache_conf.draught_steps.clone(),
+                conf.trim_steps.clone(),
+                conf.draught_min,
+                conf.hull_draught_step,
                 scheduler.clone(),
             ),
             bounded_windage_area: BoundedAreaCache::new(
                 &dbg,
                 windage_shape.clone(),
                 conf.cache_dir.clone(),
-                conf.cache_conf.trim_steps.clone(),
-                conf.cache_conf.draught_steps.clone(),
+                conf.trim_steps.clone(),
+                conf.draught_min,
+                conf.hull_draught_step,
                 scheduler.clone(),
             ),
             compartments,

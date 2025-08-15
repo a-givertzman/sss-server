@@ -16,7 +16,7 @@ pub struct BuildCompartmentCache {
     shape: Arc<RwLock<Shape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    level_steps_qnt: usize,
+    draught_step: f64,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -31,7 +31,7 @@ impl BuildCompartmentCache {
         shape: Arc<RwLock<Shape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        level_steps_qnt: usize,
+        draught_step: f64,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -40,7 +40,7 @@ impl BuildCompartmentCache {
             shape: shape.clone(),
             heel_steps,
             trim_steps,
-            level_steps_qnt,
+            draught_step,
             scheduler,
             exit,
         }
@@ -55,11 +55,10 @@ impl BuildCompartmentCache {
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        let height = match shape.read().height() {
-            Ok(height) => height,
+        let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
+            Ok(draught_steps) => draught_steps,
             Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
         };
-        let draught_steps: Vec<_> = (0..=self.level_steps_qnt).map(|v| (v as f64)*height/(self.level_steps_qnt as f64)).collect();
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {

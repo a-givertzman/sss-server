@@ -478,11 +478,28 @@ impl Shape {
         let translation = Translation3::new(-point.x, -point.y, -point.z);
         Ok(Isometry::from_parts(translation, rotation))
     }
-    /// Высота меша
-    pub fn height(&self) -> Result<f64, Error> {
+    /// Разбиение от draught_min до h_max меша на draught_step шаги
+    pub fn draught_steps(
+        &self,         
+        draught_min: f64,
+        draught_step: f64,
+    ) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "height");
+        if draught_step <= 0. {
+            return Err(error.err("draught_step == 0"))
+        }
         let aabb = self.mesh.clone().ok_or(error.err("no mesh"))?.local_aabb();
-        Ok(aabb.maxs.z - aabb.mins.z)
+        if draught_min >= aabb.maxs.z {
+            return Err(error.err("draught_min >= h_max"))
+        }
+        let mut result = vec![];
+        let mut current = draught_min;
+        while current < aabb.maxs.z {
+            result.push(current);
+            current += draught_step;
+        } 
+        result.push(aabb.maxs.z);
+        Ok(result)
     }
 }
 ///

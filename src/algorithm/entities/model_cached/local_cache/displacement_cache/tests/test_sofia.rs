@@ -52,7 +52,8 @@ fn calculated_displacement_sofia() {
         cache_dir,
         vec![-20., 0., 20.],
         vec![-20., 0., 20.],
-        vec![4.],
+        4.,
+        100.,
         thread_pool.scheduler().clone(),
     );
     let error = cashe.rebuild();
