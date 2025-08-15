@@ -5,6 +5,7 @@ use crate::algorithm::eval::parametric_resonant_zone::parametric_resonant_zone_c
 use crate::algorithm::eval::parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::infrostructure::api::client::api_client::ApiClient;
+use crate::infrostructure::query::resonant_zone::zone_id::ZoneID;
 use crate::prelude::InitialCtx;
 use crate::{
     ContextWrite,
@@ -24,7 +25,7 @@ use sal_core::{
 pub struct ParametricResonantZoneSpeedFilterEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
-    db_req: Box<dyn Fn(&str) -> Result<Vec<u8>, Error> + Send + Sync>,
+    db_req: Box<dyn Fn(Vec<(f64,f64)>, ZoneID) -> Result<Vec<u8>, Error> + Send + Sync>,
 }
 //
 //
@@ -34,7 +35,7 @@ impl ParametricResonantZoneSpeedFilterEval {
     pub fn new(
         parent: impl Into<String>, 
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static, 
-        db_req: Box<dyn Fn(&str) -> Result<Vec<u8>, Error> + Send + Sync>) -> Self {
+        db_req: Box<dyn Fn(Vec<(f64,f64)>, ZoneID) -> Result<Vec<u8>, Error> + Send + Sync>) -> Self {
         let dbg = Dbg::new(parent, "ParametricResonantZoneSpeedFilterEval");
         Self {
             dbg,
@@ -62,16 +63,10 @@ impl Eval<Zg, EvalResult> for ParametricResonantZoneSpeedFilterEval {
                         ).map(|(angle, speed, _)| (*angle, *speed))
                     .collect()
                 );
-                let sql = format!(
-                    "INSERT INTO seakeeping results (angle, speed) VALUES {}",
-                    result.iter()
-                        .map(|(a, s)| format!("({}, {})", a, s))
-                        .collect::<Vec<_>>()
-                        .join(",")
-                );
-                match (self.db_req)(&sql) {
-                    Ok(_) => log::info!("Data saved successfully"),
-                    Err(e) => log::error!("Failed to save data: {}", e),
+                //saving to DB
+                match (&self.db_req)(result.clone(), ZoneID::Parametric){
+                    Ok(_) => log::debug!("Parametric zone successully saved!"),
+                    Err(err) => log::error!("Error: {}", err),
                 }
                 ctx.write(
                     ParametricResonantZoneSpeedFilterCtx {

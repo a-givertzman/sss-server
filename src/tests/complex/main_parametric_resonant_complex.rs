@@ -9,7 +9,9 @@ use crate::{
 #[cfg(test)]
 mod main_parametric_resonant_complex {
     use std::{
-        sync::{Arc, Once}, 
+        sync::{
+            Once
+        }, 
         time::Duration
     };
     use testing::stuff::max_test_duration::TestDuration;
@@ -21,12 +23,32 @@ mod main_parametric_resonant_complex {
     use crate::{
         algorithm::{
             context::context_access::ContextRead, 
-            eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::{main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_eval::MainResonantZoneEval}, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
-        }, infrostructure::api::client::api_client::ApiClient, kernel::{eval::Eval}, prelude::{
+            eval::{
+                apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, 
+                main_resonant_zone::{
+                    main_resonant_zone_ctx::MainResonantZoneCtx, 
+                    main_resonant_zone_eval::MainResonantZoneEval
+                }, 
+                main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, 
+                parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, 
+                parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, 
+                period_excitement::period_excitement_eval::PeriodExcitementEval, 
+                roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, 
+                vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, 
+                RollingPeriodCtx, 
+                Zg
+            }
+        }, 
+        infrostructure::api::client::api_client::ApiClient, 
+        kernel::{
+            eval::Eval, types::Arc
+        }, 
+        prelude::{
             Context, 
             ContextWrite, 
             InitialCtx
-        }, tests::complex::main_parametric_resonant_complex::MocEval
+        }, 
+        tests::complex::main_parametric_resonant_complex::MocEval
     };
     ///
     ///
@@ -118,7 +140,7 @@ mod main_parametric_resonant_complex {
                     )
                 ),
                 Box::new(move |sql| {
-                    let client = Arc::clone(&api_client); // Теперь корректно
+                    let client = Arc::clone(&api_client);
                     client.fetch(sql)
                 })
             ).eval(Zg::empty());

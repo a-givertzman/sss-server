@@ -15,12 +15,10 @@ use crate::{
         eval::{
             apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::{parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval}, Zg
         }
-    }, 
-    kernel::{
+    }, infrostructure::{api::client::api_client::ApiClient, query::resonant_zone::resonant_zone::ResonantZoneQuery}, kernel::{
         eval::Eval, 
-        types::eval_result::EvalResult
-    }, 
-    prelude::{
+        types::{eval_result::EvalResult, Arc}
+    }, prelude::{
         Context, 
         ContextWrite, 
         InitialCtx
@@ -109,6 +107,12 @@ fn parametric_resonant_zone_speed_filter() {
         ),
     ];
     for (step, course_angle, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
+        let api_client = Arc::new(ApiClient::new(
+            "db_logger".to_owned(), 
+            "ship_database".to_owned(), 
+            "api.example.com".to_owned(), 
+            "5432".to_owned()
+        ));
         let mut initial_data = InitialCtx::new(
             0,
             "Unit-test",
@@ -127,7 +131,14 @@ fn parametric_resonant_zone_speed_filter() {
         .clone()
         .write(apparent_frequencies.clone())
         .unwrap();
-        let result = ParametricResonantZoneSpeedFilterEval::new("Test", ctx).eval(Zg::empty());
+        let result = ParametricResonantZoneSpeedFilterEval::new(
+            "Test", 
+            ctx,
+            Box::new(move |resonant_zone, zone_id|{
+                let client = Arc::clone(&api_client);
+                client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
+            })
+        ).eval(Zg::empty());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ParametricResonantZoneSpeedFilterCtx>::read(&ctx).parametric_resonant_zone_speed_filter.clone();
