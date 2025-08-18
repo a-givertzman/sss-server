@@ -43,7 +43,7 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
-            Ok(mut ctx) => {
+            Ok(ctx) => {
                 let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial

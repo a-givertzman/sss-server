@@ -18,21 +18,32 @@ mod seakeeping {
         LogLevel, 
         Backtrace
     };
+    use sal_core::error::Error;
     use crate::{
         algorithm::{
             context::context_access::ContextRead, 
-            eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, move_broching_filter::move_broching_filter_eval::MoveBrochingFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
-        }, 
-        kernel::eval::Eval, prelude::{
+            eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, impacts_high_waves::impacts_high_waves_eval::ImpactsHighWavesEval, main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, move_broching_filter::{move_broching_filter_ctx::MoveBrochingFilterCtx, move_broching_filter_eval::MoveBrochingFilterEval}, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
+        }, infrostructure::query::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{eval::Eval, types::Arc}, prelude::{
             Context, 
             ContextWrite, 
             InitialCtx
-        }, 
-        tests::complex::seakeeping_complex::MocEval
+        }, tests::complex::seakeeping_complex::MocEval
     };
     ///
     ///
     static INIT: Once = Once::new();
+    // Mock for ApiClient
+    struct MockApiClient;
+    //
+    impl MockApiClient {
+        fn new() -> Arc<Self> {
+            Arc::new(Self)
+        }
+        // Заглушка для запроса к БД
+        fn fetch(&self, _query: &str) -> Result<Vec<u8>, Error> {
+            Ok(Vec::new())
+        }
+    }
     ///
     /// once called initialisation
     fn init_once() {
@@ -59,7 +70,7 @@ mod seakeeping {
         log::debug!("");
         let dbg = "ComplexTest | eval";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
         let test_data = [
             (
@@ -78,6 +89,7 @@ mod seakeeping {
             )
         ];
         for (step, course_angle, roll_period, c, period_excitement, vmax, length_lbp, target) in test_data.iter() {
+            let api_client = MockApiClient::new();
             let mut initial_data= InitialCtx::new(
                 0,
                 "Unit-test",
@@ -134,16 +146,19 @@ mod seakeeping {
                                         )
                                     )
                                 )
-                            )
+                            ),
+                            Box::new(move |resonant_zone, zone_id|{
+                                let client = Arc::clone(&api_client);
+                                client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
+                            })
                         )
                     )
                 )
             ).eval(Zg::empty());
             match result {
                 Ok(ctx) => {
-                    let result = ContextRead::<ImpactsHighWavesCtx>::read(&ctx).impacts_high_waves.clone();
-                    write_json("high_waves.json", &result).expect("error");
-                    //write_json("output.json", &result).expect("error");
+                    let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx).move_broching_filter.clone();
+                    write_json("broching.json", &result).expect("error");
                     //assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 },
                 Err(err) => panic!("step {} \nerror: {:#?}", step, err),

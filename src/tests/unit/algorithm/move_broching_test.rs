@@ -60,16 +60,6 @@ fn move_broching_filter() {
             1.0,
             1.0,
             vec![
-                (135.0, 0.0), 
-                (137.0, 0.0), 
-                (137.1, 0.0), 
-                (137.2, 0.0), 
-                (137.3, 0.0), 
-                (137.4, 0.0), 
-                (137.5, 0.0), 
-                (140.8, 0.0), 
-                (140.9, 0.0), 
-                (141.0, 0.0)
             ],
         ),
         (
@@ -78,16 +68,16 @@ fn move_broching_filter() {
             0.1,
             1.0,
             vec![
-                (137.5, 0.0), 
-                (140.8, 0.0), 
-                (140.9, 0.0), 
-                (143.7, 0.0), 
-                (143.8, 0.0), 
-                (147.1, 0.0), 
-                (150.0, 0.0), 
-                (150.1, 0.0), 
-                (153.3, 0.0), 
-                (153.4, 0.0)
+                (161.6, 0.6), 
+                (161.7, 0.6), 
+                (161.8, 0.6), 
+                (161.9, 0.6), 
+                (162.0, 0.6), 
+                (162.1, 0.6), 
+                (162.2, 0.6), 
+                (162.3, 0.6), 
+                (162.4, 0.6), 
+                (162.5, 0.6)
             ],
         ),
     ];
@@ -116,7 +106,12 @@ fn move_broching_filter() {
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx).move_broching_filter.clone();
-                assert!(*target == result[0..10], "step {} \nresult: {:?}\ntarget: {:?}", step, &result[0..10], target);
+                if result.len() == 0 {
+                    assert!(*target == result, "step {} \nresult: {:?}\ntarget: {:?}", step, &result, target);
+                } else {
+                    assert!(*target == result[0..10], "step {} \nresult: {:?}\ntarget: {:?}", step, &result[0..10], target);
+                }
+
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
 

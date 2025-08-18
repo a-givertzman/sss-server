@@ -27,18 +27,6 @@ impl ResonantZoneQuery {
     ///
     /// Create SQL query
     pub fn sql(&self) -> String {
-        let create_table = format!("
-            CREATE TYPE IF NOT EXISTS zone_type AS ENUM ('Parametric', 'Main', 'Broaching', 'HighWaves');
-
-            CREATE TABLE IF NOT EXISTS seakeeping_zones (
-                id SERIAL PRIMARY KEY,
-                angle FLOAT NOT NULL,
-                speed FLOAT NOT NULL,
-                zone_id zone_type NOT NULL,
-                
-                CONSTRAINT unique_angle_speed_zone UNIQUE (angle, speed, zone_id)
-            );"
-        );
         let insert_values = format!(
             "INSERT INTO seakeeping_zones (angle, speed) VALUES {};",
             self.resonant_zone.iter()
@@ -46,6 +34,6 @@ impl ResonantZoneQuery {
                 .collect::<Vec<_>>()
                 .join(",")
         );
-        create_table + &insert_values
+        insert_values
     }
 }

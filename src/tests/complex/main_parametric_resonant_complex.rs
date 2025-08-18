@@ -20,6 +20,7 @@ mod main_parametric_resonant_complex {
         LogLevel, 
         Backtrace
     };
+    use sal_core::error::Error;
     use crate::{
         algorithm::{
             context::context_access::ContextRead, 
@@ -39,7 +40,7 @@ mod main_parametric_resonant_complex {
                 Zg
             }
         }, 
-        infrostructure::api::client::api_client::ApiClient, 
+        infrostructure::query::resonant_zone::resonant_zone::ResonantZoneQuery, 
         kernel::{
             eval::Eval, types::Arc
         }, 
@@ -53,6 +54,18 @@ mod main_parametric_resonant_complex {
     ///
     ///
     static INIT: Once = Once::new();
+    // Mock for ApiClient
+    struct MockApiClient;
+    //
+    impl MockApiClient {
+        fn new() -> Arc<Self> {
+            Arc::new(Self)
+        }
+        // Заглушка для запроса к БД
+        fn fetch(&self, _query: &str) -> Result<Vec<u8>, Error> {
+            Ok(Vec::new())
+        }
+    }
     ///
     /// once called initialisation
     fn init_once() {
@@ -86,16 +99,12 @@ mod main_parametric_resonant_complex {
             )
         ];
         for (step, wave_length, roll_period, vmax, c) in test_data.iter() {
-            let api_client = Arc::new(ApiClient::new(
-                "db_logger".to_owned(), 
-                "ship_database".to_owned(), 
-                "api.example.com".to_owned(), 
-                "5432".to_owned()
-            ));
+            let api_client = MockApiClient::new();
             let mut initial_data= InitialCtx::new(
                         0,
                         "Unit-test",
             );
+            initial_data.course_angle = Some(270.0);
             initial_data.wave_length = Some(*wave_length);
             let mut ctx = MocEval {
                 ctx: Context::new(
@@ -139,15 +148,14 @@ mod main_parametric_resonant_complex {
                         )
                     )
                 ),
-                Box::new(move |sql| {
+                Box::new(move |resonant_zone, zone_id|{
                     let client = Arc::clone(&api_client);
-                    client.fetch(sql)
+                    client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
                 })
             ).eval(Zg::empty());
             match result {
                 Ok(ctx) => {
                     let app_freq = ContextRead::<MainResonantZoneCtx>::read(&ctx).clone();
-                    println!("{:?}", app_freq);
                 },
                 Err(err) => panic!("step {} \nerror: {:#?}", step, err),
             }
