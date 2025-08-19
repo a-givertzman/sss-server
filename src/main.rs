@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   //  let model_path = "src/assets/model_1510.stp";
   //    let model_path = "src/assets/ark-Part3.obj";
   //  let model_path = "src/assets/ark.stl";
-    let cache_dir = "src/assets/cashe/sofia".into();
+    let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(59.195, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(30));
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             trim_steps: vec![-5., -2., 0., 2., 5.],
             draught_min: 2.,
             hull_draught_step: 1.,
-            compartment_level_step: 0.1,
+            compartment_level_step: 0.25,
         },
         thread_pool.scheduler(),
     ).unwrap();

@@ -98,14 +98,14 @@ impl BuildAreaCache {
             }
         }
         while !task_results.is_empty() {
-            if let Some((trim, draught, area)) = task_results.pop() {
-                    let (area, x) = match area {
+            if let Some((trim, draught, (area, x))) = task_results.pop() {
+                /*    let (area, x) = match area {
                         Ok((area, x)) => (area, x),
                         Err(err) => {
                             results.push(Err(error.pass_with("results area", err)));
                             continue;
                         }
-                    };
+                    };*/
                     results.push(Ok(vec![trim, draught, area, x]));
             }
         }

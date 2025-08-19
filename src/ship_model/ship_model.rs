@@ -104,7 +104,7 @@ impl ShipModel {
     //     let model_path = "src/assets/cube_1_1_1.step";
     //     let project_id = self.project_id.clone();
     //     let qnt_bounds = self.qnt_bounds;
-    //     let cache_dir = "src/assets/cashe/";
+    //     let cache_dir = "src/assets/cache/";
     //     let scheduler = self.scheduler.clone();
     //     let bounds = match get_bounds(&api_client, ship_id, project_id, qnt_bounds) {
     //         Ok(data) => data,
@@ -203,7 +203,7 @@ impl ShipModel {
         let ship_id = self.ship_id;
         let sink_clone = sink.clone();
         // TODO read path by ship_id
-        let cache_dir = format!("src/assets/cashe//{}", self.ship_file_name);
+        let cache_dir = format!("src/assets/cache//{}", self.ship_file_name);
         let model_dir = format!("src/assets/model//{}", self.ship_file_name);
         let bounds = match self.bounds() {
             Ok(bounds) => bounds,

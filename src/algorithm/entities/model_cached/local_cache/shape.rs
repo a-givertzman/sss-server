@@ -2,9 +2,11 @@ use nalgebra::*;
 use obj::{Obj, ObjData};
 use parry3d_f64::bounding_volume::Aabb;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
-use sal_core::dbg::Dbg;
+use sal_core::dbg::{info, Dbg};
 use sal_core::error::Error;
+use stl_io::{IndexedMesh, Vector};
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::PathBuf;
 
 use crate::algorithm::entities::{Bounds, Position};
@@ -85,25 +87,38 @@ impl Shape {
     pub fn init(&mut self) -> Result<(), Error> {
         if self.mesh.is_none() {
             let error = Error::new(&self.dbg, "init");
-            let mut mesh = load_stl(self.path.clone().ok_or(error.err("empty path"))?)
-                .map_err(|err| error.pass_with("load", err.to_string()))?;
-            if let Some(additional_path) = self.additional_path.clone() {
-                let dir = std::fs::read_dir(additional_path)
-                    .map_err(|err| error.pass_with("read additional dir", err.to_string()))?;
-                let pathes: Vec<_> = dir
-                    .into_iter()
-                    .filter_map(|f| f.ok())
-                    .map(|f| f.path())
-                    .collect();
-                let (
-                    meshes,
-                    _errors, // TODO: подумать, что делать с этими ошибками
-                ): (Vec<_>, Vec<_>) = pathes
-                    .into_iter()
-                    .map(|p| load_stl(p))
-                    .partition(|r| r.is_ok());
-                meshes.into_iter().for_each(|m| mesh.append(&m.unwrap()));
-            }
+            let mut mesh = if let Some(additional_path) = self.additional_path.clone() {
+                let path_fixed = additional_path.join("hull_fixed.stl");
+                if let Ok(mesh) = load_stl(&path_fixed) {
+                    mesh
+                } else {
+                    let mut mesh = load_stl(&self.path.clone().ok_or(error.err("empty path"))?)
+                        .map_err(|err| error.pass_with("load", err.to_string()))?;
+                    let dir = std::fs::read_dir(additional_path)
+                        .map_err(|err| error.pass_with("read additional dir", err.to_string()))?;
+                    let pathes: Vec<_> = dir
+                        .into_iter()
+                        .filter_map(|f| f.ok())
+                        .map(|f| f.path())
+                        .collect();
+                    let (
+                        meshes,
+                        _errors, // TODO: подумать, что делать с этими ошибками
+                    ): (Vec<_>, Vec<_>) = pathes
+                        .into_iter()
+                        .map(|p| load_stl(&p))
+                        .partition(|r| r.is_ok());
+                    meshes.into_iter().for_each(|m| mesh.append(&m.unwrap()));
+                    let (indices, vertices) = (mesh.indices().to_vec(), mesh.vertices().to_vec());
+                    let mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all())
+                        .map_err(|err| error.pass_with("TriMesh::with_flags", err.to_string()))?;
+                    write_stl(&path_fixed, &mesh).map_err(|err| error.pass_with("write_stl", err.to_string()))?;
+                    mesh
+                }
+            } else {
+                load_stl(&self.path.clone().ok_or(error.err("empty path"))?)
+                    .map_err(|err| error.pass_with("load", err.to_string()))?
+            };
             let scale = 1. / self.scale;
             mesh = mesh.scaled(&Vector3::new(scale, scale, scale));
             if self.delta_pos.is_none() {
@@ -144,9 +159,16 @@ impl Shape {
         let mesh = match result {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
-                None => {
-                    return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
-                }
+                None =>  {
+                    let delta_pos = self.delta_pos.unwrap();
+                    return Ok((
+                        0.,
+                        delta_pos.x,
+                        delta_pos.y,
+                        delta_pos.z + draught,
+                    ))
+                },
+                   // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
         };
@@ -188,8 +210,16 @@ impl Shape {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
                 None => {
-                    return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                    let delta_pos = self.delta_pos.unwrap();
+                    return Ok((
+                        0.,
+                        delta_pos.x,
+                        delta_pos.y,
+                        delta_pos.z + draught,
+                    ))
                 }
+                  //  return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
         };
@@ -215,35 +245,36 @@ impl Shape {
                 draught,
                 self.epsilon,
             );
-        match result {
+        return match result {
             parry3d_f64::query::IntersectResult::Intersect(polyline) => {
-                let vertices: Vec<_> = polyline
-                    .vertices()
-                    .iter()
-                    .map(|p| Point2::new(p.x, p.y))
-                    .collect();
-                let (vx, vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
-                let min_x = vx
-                    .iter()
-                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let max_x = vx
-                    .iter()
-                    .max_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let min_y = vy
-                    .iter()
-                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let max_y = vy
-                    .iter()
-                    .max_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let dx = max_x - min_x;
-                let dy = max_y - min_y;
-                return Ok((dx, dy));
-            }
-            _ => return Err(error.err("mesh.intersection_with_plane error!")),
+                        let vertices: Vec<_> = polyline
+                            .vertices()
+                            .iter()
+                            .map(|p| Point2::new(p.x, p.y))
+                            .collect();
+                        let (vx, vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
+                        let min_x = vx
+                            .iter()
+                            .min_by(|&a, &b| a.partial_cmp(b).unwrap())
+                            .unwrap();
+                        let max_x = vx
+                            .iter()
+                            .max_by(|&a, &b| a.partial_cmp(b).unwrap())
+                            .unwrap();
+                        let min_y = vy
+                            .iter()
+                            .min_by(|&a, &b| a.partial_cmp(b).unwrap())
+                            .unwrap();
+                        let max_y = vy
+                            .iter()
+                            .max_by(|&a, &b| a.partial_cmp(b).unwrap())
+                            .unwrap();
+                        let dx = max_x - min_x;
+                        let dy = max_y - min_y;
+                        Ok((dx, dy))
+                    }
+            parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
+            parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
         };
     }
     ///
@@ -260,60 +291,61 @@ impl Shape {
             .intersection_with_plane(&position, &Vector3::z_axis(), 0., self.epsilon);
         match result {
             parry3d_f64::query::IntersectResult::Intersect(polyline) => {
-                let vertices: Vec<_> = polyline
-                    .vertices()
-                    .iter()
-                    .map(|p| position.transform_point(&p))
-                    .map(|p| Point2::new(p.x, p.y))
-                    .collect();
-                let indices = polyline.indices().to_owned();
-                let mut voxel_set = parry2d_f64::transformation::voxelization::VoxelSet::voxelize(
-                    &vertices,
-                    &indices,
-                    self.resolution_inertia,
-                    parry2d_f64::transformation::voxelization::FillMode::FloodFill {
-                        detect_cavities: true,
-                        detect_self_intersections: false,
-                    },
-                    false,
-                );
-                let scale = voxel_set.scale;
-                let qrt_scale = scale * scale;
-                let voxels_volume = voxel_set.compute_volume();
-                let voxel_volume = voxel_set.voxel_volume();
-                let (v_x, v_y) = voxel_set
-                    .voxels()
-                    .iter()
-                    .fold((0., 0.), |(v_x, v_y), voxel| {
-                        (v_x + voxel.coords.x as f64, v_y + voxel.coords.y as f64)
-                    });
-                let voxel_area_center_x = v_x * voxel_volume / voxels_volume;
-                let voxel_area_center_y = v_y * voxel_volume / voxels_volume;
-                voxel_set.compute_bb();
-                let max_bb = voxel_set.max_bb_voxels();
-                let x_array: Vec<_> = (0..=max_bb.x)
-                    .map(|v| v as f64 - voxel_area_center_x)
-                    .map(|v| v * v)
-                    .collect();
-                let y_array: Vec<_> = (0..=max_bb.y)
-                    .map(|v| v as f64 - voxel_area_center_y)
-                    .map(|v| v * v)
-                    .collect();
-                let (i_x, i_y) = voxel_set
-                    .voxels()
-                    .iter()
-                    .fold((0., 0.), |(i_x, i_y), voxel| {
-                        (
-                            i_x + y_array[voxel.coords.y as usize].clone(),
-                            i_y + x_array[voxel.coords.x as usize],
-                        )
-                    });
-                let i_x = i_x * qrt_scale * voxel_volume;
-                let i_y = i_y * qrt_scale * voxel_volume;
-                return Ok((i_x, i_y));
-            }
-            _ => return Err(error.err("mesh.intersection_with_plane error!")),
-        };
+                        let vertices: Vec<_> = polyline
+                            .vertices()
+                            .iter()
+                            .map(|p| position.transform_point(&p))
+                            .map(|p| Point2::new(p.x, p.y))
+                            .collect();
+                        let indices = polyline.indices().to_owned();
+                        let mut voxel_set = parry2d_f64::transformation::voxelization::VoxelSet::voxelize(
+                            &vertices,
+                            &indices,
+                            self.resolution_inertia,
+                            parry2d_f64::transformation::voxelization::FillMode::FloodFill {
+                                detect_cavities: true,
+                                detect_self_intersections: false,
+                            },
+                            false,
+                        );
+                        let scale = voxel_set.scale;
+                        let qrt_scale = scale * scale;
+                        let voxels_volume = voxel_set.compute_volume();
+                        let voxel_volume = voxel_set.voxel_volume();
+                        let (v_x, v_y) = voxel_set
+                            .voxels()
+                            .iter()
+                            .fold((0., 0.), |(v_x, v_y), voxel| {
+                                (v_x + voxel.coords.x as f64, v_y + voxel.coords.y as f64)
+                            });
+                        let voxel_area_center_x = v_x * voxel_volume / voxels_volume;
+                        let voxel_area_center_y = v_y * voxel_volume / voxels_volume;
+                        voxel_set.compute_bb();
+                        let max_bb = voxel_set.max_bb_voxels();
+                        let x_array: Vec<_> = (0..=max_bb.x)
+                            .map(|v| v as f64 - voxel_area_center_x)
+                            .map(|v| v * v)
+                            .collect();
+                        let y_array: Vec<_> = (0..=max_bb.y)
+                            .map(|v| v as f64 - voxel_area_center_y)
+                            .map(|v| v * v)
+                            .collect();
+                        let (i_x, i_y) = voxel_set
+                            .voxels()
+                            .iter()
+                            .fold((0., 0.), |(i_x, i_y), voxel| {
+                                (
+                                    i_x + y_array[voxel.coords.y as usize].clone(),
+                                    i_y + x_array[voxel.coords.x as usize],
+                                )
+                            });
+                        let i_x = i_x * qrt_scale * voxel_volume;
+                        let i_y = i_y * qrt_scale * voxel_volume;
+                        Ok((i_x, i_y))
+                    }
+                    parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
+                    parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
+        }
     }
     /// Расчет поверхности парусности
     /// Возвращает [шкала, баундбокс, разбиение с количеством вокселей по х]
@@ -384,11 +416,19 @@ impl Shape {
     }
     /// Расчет площади и центра площади парусности
     /// Возвращает [площадь, смещение площади по x]
-    pub fn windage_area(&self, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new(&self.dbg, "windage_area");
-        let (scale, aabb, result_z) = self
-            ._windage_area(trim, draught)
-            .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
+    pub fn windage_area(&self, trim: f64, draught: f64) -> (f64, f64) {
+     //   let error = Error::new(&self.dbg, "windage_area");
+        let (scale, aabb, result_z) = match self._windage_area(trim, draught) 
+     //   .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
+        {
+            Ok((scale, aabb, result_z)) => (scale, aabb, result_z),
+            Err(_) => { 
+                // TODO:
+             //   let error = error.pass_with("_windage_area", e.to_string()).to_string();
+            //    Log::info(error); 
+                return (0., self.delta_pos.unwrap().x)
+            },
+        };            
         let mut area = 0;
         let mut moment = 0;
         for (x, &dz) in result_z.iter().enumerate() {
@@ -397,7 +437,7 @@ impl Shape {
         }
         let center_x = (moment as f64 / area as f64 * scale) + aabb.mins.x;
         let area = area as f64 * scale * scale;
-        Ok((area, center_x))
+        (area, center_x)
     }
     // TODO: можно как-то объеденить с расчетом поверхности, но возникают сложности с кэшами
     /// Расчет распределения площади парусности
@@ -537,8 +577,8 @@ fn load_obj(path: PathBuf) -> Result<TriMesh, Error> {
 }
 ///
 /// Load data from .stl file
-pub fn load_stl(path: PathBuf) -> Result<TriMesh, Error> {
-    let error = Error::new("Shape", "load_obj");
+pub fn load_stl(path: &PathBuf) -> Result<TriMesh, Error> {
+    let error = Error::new("Shape", "load_stl");
     let file =
         std::fs::File::open(path).map_err(|err| error.pass_with("File::open", err.to_string()))?;
     let mut reader = std::io::BufReader::new(file);
@@ -563,3 +603,50 @@ pub fn load_stl(path: PathBuf) -> Result<TriMesh, Error> {
     TriMesh::with_flags(vertices, indices, TriMeshFlags::all())
         .map_err(|err| error.pass_with("TriMesh::with_flags", err.to_string()))
 }
+///
+/// Write data to .stl file
+pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
+    let error = Error::new("Shape", "write_stl");
+    let (result, empty_normals): (Vec<_>, Vec<_>)  = mesh.triangles()
+        .map(|t| (t.normal(), t) )
+        .partition(|(n, _)| n.is_some());
+    if !empty_normals.is_empty() {
+        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
+    }
+    let triangles: Vec<_> = result.iter()
+        .map(|(n, t)| {
+            let n = n.unwrap();
+            let normal = stl_io::Vector([
+                n[0] as f32,
+                n[1] as f32,
+                n[2] as f32,
+            ]);
+            let vertices = [
+                stl_io::Vector([
+                    t.a[0] as f32,
+                    t.a[1] as f32,
+                    t.a[2] as f32,
+                ]),
+                stl_io::Vector([
+                    t.b[0] as f32,
+                    t.b[1] as f32,
+                    t.b[2] as f32,
+                ]),
+                stl_io::Vector([
+                    t.c[0] as f32,
+                    t.c[1] as f32,
+                    t.c[2] as f32,
+                ]),
+            ];
+            stl_io::Triangle {normal, vertices,} 
+        })
+        .collect();
+    let mut binary_stl = Vec::<u8>::new();
+    stl_io::write_stl(&mut binary_stl, triangles.iter())
+        .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
+    let mut buffer = std::fs::File::create(&path)
+        .map_err(|err| error.pass_with(format!("File::create, path:{:?}", path), err.to_string()))?;
+    buffer.write_all(&binary_stl)
+        .map_err(|err| error.pass_with(format!("buffer.write_all, path:{:?}", path), err.to_string()))
+}
+

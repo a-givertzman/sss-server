@@ -47,7 +47,7 @@ fn calculated_windage_area_ark() {
     let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-   let mut cashe = AreaCache::new(
+   let mut cache = AreaCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,
@@ -55,7 +55,7 @@ fn calculated_windage_area_ark() {
         vec![0., 2.],
         thread_pool.scheduler().clone(),
     );
-    let error = cashe.rebuild();
+    let error = cache.rebuild();
     assert!(error.is_ok(), "*error*: {:?}", error);
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
@@ -67,7 +67,7 @@ fn calculated_windage_area_ark() {
         let mut key = [None; 4];
         key[0] = Some(target[0]);
         key[1] = Some(target[1]);
-        let result: Result<Vec<f64>, Error> = cashe.get(&key);
+        let result: Result<Vec<f64>, Error> = cache.get(&key);
         assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
         let result = result.unwrap();
         for (r, t) in result.iter().zip(target.iter()) {

@@ -46,7 +46,7 @@ fn calculated_displacement_ark() {
     let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cashe = DisplacementCache::new(
+    let mut cache = DisplacementCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,
@@ -56,7 +56,7 @@ fn calculated_displacement_ark() {
         100.,
         thread_pool.scheduler().clone(),
     );
-    let error = cashe.rebuild();
+    let error = cache.rebuild();
     assert!(error.is_ok(), "*error*: {:?}", error);
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
@@ -74,7 +74,7 @@ fn calculated_displacement_ark() {
         key[0] = Some(target[0]);
         key[1] = Some(target[1]);
         key[2] = Some(target[2]);
-        let result: Result<Vec<f64>, Error> = cashe.get(&key);
+        let result: Result<Vec<f64>, Error> = cache.get(&key);
         assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
         let result = result.unwrap();
         for (r, t) in result.iter().zip(target.iter()) {

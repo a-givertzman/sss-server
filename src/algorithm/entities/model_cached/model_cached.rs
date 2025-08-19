@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use crate::{
     algorithm::entities::model_cached::{
-        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, load_stl, AreaCache, BoundedAreaCache, CompartmentCache, DisplacementCache, Shape
+        AreaCache, BoundedAreaCache, CompartmentCache, DisplacementCache, Shape,
+        floating_position::{EvaluatedFloatingPosition, FloatingPosition},
+        load_stl,
     },
     kernel::types::{Arc, RwLock},
 };
@@ -68,8 +70,8 @@ impl ModelCached {
     ///
     /// Creates a new instance.
     pub fn new(parent: &Dbg, conf: ModelCachedConf, scheduler: Scheduler) -> Result<Self, Error> {
-        let dbg = Dbg::new(parent, "ModelCached");    
-        let error = Error::new(&dbg, "new");   
+        let dbg = Dbg::new(parent, "ModelCached");
+        let error = Error::new(&dbg, "new");
         let mut shapes = Vec::new();
         let delta_pos = Some(conf.model_center_coord.clone());
         let displacement_shape = Arc::new(RwLock::new(Shape::new_uninit(
@@ -83,53 +85,64 @@ impl ModelCached {
         let windage_shape = Arc::new(RwLock::new(Shape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
-            Some(conf.model_dir.clone().join(PathBuf::from("additionals"))), 
+            Some(conf.model_dir.clone().join(PathBuf::from("additionals"))),
             delta_pos,
             conf.model_scale,
         )));
         shapes.push(windage_shape.clone());
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
-        let dir = std::fs::read_dir(&path)
-                    .map_err(|err| error.pass_with(format!("read additional dir {:?}", path.to_str()), err.to_string()))?;
+        let dir = std::fs::read_dir(&path).map_err(|err| {
+            error.pass_with(
+                format!("read additional dir {:?}", path.to_str()),
+                err.to_string(),
+            )
+        })?;
         let pathes: Vec<_> = dir
-                    .into_iter()
-                    .filter_map(|f| f.ok())
-                    .map(|f| f.path())
-                    .collect();
-        // TODO: подумать, что делать с этими ошибками
-    /*    let (result, _errors): (Vec<_>, Vec<_>) = pathes
             .into_iter()
-            .map(|p| (p.file_name(), p))
-            .partition(|(s, r)| s.is_some());
-*/
-        let compartments = pathes.into_iter().filter(|path| path.file_name().is_some()).map(|path| {
-            let Some(name) = path.file_name() else {
-                return None;
-            };
-            let Some(name) = name.to_str() else {
-                return None;
-            };  
-            let name = name.to_string();
-            let shape = Arc::new(RwLock::new(Shape::new_uninit(
-                &dbg,
-                path,
-                None,
-                None,
-                conf.model_scale,
-            )));
-            shapes.push(shape.clone());
-            Some((name.clone(), CompartmentCache::new(
-                &dbg,
-                shape.clone(),
-                conf.cache_dir.clone().join(PathBuf::from("compartments")),
-                name,
-                conf.heel_steps.clone(),
-                conf.trim_steps.clone(),
-                conf.compartment_level_step,
-                scheduler.clone(),
-            )))
-        }).flat_map(|v| v).collect();
-
+            .filter_map(|f| f.ok())
+            .map(|f| f.path())
+            .collect();
+        // TODO: подумать, что делать с этими ошибками
+        /*    let (result, _errors): (Vec<_>, Vec<_>) = pathes
+                    .into_iter()
+                    .map(|p| (p.file_name(), p))
+                    .partition(|(s, r)| s.is_some());
+        */
+        let compartments = pathes
+            .into_iter()
+            .filter(|path| path.file_name().is_some())
+            .map(|path| {
+                let Some(name) = path.file_stem() else {
+                    return None;
+                };
+                let Some(name) = name.to_str() else {
+                    return None;
+                };
+                let name = name.to_string();
+                let shape = Arc::new(RwLock::new(Shape::new_uninit(
+                    &dbg,
+                    path,
+                    None,
+                    None,
+                    conf.model_scale,
+                )));
+                shapes.push(shape.clone());
+                Some((
+                    name.clone(),
+                    CompartmentCache::new(
+                        &dbg,
+                        shape.clone(),
+                        conf.cache_dir.clone().join(PathBuf::from("compartments")),
+                        name,
+                        conf.heel_steps.clone(),
+                        conf.trim_steps.clone(),
+                        conf.compartment_level_step,
+                        scheduler.clone(),
+                    ),
+                ))
+            })
+            .flat_map(|v| v)
+            .collect();
         let model_cached = Self {
             dbg: dbg.clone(),
             shapes,
@@ -186,27 +199,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut results: Vec<Result<(), Error>> = Vec::new();
         // Сначала считаем модели в разных потоках
-     /*       if let Some(guard) = self.displacement_shape.try_write() {
-                let mut shape = guard.clone();
-                let task_results = task_results.clone();
-                let handle = self
-                    .scheduler
-                    .spawn(move || {
-                        task_results.push(shape.init());
-                        Ok(())
-                    })
-                    .map_err(|err| {
-                        error.pass_with(format!("spawn task displacement_shape"), err.to_string())
-                    });
-                match handle {
-                    Ok(task) => tasks.push(task),
-                    Err(err) => results.push(Err(err)),
-                };
-            } else {
-                results.push(Err(error.err("self.displacement_shape.try_write")));
-            }
-    */
-    // Сначала считаем модели в разных потоках
+        dbg!("shapes start");
         for shape in &self.shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
@@ -217,9 +210,7 @@ impl ModelCached {
                     task_results.push(guard.init());
                     Ok(())
                 })
-                .map_err(|err| {
-                    error.pass_with(format!("spawn task shape"), err.to_string())
-                });
+                .map_err(|err| error.pass_with(format!("spawn task shape"), err.to_string()));
             match handle {
                 Ok(task) => tasks.push(task),
                 Err(err) => results.push(Err(err)),
@@ -232,16 +223,30 @@ impl ModelCached {
                 results.push(Err(error));
             }
         }
+        dbg!("shapes end");
+        dbg!("displacement start");
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
         if let Err(error) = self.displacement.rebuild() {
-            errors.push(("displacement", error));
+            errors.push(("displacement".to_owned(), error));
         }
+        dbg!("displacement end");
+        dbg!("windage_area start");
         if let Err(error) = self.windage_area.rebuild() {
-            errors.push(("windage_area", error));
+            errors.push(("windage_area".to_owned(), error));
         }
+        dbg!("windage_area end");
+        dbg!("bounded_windage_area start");
         if let Err(error) = self.bounded_windage_area.rebuild() {
-            errors.push(("bounded_windage_area", error));
+            errors.push(("bounded_windage_area".to_owned(), error));
         }
+        dbg!("bounded_windage_area end");
+        dbg!("compartments start");
+        for (name, compartment) in &mut self.compartments {
+            if let Err(error) = compartment.rebuild() {
+                errors.push((("compartment ".to_owned() + name), error));
+            }
+        }
+        dbg!("compartments end");
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
