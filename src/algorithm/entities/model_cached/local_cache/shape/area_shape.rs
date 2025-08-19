@@ -13,9 +13,8 @@ pub struct AreaShape {
     mesh: Option<TriMesh>,
     path: Option<PathBuf>,
     additional_path: Option<PathBuf>,
-    delta_pos: Option<Point3<f64>>,
+    center: Option<Point3<f64>>,
     scale: f64,
-    epsilon: f64,
     resolution: u32,
     voxels: Option<Vec<(f64, Vec<f64>)>>,
     voxel_scale: Option<f64>,
@@ -31,18 +30,19 @@ impl AreaShape {
     /// * additional_path - путь к директории, содержащей дополнительные модели
     /// * dx - смещение миделя относительно центра координат модели
     /// * scale - масштаб модели для ее приведения к метрам (1000: модель в мм)
-    /// * epsilon - точность расчета сечений
     /// * resolution - точность расчета площади парусности
+    /// * voxels - силуэт разбитый на квадратные примитивы - воксели,
+    /// [смещение по х относительно center, [массив координат вокселей по z]]
+    /// * voxel_scale - размер вокселя
     pub fn new(
         parent: &Dbg,
         mesh: Option<TriMesh>,
         path: Option<PathBuf>,
         additional_path: Option<PathBuf>,
-        delta_pos: Option<Point3<f64>>,
+        center: Option<Point3<f64>>,
         scale: f64,
-        epsilon: f64,
         resolution: u32,
-        voxels: Option<Vec<(f64, Vec<f64>)>>,
+        voxels: Option<Vec<(f64, Vec<f64>)>>, 
         voxel_scale: Option<f64>,
     ) -> Self {
         let dbg = Dbg::new(parent, "Shape");
@@ -51,9 +51,8 @@ impl AreaShape {
             mesh,
             path,
             additional_path,
-            delta_pos,
+            center,
             scale,
-            epsilon,
             resolution,
             voxels, 
             voxel_scale,
@@ -61,12 +60,13 @@ impl AreaShape {
     }
     /// Конструктор для создания "ленивого" экземпляра.
     /// После создания обязателен вызов метода "init".
-    /// delta_pos - смещение центра координат, для отсеков задается как None и считается автоматом
+    /// center - смещение центра координат для расчетов относительно центра координат меша, 
+    /// для отсеков задается как None и считается автоматом
     pub fn new_uninit(
         parent: &Dbg,
         path: PathBuf,
         additional_path: Option<PathBuf>,
-        delta_pos: Option<Position>,
+        center: Option<Position>,
         scale: f64,
     ) -> Self {
         Self::new(
@@ -74,13 +74,62 @@ impl AreaShape {
             None,
             Some(path),
             additional_path,
-            delta_pos.map(|p| Point3::new(p.x(), p.y(), p.z())),
+            center.map(|p| Point3::new(p.x(), p.y(), p.z())),
             scale,
-            0.0000001,
             2000,
             None,
             None,
         )
+    }
+    /// Разбиваем поверхность меша на воксели и строим силуэт
+    pub fn _voxelize(&mut self) -> Result<(), Error> {
+            let error = Error::new(&self.dbg, "voxelize");    
+            let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+            (self.voxels, self.voxel_scale) = {
+                let aabb = mesh.local_aabb();
+                let (dx, dz) = {
+                    let center = self.center.as_ref().unwrap();
+                    (aabb.mins.coords.x - center.x, aabb.mins.coords.z - center.z)
+                };              
+                // разбиваем поверхность полученного над водой объема на воксели
+                let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
+                    &mesh.vertices(),
+                    &mesh.indices(),
+                    self.resolution,
+                    parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
+                    false,
+                );                
+                let mut voxels = voxel_set.voxels().to_vec();
+                // сортируем воксели по х
+                voxels.sort_by(|a, b| a.coords.x.cmp(&b.coords.x));
+                let mut current_max_x = 0;
+                let mut result = Vec::new();
+                let mut current = Vec::new();
+                let scale = voxel_set.scale;
+                let x = |x: u32| x as f64 * scale + dx;
+                let z = |z: u32| z as f64 * scale + dz;
+                // проходим по вокселям по порядку и берем воксели с одинаковой координатой по x,
+                // отбрасываем с одинаковой координатой по y, полчаем боковую поверхность
+                for p in voxels.iter() {
+                    if p.coords.x > current_max_x {
+                        current.sort();
+                        current.dedup();
+                        result.push((x(current_max_x), current.iter().map(|&v| z(v) ).collect()));
+                        current = Vec::new();
+                        current_max_x += 1;
+                        while p.coords.x > current_max_x {
+                            result.push((x(current_max_x), Vec::new()));
+                            current_max_x += 1;                            
+                        }
+                    }
+                    current.push(p.coords.z);
+                }
+                current.sort();
+                current.dedup();
+                result.push((x(current_max_x), current.iter().map(|&v| z(v) ).collect()));
+                (Some(result), Some(scale))
+            };
+            Ok(())
     }
     /// Расчет поверхности парусности
     /// Возвращает повернутое и смещенное разбиение
@@ -91,13 +140,13 @@ impl AreaShape {
         let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
         let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
         let voxel_area = voxel_scale * voxel_scale;
-        let delta_pos =  self.delta_pos.ok_or(error.err("no delta_pos"))?;
+        let center =  self.center.ok_or(error.err("no center"))?;
         let result: Vec<_> = voxels.iter().map(|(x, v)| {
             let x_dz = x*trim_sin; 
-            (   *x - delta_pos.x, 
+            (   *x + center.x, 
                 v.iter()
                 .map(|z| x_dz + ((z - draught)*trim_cos))
-                .filter(|&z| z >= draught)
+                .filter(|&z| z >= 0.)
                 .count() as f64 * voxel_area
             )
         })
@@ -116,7 +165,7 @@ impl AreaShape {
                 // TODO:
              //   let error = error.pass_with("_windage_area", e.to_string()).to_string();
             //    Log::info(error); 
-                return (0., self.delta_pos.unwrap().x)
+                return (0., self.center.unwrap().x)
             },
         };            
         let mut area_sum = 0.;
@@ -148,58 +197,6 @@ impl AreaShape {
             x_max + voxel_scale/2.,
             result.into_iter().map(|(_, area)| area).collect(),
         ))
-    }
-    /// Разбиваем поверхность меша на воксели и строим силуэт
-    pub fn voxelize(&mut self) -> Result<(), Error> {
-            let error = Error::new(&self.dbg, "voxelize");           
-
-            let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
-            (self.voxels, self.voxel_scale) = {
-                let aabb = mesh.local_aabb();
-                let (dx, dz) = {
-                    let center = self.delta_pos.as_ref().unwrap();
-                    (aabb.mins.coords.x - center.x, aabb.mins.coords.y - center.z)
-                };                
-                // разбиваем поверхность полученного над водой объема на воксели
-                let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
-                    &mesh.vertices(),
-                    &mesh.indices(),
-                    self.resolution,
-                    parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
-                    false,
-                );
-                
-                let mut voxels = voxel_set.voxels().to_vec();
-                // сортируем воксели по х
-                voxels.sort_by(|a, b| a.coords.x.cmp(&b.coords.x));
-                let mut current_max_x = 0;
-                let mut result = Vec::new();
-                let mut current = Vec::new();
-                let scale = voxel_set.scale;
-                let x = |x: u32| x as f64 * scale + dx;
-                let z = |z: u32| z as f64 * scale + dz;
-                // проходим по вокселям по порядку и берем воксели с одинаковой координатой по x,
-                // отбрасываем с одинаковой координатой по y, полчаем боковую поверхность
-                for p in voxels.iter() {
-                    if p.coords.x > current_max_x {
-                        current.sort();
-                        current.dedup();
-                        result.push((x(current_max_x), current.iter().map(|&v| z(v) ).collect()));
-                        current = Vec::new();
-                        current_max_x += 1;
-                        while p.coords.x > current_max_x {
-                            result.push((x(current_max_x), Vec::new()));
-                            current_max_x += 1;                            
-                        }
-                    }
-                    current.push(p.coords.z);
-                }
-                current.sort();
-                current.dedup();
-                result.push((x(current_max_x), current.iter().map(|&v| z(v) ).collect()));
-                (Some(result), Some(scale*scale))
-            };
-            Ok(())
     }
 }
 //
@@ -242,11 +239,11 @@ impl Shape for AreaShape {
             };
             let scale = 1. / self.scale;
             mesh = mesh.scaled(&Vector3::new(scale, scale, scale));
-            if self.delta_pos.is_none() {
-                self.delta_pos = Some(compartment_center(&mesh));
+            if self.center.is_none() {
+                self.center = Some(compartment_center(&mesh));
             }
             self.mesh = Some(mesh);
-            self.voxelize().map_err(|err| error.pass_with("self.voxelize", err))?;
+            self._voxelize().map_err(|err| error.pass_with("self.voxelize", err))?;
         }
         Ok(())
     }
@@ -260,7 +257,7 @@ impl Shape for AreaShape {
     }
     //
     fn center(&self) -> Option<&Point3<f64>> {
-        self.delta_pos.as_ref()
+        self.center.as_ref()
     } 
 }
 

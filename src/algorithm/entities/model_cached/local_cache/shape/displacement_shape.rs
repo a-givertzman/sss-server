@@ -13,7 +13,7 @@ pub struct DisplacementShape {
     dbg: Dbg,
     mesh: Option<TriMesh>,
     path: Option<PathBuf>,
-    delta_pos: Option<Point3<f64>>,
+    center: Option<Point3<f64>>,
     scale: f64,
     epsilon: f64,
     resolution: u32,
@@ -34,7 +34,7 @@ impl DisplacementShape {
         parent: &Dbg,
         mesh: Option<TriMesh>,
         path: Option<PathBuf>,
-        delta_pos: Option<Point3<f64>>,
+        center: Option<Point3<f64>>,
         scale: f64,
         epsilon: f64,
         resolution: u32,
@@ -44,7 +44,7 @@ impl DisplacementShape {
             dbg,
             mesh,
             path,
-            delta_pos,
+            center,
             scale,
             epsilon,
             resolution,
@@ -52,18 +52,19 @@ impl DisplacementShape {
     }
     /// Конструктор для создания "ленивого" экземпляра.
     /// После создания обязателен вызов метода "init".
-    /// delta_pos - смещение центра координат, для отсеков задается как None и считается автоматом
+    /// center - смещение центра координат для расчетов относительно центра координат меша, 
+    /// для отсеков задается как None и считается автоматом
     pub fn new_uninit(
         parent: &Dbg,
         path: PathBuf,
-        delta_pos: Option<Position>,
+        center: Option<Position>,
         scale: f64,
     ) -> Self {
         Self::new(
             parent,
             None,
             Some(path),
-            delta_pos.map(|p| Point3::new(p.x(), p.y(), p.z())),
+            center.map(|p| Point3::new(p.x(), p.y(), p.z())),
             scale,
             0.0000001,
             10000,
@@ -77,8 +78,8 @@ impl DisplacementShape {
                 .map_err(|err| error.pass_with("load", err.to_string()))?;
             let scale = 1. / self.scale;
             mesh = mesh.scaled(&Vector3::new(scale, scale, scale));
-            if self.delta_pos.is_none() {
-                self.delta_pos = Some(compartment_center(&mesh));
+            if self.center.is_none() {
+                self.center = Some(compartment_center(&mesh));
             }
             self.mesh = Some(mesh);
         }
@@ -118,8 +119,8 @@ impl DisplacementShape {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
                 None => {
-                    let delta_pos = self.delta_pos.unwrap();
-                    return Ok((0., delta_pos.x, delta_pos.y, delta_pos.z + draught));
+                    let center = self.center.unwrap();
+                    return Ok((0., center.x, center.y, center.z + draught));
                 } // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
@@ -164,8 +165,8 @@ impl DisplacementShape {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
                 None => {
-                    let delta_pos = self.delta_pos.unwrap();
-                    return Ok((0., delta_pos.x, delta_pos.y, delta_pos.z + draught));
+                    let center = self.center.unwrap();
+                    return Ok((0., center.x, center.y, center.z + draught));
                 } //  return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
@@ -305,8 +306,8 @@ impl Shape for DisplacementShape {
                 .map_err(|err| error.pass_with("load", err.to_string()))?;
             let scale = 1. / self.scale;
             mesh = mesh.scaled(&Vector3::new(scale, scale, scale));
-            if self.delta_pos.is_none() {
-                self.delta_pos = Some(compartment_center(&mesh));
+            if self.center.is_none() {
+                self.center = Some(compartment_center(&mesh));
             }
             self.mesh = Some(mesh);
         }
@@ -322,6 +323,6 @@ impl Shape for DisplacementShape {
     }
     //
     fn center(&self) -> Option<&Point3<f64>> {
-        self.delta_pos.as_ref()
+        self.center.as_ref()
     }
 }

@@ -27,8 +27,8 @@ mod tests {
         )
         .ok();
         let epsilon = 0.0000001;
-        let mut shape = AreaShape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000, None, None);
-        shape.voxelize().unwrap();
+        let mut shape = AreaShape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 1000, None, None);
+        shape._voxelize().unwrap();
         let result = shape.windage_area(0., 0.,);
         let target = (1.0, 1.0);
         assert!(

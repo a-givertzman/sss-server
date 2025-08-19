@@ -29,7 +29,7 @@ fn init_each() -> () {}
 /// During the test a file called `fpc_result` is created in ./tmpdir/.
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
-//#[ignore = "too slow, run only in release mode"]
+#[ignore = "too slow, run only in release mode"]
 #[test]
 fn calculated_windage_area_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);

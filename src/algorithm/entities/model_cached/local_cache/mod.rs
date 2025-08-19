@@ -7,7 +7,6 @@
 //! - reload the stored dataset for the current cache,
 //! - calculate and get rows for given approximated values.
 //
-mod cache_key;
 mod cache_conf;
 mod file_io;
 mod displacement_cache;
@@ -18,7 +17,6 @@ mod bounded_windage_area_cache;
 mod local_cache;
 mod shape;
 
-pub(crate) use cache_key::*;
 pub(crate) use cache_conf::*;
 pub(crate) use file_io::*;
 //pub(crate) use bound_cache::*;
