@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{local_cache::LocalCache, save, Shape},
+        model_cached::{local_cache::LocalCache, save, DisplacementShape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -23,7 +23,7 @@ pub struct DisplacementCache {
     /// qnt draught steps for hull
     draught_step: f64,
     /// Model representation used for cache calculation.
-    shape: Arc<RwLock<Shape>>,
+    shape: Arc<RwLock<DisplacementShape>>,
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
     scheduler: Scheduler,
@@ -37,7 +37,7 @@ impl DisplacementCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: impl AsRef<Path>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,

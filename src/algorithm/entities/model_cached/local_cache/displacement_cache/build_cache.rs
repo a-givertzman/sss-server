@@ -5,13 +5,13 @@ use sal_sync::{
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::{algorithm::entities::model_cached::Shape, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::model_cached::{DisplacementShape, Shape}, kernel::types::{Arc, RwLock}};
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
 pub struct BuildDisplacementCache {
     dbg: Dbg,
-    shape: Arc<RwLock<Shape>>,
+    shape: Arc<RwLock<DisplacementShape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     /// Draught in meters
@@ -29,7 +29,7 @@ impl BuildDisplacementCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<DisplacementShape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_min: f64,

@@ -3,6 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
+use crate::algorithm::entities::model_cached::DisplacementShape;
 #[cfg(test)]
 use crate::{algorithm::entities::{model_cached::{CompartmentCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
@@ -42,7 +43,7 @@ fn calculated_compartments_sofia() {
     let model_path = "src/assets/sofia.stl";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(Position::new(65.250, 0., 0.));
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord, 1000.);
+    let mut shape = DisplacementShape::new_uninit(&dbg, model_path.into(), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cache = CompartmentCache::new(

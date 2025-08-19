@@ -5,7 +5,7 @@ use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
 use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::{algorithm::entities::{model_cached::{AreaCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::{model_cached::{AreaCache, AreaShape, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -31,20 +31,19 @@ fn init_each() -> () {}
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
 #[ignore = "no target values"]
 #[test]
-fn calculated_windage_area_sofia() {
+fn calculated_bounded_windage_area_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test models", "calculated_windage_area_sofia");
+    let dbg = Dbg::new("test models", "calculated_bounded_windage_area_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
-    let dbg = Dbg::new("ShipModel", "calculated_windage_area_sofia");
     let model_path = "src/assets/sofia.stl";
     let additionals_path = "src/assets/sofia_additionals/";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(Position::new(65.250, 0., 0.));
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
+    let mut shape = AreaShape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cache = AreaCache::new(

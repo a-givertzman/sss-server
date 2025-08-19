@@ -2,9 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     algorithm::entities::model_cached::{
-        AreaCache, BoundedAreaCache, CompartmentCache, DisplacementCache, Shape,
-        floating_position::{EvaluatedFloatingPosition, FloatingPosition},
-        load_stl,
+        floating_position::{EvaluatedFloatingPosition, FloatingPosition}, load_stl, AreaCache, AreaShape, BoundedAreaCache, CompartmentCache, DisplacementCache, DisplacementShape, Shape
     },
     kernel::types::{Arc, RwLock},
 };
@@ -48,7 +46,8 @@ pub struct ModelCached {
     dbg: Dbg,
     ///
     /// Privides access to structure of the 3D element
-    shapes: Vec<Arc<RwLock<Shape>>>,
+    displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>>,
+    area_shapes: Vec<Arc<RwLock<AreaShape>>>,
     /// Provides a number of calculations:
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
     displacement: DisplacementCache,
@@ -72,24 +71,24 @@ impl ModelCached {
     pub fn new(parent: &Dbg, conf: ModelCachedConf, scheduler: Scheduler) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
-        let mut shapes = Vec::new();
+        let mut displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>> = Vec::new();
+        let mut area_shapes: Vec<Arc<RwLock<AreaShape>>> = Vec::new();
         let delta_pos = Some(conf.model_center_coord.clone());
-        let displacement_shape = Arc::new(RwLock::new(Shape::new_uninit(
+        let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
-            None,
             delta_pos,
             conf.model_scale,
         )));
-        shapes.push(displacement_shape.clone());
-        let windage_shape = Arc::new(RwLock::new(Shape::new_uninit(
+        displacement_shapes.push(displacement_shape.clone());
+        let windage_shape = Arc::new(RwLock::new(AreaShape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
             Some(conf.model_dir.clone().join(PathBuf::from("additionals"))),
             delta_pos,
             conf.model_scale,
         )));
-        shapes.push(windage_shape.clone());
+        area_shapes.push(windage_shape.clone());
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let dir = std::fs::read_dir(&path).map_err(|err| {
             error.pass_with(
@@ -119,14 +118,13 @@ impl ModelCached {
                     return None;
                 };
                 let name = name.to_string();
-                let shape = Arc::new(RwLock::new(Shape::new_uninit(
+                let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
                     &dbg,
                     path,
                     None,
-                    None,
                     conf.model_scale,
                 )));
-                shapes.push(shape.clone());
+                displacement_shapes.push(shape.clone());
                 Some((
                     name.clone(),
                     CompartmentCache::new(
@@ -145,7 +143,8 @@ impl ModelCached {
             .collect();
         let model_cached = Self {
             dbg: dbg.clone(),
-            shapes,
+            displacement_shapes,
+            area_shapes,
             displacement: DisplacementCache::new(
                 &dbg,
                 displacement_shape.clone(),
@@ -200,7 +199,7 @@ impl ModelCached {
         let mut results: Vec<Result<(), Error>> = Vec::new();
         // Сначала считаем модели в разных потоках
         dbg!("shapes start");
-        for shape in &self.shapes {
+        for shape in &self.displacement_shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
             let handle = self
@@ -210,7 +209,23 @@ impl ModelCached {
                     task_results.push(guard.init());
                     Ok(())
                 })
-                .map_err(|err| error.pass_with(format!("spawn task shape"), err.to_string()));
+                .map_err(|err| error.pass_with(format!("spawn task displacement_shape"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => results.push(Err(err)),
+            };
+        }
+        for shape in &self.area_shapes {
+            let shape = shape.clone();
+            let task_results = task_results.clone();
+            let handle = self
+                .scheduler
+                .spawn(move || {
+                    let mut guard = shape.write();
+                    task_results.push(guard.init());
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("spawn task area_shape"), err.to_string()));
             match handle {
                 Ok(task) => tasks.push(task),
                 Err(err) => results.push(Err(err)),
