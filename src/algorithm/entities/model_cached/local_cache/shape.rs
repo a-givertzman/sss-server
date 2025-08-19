@@ -5,7 +5,7 @@ use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
 use sal_core::dbg::{info, Dbg};
 use sal_core::error::Error;
 use stl_io::{IndexedMesh, Vector};
-use std::collections::HashMap;
+use std::collections::HashMap; 
 use std::io::Write;
 use std::path::PathBuf;
 
