@@ -6,43 +6,50 @@ edition = "2024"
 [dependencies]
 #
 # Logging
-log = "^0.4"
-env_logger = "^0.11"
+log = "~0.4"
+env_logger = "~0.11"
 #
 # Internal deps
 testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.1" }
-sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
-sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.10" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.2.0" }
+#glam = { version = "0.24", features = ["bytemuck"] }
+#opencascade = { path = "../opencascade-rs/crates/opencascade/" }
+nalgebra = "0.33.2"
+obj = "0.10.2"
+stl_io = "0.8.5"
+parry3d-f64 = "~0.22"
+parry2d-f64 = "~0.22"
+
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
+#sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.10" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
 #
 # Time
-chrono = "^0.4"
+chrono = "~0.4"
 #
 # Serde
-serde = { version = "^1.0", features = ["derive"] }
-serde_yaml = "^0.9"
-serde_json = "^1.0"
-bincode = "^2.0"
+serde = { version = "~1.0", features = ["derive"] }
+serde_yaml = "~0.9"
+serde_json = "~1.0"
+bincode = "~2.0"
 #
 # Regex
-regex = "^1.10"
+regex = "~1.11"
 #
 # Collections
-indexmap = "^2.7"
-rustc-hash = "^2.1"
-coco = "^0.3"
-dashmap = "^6.1"
+indexmap = "~2.10"
+rustc-hash = "~2.1"
+dashmap = "~6.1"
 #
 # Math
-splines = "^5.0"
+splines = "~5.0"
 #
 # Helpful macros for working with enums and strings
-strum = "^0.27"
-strum_macros = "^0.27"
+strum = "~0.27"
+strum_macros = "~0.27"
 #
 # Thread safe
-kanal = "^0.1"
-papaya = "^0.2"
-parking_lot = "^0.12"
+kanal = "~0.1"
+papaya = "~0.2"
+parking_lot = "~0.12"

@@ -12,6 +12,7 @@ mod metacentric_height_eval;
 mod lever_diagram_eval;
 mod wind_eval;
 mod windage_eval;
+mod roll_frequency_eval;
 mod roll_period_eval;
 mod roll_amplitude_eval;
 mod criterion;
@@ -54,6 +55,8 @@ pub use wind_eval::wind_ctx::WindCtx;
 pub use windage_eval::windage_eval::WindageEval;
 pub use windage_eval::windage_ctx::WindageCtx;
 
+pub use roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
+
 pub use roll_period_eval::roll_period_eval::RollingPeriodEval;
 pub use roll_period_eval::roll_period_ctx::RollingPeriodCtx;
 
@@ -66,6 +69,7 @@ pub use criterion::*;
 
 pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;
+pub use zg_eval::Zg;
 
 pub use draft_mark_eval::draft_mark_ctx::DraftMarkCtx;
 pub use draft_mark_eval::draft_mark_eval::DraftMarkEval;
