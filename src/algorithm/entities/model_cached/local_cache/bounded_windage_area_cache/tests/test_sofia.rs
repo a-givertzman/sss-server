@@ -5,7 +5,7 @@ use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
 use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::{algorithm::entities::{model_cached::{AreaCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::{model_cached::{AreaCache, AreaShape, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -29,33 +29,33 @@ fn init_each() -> () {}
 /// During the test a file called `fpc_result` is created in ./tmpdir/.
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
-#[ignore = "too slow, run only in release mode"]
+#[ignore = "no target values"]
 #[test]
-fn calculated_windage_area_sofia() {
+fn calculated_bounded_windage_area_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test models", "calculated_windage_area_sofia");
+    let dbg = Dbg::new("test models", "calculated_bounded_windage_area_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
-    let dbg = Dbg::new("ShipModel", "compute_balance");
     let model_path = "src/assets/sofia.stl";
     let additionals_path = "src/assets/sofia_additionals/";
-    let cache_dir = "src/algorithm/entities/model/local_cache/windage_area/tests/cache/";
-    let center_coord = Position::new(65.250, 0., 0.);
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord.x(), 1000.);
+    let cache_dir = "src/algorithm/entities/cache/tests/";
+    let center_coord = Some(Position::new(65.250, 0., 0.));
+    let mut shape = AreaShape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cashe = AreaCache::new(
+    let mut cache = AreaCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,
         vec![0.],
-        vec![0., 2.],
+        0.,
+        2.,
         thread_pool.scheduler().clone(),
     );
-    let error = cashe.rebuild();
+    let error = cache.rebuild();
     assert!(error.is_ok(), "*error*: {:?}", error);
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
@@ -67,7 +67,7 @@ fn calculated_windage_area_sofia() {
         let mut key = [None; 4];
         key[0] = Some(target[0]);
         key[1] = Some(target[1]);
-        let result: Result<Vec<f64>, Error> = cashe.get(&key);
+        let result: Result<Vec<f64>, Error> = cache.get(&key);
         assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
         let result = result.unwrap();
         for (r, t) in result.iter().zip(target.iter()) {

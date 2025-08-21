@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{local_cache::LocalCache, save, AreaShape, Shape},
+        model_cached::{local_cache::LocalCache, save, DisplacementShape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -12,17 +12,17 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 ///
-/// Pre-calculated cache
-pub struct BoundedAreaCache {
+/// Pre-calculated cache for floating position algorithm.
+pub struct CompartmentCache {
     dbg: Dbg,
     cache_path: PathBuf,
+    heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    /// Draught in meters
-    draught_min: f64,
-    /// qnt draught steps for hull
     draught_step: f64,
+    ///
     /// Model representation used for cache calculation.
-    shape: Arc<RwLock<AreaShape>>,
+    shape: Arc<RwLock<DisplacementShape>>,
+    ///
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
     scheduler: Scheduler,
@@ -30,28 +30,28 @@ pub struct BoundedAreaCache {
 }
 //
 //
-impl BoundedAreaCache {
+impl CompartmentCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<AreaShape>>,
+        shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: impl AsRef<Path>,
+        compartment_id: String,
+        heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_min: f64,
         draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, "BoundedAreaCache");
-        let path = cache_dir.as_ref().join("bounded_area_cache");
+        let dbg = Dbg::new(parent, format!("Compartment_{compartment_id}_Cache"));
         Self {
             shape,
+            heel_steps,
             trim_steps,
-            draught_min,
             draught_step,
-            cache: Arc::new(RwLock::new(None)), 
-            cache_path: path,
+            cache: Arc::new(RwLock::new(None)),
+            cache_path: cache_dir.as_ref().join(compartment_id),
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
@@ -60,15 +60,15 @@ impl BoundedAreaCache {
 }
 //
 //
-impl LocalCache for BoundedAreaCache {
+impl LocalCache for CompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildBoundedAreaCache::new(
+        let cache_data = super::build_cache::BuildCompartmentCache::new(
             &self.dbg,
             self.shape.clone(),
+            self.heel_steps.clone(),
             self.trim_steps.clone(),
-            self.draught_min,
             self.draught_step,
             self.scheduler.clone(),
             self.exit.clone(),

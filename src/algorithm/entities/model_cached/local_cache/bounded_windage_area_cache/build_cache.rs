@@ -1,4 +1,4 @@
-use crate::{algorithm::entities::model_cached::Shape, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::model_cached::{AreaShape, Shape}, kernel::types::{Arc, RwLock}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -10,9 +10,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 ///
 pub struct BuildBoundedAreaCache {
     dbg: Dbg,
-    shape: Arc<RwLock<Shape>>,
+    shape: Arc<RwLock<AreaShape>>,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
+    /// Draught in meters
+    draught_min: f64,
+    /// qnt draught steps for hull
+    draught_step: f64,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -24,9 +27,10 @@ impl BuildBoundedAreaCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<AreaShape>>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        draught_min: f64,
+        draught_step: f64,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -34,7 +38,8 @@ impl BuildBoundedAreaCache {
             dbg: Dbg::new(parent, "BuildAreaCache"),
             shape: shape.clone(),
             trim_steps,
-            draught_steps,
+            draught_min,
+            draught_step,
             scheduler,
             exit,
         }
@@ -49,7 +54,11 @@ impl BuildBoundedAreaCache {
         let task_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        'draught: for &draught in &self.draught_steps {
+        let draught_steps = match shape.read().draught_steps(self.draught_min, self.draught_step) {
+            Ok(draught_steps) => draught_steps,
+            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
+        };
+        'draught: for draught in draught_steps {
             for &trim in &self.trim_steps {
                 // _true_ if the caller has requisted to exit.
                 // Note that in this case the file may be partially filled.

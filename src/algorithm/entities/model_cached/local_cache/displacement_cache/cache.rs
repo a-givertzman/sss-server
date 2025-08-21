@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{local_cache::LocalCache, save, Shape},
+        model_cached::{local_cache::LocalCache, save, DisplacementShape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -9,9 +9,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
 use std::{
     path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
@@ -20,11 +18,12 @@ pub struct DisplacementCache {
     cache_path: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
-    ///
+    /// Draught in meters
+    draught_min: f64,
+    /// qnt draught steps for hull
+    draught_step: f64,
     /// Model representation used for cache calculation.
-    shape: Arc<RwLock<Shape>>,
-    ///
+    shape: Arc<RwLock<DisplacementShape>>,
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
     scheduler: Scheduler,
@@ -33,28 +32,27 @@ pub struct DisplacementCache {
 //
 //
 impl DisplacementCache {
-    //
-    //
-    const KEY: &'static str = "floating_position_cache";
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: impl AsRef<Path>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        draught_min: f64,
+        draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "DisplacementCache");
-        let path = cache_dir.as_ref().join(Self::KEY);
+        let path = cache_dir.as_ref().join("displacement_cache");
         Self {
             shape,
             heel_steps,
             trim_steps,
-            draught_steps,
+            draught_min,
+            draught_step,
             cache: Arc::new(RwLock::new(None)),
             cache_path: path,
             dbg,
@@ -74,7 +72,8 @@ impl LocalCache for DisplacementCache {
             self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
-            self.draught_steps.clone(),
+            self.draught_min,
+            self.draught_step,
             self.scheduler.clone(),
             self.exit.clone(),
         )

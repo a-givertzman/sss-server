@@ -54,38 +54,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let res = model.rebuild_caches(&[&CacheKey::FloatingPostion]);
     dbg!(&res);
-*/
-   
+*/   
     let dbg = Dbg::new("ShipModel", "compute_balance");
  //   let model_path = "src/assets/sofia3.stp";
  //    let center_coord = Position::new(65.22, 0., 0.);
   //  let model_path = "src/assets/model_1510.stp";
   //    let model_path = "src/assets/ark-Part3.obj";
   //  let model_path = "src/assets/ark.stl";
-    let model_path = "src/assets/sofia.stl";
-    let additional_path = "src/assets/sofia_additionals/";
-    let cache_dir = "src/assets/cache/";
-    let center_coord = Position::new(59.195, 0., 0.);
+    let cache_dir = "src/assets/cache/sofia".into();
+    let model_dir = "src/assets/model/sofia".into();
+    let model_center_coord = Position::new(59.195, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(30));
     let mut model = model_cached::ModelCached::new(
         &dbg, 
         model_cached::ModelCachedConf {
-            model_path: PathBuf::from(model_path),
-            additional_path: Some(PathBuf::from(additional_path)),
+            model_dir,
+            cache_dir,
             model_scale: 1000.,
-            cache_dir: PathBuf::from(cache_dir),
-            cache_conf: model_cached::CacheConf {
-                center_coord,
-        //        heel_steps: vec![-20.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
-        //        trim_steps: vec![-20.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
-        //        draught_steps: vec![4.,],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(), 
-                heel_steps: vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
-                trim_steps: vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
-                draught_steps: vec![2., 3., 4., 5., 6., 7., 8.,],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         
-            },
+            model_center_coord,
+            heel_steps: vec![-10., -5., 0., 5., 10.],
+            trim_steps: vec![-5., -2., 0., 2., 5.],
+            draught_min: 2.,
+            hull_draught_step: 1.,
+            compartment_level_step: 0.25,
         },
         thread_pool.scheduler(),
-    );
+    ).unwrap();
     let res = model.rebuild_caches();
     dbg!(&res);
  /*   let floating_position = model.floating_position(

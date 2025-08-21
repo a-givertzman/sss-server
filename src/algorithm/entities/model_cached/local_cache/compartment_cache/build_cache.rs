@@ -1,24 +1,22 @@
-use crate::algorithm::entities::model::Shape;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use crate::{
+    algorithm::entities::model_cached::{DisplacementShape, Shape},
+    kernel::types::{Arc, RwLock},
 };
 ///
 /// Provides logic to calculate and store cache used by [super::CompartmentCache].
-///
-/// See [super::CompartmentCacheConf] for more details about the fields.
-//
-
 pub struct BuildCompartmentCache {
     dbg: Dbg,
-    shape: Shape,
+    shape: Arc<RwLock<DisplacementShape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
+    draught_step: f64,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -30,34 +28,38 @@ impl BuildCompartmentCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Shape,
+        shape: Arc<RwLock<DisplacementShape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        draught_step: f64,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildCompartmentCache"),
-            shape,
+            shape: shape.clone(),
             heel_steps,
             trim_steps,
-            draught_steps,
+            draught_step,
             scheduler,
             exit,
         }
     }
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
-    /// results: [[heel, trim, draught, volume, x, y, z, inertia_x, inertia_y]]
+    /// results: [[heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let shape = Arc::new(RwLock::new(self.shape.clone()));
-        'draught: for &draught in &self.draught_steps {
+        let shape = self.shape.clone();
+        let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
+            Ok(draught_steps) => draught_steps,
+            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
+        };
+        'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
@@ -71,7 +73,7 @@ impl BuildCompartmentCache {
                     let handle = self
                         .scheduler
                         .spawn(move || {
-                            let guard = shape.read().expect("Unable to read");
+                            let guard = shape.read();
                             draft_results.push((
                                 heel,
                                 trim,
@@ -120,9 +122,7 @@ impl BuildCompartmentCache {
                         continue;
                     }
                 };
-                results.push(Ok(vec![
-                    heel, trim, draught, volume, vx, vy, vz, i_x, i_y,
-                ]));
+                results.push(Ok(vec![heel, trim, draught, volume, vx, vy, vz, i_x, i_y]));
             }
         }
         //   dbg!(&results);

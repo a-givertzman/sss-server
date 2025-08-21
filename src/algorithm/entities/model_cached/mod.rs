@@ -1,7 +1,7 @@
 //!
 //! The representation of the ship in terms of its 3D elements.
 //
-mod floating_position;
+//mod floating_position;
 mod local_cache;
 mod model_cached_conf;
 //mod model_cached_meta;

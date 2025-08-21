@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{local_cache::LocalCache, save, Shape},
+        model_cached::{local_cache::LocalCache, save, AreaShape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -17,11 +17,12 @@ pub struct AreaCache {
     dbg: Dbg,
     cache_path: PathBuf,
     trim_steps: Vec<f64>,
-    draught_steps: Vec<f64>,
-    ///
+    /// Draught in meters
+    draught_min: f64,
+    /// qnt draught steps for hull
+    draught_step: f64,
     /// Model representation used for cache calculation.
-    shape: Arc<RwLock<Shape>>,
-    ///
+    shape: Arc<RwLock<AreaShape>>,
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
     scheduler: Scheduler,
@@ -33,20 +34,23 @@ impl AreaCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
+    /// 
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<AreaShape>>,
         cache_dir: impl AsRef<Path>,
         trim_steps: Vec<f64>,
-        draught_steps: Vec<f64>,
+        draught_min: f64,
+        draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "AreaCache");
-        let path = cache_dir.as_ref().join("floating_position_cache");
+        let path = cache_dir.as_ref().join("area_cache");
         Self {
             shape,
             trim_steps,
-            draught_steps,
+            draught_min,
+            draught_step,
             cache: Arc::new(RwLock::new(None)), 
             cache_path: path,
             dbg,
@@ -65,7 +69,8 @@ impl LocalCache for AreaCache {
             &self.dbg,
             self.shape.clone(),
             self.trim_steps.clone(),
-            self.draught_steps.clone(),
+            self.draught_min,
+            self.draught_step,
             self.scheduler.clone(),
             self.exit.clone(),
         )

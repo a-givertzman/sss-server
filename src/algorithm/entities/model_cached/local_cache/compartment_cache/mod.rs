@@ -1,7 +1,6 @@
-mod build_compartment_cache;
-mod compartment_cache_conf;
-//mod tests;
-mod compartment_cache;
+mod build_cache;
+mod tests;
+mod cache;
 
-pub(crate) use compartment_cache_conf::*;
-pub(crate) use compartment_cache::*;
+
+pub(crate) use cache::*;
