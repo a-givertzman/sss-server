@@ -8,7 +8,7 @@ pub mod icing_stab;
 pub mod math;
 //pub mod area;
 pub mod data;
-pub mod model;
+pub mod model_cached;
 pub mod cache;
 
 //pub use stability::*;

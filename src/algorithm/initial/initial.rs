@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::initial_ctx::InitialCtx;
+use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::ship_type::ShipType;
@@ -26,7 +27,6 @@ use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
-#[derive(Debug)]
 pub struct Initial {
     dbg: Dbg,
     model: Arc<ShipModel>,
