@@ -5,7 +5,7 @@ use testing::stuff::max_test_duration::TestDuration;
 
 #[cfg(test)]
 use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::{algorithm::entities::{model_cached::{LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::{model_cached::{DisplacementShape, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -43,7 +43,7 @@ fn calculated_displacement_ark() {
     let model_path = "src/assets/ark.stl";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(Position::new(59.195, 0., 0.));
-    let mut shape = Shape::new_uninit(&dbg, model_path.into(), None, center_coord, 1000.);
+    let mut shape = DisplacementShape::new_uninit(&dbg, model_path.into(), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
     let mut cache = DisplacementCache::new(

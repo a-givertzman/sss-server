@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{local_cache::LocalCache, save, Shape},
+        model_cached::{local_cache::LocalCache, save, AreaShape, Shape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -22,7 +22,7 @@ pub struct BoundedAreaCache {
     /// qnt draught steps for hull
     draught_step: f64,
     /// Model representation used for cache calculation.
-    shape: Arc<RwLock<Shape>>,
+    shape: Arc<RwLock<AreaShape>>,
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
     scheduler: Scheduler,
@@ -36,7 +36,7 @@ impl BoundedAreaCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<AreaShape>>,
         cache_dir: impl AsRef<Path>,
         trim_steps: Vec<f64>,
         draught_min: f64,

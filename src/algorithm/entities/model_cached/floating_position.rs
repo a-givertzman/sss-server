@@ -16,8 +16,6 @@ pub struct EvaluatedFloatingPosition {
 pub struct FloatingPosition<'cache> {
     dbg: Dbg,
     cache: &'cache dyn LocalCache,
- //   centreline: Edge<Attr>,
- //   middle: Face<Attr>,
     displacement: f64,
     mass_center: Position2d,
 }
@@ -28,16 +26,12 @@ impl<'cache> FloatingPosition<'cache> {
     pub(super) fn new(
         parent: &Dbg,
         cache: &'cache dyn LocalCache,
-  //      centreline: Edge<Attr>,
-   //     middle: Face<Attr>,
         displacement: f64,
         mass_center: Position2d,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "FloatingPosition"),
             cache,
-    //        centreline,
-    //        middle,
             displacement,
             mass_center,
         }

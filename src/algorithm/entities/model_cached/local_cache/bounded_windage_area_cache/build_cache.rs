@@ -1,4 +1,4 @@
-use crate::{algorithm::entities::model_cached::Shape, kernel::types::{Arc, RwLock}};
+use crate::{algorithm::entities::model_cached::{AreaShape, Shape}, kernel::types::{Arc, RwLock}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 ///
 pub struct BuildBoundedAreaCache {
     dbg: Dbg,
-    shape: Arc<RwLock<Shape>>,
+    shape: Arc<RwLock<AreaShape>>,
     trim_steps: Vec<f64>,
     /// Draught in meters
     draught_min: f64,
@@ -27,7 +27,7 @@ impl BuildBoundedAreaCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<Shape>>,
+        shape: Arc<RwLock<AreaShape>>,
         trim_steps: Vec<f64>,
         draught_min: f64,
         draught_step: f64,

@@ -392,25 +392,27 @@ fn compute_balance(
         scheduler.clone(),
     )
     .map_err(|err| error.pass_with("model_cached::ModelCached::new", err))?;
-    let floating_position = model
+
+  /* TODO
+   let floating_position = model
         .floating_position(
             src_data.mass_sum / src_data.water_density,
             Position2d::new(src_data.mass_shift.x(), src_data.mass_shift.y()),
         )
         .map_err(|err| error.pass_with("floating_position", err))?;
-
+*/
     let result = BalanceCtx {
-        trim: floating_position.trim_angle,
-        roll: floating_position.heel_angle,
-        draught_mid: floating_position.draught_at_amidships,
+        trim: todo!(),//floating_position.trim_angle,
+        roll: todo!(),//floating_position.heel_angle,
+        draught_mid: todo!(),//floating_position.draught_at_amidships,
         bulk: todo!(),
         liquid: todo!(),
         bounds_volume: todo!(),
-        volume: floating_position.displacement,
+        volume: todo!(),//floating_position.displacement,
         area_wl: todo!(),
         length_wl: todo!(),
         breadth_wl: todo!(),
-        volume_shift_z: floating_position.disp_center[2],
+        volume_shift_z: todo!(),//floating_position.disp_center[2],
         entry_angle: todo!(),
         flooding_angle: todo!(),
         bow_area: todo!(),
