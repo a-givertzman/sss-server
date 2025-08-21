@@ -108,33 +108,8 @@ impl ShipModel {
                 Err(_) => {
                     let bounds = self.model_cached.rebuild_bounds().map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
                     self.bounds = Some(bounds.clone());
-
-
-                        FOR index in 0..(n_parts-1) LOOP
-        INSERT INTO
-            computed_frame_space (ship_id, index, start_x, end_x)
-        VALUES
-            (changed_ship_id, index, stern_x + (bow_x - stern_x)*index/n_parts, stern_x + (bow_x - stern_x)*(index+1)/n_parts);
-    END LOOP;
-
-
-
-                    full_sql += " INSERT INTO computed_frame_space (ship_id, qnt_bounds, index, start_x, end_x) VALUES";
-                    data.iter().for_each(|v| {
-                        let z = if let Some(z) = v.z {
-                            z.to_string()
-                        } else {
-                            "NULL".to_string()
-                        };
-                        full_sql += &format!(" ({ship_id}, '{}', {}, {}, {}),", v.name, v.x, v.y, z,);
-                    });
-                    full_sql.pop();
-                    full_sql.push(';');
-
-                    let data = api_client.fetch(&format!(
-                        "SELECT index, start_x, end_x FROM computed_frame_space WHERE qnt_bounds = {qnt_bounds} AND ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
-                    ));
-
+                    let sql = format!("INSERT INTO computed_frame_space\n\t(ship_id, qnt_bounds, index, start_x, end_x)\nVALUES{};",
+                        bounds.iter().filter(|v| v.is_value()).iter().enumerate().map(|(i, v)| format!("\n\t({}, '{}', {i}, {}, {})", self.ship_id, self.qnt_bounds, v.start().unwrap(), v.end().unwrap())).join(","));
                     Ok(bounds)
                 }
             }

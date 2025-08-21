@@ -256,4 +256,11 @@ impl ModelCached {
         }
         Ok(())
     }
+    //
+    pub fn rebuild_bounds(&mut self) -> Result<Bounds, Error> {
+        TODO: rebuild
+        model_bounded
+        compartments_bounded
+        bounded_windage_area
+    }
 }
