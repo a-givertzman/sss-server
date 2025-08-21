@@ -1,6 +1,5 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, time::Duration};
-use coco::Stack;
-use sal_sync::services::entity::{Name, PointTxId};
+use sal_sync::{services::entity::{Name, PointTxId}, sync::Owner};
 use crate::kernel::types::{channel::{Receiver, Sender}, fx_map::FxDashMap};
 use super::link::Link;
 ///
@@ -9,10 +8,10 @@ pub struct Switch {
     txid: usize,
     name: Name,
     send: Sender<Vec<u8>>,
-    recv: Stack<Receiver<Vec<u8>>>,
+    recv: Owner<Receiver<Vec<u8>>>,
     subscribers: Arc<FxDashMap<String, Sender<Vec<u8>>>>,
     receivers_tx: Sender<(String, Receiver<Vec<u8>>)>,
-    receivers_rx: Stack<Receiver<(String, Receiver<Vec<u8>>)>>,
+    receivers_rx: Owner<Receiver<(String, Receiver<Vec<u8>>)>>,
     receivers: Arc<AtomicUsize>,
     timeout: Duration,
     exit: Arc<AtomicBool>,
@@ -30,20 +29,16 @@ impl Switch {
     /// - `exit` - exit signal for `recv_query` method
     pub fn new(parent: impl Into<String>, send: Sender<Vec<u8>>, recv: Receiver<Vec<u8>>) -> Self {
         let name = Name::new(parent, "Switch");
-        let stack = Stack::new();
-        stack.push(recv);
         let (receivers_tx, receivers_rx) = kanal::unbounded();
-        let receivers_rx_stack = Stack::new();
-        receivers_rx_stack.push(receivers_rx);
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
             send, 
-            recv: stack,
+            recv: Owner::new(recv),
             subscribers: Arc::new(FxDashMap::default()),
             receivers: Arc::new(AtomicUsize::new(0)),
             receivers_tx,
-            receivers_rx: receivers_rx_stack,
+            receivers_rx: Owner::new(receivers_rx),
             timeout: Self::DEFAULT_TIMEOUT,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -55,20 +50,16 @@ impl Switch {
         let (loc_send, rem_recv) = kanal::unbounded();
         let (rem_send, loc_recv) = kanal::unbounded();
         let remote = Link::new(name.join(), rem_send, rem_recv);
-        let stack = Stack::new();
-        stack.push(loc_recv);
         let (receivers_tx, receivers_rx) = kanal::unbounded();
-        let receivers_rx_stack = Stack::new();
-        receivers_rx_stack.push(receivers_rx);
         (
             Self { 
                 txid: PointTxId::from_str(&name.join()),
                 name: name.clone(),
-                send: loc_send, recv: stack,
+                send: loc_send, recv: Owner::new(loc_recv),
                 subscribers: Arc::new(FxDashMap::default()),
                 receivers: Arc::new(AtomicUsize::new(0)),
                 receivers_tx,
-                receivers_rx: receivers_rx_stack,
+                receivers_rx: Owner::new(receivers_rx),
                 timeout: Self::DEFAULT_TIMEOUT,
                 exit: Arc::new(AtomicBool::new(false)),
             },

@@ -29,3 +29,6 @@ Cargo.lock
 
 # win trash
 desktop.ini
+
+# too heavy
+/src/assets/*

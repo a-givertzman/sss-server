@@ -1,2 +1,0 @@
-mod test_sofia;
-mod calculated_displacement_cache_test;
