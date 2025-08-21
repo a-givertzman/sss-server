@@ -73,6 +73,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     bulk: loads.bulk.clone(),
                     liquid: loads.liquid.clone(),
                     grain_bulkhead: loads.grain_bulkhead,
+                    damage_compartment: Vec::new(), //TODO
                 };
                 // Расчет баланса в модели
                 let result_data: BalanceCtx = match self.model.compute_balance(balance_query).wait() {

@@ -1,6 +1,7 @@
 use super::query::*;
 use super::reply::*;
 use super::{query::Query, reply::Reply};
+use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::Position2d;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
@@ -35,153 +36,113 @@ use std::{
 ///
 ///
 pub struct ShipModel {
-    txid: usize,
-    name: Name,
+ //   txid: usize,
+ //   name: Name,
+    dbg: Dbg, 
     ship_id: usize,
-    ship_file_name: String, // TODO - read by  ship_id
+ //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
     qnt_bounds: usize,
     bounds: Option<Bounds>,
+    model_cached: ModelCached,
     scheduler: Scheduler,
-    timeout: Duration,
+//    timeout: Duration,
     api_client: Arc<RwLock<ApiClient>>,
-    handles: Handles<()>,
     exit: Arc<AtomicBool>,
-    dbg: Dbg,
 }
 //
 //
 impl ShipModel {
     ///
     /// Default timeout to await `recv`` operation, 300 ms
-    const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
-    ///
+ //   const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
+    /// TODO
     /// Returns [ShipModel] new instance
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
     pub fn new(
         parent: impl Into<String>,
-        ship_id: usize,
-        ship_file_name: String,
+        ship_id: usize,        
+    //    ship_file_name: String,
         project_id: String,
         qnt_bounds: usize,
+        model_cached: ModelCached,
         api_client: ApiClient,
         scheduler: Scheduler,
     ) -> Self {
-        let name = Name::new(parent, "ShipModel");
-        let dbg = Dbg::new(name.parent(), name.me());
+    //    let name = Name::new(parent, "ShipModel");
+        let dbg = Dbg::new(parent, "ShipModel");
         Self {
-            txid: PointTxId::from_str(&name.join()),
-            name,
+        //    txid: PointTxId::from_str(&name.join()),
+        //    name,
+            dbg,        
             ship_id,
-            ship_file_name,
+      //      ship_file_name,
             project_id,
             qnt_bounds,
             bounds: None,
+            model_cached,
             scheduler,
-            timeout: Self::DEFAULT_TIMEOUT,
+        //    timeout: Self::DEFAULT_TIMEOUT,
             api_client: Arc::new(RwLock::new(api_client)),
-            handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
-            dbg,
         }
     }
-    // ///
-    // /// Entry point
-    // pub fn run(&self) -> Result<JoinHandle<()>, Error> {
-    //     let dbg = self.name.join();
-    //     let error = Error::new(&dbg, "run");
-    //     log::info!("{}.run | Starting...", dbg);
-    //     // let timeout = self.timeout;
-    //     // let interval = self.timeout; //Duration::from_millis(1000);
-    //     let api_client = self.api_client.take().unwrap();
-    //     let exit = self.exit.clone();
-    //     let ship_id = self.ship_id;
-    //     // TODO read key by ship_id
-    //     let model_key = "/cube_1_1_1_centered";
-    //     // TODO read path by ship_id
-    //     let model_path = "src/assets/cube_1_1_1.step";
-    //     let project_id = self.project_id.clone();
-    //     let qnt_bounds = self.qnt_bounds;
-    //     let cache_dir = "src/assets/cache/";
-    //     let scheduler = self.scheduler.clone();
-    //     let bounds = match get_bounds(&api_client, ship_id, project_id, qnt_bounds) {
-    //         Ok(data) => data,
-    //         Err(err) => return Err(error.pass_with("get_bounds error", err)),
-    //     };
-    //     let handle = self.hub.listen(move |query, send| {
-    //         let error = Error::new(&dbg, "hub.listen");
-    //         log::trace!("{}.run | Received query: {:?}", dbg, query);
-    //         match query {
-    //             Query::Bounds => {
-    //                 if let Err(err) = send.send(Reply::Bounds(bounds.clone())) {
-    //                     log::warn!("{}.run | Send error: {:?}", dbg, err);
-    //                 }
-    //             }
-    //             Query::BoundAreas => {
-    //                 let bounds = bounds.clone();
-    //                 let api_client = api_client.clone();
-    //                 let exit = exit.clone();
-    //                 if let Err(err) = scheduler.spawn(move || {
-    //                     let result = bound_areas(bounds, ship_id, &api_client, exit);
-    //                     if let Err(err) = send.send(Reply::BoundAreas(result)) {
-    //                         let err = error.pass_with("Send error", err);
-    //                         log::warn!("{}", err);
-    //                     }
-    //                     Ok(())
-    //                 }) {
-    //                     log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-    //                 }
-    //             }
-    //             Query::ComputeBalance(balance_src_data) => {
-    //                 let bounds = bounds.clone();
-    //                 let exit = exit.clone();
-    //                 let scheduler_ = scheduler.clone();
-    //                 if let Err(err) = scheduler.spawn(move || {
-    //                     let result = compute_balance(
-    //                         model_key,
-    //                         model_path,
-    //                         cache_dir,
-    //                         bounds.clone(),
-    //                         balance_src_data,
-    //                         ship_id,
-    //                         scheduler_.clone(),
-    //                         exit,
-    //                     );
-    //                     if let Err(err) = send.send(Reply::ComputeBalance(result)) {
-    //                         let err = error.pass_with("Send error", err);
-    //                         log::warn!("{}", err);
-    //                     };
-    //                     Ok(())
-    //                 }) {
-    //                     log::warn!("{}.run | Schedule error: {:?}", dbg, err);
-    //                 }
-    //             } //          Query::StabilityAreas => todo!(),
-    //               //          Query::ComputePantocaren => todo!(),
-    //         };
-    //         None::<()>
-    //     });
-    //     let dbg = self.name.join();
-    //     log::info!("{}.run | Starting - Ok", dbg);
-    //     handle.map_err(|err| error.pass(err.to_string()))
-    // }
     ///
     /// TODO: Doc
-    pub fn bounds(&self) -> Result<Bounds, Error> {
+    pub fn bounds(&mut self) -> Result<Bounds, Error> {
+        let error = Error::new(&self.dbg, "bounds");
         match &self.bounds {
             Some(bounds) => Ok(bounds.clone()),
-            None => get_bounds(
+            None => match get_bounds(
                 &self.api_client.read(),
                 self.ship_id,
                 self.project_id.clone(),
                 self.qnt_bounds,
-            ),
+            ) {
+                Ok(bounds) => {
+                    self.bounds = Some(bounds.clone());
+                    Ok(bounds)
+                },
+                Err(_) => {
+                    let bounds = self.model_cached.rebuild_bounds().map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
+                    self.bounds = Some(bounds.clone());
+
+
+                        FOR index in 0..(n_parts-1) LOOP
+        INSERT INTO
+            computed_frame_space (ship_id, index, start_x, end_x)
+        VALUES
+            (changed_ship_id, index, stern_x + (bow_x - stern_x)*index/n_parts, stern_x + (bow_x - stern_x)*(index+1)/n_parts);
+    END LOOP;
+
+
+
+                    full_sql += " INSERT INTO computed_frame_space (ship_id, qnt_bounds, index, start_x, end_x) VALUES";
+                    data.iter().for_each(|v| {
+                        let z = if let Some(z) = v.z {
+                            z.to_string()
+                        } else {
+                            "NULL".to_string()
+                        };
+                        full_sql += &format!(" ({ship_id}, '{}', {}, {}, {}),", v.name, v.x, v.y, z,);
+                    });
+                    full_sql.pop();
+                    full_sql.push(';');
+
+                    let data = api_client.fetch(&format!(
+                        "SELECT index, start_x, end_x FROM computed_frame_space WHERE qnt_bounds = {qnt_bounds} AND ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
+                    ));
+
+                    Ok(bounds)
+                }
+            }
         }
     }
     ///
     /// TODO: Doc
-    pub fn bound_areas(&self) -> Result<BoundArea, Error> {
+  /*  pub fn bound_areas(&self) -> Result<BoundArea, Error> {
         let error = Error::new(&self.dbg, "bound_areas");
         match self.bounds() {
             Ok(bounds) => bound_areas(
@@ -192,7 +153,7 @@ impl ShipModel {
             ),
             Err(err) => Err(error.pass(err)),
         }
-    }
+    }*/
     ///
     /// TODO: Doc
     pub fn compute_balance(&self, query: BalanceQuery) -> Future<Result<BalanceCtx, Error>> {
@@ -202,9 +163,36 @@ impl ShipModel {
         let exit = self.exit.clone();
         let ship_id = self.ship_id;
         let sink_clone = sink.clone();
-        // TODO read path by ship_id
-        let cache_dir = format!("src/assets/cache//{}", self.ship_file_name);
-        let model_dir = format!("src/assets/model//{}", self.ship_file_name);
+
+        let floating_position = self.model_cached
+        .floating_position(
+            query,
+        )
+        .map_err(|err| error.pass_with("floating_position", err))?;
+
+    let result = BalanceCtx {
+        trim: todo!(),//floating_position.trim_angle,
+        roll: todo!(),//floating_position.heel_angle,
+        draught_mid: todo!(),//floating_position.draught_at_amidships,
+        bulk: todo!(),
+        liquid: todo!(),
+        bounds_volume: todo!(),
+        volume: todo!(),//floating_position.displacement,
+        area_wl: todo!(),
+        length_wl: todo!(),
+        breadth_wl: todo!(),
+        volume_shift_z: todo!(),//floating_position.disp_center[2],
+        entry_angle: todo!(),
+        flooding_angle: todo!(),
+        bow_area: todo!(),
+        const_area_v: todo!(),
+        const_area_h: todo!(),
+        rad_long: todo!(),
+        rad_trans: todo!(),
+        pantocaren: todo!(),
+    };
+    Ok(result)
+
         let bounds = match self.bounds() {
             Ok(bounds) => bounds,
             Err(err) => {
@@ -257,7 +245,7 @@ impl Debug for ShipModel {
             // .field("recv", &self.recv)
             // .field("subscribers", &self.subscribers)
             // .field("receivers", &self.receivers)
-            .field("timeout", &self.timeout)
+         //   .field("timeout", &self.timeout)
             .field("exit", &self.exit)
             .finish()
     }
@@ -276,14 +264,17 @@ fn get_bounds(
         ));
     let bounds = match data {
         Ok(data) => {
-            // TODO: если шпации для разбиения на qnt_bounds есть, значит есть кэш для этого разбиения - читаем их
+            // если шпации для разбиения на qnt_bounds есть, значит есть кэш для этого разбиения - читаем их
             match ComputedFrameDataArray::parse(&data) {
                 Ok(data) => data.data(),
                 Err(err) => return Err(error.pass_with("parse error", err)),
             }
         }
-        Err(err1) => {
-            // TODO: если шпаций для qnt_bounds нет, значит создаем такое разбиение и считаем кэш
+        Err(err) => return Err(err), 
+        // если шпаций для qnt_bounds нет, 
+        // значит нет кэшей для такого разбиения и надо их пересчитать
+    /*    {
+           // TODO: если шпаций для qnt_bounds нет, значит создаем такое разбиение и считаем кэш
             let data = api_client.fetch(&format!(
                 "SELECT pos_x, frame_index as index FROM physical_frame WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
             ));
@@ -315,7 +306,7 @@ fn get_bounds(
                     return Err(error.pass(format!("error: {err1}, physical_frames error: {err2}")));
                 }
             };
-        }
+        }*/
     };
     let bounds: Bounds = match Bounds::from_frames(&bounds) {
         Ok(data) => data,
@@ -373,54 +364,4 @@ fn bound_areas(
         h: area_h_str,
     })
 }
-///
-/// Computes ...
-/// - `exit` - used to breake long havy computation if possible
-fn compute_balance(
-    model_conf: model_cached::ModelCachedConf,
-    bounds: Bounds,
-    src_data: BalanceQuery,
-    ship_id: usize,
-    scheduler: Scheduler,
-    exit: Arc<AtomicBool>,
-) -> Result<BalanceCtx, Error> {
-    let dbg = Dbg::new("ShipModel", "compute_balance");
-    let error = Error::new(&dbg, "compute_balance");
-    let model = model_cached::ModelCached::new(
-        &dbg,
-        model_conf,
-        scheduler.clone(),
-    )
-    .map_err(|err| error.pass_with("model_cached::ModelCached::new", err))?;
 
-  /* TODO
-   let floating_position = model
-        .floating_position(
-            src_data.mass_sum / src_data.water_density,
-            Position2d::new(src_data.mass_shift.x(), src_data.mass_shift.y()),
-        )
-        .map_err(|err| error.pass_with("floating_position", err))?;
-*/
-    let result = BalanceCtx {
-        trim: todo!(),//floating_position.trim_angle,
-        roll: todo!(),//floating_position.heel_angle,
-        draught_mid: todo!(),//floating_position.draught_at_amidships,
-        bulk: todo!(),
-        liquid: todo!(),
-        bounds_volume: todo!(),
-        volume: todo!(),//floating_position.displacement,
-        area_wl: todo!(),
-        length_wl: todo!(),
-        breadth_wl: todo!(),
-        volume_shift_z: todo!(),//floating_position.disp_center[2],
-        entry_angle: todo!(),
-        flooding_angle: todo!(),
-        bow_area: todo!(),
-        const_area_v: todo!(),
-        const_area_h: todo!(),
-        rad_long: todo!(),
-        rad_trans: todo!(),
-        pantocaren: todo!(),
-    };
-    Ok(result)
-}

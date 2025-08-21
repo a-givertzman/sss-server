@@ -9,17 +9,20 @@ use super::{bulk_data::BulkData, liquid_data::LiquidData};
 pub struct BalanceQuery {
     /// Плотность забортной воды
     pub water_density: f64,
-    /// Суммарная масса корпуса, всех грузов и обледенения с намоканием
+    /// масса и положение центра тяжести судна порожнем и грузов размещенных на судне: 
+    /// генерального груза (unitCargoAssignment), контейнеров (containerCargoAssignment), 
+    /// газообразного груза (gaseousCargoAssignment);
     pub mass_sum: f64,
-    /// Смещение суммарной массы.
-    /// TODO: пересчитывать смещение с учетом смещяемых и насыпных грузов
+    /// Смещение суммарной массы
     pub mass_shift: Position,
     /// Сумарный момент за вычетом смещяемых и насыпных грузов
     pub moment_const: Moment,
-    /// Груз, для которого центр массы и распределение зависит от 
-    /// объема и/или положения корпуса, считается в модели
+    /// навалочный груз
     pub bulk: Vec<BulkData>,
+    /// жидкий груз
     pub liquid: Vec<LiquidData>,
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>,
+    /// номера поврежденных помещений
+    pub damage_compartment: Vec<String>,
 }
