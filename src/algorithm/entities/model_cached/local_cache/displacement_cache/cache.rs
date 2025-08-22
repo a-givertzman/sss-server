@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{local_cache::LocalCache, save, DisplacementShape},
+        model_cached::{local_cache::LocalCache, save, DisplacementShape}, Position,
     },
     kernel::types::{Arc, RwLock},
 };
@@ -13,6 +13,7 @@ use std::{
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
+/// contains [heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
 pub struct DisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
