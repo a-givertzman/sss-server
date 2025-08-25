@@ -8,10 +8,12 @@ use crate::{
         eval::BalanceCtx,
     },
     kernel::types::{Arc, RwLock},
-    ship_model::query::BalanceQuery,
+    ship_model::{query::BalanceQuery, reply::BoundArea},
 };
 use indexmap::IndexMap;
 use log::*;
+use nalgebra::{Point3, UnitQuaternion, UnitVector3, Vector3};
+use parry3d_f64::{math::{UnitVector, Vector}, query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -22,12 +24,10 @@ use std::path::PathBuf;
 use super::{LocalCache, ModelCachedConf};
 
 ///
-/// Ship object represented as a collection of its 3D elements all with attributes of type `A`.
 struct FloatingPositionResult {
-    roll: f64,
+    heel: f64,
     trim: f64,
-    draught_mid: f64, // TODO
-    volume: f64,
+    draught: f64,
     precision: f64,
 }
 ///
@@ -36,11 +36,11 @@ pub struct ModelCached {
     dbg: Dbg,
     /// 3d model initial position in 3D space (midel).
     pub model_center_coord: Position,
-    /// Waterline coord Y in 3D space (midel) initial position. 
+    /// Waterline coord Z in 3D space (midel) initial position. 
     draught_min: f64,
     /// Privides access to structure of the 3D element
     displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>>,
-    area_shapes: Vec<Arc<RwLock<AreaShape>>>,
+    windage_shape: Arc<RwLock<AreaShape>>,
     /// Provides a number of calculations:
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y ]
     displacement: DisplacementCache,
@@ -52,10 +52,6 @@ pub struct ModelCached {
     //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
     //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
-    /// - cache for windage area
-    windage_area: AreaCache,
-    /// - cache for bounded windage area
-    bounded_windage_area: BoundedAreaCache,
     scheduler: Scheduler,
 }
 //
@@ -67,7 +63,6 @@ impl ModelCached {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
         let mut displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>> = Vec::new();
-        let mut area_shapes: Vec<Arc<RwLock<AreaShape>>> = Vec::new();
         let delta_pos = Some(conf.model_center_coord.clone());
         let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg,
@@ -83,7 +78,6 @@ impl ModelCached {
             delta_pos,
             conf.model_scale,
         )));
-        area_shapes.push(windage_shape.clone());
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let dir = std::fs::read_dir(&path).map_err(|err| {
             error.pass_with(
@@ -175,30 +169,12 @@ impl ModelCached {
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
             displacement_shapes,
-            area_shapes,
+            windage_shape,
             displacement: DisplacementCache::new(
                 &dbg,
                 displacement_shape.clone(),
                 conf.cache_dir.clone(),
                 conf.heel_steps.clone(),
-                conf.trim_steps.clone(),
-                conf.draught_min,
-                conf.hull_draught_step,
-                scheduler.clone(),
-            ),
-            windage_area: AreaCache::new(
-                &dbg,
-                windage_shape.clone(),
-                conf.cache_dir.clone(),
-                conf.trim_steps.clone(),
-                conf.draught_min,
-                conf.hull_draught_step,
-                scheduler.clone(),
-            ),
-            bounded_windage_area: BoundedAreaCache::new(
-                &dbg,
-                windage_shape.clone(),
-                conf.cache_dir.clone(),
                 conf.trim_steps.clone(),
                 conf.draught_min,
                 conf.hull_draught_step,
@@ -249,8 +225,8 @@ impl ModelCached {
                 Err(err) => results.push(Err(err)),
             };
         }
-        for shape in &self.area_shapes {
-            let shape = shape.clone();
+        {
+            let shape = self.windage_shape.clone();
             let task_results = task_results.clone();
             let handle = self
                 .scheduler
@@ -280,14 +256,10 @@ impl ModelCached {
         }
         dbg!("displacement end");
         dbg!("windage_area start");
-        if let Err(error) = self.windage_area.rebuild() {
-            errors.push(("windage_area".to_owned(), error));
-        }
+            TODO
         dbg!("windage_area end");
         dbg!("bounded_windage_area start");
-        if let Err(error) = self.bounded_windage_area.rebuild() {
-            errors.push(("bounded_windage_area".to_owned(), error));
-        }
+            TODO
         dbg!("bounded_windage_area end");
         dbg!("compartments start");
         for (name, compartment) in &mut self.compartments {
@@ -314,7 +286,7 @@ impl ModelCached {
         Ok(())
     }
     //
-    pub fn rebuild_bounds(&mut self) -> Result<Bounds, Error> {
+    pub fn rebuild_bounds(&self, bounds_qnt: usize) -> Result<Bounds, Error> {
         /*     TODO: rebuild
         model_bounded
         compartments_bounded
@@ -323,7 +295,18 @@ impl ModelCached {
 
         Ok(())
     }
-
+    //
+    pub fn rebuild_bounded_windage_area(&self, bounds: Bounds) -> Result<Vec<f64>, Error> {
+        /*     TODO: 
+        */
+        Ok(())
+    }
+    //
+    pub fn windage_area(&self) -> Result<(f64, f64), Error> {
+        /*     TODO: 
+        */
+        Ok(())
+    }
     //
     pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
         let error = Error::new(&self.dbg, "balance");
@@ -367,7 +350,9 @@ impl ModelCached {
         let init_center = self.model_center_coord.clone();
 
         // постоянная масса
-        let mass_const = query.mass_sum; 
+        let mass_const = query.mass_const; 
+        // постоянный момент
+        let moment_const = query.moment_const; 
 
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
@@ -393,7 +378,7 @@ impl ModelCached {
             }).collect();    
             (
                 query.bulk.iter().map(|v| v.mass).sum(), 
-                result.iter().map(|(_, _, m)| m).sum(),
+                result.iter().map(|(_, _, m)| *m).sum(),
                 result
             )
         };
@@ -403,38 +388,6 @@ impl ModelCached {
         let mut trim = 0.0;
         let mut draught = self.draught_min;
         loop {
-
-
-       /*     // считаем обледенение TODO не зависит от крена  
-            let icing_result = {
-
-                [trim, draught, area, x]
-
-                self.windage_area.get(vals)
-
-                // Prepare values (key) to extract data from `self.cache`.
-                // Note that 3rd parameter sets to None (as well as 5th and the rest).
-                // This means we expect to get their approximated values from the cache.
-                let mut vals = vec![Some(trim), ];
-                vals[0] = Some(heel);
-                vals[1] = Some(trim);
-                vals[3] = Some(disp_vol);
-                // The cache returns the whole row(s) for given `vals`
-                // and we expect each row has at least the following structure:
-                //
-                // [heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
-                // where
-                // - every value is of type f64,
-                //
-                let result = self.displacement
-                    .get(&vals)
-                    .map_err(|err| error.pass_with(format!("self.displacement.get vals:{:?}", vals), err))?;
-                let draught = result[2];
-                let volume = result[3];
-                let center = Position::new(result[4], result[5], result[6]);          
-                (draught, volume, center) 
-            };
-*/
             let moment_liquid = {
                 let mut vals = vec![None; 9];
                 query.liquid.iter()
@@ -456,10 +409,9 @@ impl ModelCached {
                         Moment::from_pos(center, v.mass)
                 }).sum()
             };
-
             let (mass_damaged_compartment, moment_damaged_compartment)  = {
                 let mut vals = vec![None; 9];
-                let result: Vec<_> = query.damaged_compartment.iter()
+                query.damaged_compartment.iter()
                     .map(|v| {
                         vals[0] = Some(heel);
                         vals[1] = Some(trim);
@@ -479,15 +431,11 @@ impl ModelCached {
                         };
                         let mass = volume*query.water_density;
                         (mass, Moment::from_pos(center, mass))
-                }).collect();    
-                (
-                    query.bulk.iter().map(|v| v.mass).sum(), 
-                    result.iter().map(|(_, _, m)| m).sum()
-                )
+                }).fold((0., Moment::zero()), |(mass_sum, moment_sum), (mass, moment)| (
+                    (mass_sum + mass, moment_sum + moment)
+                ))
             };
-
-            let mass_sum = mass_const + mass_bulk + mass_liquid + mass_icing + mass_damaged_compartment;
-            let disp_vol = mass_sum/query.water_density;
+            let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             // считаем корпус 
             let (draught, volume, volume_center) = {
                 // Prepare values (key) to extract data from `self.cache`.
@@ -496,7 +444,7 @@ impl ModelCached {
                 let mut vals = vec![None; 13];
                 vals[0] = Some(heel);
                 vals[1] = Some(trim);
-                vals[3] = Some(disp_vol);
+                vals[3] = Some(mass_sum/query.water_density);
                 // The cache returns the whole row(s) for given `vals`
                 // and we expect each row has at least the following structure:
                 //
@@ -507,32 +455,58 @@ impl ModelCached {
                 let result = self.displacement
                     .get(&vals)
                     .map_err(|err| error.pass_with(format!("self.displacement.get vals:{:?}", vals), err))?;
-                let draught = result[2];
-                let volume = result[3];
-                let center = Position::new(result[4], result[5], result[6]);          
-                (draught, volume, center) 
+                (result[2], result[3], Position::new(result[4], result[5], result[6])) 
             };
 
+            let mass_center = {
+                let moment_sum = moment_const + moment_bulk + moment_liquid + moment_damaged_compartment;
+                moment_sum.to_pos(mass_sum)
+            };
+
+            // Определение невязки
             {
-                let horizontal_dist = {
-                    let [ax, ay, ..] = volume_center.point();
-                    let [bx, by, ..] = self.disp_center.point();
-                    ((bx - ax).powi(2) + (by - ay).powi(2)).sqrt()
-                };
-                if horizontal_dist < self.accuracy {
-                    return Ok(EvaluatedFloatingPosition {
-                        heel_angle: heel,
-                        trim_angle: trim,
-                        draught_at_amidships: draught,
-                        displacement: self.displacement,
-                        displacement_center: self.disp_center.point(),
-                        displacement_volume: disp_vol,
-                        displacement_volume_center: volume_center.point(),
-                        accuracy: self.accuracy,
+                let heel_rad = -heel.to_radians();
+                let trim_rad = trim.to_radians();
+                let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+                let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+                let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
+                let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+                let rotation = heel_rotation * trim_rotation;
+                let up_vector = rotation.transform_vector(&Vector3::z_axis());
+                let up_vector = UnitVector::new_normalize(up_vector);
+                // Через центр плавучести CB проводится горизонтальная плоскость                
+                let my_plane = HalfSpace::new(up_vector);
+                let cg = Point3::from_slice(&(volume_center - mass_center).values());
+
+                let cg_h = my_plane.project_local_point(&cg, false).point;
+                let l = (Position::new(cg_h.x, cg_h.y, cg_h.z) - Position::new(cg.x, cg.y, cg.z)).len();
+                if l < query.precision {
+                    return Ok(FloatingPositionResult {
+                        heel,
+                        trim,
+                        draught,
+                        precision: l,
                     });
                 }
             }
+
+            // Определение посадки судна для следующего шага
             let [frac_delta_psi_2, frac_delta_theta_2] = {
+                let heel_rad = -heel.to_radians();
+                let trim_rad = trim.to_radians();
+                let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+                let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+                let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
+                let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+                let rotation = heel_rotation * trim_rotation;
+                let up_vector = rotation.transform_vector(&Vector3::z_axis());
+                let up_vector = UnitVector::new_normalize(up_vector);
+                // Через центр плавучести CB проводится горизонтальная плоскость                
+                let my_plane = HalfSpace::new(up_vector);
+                let cg = Point3::from_slice(&(volume_center - mass_center).values());
+
+                let cg_h = my_plane.project_local_point(&cg, false);
+
                 let cg = Point::from(self.disp_center.point());
                 let size = self.centreline.len();
                 let v_plane_normal = self.centreline.dir().cross(&Vector::unit_z());

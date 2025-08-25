@@ -16,16 +16,12 @@ use std::{
 pub struct BoundedAreaCache {
     dbg: Dbg,
     cache_path: PathBuf,
-    trim_steps: Vec<f64>,
     /// Draught in meters
     draught_min: f64,
-    /// qnt draught steps for hull
-    draught_step: f64,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<AreaShape>>,
     /// Cache read from `self.file_path`.
     cache: Arc<RwLock<Option<Cache<f64>>>>,
-    scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
 //
@@ -38,23 +34,16 @@ impl BoundedAreaCache {
         parent: &Dbg,
         shape: Arc<RwLock<AreaShape>>,
         cache_dir: impl AsRef<Path>,
-        trim_steps: Vec<f64>,
         draught_min: f64,
-        draught_step: f64,
-        scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, "BoundedAreaCache");
         let path = cache_dir.as_ref().join("bounded_area_cache");
         Self {
             shape,
-            trim_steps,
             draught_min,
-            draught_step,
             cache: Arc::new(RwLock::new(None)), 
             cache_path: path,
             dbg,
-            scheduler,
-            exit: Arc::new(AtomicBool::new(false)),
         }
     }
 }

@@ -42,8 +42,8 @@ pub struct ShipModel {
     ship_id: usize,
  //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
-    qnt_bounds: usize,
     bounds: Option<Bounds>,
+    bound_areas: Option<BoundArea>,
     model_cached: ModelCached,
     scheduler: Scheduler,
 //    timeout: Duration,
@@ -66,7 +66,6 @@ impl ShipModel {
         ship_id: usize,        
     //    ship_file_name: String,
         project_id: String,
-        qnt_bounds: usize,
         model_cached: ModelCached,
         api_client: ApiClient,
         scheduler: Scheduler,
@@ -80,8 +79,8 @@ impl ShipModel {
             ship_id,
       //      ship_file_name,
             project_id,
-            qnt_bounds,
             bounds: None,
+            bound_areas: None,
             model_cached,
             scheduler,
         //    timeout: Self::DEFAULT_TIMEOUT,
@@ -91,7 +90,7 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn bounds(&mut self) -> Result<Bounds, Error> {
+    pub fn bounds(&mut self, qnt_bounds: usize) -> Result<Bounds, Error> {
         let error = Error::new(&self.dbg, "bounds");
         match &self.bounds {
             Some(bounds) => Ok(bounds.clone()),
@@ -99,17 +98,18 @@ impl ShipModel {
                 &self.api_client.read(),
                 self.ship_id,
                 self.project_id.clone(),
-                self.qnt_bounds,
+                qnt_bounds,
             ) {
                 Ok(bounds) => {
                     self.bounds = Some(bounds.clone());
                     Ok(bounds)
                 },
                 Err(_) => {
-                    let bounds = self.model_cached.rebuild_bounds().map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
+                    let bounds = self.model_cached.rebuild_bounds(qnt_bounds).map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
                     self.bounds = Some(bounds.clone());
                     let sql = format!("INSERT INTO computed_frame_space\n\t(ship_id, qnt_bounds, index, start_x, end_x)\nVALUES{};",
-                        bounds.iter().filter(|v| v.is_value()).iter().enumerate().map(|(i, v)| format!("\n\t({}, '{}', {i}, {}, {})", self.ship_id, self.qnt_bounds, v.start().unwrap(), v.end().unwrap())).join(","));
+                        bounds.iter().filter(|v| v.is_value()).enumerate().map(|(i, v)| format!("\n\t({}, '{}', {i}, {}, {})", self.ship_id, qnt_bounds, v.start().unwrap(), v.end().unwrap())).collect::<Vec<_>>().join(","));
+                    self.api_client.read().fetch(&sql).map_err(|err| error.pass_with("self.api_client.fetch", err))?;         
                     Ok(bounds)
                 }
             }
@@ -117,18 +117,31 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-  /*  pub fn bound_areas(&self) -> Result<BoundArea, Error> {
+    pub fn bound_areas(&mut self, bounds: Bounds) -> Result<BoundArea, Error> {
         let error = Error::new(&self.dbg, "bound_areas");
-        match self.bounds() {
-            Ok(bounds) => bound_areas(
+        match &self.bound_areas {
+            Some(bound_areas) => Ok(bound_areas.clone()),
+            None => match bound_areas(
                 bounds,
                 self.ship_id,
                 &self.api_client.read(),
                 self.exit.clone(),
-            ),
-            Err(err) => Err(error.pass(err)),
+            ) {
+                Ok(bound_areas) => {
+                    self.bound_areas = Some(bound_areas.clone());
+                    Ok(bound_areas)
+                },
+                Err(_) => {
+                    let bound_areas = self.model_cached.rebuild_windage_area(bounds).map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
+                    self.bound_areas = Some(bound_areas.clone());
+                    let sql = format!("INSERT INTO computed_frame_space\n\t(ship_id, qnt_bounds, index, start_x, end_x)\nVALUES{};",
+                        bounds.iter().filter(|v| v.is_value()).enumerate().map(|(i, v)| format!("\n\t({}, '{}', {i}, {}, {})", self.ship_id, qnt_bounds, v.start().unwrap(), v.end().unwrap())).collect::<Vec<_>>().join(","));
+                    self.api_client.read().fetch(&sql).map_err(|err| error.pass_with("self.api_client.fetch", err))?;         
+                    Ok(bound_areas)
+                }
+            }
         }
-    }*/
+    }
     ///
     /// TODO: Doc
     pub fn compute_balance(&self, query: BalanceQuery) -> Future<Result<BalanceCtx, Error>> {
@@ -292,51 +305,66 @@ fn get_bounds(
 ///
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
-fn bound_areas(
+fn bounded_horisontal_area(
     bounds: Bounds,
     ship_id: usize,
     api_client: &ApiClient,
     _: Arc<AtomicBool>,
-) -> Result<BoundArea, Error> {
-    let err = Error::new("ShipModel", "bound_areas");
-    let area_h_str = HStrAreaArray::parse(
+) -> Result<Vec<f64>, Error> {
+    let err = Error::new("ShipModel", "bounded_horisontal_area");
+    let area = HStrAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
         )).map_err(|e| err.pass(e.to_string()))?
     ).map_err(|e| err.pass(e.to_string()))?;
-    let area_v_str = strength::VerticalAreaArray::parse(
+    let area: Vec<_> = area
+        .data()
+        .into_iter()
+        .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
+        .collect();
+    let area: Vec<f64> = bounds
+        .iter()
+        .map(|b1| {
+                area.iter().fold(0., |sum, &(v, b2)| 
+                    sum + v * b1.part_ratio(&b2).unwrap_or(0.)
+                )
+        })
+        .collect();
+    Ok(area)
+}
+///
+/// Computes ...
+/// - `exit` - used to breake long havy computation if possible
+fn bounded_windage_area(
+    bounds: Bounds,
+    ship_id: usize,
+    api_client: &ApiClient,
+    _: Arc<AtomicBool>,
+) -> Result<BoundArea, Error> {
+    let err = Error::new("ShipModel", "bounded_windage_area");
+    let area = strength::VerticalAreaArray::parse(
         &api_client.fetch(&format!(
             "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
             ship_id
         )).map_err(|e| err.pass(e.to_string()))?
     ).map_err(|e| err.pass(e.to_string()))?;
-    let area_h_str: Vec<_> = area_h_str
+    let area: Vec<_> = area
         .data()
         .into_iter()
         .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
         .collect();
-    let area_v_str: Vec<_> = area_v_str
-        .data()
-        .into_iter()
-        .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
-        .collect();
-    let (area_v_str, area_h_str): (Vec<f64>, Vec<f64>) = bounds
+    let area: Vec<f64> = bounds
         .iter()
         .map(|b1| {
             (
-                area_v_str.iter().fold(0., |sum, &(v, b2)| {
+                area.iter().fold(0., |sum, &(v, b2)| 
                     sum + v * b1.part_ratio(&b2).unwrap_or(0.)
-                }),
-                area_h_str.iter().fold(0., |sum, &(v, b2)| {
-                    sum + v * b1.part_ratio(&b2).unwrap_or(0.)
-                }),
+                ),
             )
         })
         .collect();
-    Ok(BoundArea {
-        v: area_v_str,
-        h: area_h_str,
-    })
+    Ok(area)
 }
+
 

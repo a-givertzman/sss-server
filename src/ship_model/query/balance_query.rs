@@ -9,12 +9,10 @@ use super::{bulk_data::BulkData, liquid_data::LiquidData};
 pub struct BalanceQuery {
     /// Плотность забортной воды
     pub water_density: f64,
-    /// масса и положение центра тяжести судна порожнем и грузов размещенных на судне: 
+    /// масса судна порожнем и грузов размещенных на судне: 
     /// генерального груза (unitCargoAssignment), контейнеров (containerCargoAssignment), 
-    /// газообразного груза (gaseousCargoAssignment);
-    pub mass_sum: f64,
-    /// Смещение суммарной массы
-    pub mass_shift: Position,
+    /// газообразного груза (gaseousCargoAssignment), массы обледенения и намокания;
+    pub mass_const: f64,
     /// Сумарный момент за вычетом смещяемых и насыпных грузов
     pub moment_const: Moment,
     /// навалочный груз
@@ -25,4 +23,6 @@ pub struct BalanceQuery {
     pub grain_bulkhead: Vec<f64>,
     /// номера поврежденных помещений
     pub damaged_compartment: Vec<String>,
+    /// точность расчета
+    pub precision: f64,
 }

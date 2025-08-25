@@ -67,7 +67,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                 // Структура для передачи в модель
                 let balance_query = BalanceQuery {
                     water_density: voyage.density,
-                    mass_sum,
+                    mass_const: mass_sum,
                     mass_shift,
                     moment_const,
                     bulk: loads.bulk.clone(),

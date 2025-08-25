@@ -11,13 +11,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub struct BuildBoundedAreaCache {
     dbg: Dbg,
     shape: Arc<RwLock<AreaShape>>,
-    trim_steps: Vec<f64>,
     /// Draught in meters
     draught_min: f64,
-    /// qnt draught steps for hull
-    draught_step: f64,
-    scheduler: Scheduler,
-    exit: Arc<AtomicBool>,
 }
 //
 //
@@ -28,20 +23,12 @@ impl BuildBoundedAreaCache {
     pub(super) fn new(
         parent: &Dbg,
         shape: Arc<RwLock<AreaShape>>,
-        trim_steps: Vec<f64>,
         draught_min: f64,
-        draught_step: f64,
-        scheduler: Scheduler,
-        exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "BuildAreaCache"),
             shape: shape.clone(),
-            trim_steps,
             draught_min,
-            draught_step,
-            scheduler,
-            exit,
         }
     }
     ///
@@ -98,21 +85,7 @@ impl BuildBoundedAreaCache {
                 results.push(Err(error));
             }
         }
-        while !task_results.is_empty() {
-            if let Some((trim, draught, area)) = task_results.pop() {
-                    let (_, _, mut values) = match area {
-                        Ok((start_x, end_x, values)) => (start_x, end_x, values),
-                        Err(err) => {
-                            results.push(Err(error.pass_with("results area", err)));
-                            continue;
-                        }
-                    };
-                    let mut result = vec![trim, draught];
-                    result.append(&mut values);
-                    results.push(Ok(result));
-            }
-        }
         //   dbg!(&results);
-        results
+        result
     }
 }

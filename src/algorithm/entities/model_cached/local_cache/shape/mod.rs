@@ -30,12 +30,8 @@ pub trait Shape {
         let heel_rad = -heel.to_radians();
         let trim_rad = trim.to_radians();
         let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
-        let transformed_x_axis = trim_rotation.transform_point(&Point3::new(1., 0., 0.));
-        let transformed_x_axis = UnitVector3::new_normalize(Vector3::new(
-            transformed_x_axis.x,
-            transformed_x_axis.y,
-            transformed_x_axis.z,
-        ));
+        let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+        let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
         let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
         let rotation = heel_rotation * trim_rotation;
         let mut center = center.clone();
