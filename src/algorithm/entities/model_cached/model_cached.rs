@@ -4,7 +4,7 @@ use crate::{
             model_cached::{
                 AreaCache, AreaShape, BoundedAreaCache, CompartmentCache, DisplacementCache,
                 DisplacementShape, Shape,
-            }, Bounds, Position
+            }, Bounds, Moment, Position
         },
         eval::BalanceCtx,
     },
@@ -12,6 +12,7 @@ use crate::{
     ship_model::query::BalanceQuery,
 };
 use indexmap::IndexMap;
+use log::*;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -34,13 +35,15 @@ struct FloatingPositionResult {
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
 pub struct ModelCached {
     dbg: Dbg,
-    /// Waterline initial position in 3D space (midel).
+    /// 3d model initial position in 3D space (midel).
     pub model_center_coord: Position,
+    /// Waterline coord Y in 3D space (midel) initial position. 
+    draught_min: f64,
     /// Privides access to structure of the 3D element
     displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>>,
     area_shapes: Vec<Arc<RwLock<AreaShape>>>,
     /// Provides a number of calculations:
-    /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y, i_x, i_y ]
+    /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y ]
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, CompartmentCache>,
@@ -134,6 +137,8 @@ impl ModelCached {
             .collect();
         let model_cached = Self {
             dbg: dbg.clone(),
+            model_center_coord: conf.model_center_coord.clone(),
+            draught_min: conf.draught_min,
             displacement_shapes,
             area_shapes,
             displacement: DisplacementCache::new(
@@ -316,28 +321,62 @@ impl ModelCached {
         if query.water_density <= 0.  {
             return Err(error.err("water_density <= 0."));
         }
-        let init_keel = self.model_center_coord.clone();
-        let init_mass = query.mass_sum + 
-                    query.bulk.iter().map(|v| v.mass).sum() +
-                    query.liquid.iter().map(|v| v.mass).sum();
-        let mut disp_vol = init_mass/query.water_density;
+        let init_center = self.model_center_coord.clone();
 
+        // постоянная масса
+        let mass_const = query.mass_sum; 
 
+        // Считаем сыпучие грузы.
+        // На них крен и дифферент не влияет.
+        let (mass_bulk, moment_bulk, bulk_result)  = {
+            let mut vals = vec![None; 9];
+            let result: Vec<_> = query.bulk.iter()
+                .map(|v| {
+                    vals[3] = Some(v.volume);
+                    let (level, center) = match self.compartments.get(&v.space_id).map(|c| c.get(&vals)) {
+                        Some(v) => match v {
+                            Ok(v) => (v[2], Position::new(v[4], v[5], v[6])),
+                            Err(err) => {
+                                log::error!("{}", error.pass_with("bulk self.compartments.get", err));
+                                (0., Moment::zero())
+                            },
+                        },
+                        None => {
+                            log::error!("{}", error.err(format!("bulk no compartment:{} in compartments", v.space_id)));
+                            (0., Moment::zero())
+                        },
+                    };
+                    (v.space_id.clone(), level, Moment::from_pos(center, v.mass))
+            }).collect();    
+            (
+                query.bulk.iter().map(|v| v.mass).sum(), 
+                result.iter().map(|(_, _, m)| m).sum(),
+                result
+            )
+        };
 
-          //          query.damage_compartment.iter().map()
-
+        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum();
         let mut heel = 0.0;
         let mut trim = 0.0;
+        let mut draught = self.draught_min;
         loop {
-            let (draught, disp_vol_center) = {
+
+
+       /*     // считаем обледенение TODO не зависит от крена  
+            let icing_result = {
+
+                [trim, draught, area, x]
+
+                self.windage_area.get(vals)
+
                 // Prepare values (key) to extract data from `self.cache`.
                 // Note that 3rd parameter sets to None (as well as 5th and the rest).
                 // This means we expect to get their approximated values from the cache.
-                let mut approx_vals = vec![None; 13];
-                approx_vals[0] = Some(heel);
-                approx_vals[1] = Some(trim);
-                approx_vals[3] = Some(disp_vol);
-                // The cache returns the whole row(s) for given `approx_vals`
+                let mut vals = vec![Some(trim), ];
+                vals[0] = Some(heel);
+                vals[1] = Some(trim);
+                vals[3] = Some(disp_vol);
+                // The cache returns the whole row(s) for given `vals`
                 // and we expect each row has at least the following structure:
                 //
                 // [heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
@@ -345,27 +384,95 @@ impl ModelCached {
                 // - every value is of type f64,
                 //
                 let result = self.displacement
-                    .get(&approx_vals)
-                    .map_err(|err| error.pass_with(format!("self.displacement.get approx_vals:{:?}", approx_vals), err))?;
-                    
-                    
-                    .map(|row| {
-                        let mb_disp_vol_center = &row[4..=6];
-                        if let [x, y, z] = *mb_disp_vol_center {
-                            return (row[2], Vertex::new([x, y, z]));
-                        }
-                        // The cache is inconsistent in terms of length of columns.
-                        panic!(
-                            "{} |`center_of_displacement_volume` must be a point \
-                                    in 3-dimensional space, but it has {} coordinates",
-                            &self.dbg,
-                            mb_disp_vol_center.len()
-                        );
-                    })?
+                    .get(&vals)
+                    .map_err(|err| error.pass_with(format!("self.displacement.get vals:{:?}", vals), err))?;
+                let draught = result[2];
+                let volume = result[3];
+                let center = Position::new(result[4], result[5], result[6]);          
+                (draught, volume, center) 
             };
+*/
+            let moment_liquid = {
+                let mut vals = vec![None; 9];
+                query.liquid.iter()
+                    .map(|v| {
+                        vals[3] = Some(v.volume);
+                        let (level, center) = match self.compartments.get(&v.space_id).map(|c| c.get(&vals)) {
+                            Some(v) => match v {
+                                Ok(v) => (v[2], Position::new(v[4], v[5], v[6])),
+                                Err(err) => {
+                                    log::error!("{}", error.pass_with("liquid self.compartments.get", err));
+                                    (0., Moment::zero())
+                                },
+                            },
+                            None => {
+                                log::error!("{}", error.err(format!("liquid no compartment:{} in compartments", v.space_id)));
+                                (0., Moment::zero())
+                            },
+                        };
+                        Moment::from_pos(center, v.mass)
+                }).sum()
+            };
+
+            let (mass_damaged_compartment, moment_damaged_compartment)  = {
+                let mut vals = vec![None; 9];
+                let result: Vec<_> = query.damaged_compartment.iter()
+                    .map(|v| {
+                        vals[0] = Some(heel);
+                        vals[1] = Some(trim);
+                        vals[2] = Some(draught);
+                        let (volume, center) = match self.compartments.get(v).map(|c| c.get(&vals)) {
+                            Some(v) => match v {
+                                Ok(v) => (v[3], Position::new(v[4], v[5], v[6])),
+                                Err(err) => {
+                                    log::error!("{}", error.pass_with("damaged_compartment self.compartments.get", err));
+                                    (0., Moment::zero())
+                                },
+                            },
+                            None => {
+                                log::error!("{}", error.err(format!("damaged_compartment no compartment:{} in compartments", v)));
+                                (0., Moment::zero())
+                            },
+                        };
+                        let mass = volume*query.water_density;
+                        (mass, Moment::from_pos(center, mass))
+                }).collect();    
+                (
+                    query.bulk.iter().map(|v| v.mass).sum(), 
+                    result.iter().map(|(_, _, m)| m).sum()
+                )
+            };
+
+            let mass_sum = mass_const + mass_bulk + mass_liquid + mass_icing + mass_damaged_compartment;
+            let disp_vol = mass_sum/query.water_density;
+            // считаем корпус 
+            let (draught, volume, volume_center) = {
+                // Prepare values (key) to extract data from `self.cache`.
+                // Note that 3rd parameter sets to None (as well as 5th and the rest).
+                // This means we expect to get their approximated values from the cache.
+                let mut vals = vec![None; 13];
+                vals[0] = Some(heel);
+                vals[1] = Some(trim);
+                vals[3] = Some(disp_vol);
+                // The cache returns the whole row(s) for given `vals`
+                // and we expect each row has at least the following structure:
+                //
+                // [heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
+                // where
+                // - every value is of type f64,
+                //
+                let result = self.displacement
+                    .get(&vals)
+                    .map_err(|err| error.pass_with(format!("self.displacement.get vals:{:?}", vals), err))?;
+                let draught = result[2];
+                let volume = result[3];
+                let center = Position::new(result[4], result[5], result[6]);          
+                (draught, volume, center) 
+            };
+
             {
                 let horizontal_dist = {
-                    let [ax, ay, ..] = disp_vol_center.point();
+                    let [ax, ay, ..] = volume_center.point();
                     let [bx, by, ..] = self.disp_center.point();
                     ((bx - ax).powi(2) + (by - ay).powi(2)).sqrt()
                 };
@@ -377,7 +484,7 @@ impl ModelCached {
                         displacement: self.displacement,
                         displacement_center: self.disp_center.point(),
                         displacement_volume: disp_vol,
-                        displacement_volume_center: disp_vol_center.point(),
+                        displacement_volume_center: volume_center.point(),
                         accuracy: self.accuracy,
                     });
                 }
@@ -390,7 +497,7 @@ impl ModelCached {
                     Face::rect(&self.disp_center, &v_plane_normal, 0.5 * size, 1.5 * size);
                 let frac_delta_psi_2 = 0.5 * {
                     let cb_v = v_plane
-                        .project(&disp_vol_center /* ~ CB */)
+                        .project(&volume_center /* ~ CB */)
                         .map(|vertex| Point::from(vertex.point()))
                         .map_err(|err| {
                             error.pass_with("cb_v = m_plane.project", err.to_string())
@@ -461,7 +568,7 @@ impl ModelCached {
                             &self.dbg
                         ))?;
                     let cb_m = m_plane
-                        .project(&disp_vol_center)
+                        .project(&volume_center)
                         .map(|vertex| Point::from(vertex.point()))
                         .map_err(|err| {
                             error.pass_with("cb_m = m_plane.project", err.to_string())
@@ -530,7 +637,7 @@ impl ModelCached {
                 let dir = {
                     let cur_keel = Point::from(self.centreline.center().point());
                     let new_keel = {
-                        let [x, y, ..] = init_keel;
+                        let [x, y, ..] = init_center;
                         let [.., z] = *cur_keel;
                         Point::from([x, y, z])
                     };

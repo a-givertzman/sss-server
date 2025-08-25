@@ -24,5 +24,5 @@ pub struct BalanceQuery {
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>,
     /// номера поврежденных помещений
-    pub damage_compartment: Vec<String>,
+    pub damaged_compartment: Vec<String>,
 }

@@ -47,7 +47,8 @@ impl BuildCompartmentCache {
     }
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
-    /// results: [[heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]]
+    /// 
+    /// results: [[heel, trim, draught, volume, x, y, z, inertia_x, inertia_y]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");

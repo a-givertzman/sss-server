@@ -52,7 +52,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     + loads.mass_bulk
                     + loads.mass_gaseous
                     + loads.mass_liquid
-                    + icing.mass
+            TODO        + icing.mass
                     + wetting.mass;
                 // Сумарный момент за вычетом смещяемых и насыпных груов
                 let moment_const = Moment::from_pos(loads.shift_const, loads.mass_const) +
