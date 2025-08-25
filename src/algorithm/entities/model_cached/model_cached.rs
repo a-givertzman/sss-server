@@ -2,8 +2,7 @@ use crate::{
     algorithm::{
         entities::{
             model_cached::{
-                AreaCache, AreaShape, BoundedAreaCache, CompartmentCache, DisplacementCache,
-                DisplacementShape, Shape,
+                AreaCache, AreaShape, BoundedAreaCache, CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Shape
             }, Bounds, Moment, Position
         },
         eval::BalanceCtx,
@@ -47,6 +46,8 @@ pub struct ModelCached {
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, CompartmentCache>,
+    /// - cache for damaged compartments, [index of compartments, [heel, trim, level, volume, x, y, z ]]
+    damaged_compartments: IndexMap<String, DamagedCompartmentCache>,
     /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
     //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
@@ -102,7 +103,7 @@ impl ModelCached {
                     .partition(|(s, r)| s.is_some());
         */
         let compartments = pathes
-            .into_iter()
+            .iter()
             .filter(|path| path.file_name().is_some())
             .map(|path| {
                 let Some(name) = path.file_stem() else {
@@ -114,7 +115,7 @@ impl ModelCached {
                 let name = name.to_string();
                 let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
                     &dbg,
-                    path,
+                    path.clone(),
                     None,
                     conf.model_scale,
                 )));
@@ -122,6 +123,40 @@ impl ModelCached {
                 Some((
                     name.clone(),
                     CompartmentCache::new(
+                        &dbg,
+                        shape.clone(),
+                        conf.cache_dir.clone().join(PathBuf::from("compartments")),
+                        name,
+                        conf.heel_steps.clone(),
+                        conf.trim_steps.clone(),
+                        conf.compartment_level_step,
+                        scheduler.clone(),
+                    ),
+                ))
+            })
+            .flat_map(|v| v)
+            .collect();
+        let damaged_compartments = pathes
+            .iter()
+            .filter(|path| path.file_name().is_some())
+            .map(|path| {
+                let Some(name) = path.file_stem() else {
+                    return None;
+                };
+                let Some(name) = name.to_str() else {
+                    return None;
+                };
+                let name = name.to_string();
+                let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
+                    &dbg,
+                    path.clone(),
+                    delta_pos,
+                    conf.model_scale,
+                )));
+                displacement_shapes.push(shape.clone());
+                Some((
+                    name.clone(),
+                    DamagedCompartmentCache::new(
                         &dbg,
                         shape.clone(),
                         conf.cache_dir.clone().join(PathBuf::from("compartments")),
@@ -170,6 +205,7 @@ impl ModelCached {
                 scheduler.clone(),
             ),
             compartments,
+            damaged_compartments,
             scheduler: scheduler.clone(),
         };
         Ok(model_cached)
@@ -260,6 +296,13 @@ impl ModelCached {
             }
         }
         dbg!("compartments end");
+        dbg!("damaged_compartments start");
+        for (name, compartment) in &mut self.damaged_compartments {
+            if let Err(error) = compartment.rebuild() {
+                errors.push((("damaged_compartment ".to_owned() + name), error));
+            }
+        }
+        dbg!("damaged_compartments end");
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
