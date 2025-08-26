@@ -133,8 +133,25 @@ impl AreaShape {
     }
     /// Расчет поверхности парусности
     /// Возвращает повернутое и смещенное разбиение
-    fn _windage_area(&self, trim: f64, draught: f64) -> Result<Vec<(f64, f64)>, Error> {
-        let error = Error::new(&self.dbg, "_windage_area");
+    pub fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, f64)>, Error> {
+        let error = Error::new(&self.dbg, "windage_area_data");
+        let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
+        let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
+        let voxel_area = voxel_scale * voxel_scale;
+        let center =  self.center.ok_or(error.err("no center"))?;
+        let result: Vec<_> = voxels.iter().map(|(x, v)| {
+            (   *x + center.x, 
+                v.iter()
+                .map(|z| z + center.z - draught)
+                .filter(|&z| z >= 0.)
+                .count() as f64 * voxel_area
+            )
+        })
+        .collect();
+        Ok(result)
+    }
+   /* fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, f64)>, Error> {
+        let error = Error::new(&self.dbg, "windage_area_data");
         let trim_sin = trim.to_radians().sin();
         let trim_cos = trim.to_radians().cos();
         let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
@@ -152,18 +169,18 @@ impl AreaShape {
         })
         .collect();
         Ok(result)
-    }
+    }*/
     /// Расчет площади и центра площади парусности
     /// Возвращает [площадь, смещение площади по x]
-    pub fn windage_area(&self, trim: f64, draught: f64) -> (f64, f64) {
+    pub fn windage_area(&self, draught: f64) -> (f64, f64) {
      //   let error = Error::new(&self.dbg, "windage_area");
-        let result = match self._windage_area(trim, draught) 
+        let result = match self.windage_area_data(draught) 
      //   .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
         {
             Ok(result) => result,
             Err(_) => { 
                 // TODO:
-             //   let error = error.pass_with("_windage_area", e.to_string()).to_string();
+             //   let error = error.pass_with("windage_area_data", e.to_string()).to_string();
             //    Log::info(error); 
                 return (0., self.center.unwrap().x)
             },
@@ -181,20 +198,19 @@ impl AreaShape {
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
     pub fn bounded_windage_area(
         &self,
-        trim: f64,
         draught: f64,
     ) -> Result<(f64, f64, Vec<f64>), Error> {
         let error = Error::new(&self.dbg, "bounded_windage_area");
         // набор значений площади в разбиении по площади части модели над водой
         let result = self
-            ._windage_area(trim, draught)
-            .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
+            .windage_area_data(draught)
+            .map_err(|e| error.pass_with("windage_area_data", e.to_string()))?;
         let x_min = result.first().ok_or(error.err("empty result from _windage_area"))?.0;
         let x_max = result.last().ok_or(error.err("empty result from _windage_area"))?.0;
-        let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
+        let dx = (x_max - x_min) / 2. * ((result.len() - 1) as f64);
         Ok((
-            x_min - voxel_scale/2.,
-            x_max + voxel_scale/2.,
+            x_min - dx,
+            x_max + dx,
             result.into_iter().map(|(_, area)| area).collect(),
         ))
     }

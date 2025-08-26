@@ -16,7 +16,6 @@ mod damaged_compartment_cache;
 mod windage_area_cache;
 mod bounded_windage_area_cache;
 mod local_cache;
-mod shape;
 
 pub(crate) use cache_conf::*;
 pub(crate) use file_io::*;
@@ -27,4 +26,4 @@ pub(crate) use damaged_compartment_cache::*;
 pub(crate) use windage_area_cache::*;
 pub(crate) use bounded_windage_area_cache::*;
 pub(crate) use local_cache::*;
-pub(crate) use shape::*;
+

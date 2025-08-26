@@ -52,6 +52,9 @@ pub struct ModelCached {
     //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
     //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
+    
+    windage_area: DisplacementCache,
+
     scheduler: Scheduler,
 }
 //
@@ -296,7 +299,7 @@ impl ModelCached {
         Ok(())
     }
     //
-    pub fn rebuild_bounded_windage_area(&self, bounds: Bounds) -> Result<Vec<f64>, Error> {
+    pub fn bounded_windage_area(&self, bounds: Bounds) -> Result<Vec<f64>, Error> {
         /*     TODO: 
         */
         Ok(())
