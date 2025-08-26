@@ -499,7 +499,7 @@ impl ModelCached {
             };
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             // считаем корпус
-            let (draught, volume, volume_center) = {
+            let (draught, volume, cb) = {
                 // Prepare values (key) to extract data from `self.cache`.
                 // Note that 3rd parameter sets to None (as well as 5th and the rest).
                 // This means we expect to get their approximated values from the cache.
@@ -524,14 +524,12 @@ impl ModelCached {
                 )
             };
 
-            let mass_center = {
+            let cg = {
                 let moment_sum =
                     moment_const + moment_bulk + moment_liquid + moment_damaged_compartment;
                 moment_sum.to_pos(mass_sum)
             };
 
-            // Определение невязки
-            {
                 let heel_rad = -heel.to_radians();
                 let trim_rad = trim.to_radians();
                 let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
@@ -539,11 +537,14 @@ impl ModelCached {
                 let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
                 let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
                 let rotation = heel_rotation * trim_rotation;
+
+            // Определение невязки
+            let cg_h = {
                 let up_vector = rotation.transform_vector(&Vector3::z_axis());
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CB проводится горизонтальная плоскость
                 let my_plane = HalfSpace::new(up_vector);
-                let cg = Point3::from_slice(&(volume_center - mass_center).values());
+                let cg = Point3::from_slice(&(cb - cg).values());
 
                 let cg_h = my_plane.project_local_point(&cg, false).point;
                 let l =
@@ -556,24 +557,35 @@ impl ModelCached {
                         precision: l,
                     });
                 }
-            }
+                Position::new(cg_h.x, cg_h.y, cg_h.z) + cg
+            };
 
             // Определение посадки судна для следующего шага
-            let [frac_delta_psi_2, frac_delta_theta_2] = {
-                let heel_rad = -heel.to_radians();
-                let trim_rad = trim.to_radians();
-                let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
-                let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
-                let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
-                let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
-                let rotation = heel_rotation * trim_rotation;
-                let up_vector = rotation.transform_vector(&Vector3::z_axis());
+            let cb_v = {
+                let up_vector = rotation.transform_vector(&Vector3::y_axis());
                 let up_vector = UnitVector::new_normalize(up_vector);
-                // Через центр плавучести CB проводится горизонтальная плоскость
+                // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
                 let my_plane = HalfSpace::new(up_vector);
-                let cg = Point3::from_slice(&(volume_center - mass_center).values());
+                let cb = Point3::from_slice(&(cg - cb).values());
+                let cb_v = my_plane.project_local_point(&cb, false).point;
+                Position::new(cb_v.x, cb_v.y, cb_v.z) + cb
+            };
 
-                let cg_h = my_plane.project_local_point(&cg, false);
+            let cb_m = {
+                let up_vector = rotation.transform_vector(&Vector3::x_axis());
+                let up_vector = UnitVector::new_normalize(up_vector);
+                // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
+                let my_plane = HalfSpace::new(up_vector);
+                let cb = Point3::from_slice(&(cb - cg).values());
+                let cb_m = my_plane.project_local_point(&cb, false).point;
+                my_plane.
+                Position::new(cb_m.x, cb_m.y, cb_m.z) + cg
+            };
+
+            let frac_delta_psi_2 = ((cg_h - cg)/(cb_v - cg)).acos();
+            let frac_delta_theta_2 = 
+
+
 
                 let cg = Point::from(self.disp_center.point());
                 let size = self.centreline.len();
@@ -582,7 +594,7 @@ impl ModelCached {
                     Face::rect(&self.disp_center, &v_plane_normal, 0.5 * size, 1.5 * size);
                 let frac_delta_psi_2 = 0.5 * {
                     let cb_v = v_plane
-                        .project(&volume_center /* ~ CB */)
+                        .project(&cb /* ~ CB */)
                         .map(|vertex| Point::from(vertex.point()))
                         .map_err(|err| {
                             error.pass_with("cb_v = m_plane.project", err.to_string())
@@ -653,7 +665,7 @@ impl ModelCached {
                             &self.dbg
                         ))?;
                     let cb_m = m_plane
-                        .project(&volume_center)
+                        .project(&cb)
                         .map(|vertex| Point::from(vertex.point()))
                         .map_err(|err| {
                             error.pass_with("cb_m = m_plane.project", err.to_string())
