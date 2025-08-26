@@ -125,4 +125,41 @@ impl Bounds {
             .length()
             .expect("Bounds delta error: no length for first element!")
     }
+    /// Преобразование диапазона значений
+    /// Возвращает вектор значений, пересчитанный к дипазону
+    /// TODO: test
+    pub fn intersect(&self, bounds: &Bounds, values: &Vec<f64>) -> Result<Vec<f64>, Error> {
+        let error = Error::new("Bounds", "intersect");
+        let bounds = bounds.iter();
+        if bounds.len() != values.len() {
+            return Err(error.err("bounds.len() != values.len()"));
+        }
+        let values = bounds.zip(values.iter());
+        let mut current_i = 0;
+        let mut current_value = 0.;
+        let mut result = Vec::new();
+        let mut self_b = &self.values[current_i];
+        for (query_b, a) in values {
+            if self_b.start().ok_or(error.err("query_b.start"))?
+                >= query_b.end().ok_or(error.err("src_b.end"))?
+            {
+                current_i += 1;
+                self_b = &self.values[current_i];
+                result.push(current_value);
+                if current_i >= self.values.len() {
+                    break;
+                }
+            }
+            current_value += a*query_b.part_ratio(self_b).map_err(|err| {
+                error.pass_with(
+                    format!(
+                        "query_b.part_ratio(self_b), query_b:{query_b}, self_b:{self_b}, current_i: current_i"
+                    ),
+                    err,
+                )
+            })?;
+        }
+        result.push(current_value);
+        Ok(result)
+    }
 }

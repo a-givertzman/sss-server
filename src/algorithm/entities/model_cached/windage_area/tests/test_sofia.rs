@@ -3,9 +3,15 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
+use crate::algorithm::entities::model_cached::WindageArea;
 #[cfg(test)]
-use crate::algorithm::entities::model_cached::local_cache::displacement_cache::DisplacementCache;
-use crate::{algorithm::entities::{model_cached::{AreaCache, AreaShape, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
+use crate::{
+    algorithm::entities::{
+        Position,
+        model_cached::{AreaShape, LocalCache, Shape},
+    },
+    kernel::types::{Arc, RwLock},
+};
 use std::{fs, sync::Once, time::Duration};
 //
 //
@@ -44,44 +50,44 @@ fn calculated_windage_area_sofia() {
     let additionals_path = "src/assets/model/sofia/additionals/";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(Position::new(65.250, 0., 0.));
-    let mut shape = AreaShape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
-    shape.init().unwrap();
-    let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cache = AreaCache::new(
+    let mut shape = AreaShape::new_uninit(
         &dbg,
-        Arc::new(RwLock::new(shape)),
-        cache_dir,
-        vec![0.],
-        0.,
-        2.,
-        thread_pool.scheduler().clone(),
+        model_path.into(),
+        Some(additionals_path.into()),
+        center_coord,
+        1000.,
     );
-    let error = cache.rebuild();
+    shape.init().unwrap();
+    let mut area = WindageArea::new(&dbg, Arc::new(RwLock::new(shape)), cache_dir, 2.);
+    let error = area.calculate();
     assert!(error.is_ok(), "*error*: {:?}", error);
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
-    let target = [
-        [0., 0., 1871.534, 63.109],
-        [0., 2., 1619.008, 62.501],
-    ];
-    for target in target {
-        let mut key = [None; 4];
-        key[0] = Some(target[0]);
-        key[1] = Some(target[1]);
-        let result: Result<Vec<f64>, Error> = cache.get(&key);
-        assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
-        let result = result.unwrap();
-        for (r, t) in result.iter().zip(target.iter()) {
-            let delta = (r - t).abs();
-            assert!(
-                delta < epsilon_p * (r.abs().max(t.abs())) || delta < epsilon_abs,
-                "\nresult: {:?}\ntarget: {:?}",
-                result,
-                target
-            );
-        }
+    let target = (1619.008, 62.501);
+    let result = area.windage_area();
+    assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
+    let result = result.unwrap();
+    {
+        let (r, t) = (result.0, target.0);
+        let delta = (r - t).abs();
+        assert!(
+            delta < epsilon_p * (r.abs().max(t.abs())) || delta < epsilon_abs,
+            "\nresult: {:?}\ntarget: {:?}",
+            result,
+            target
+        );
     }
- /*   // clean up
+    {
+        let (r, t) = (result.1, target.1);
+        let delta = (r - t).abs();
+        assert!(
+            delta < epsilon_p * (r.abs().max(t.abs())) || delta < epsilon_abs,
+            "\nresult: {:?}\ntarget: {:?}",
+            result,
+            target
+        );
+    }
+    /*   // clean up
     if let Err(why) = fs::remove_file(cache_dir.to_owned()) {
         log::warn!(
             "Clean up (optional) | Failed removing result file='{}': {}",

@@ -5,8 +5,7 @@ use sal_core::error::Error;
 use std::path::PathBuf;
 
 use crate::algorithm::entities::Position;
-use crate::algorithm::entities::model_cached::local_cache::shape::compartment_center;
-use crate::algorithm::entities::model_cached::{Shape, load_stl};
+use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
 
 #[derive(Clone)]
 pub struct DisplacementShape {

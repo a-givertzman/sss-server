@@ -170,50 +170,6 @@ impl AreaShape {
         .collect();
         Ok(result)
     }*/
-    /// Расчет площади и центра площади парусности
-    /// Возвращает [площадь, смещение площади по x]
-    pub fn windage_area(&self, draught: f64) -> (f64, f64) {
-     //   let error = Error::new(&self.dbg, "windage_area");
-        let result = match self.windage_area_data(draught) 
-     //   .map_err(|e| error.pass_with("_windage_area", e.to_string()))?;
-        {
-            Ok(result) => result,
-            Err(_) => { 
-                // TODO:
-             //   let error = error.pass_with("windage_area_data", e.to_string()).to_string();
-            //    Log::info(error); 
-                return (0., self.center.unwrap().x)
-            },
-        };            
-        let mut area_sum = 0.;
-        let mut moment = 0.;
-        for (x, area) in result.iter() {
-            moment += x * area;
-            area_sum += area;
-        }
-        let center_x = moment / area_sum;
-        (area_sum, center_x)
-    }
-    /// Расчет распределения площади парусности
-    /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
-    pub fn bounded_windage_area(
-        &self,
-        draught: f64,
-    ) -> Result<(f64, f64, Vec<f64>), Error> {
-        let error = Error::new(&self.dbg, "bounded_windage_area");
-        // набор значений площади в разбиении по площади части модели над водой
-        let result = self
-            .windage_area_data(draught)
-            .map_err(|e| error.pass_with("windage_area_data", e.to_string()))?;
-        let x_min = result.first().ok_or(error.err("empty result from _windage_area"))?.0;
-        let x_max = result.last().ok_or(error.err("empty result from _windage_area"))?.0;
-        let dx = (x_max - x_min) / 2. * ((result.len() - 1) as f64);
-        Ok((
-            x_min - dx,
-            x_max + dx,
-            result.into_iter().map(|(_, area)| area).collect(),
-        ))
-    }
 }
 //
 impl Shape for AreaShape {

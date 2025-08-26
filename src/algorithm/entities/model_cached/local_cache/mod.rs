@@ -13,8 +13,6 @@ mod displacement_cache;
 //mod bound_cache;
 mod compartment_cache;
 mod damaged_compartment_cache;
-mod windage_area_cache;
-mod bounded_windage_area_cache;
 mod local_cache;
 
 pub(crate) use cache_conf::*;
@@ -23,7 +21,5 @@ pub(crate) use file_io::*;
 pub(crate) use displacement_cache::*;
 pub(crate) use compartment_cache::*;
 pub(crate) use damaged_compartment_cache::*;
-pub(crate) use windage_area_cache::*;
-pub(crate) use bounded_windage_area_cache::*;
 pub(crate) use local_cache::*;
 
