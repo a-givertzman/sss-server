@@ -1,0 +1,172 @@
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{
+    sync::Stack,
+    thread_pool::{JoinHandle, Scheduler},
+};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use crate::{algorithm::entities::model_cached::{DisplacementShape, Shape}, kernel::types::{Arc, RwLock}};
+///
+/// Provides logic to calculate and store cache used by [super::DisplacementCache].
+///
+pub struct BuildDisplacementCache {
+    dbg: Dbg,
+    shape: Arc<RwLock<DisplacementShape>>,
+    heel_steps: Vec<f64>,
+    trim_steps: Vec<f64>,
+    /// Draught in meters
+    draught_min: f64,
+    /// qnt draught steps for hull
+    draught_step: f64,
+    scheduler: Scheduler,
+    exit: Arc<AtomicBool>,
+}
+//
+//
+impl BuildDisplacementCache {
+    ///
+    /// Crates a new instance.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn new(
+        parent: &Dbg,
+        shape: Arc<RwLock<DisplacementShape>>,
+        heel_steps: Vec<f64>,
+        trim_steps: Vec<f64>,
+        draught_min: f64,
+        draught_step: f64,
+        scheduler: Scheduler,
+        exit: Arc<AtomicBool>,
+    ) -> Self {
+        Self {
+            dbg: Dbg::new(parent, "BuildDisplacementCache"),
+            shape: shape.clone(),
+            heel_steps,
+            trim_steps,
+            draught_min,
+            draught_step,
+            scheduler,
+            exit,
+        }
+    }
+    ///
+    /// Creates and starts worker for [DisplacementCache::calculate].
+    /// results: [[heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]]
+    pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
+        log::info!("{}.build | Starting build", &self.dbg);
+        let error = Error::new(&self.dbg, "build");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let aabb_results = Arc::new(Stack::new());
+        let draft_results = Arc::new(Stack::new());
+        let mut results = Vec::new();
+        let shape = self.shape.clone();
+        let draught_steps = match shape.read().draught_steps(self.draught_min, self.draught_step) {
+            Ok(draught_steps) => draught_steps,
+            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
+        };
+        'draught: for draught in draught_steps {
+            if self.exit.load(Ordering::SeqCst) {
+                break 'draught;
+            }
+            {
+                let aabb_results = aabb_results.clone();            
+                let shape = shape.clone();
+                let handle = self
+                    .scheduler
+                    .spawn(move || {
+                        let guard = shape.read();
+                        aabb_results.push((draught, guard.aabb(draught)));
+                        Ok(())
+                    })
+                    .map_err(|err| {
+                        error.pass_with(
+                            format!("spawn task aabb draught:{draught}"),
+                            err.to_string(),
+                        )
+                    });
+                match handle {
+                    Ok(task) => tasks.push(task),
+                    Err(err) => results.push(Err(err)),
+                };
+            }
+            for &heel in &self.heel_steps {
+                for &trim in &self.trim_steps {
+                    // _true_ if the caller has requisted to exit.
+                    // Note that in this case the file may be partially filled.
+                    if self.exit.load(Ordering::SeqCst) {
+                        break 'draught;
+                    }
+                    //  let dbg_ = self.dbg.clone();
+                    let draft_results = draft_results.clone();
+                    let shape = shape.clone();
+                    let handle = self
+                        .scheduler
+                        .spawn(move || {
+                            let guard = shape.read();
+                            draft_results.push((
+                                heel,
+                                trim,
+                                draught,
+                                guard.displacement(heel, trim, draught),
+                                guard.waterline_area(heel, trim, draught),
+                            ));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(
+                                format!(
+                                    "spawn task draught:{} heel:{} trim:{}",
+                                    draught, heel, trim
+                                ),
+                                err.to_string(),
+                            )
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => results.push(Err(err)),
+                    };
+                }
+            }
+        }
+        for task in tasks {
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                results.push(Err(error));
+            }
+        }
+        let mut aabb = Vec::new();
+        while !aabb_results.is_empty() {
+            if let Some((draught, data)) = aabb_results.pop() {
+                match data {
+                    Ok(data) => aabb.push((draught, data)),
+                    Err(err) => results.push(Err(error.pass_with("aabb_results", err))),
+                }
+            }
+        }
+        while !draft_results.is_empty() {
+            if let Some((heel, trim, draught, volume, area)) = draft_results.pop() {
+                if let Some((_, (l_x, l_y))) = aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
+                    let (volume, vx, vy, vz) = match volume {
+                        Ok((volume, x, y, z)) => (volume, x, y, z),
+                        Err(err) => {
+                            results.push(Err(error.pass_with("draft_results volume", err)));
+                            continue;
+                        }
+                    };
+                    let (area, ax, ay, az) = match area {
+                        Ok((area, x, y, z)) => (area, x, y, z),
+                        Err(err) => {
+                            results.push(Err(error.pass_with("draft_results area", err)));
+                            continue;
+                        }
+                    };
+                    results.push(Ok(vec!(heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, *l_x, *l_y)));
+                } else {
+                    results.push(Err(error.err(format!("no aabb for draught:{draught}"))));
+                }
+            }
+        }
+        //   dbg!(&results);
+        results
+    }
+}
