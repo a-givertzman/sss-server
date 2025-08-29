@@ -59,7 +59,7 @@ fn calculated_windage_area_sofia() {
     );
     shape.init().unwrap();
     let mut area = WindageArea::new(&dbg, Arc::new(RwLock::new(shape)), cache_dir, 2.);
-    let error = area.calculate();
+    let error = area.rebuild();
     assert!(error.is_ok(), "*error*: {:?}", error);
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см

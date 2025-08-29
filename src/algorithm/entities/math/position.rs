@@ -37,12 +37,6 @@ impl Position {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
-    /// Дополнительный конструктор  
-    /// * (f64, f64, f64) - x, y, z
-    #[allow(unused)]
-    pub fn from(v: (f64, f64, f64)) -> Self {
-        Self::new(v.0, v.1, v.2)
-    }
     //
     pub fn x(&self) -> f64 {
         self.x
@@ -107,3 +101,22 @@ impl Into<[f64; 3]> for Position {
         [self.x, self.y, self.z]
     }
 }
+//
+impl Into<nalgebra::Point3<f64>> for Position {
+    fn into(self) -> nalgebra::Point3<f64> {
+        nalgebra::Point3::new(self.x, self.y, self.z)
+    }
+}
+//
+impl From<nalgebra::Point3<f64>> for Position {
+    fn from(v: nalgebra::Point3<f64>) -> Self {
+        Self::new(v.x, v.y, v.z)
+    }
+}
+//
+impl From<(f64, f64, f64)> for Position {
+    fn from(v: (f64, f64, f64)) -> Self {
+        Self::new(v.0, v.1, v.2)
+    }
+}
+

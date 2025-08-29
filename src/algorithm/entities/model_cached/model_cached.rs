@@ -3,7 +3,7 @@ use crate::{
         entities::{
             Bounds, Moment, Position,
             model_cached::{
-                AreaCache, AreaShape, BoundedAreaCache, CompartmentCache, DamagedCompartmentCache,
+                AreaShape, CompartmentCache, DamagedCompartmentCache,
                 DisplacementCache, DisplacementShape, Shape, WindageArea,
             },
         },
@@ -545,11 +545,9 @@ impl ModelCached {
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CB проводится горизонтальная плоскость
                 let my_plane = HalfSpace::new(up_vector);
-                let cg = Point3::from_slice(&(cb - cg).values());
-
-                let cg_h = my_plane.project_local_point(&cg, false).point;
-                let l =
-                    (Position::new(cg_h.x, cg_h.y, cg_h.z) - Position::new(cg.x, cg.y, cg.z)).len();
+                let cg = Position::from(cb - cg);
+                let cg_h = Position::from(my_plane.project_local_point(&cg.into(), false).point);
+                let l = (cg_h - cg).len();
                 if l < query.precision {
                     return Ok(FloatingPositionResult {
                         heel,
@@ -558,7 +556,7 @@ impl ModelCached {
                         precision: l,
                     });
                 }
-                Position::new(cg_h.x, cg_h.y, cg_h.z) + cg
+                cg_h + cg
             };
 
             // Определение посадки судна для следующего шага
@@ -567,9 +565,9 @@ impl ModelCached {
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
                 let my_plane = HalfSpace::new(up_vector);
-                let cb = Point3::from_slice(&(cg - cb).values());
-                let cb_v = my_plane.project_local_point(&cb, false).point;
-                Position::new(cb_v.x, cb_v.y, cb_v.z) + cb
+                let cb = cg - cb;
+                let cb_v = Position::from(my_plane.project_local_point(&cb.into(), false).point);
+                cb_v + cb
             };
 
             let cb_m = {
@@ -577,11 +575,16 @@ impl ModelCached {
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
                 let my_plane = HalfSpace::new(up_vector);
-                let cb = Point3::from_slice(&(cb - cg).values());
-                let cb_m = my_plane.project_local_point(&cb, false).point;
-                my_plane.
-                Position::new(cb_m.x, cb_m.y, cb_m.z) + cg
+                let cb = cb - cg;
+                let cb_m = Position::from(my_plane.project_local_point(&cb.into(), false).point);
+                cb_m + cg
             };
+
+
+              use nalgebra::{Vector3, InnerSpace};
+
+            // Assuming you have n and d Vector3 instances
+            let theta = n.angle(&d); // Angle between normal and direction vector
 
             let frac_delta_psi_2 = ((cg_h - cg)/(cb_v - cg)).acos();
             let frac_delta_theta_2 = TODO;

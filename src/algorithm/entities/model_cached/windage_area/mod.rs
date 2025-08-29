@@ -118,7 +118,7 @@ impl WindageArea {
                 )
             })?
         };
-        let values = area_data.iter().map(|(a, _)| *a).collect();
+        let values: Vec<_> = area_data.iter().map(|(a, _)| *a).collect();
         bounds
             .intersect(&src_bounds, &values)
             .map_err(|err| error.pass_with("bounds.intersect", err))
