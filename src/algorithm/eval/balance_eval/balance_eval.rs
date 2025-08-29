@@ -47,12 +47,12 @@ impl Eval<(), EvalResult> for BalanceEval {
                 let icing: IcingCtx = ctx.read();
                 let wetting: WettingCtx = ctx.read();
                 // Суммарная масса корпуса, всех грузов и обледенения с намоканием
-                let mass_sum = loads.mass_const
+                let mass_const = loads.mass_const
                     + loads.mass_unit
-                    + loads.mass_bulk
+                //    + loads.mass_bulk
                     + loads.mass_gaseous
-                    + loads.mass_liquid
-            TODO        + icing.mass
+                //    + loads.mass_liquid
+                    + icing.mass
                     + wetting.mass;
                 // Сумарный момент за вычетом смещяемых и насыпных груов
                 let moment_const = Moment::from_pos(loads.shift_const, loads.mass_const) +
@@ -60,20 +60,16 @@ impl Eval<(), EvalResult> for BalanceEval {
                     Moment::from_pos(loads.shift_gaseous, loads.mass_gaseous) + 
                     Moment::new(icing.mass*icing.mass_shift_x, 0., 0.) + 
                     Moment::from_pos(wetting.mass_shift, wetting.mass);
-                let moment_sum = moment_const + 
-                    Moment::from_pos(loads.shift_liquid, loads.mass_liquid) + 
-                    Moment::from_pos(loads.shift_bulk, loads.mass_bulk);
-                let mass_shift = moment_sum.to_pos(mass_sum);
                 // Структура для передачи в модель
                 let balance_query = BalanceQuery {
                     water_density: voyage.density,
-                    mass_const: mass_sum,
-                    mass_shift,
+                    mass_const,
                     moment_const,
                     bulk: loads.bulk.clone(),
                     liquid: loads.liquid.clone(),
                     grain_bulkhead: loads.grain_bulkhead,
-                    damage_compartment: Vec::new(), //TODO
+                    damaged_compartment: Vec::new(), //TODO
+                    precision: 0.001, //TODO
                 };
                 // Расчет баланса в модели
                 let result_data: BalanceCtx = match self.model.compute_balance(balance_query).wait() {

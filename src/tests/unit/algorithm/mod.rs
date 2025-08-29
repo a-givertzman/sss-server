@@ -11,3 +11,5 @@ mod roll_frequency_test;
 //mod wetting;
 mod displacement_shape;
 mod area_shape;
+mod bound;
+mod bounds;

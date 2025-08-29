@@ -127,8 +127,7 @@ impl Bounds {
     }
     /// Преобразование диапазона значений
     /// Возвращает вектор значений, пересчитанный к дипазону
-    /// TODO: test
-    pub fn intersect(&self, bounds: &Bounds, values: &Vec<f64>) -> Result<Vec<f64>, Error> {
+    pub fn intersect(&self, bounds: &Bounds, values: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new("Bounds", "intersect");
         let bounds = bounds.iter();
         if bounds.len() != values.len() {

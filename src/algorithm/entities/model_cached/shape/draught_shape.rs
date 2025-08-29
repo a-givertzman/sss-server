@@ -1,52 +1,65 @@
 use nalgebra::*;
-use parry3d_f64::shape::{Cuboid, TriMesh};
+use parry3d_f64::shape::{Cuboid, Polyline, TriMesh};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
+use sal_sync::thread_pool::Scheduler;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
+use crate::kernel::types::Arc;
 
 #[derive(Clone)]
-pub struct DisplacementShape {
+pub struct DraughtShape {
     dbg: Dbg,
     mesh: Option<TriMesh>,
     path: Option<PathBuf>,
     center: Option<Point3<f64>>,
+    planes: Option<Vec<(f64, Polyline)>>,
     scale: f64,
     epsilon: f64,
     resolution: u32,
+    scheduler: Scheduler,
+    exit: Arc<AtomicBool>,
 }
 
-unsafe impl Send for DisplacementShape {}
+unsafe impl Send for DraughtShape {}
 
-impl DisplacementShape {
+impl DraughtShape {
     /// Конструктор
     /// * parent - Dbg родителя
     /// * mesh - модель
     /// * path - путь к файлу, содержащему модель
-    /// * center - смещение относительно центра координат модели
+    /// * center - смещение миделя относительно центра координат модели
+    /// * planes - набор сечений для которых ищем осадку
     /// * scale - масштаб модели для ее приведения к метрам (1000: модель в мм)
     /// * epsilon - точность расчета сечений
-    /// * resolution - точность расчета момента инерции
+    /// * resolution - точность расчета - количество сечений
     pub fn new(
         parent: &Dbg,
         mesh: Option<TriMesh>,
         path: Option<PathBuf>,
         center: Option<Point3<f64>>,
+        planes: Option<Vec<(f64, Polyline)>>,
         scale: f64,
         epsilon: f64,
         resolution: u32,
+        scheduler: Scheduler,
+        exit: Arc<AtomicBool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, "DisplacementShape");
+        let dbg = Dbg::new(parent, "DraughtShape");
         Self {
             dbg,
             mesh,
             path,
             center,
+            planes,
             scale,
             epsilon,
             resolution,
+            scheduler,
+            exit,
         }
     }
     /// Конструктор для создания "ленивого" экземпляра.
@@ -59,15 +72,20 @@ impl DisplacementShape {
         path: PathBuf,
         center: Option<Position>,
         scale: f64,
+        scheduler: Scheduler,
+        exit: Arc<AtomicBool>,
     ) -> Self {
         Self::new(
             parent,
             None,
             Some(path),
             center.map(|p| Point3::new(p.x(), p.y(), p.z())),
+            None,
             scale,
             0.0000001,
-            10000,
+            1000,
+            scheduler,
+            exit,
         )
     }
     /// Init shape, load geometry
@@ -226,6 +244,98 @@ impl DisplacementShape {
         };
     }
     ///
+    /// Расчет осадок судна в связанной с судной системой координат
+    /// result: [dz]
+    pub fn draught(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+        dx: &Vec<f64>,
+    ) -> Result<Vec<f64>, Error> {
+        let error = Error::new(&self.dbg, "draught");
+        let position = self
+            .position(heel, trim, draught)
+            .map_err(|err| error.pass_with("self.position", err))?;
+        for &dx in dx {
+            let result: parry3d_f64::query::IntersectResult<parry3d_f64::shape::Polyline> = self
+                .mesh
+                .as_ref()
+                .ok_or(error.err("no mesh"))?
+                .intersection_with_plane(
+                    &position,
+                    &Vector3::x_axis(),
+                    dx,
+                    self.epsilon,
+                );
+            let dz = match result {
+                parry3d_f64::query::IntersectResult::Intersect(polyline) => {
+                    let vz: Vec<_> = polyline
+                        .vertices()
+                        .iter()
+                        .map(|p| p.z)
+                        .collect();                    
+                    let min_z = vx
+                        .iter()
+                        .min_by(|&a, &b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let max_x = vx
+                        .iter()
+                        .max_by(|&a, &b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let min_y = vy
+                        .iter()
+                        .min_by(|&a, &b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let max_y = vy
+                        .iter()
+                        .max_by(|&a, &b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+                    let dx = max_x - min_x;
+                    let dy = max_y - min_y;
+                    Ok((dx, dy))
+                }
+                parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
+                parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
+            };
+        }
+
+
+        let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_cuboid(
+                &position,
+                false,
+                &cuboid,
+                &Isometry::from_parts(
+                    Translation3::new(0., 0., -cuboid_half_size),
+                    UnitQuaternion::identity(),
+                ),
+                false,
+                self.epsilon,
+            );
+        let mesh = match result {
+            Ok(mesh) => match mesh {
+                Some(mesh) => mesh,
+                None => {
+                    let center = self.center.unwrap();
+                    return Ok((0., center.x, center.y, center.z + draught));
+                } // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+            },
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+        };
+        let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
+        Ok((
+            1. / properties.inv_mass,
+            properties.local_com.x,
+            properties.local_com.y,
+            properties.local_com.z,
+        ))
+    }
+    ///
     /// Расчет [момента инерции свободной поверхности жидкости](https://github.com/a-givertzman/sss/blob/cdef1e9a2133adeb2fe8abcda6229b206c28493c/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md#%D0%B2%D0%BB%D0%B8%D1%8F%D0%BD%D0%B8%D0%B5-%D1%81%D0%B2%D0%BE%D0%B1%D0%BE%D0%B4%D0%BD%D0%BE%D0%B9-%D0%BF%D0%BE%D0%B2%D0%B5%D1%80%D1%85%D0%BD%D0%BE%D1%81%D1%82%D0%B8)
     pub fn inertia(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
         let error = Error::new(&self.dbg, "inertia");
@@ -297,7 +407,7 @@ impl DisplacementShape {
     }
 }
 
-impl Shape for DisplacementShape {
+impl Shape for DraughtShape {
     /// Init shape, load geometry
     fn init(&mut self) -> Result<(), Error> {
         if self.mesh.is_none() {
