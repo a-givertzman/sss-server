@@ -33,8 +33,9 @@ use super::{LocalCache, ModelCachedConf};
 struct FloatingPositionResult {
     heel: f64,
     trim: f64,
-    draught: f64,
+    draught_mid: f64,
     precision: f64,
+    volume: f64,
 }
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
@@ -325,19 +326,19 @@ impl ModelCached {
     pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
         let error = Error::new(&self.dbg, "balance");
         let FloatingPositionResult {
-            roll,
+            heel,
             trim,
             draught_mid,
-            volume,
             precision,
+            volume,
         } = self
             .floating_position(query)
             .map_err(|err| error.pass_with("self.floating_position", err))?;
 
         let result = BalanceCtx {
+            roll: heel,
             trim,
             draught_mid,
-            roll,
             bounds: todo!(),
             bulk: todo!(),
             liquid: todo!(),
@@ -364,7 +365,6 @@ impl ModelCached {
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
         }
-        let init_center = self.model_center_coord.clone();
 
         // постоянная масса
         let mass_const = query.mass_const;
@@ -407,13 +407,13 @@ impl ModelCached {
                 })
                 .collect();
             (
-                query.bulk.iter().map(|v| v.mass).sum(),
+                query.bulk.iter().map(|v| v.mass).sum::<f64>(),
                 result.iter().map(|(_, _, m)| *m).sum(),
                 result,
             )
         };
 
-        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum();
+        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
@@ -545,15 +545,19 @@ impl ModelCached {
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CB проводится горизонтальная плоскость
                 let my_plane = HalfSpace::new(up_vector);
-                let cg = Position::from(cb - cg);
+                let cg = cb - cg;
                 let cg_h = Position::from(my_plane.project_local_point(&cg.into(), false).point);
-                let l = (cg_h - cg).len();
-                if l < query.precision {
+                let precision_pos = (cg_h - cg).len();
+                let volume_sqr = mass_sum/query.water_density;
+                let precision_volume = (volume_sqr - volume).abs();
+                dbg!(heel, trim, draught, precision_pos, precision_volume);
+                if precision_pos < query.precision {
                     return Ok(FloatingPositionResult {
                         heel,
                         trim,
-                        draught,
-                        precision: l,
+                        draught_mid: draught,
+                        precision: precision_pos,
+                        volume,
                     });
                 }
                 cg_h + cg
@@ -580,17 +584,22 @@ impl ModelCached {
                 cb_m + cg
             };
 
+            // проекция точки cg_m на вертикальную плоскость параллельную основной линии
+            let cg_m_h = {
+                let up_vector = rotation.transform_vector(&Vector3::y_axis());
+                let up_vector = UnitVector::new_normalize(up_vector);
+                // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
+                let my_plane = HalfSpace::new(up_vector);
+                let cg_m = cb_m - cg;
+                let cg_m_h = Position::from(my_plane.project_local_point(&cg_m.into(), false).point);
+                cg_m_h + cg
+            };
 
-              use nalgebra::{Vector3, InnerSpace};
+            let frac_delta_psi_2 = ((cg_h - cg).len()/(cb_v - cg).len()).acos();
+            let frac_delta_theta_2 = ((cb_m - cg).len()/(cg_m_h - cg).len()).acos();
 
-            // Assuming you have n and d Vector3 instances
-            let theta = n.angle(&d); // Angle between normal and direction vector
-
-            let frac_delta_psi_2 = ((cg_h - cg)/(cb_v - cg)).acos();
-            let frac_delta_theta_2 = TODO;
-
-            heel += frac_delta_theta_2;
-            trim += frac_delta_psi_2;
+            heel += frac_delta_theta_2.to_degrees();
+            trim += frac_delta_psi_2.to_degrees();
         }
     }
 }
