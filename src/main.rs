@@ -19,56 +19,56 @@ use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
 use kernel::{eval::Eval, run::Run};
 //use prelude::*;
-use sal_core::{error::Error, dbg::Dbg};
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
+use crate::algorithm::entities::{Moment, model_cached};
 use std::path::PathBuf;
-use crate::algorithm::entities::model_cached;
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
- //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
 
- /*    let dbg = Dbg::new("ShipModel", "compute_balance");
-    let model_path = "src/assets/cube_1_1_1.step";
+    /*    let dbg = Dbg::new("ShipModel", "compute_balance");
+        let model_path = "src/assets/cube_1_1_1.step";
 
-   let cache_dir = "src/assets/cache/";
-    let center_coord = Position::new(0., 0., 0.);
+       let cache_dir = "src/assets/cache/";
+        let center_coord = Position::new(0., 0., 0.);
 
-    let thread_pool = ThreadPool::new(&dbg, Some(12));
-    let mut model: model::ShipModel = model::ShipModel::new(
-        &dbg, 
-        model::ShipModelConf {
-            model_path: PathBuf::from(model_path),
-            model_scale: 1.,
-            cache_dir: PathBuf::from(cache_dir),
-            floating_position_cache_conf: model::DisplacementCacheConf {
-                center_coord: center_coord,
-      //                  heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
-      //  trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
-      //  draught_steps: vec![0.0, 0.25],
-                heel_steps: vec![-180., -90., -45., 0., 45., 90., 180.], //vec![0.,],//vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
-                trim_steps: vec![-180., -90., -45., 0., 45., 90., 180.],//vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
-                draught_steps: vec![-10., -5., -2.5, 0., 2.5, 5., 10.],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),         
+        let thread_pool = ThreadPool::new(&dbg, Some(12));
+        let mut model: model::ShipModel = model::ShipModel::new(
+            &dbg,
+            model::ShipModelConf {
+                model_path: PathBuf::from(model_path),
+                model_scale: 1.,
+                cache_dir: PathBuf::from(cache_dir),
+                floating_position_cache_conf: model::DisplacementCacheConf {
+                    center_coord: center_coord,
+          //                  heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
+          //  trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
+          //  draught_steps: vec![0.0, 0.25],
+                    heel_steps: vec![-180., -90., -45., 0., 45., 90., 180.], //vec![0.,],//vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
+                    trim_steps: vec![-180., -90., -45., 0., 45., 90., 180.],//vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
+                    draught_steps: vec![-10., -5., -2.5, 0., 2.5, 5., 10.],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),
+                },
             },
-        },
-        thread_pool.scheduler(),
-    );
-    let res = model.rebuild_caches(&[&CacheKey::FloatingPostion]);
-    dbg!(&res);
-*/   
+            thread_pool.scheduler(),
+        );
+        let res = model.rebuild_caches(&[&CacheKey::FloatingPostion]);
+        dbg!(&res);
+    */
     let dbg = Dbg::new("ShipModel", "compute_balance");
- //   let model_path = "src/assets/sofia3.stp";
- //    let center_coord = Position::new(65.22, 0., 0.);
-  //  let model_path = "src/assets/model_1510.stp";
-  //    let model_path = "src/assets/ark-Part3.obj";
-  //  let model_path = "src/assets/ark.stl";
+    //   let model_path = "src/assets/sofia3.stp";
+    //    let center_coord = Position::new(65.22, 0., 0.);
+    //  let model_path = "src/assets/model_1510.stp";
+    //    let model_path = "src/assets/ark-Part3.obj";
+    //  let model_path = "src/assets/ark.stl";
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(59.195, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(30));
     let mut model = model_cached::ModelCached::new(
-        &dbg, 
+        &dbg,
         model_cached::ModelCachedConf {
             model_dir,
             cache_dir,
@@ -77,19 +77,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             heel_steps: vec![-20., 0., 20.],
             trim_steps: vec![-20., 0., 20.],
             draught_min: 2.,
-            hull_draught_step: 5.,
-            compartment_level_step: 3.,
+            draught_max: 22.,
+            hull_draught_step: 10.,
+            compartment_level_step: 10.,
         },
         thread_pool.scheduler(),
-    ).unwrap();
-    let res = model.rebuild_caches();
-    dbg!(&res);
- /*   let floating_position = model.floating_position(
-        3230.55,
-        center_mass,
-    ).eval().map_err(|err| error.pass_with("floating_position", err))?;
-*/
- /*    
+    )
+    .unwrap();
+  //  let res = model.rebuild_caches();
+//   dbg!(&res);
+
+    let query = ship_model::query::BalanceQuery {
+        water_density: 1.025,
+        mass_const: 5000.,
+        moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
+        bulk: vec![ship_model::query::BulkData {
+            cargo_id: 1,
+            space_id: "212".to_owned(),
+            mass: 100.,
+            volume: 100.,
+        }],
+        liquid: vec![ship_model::query::LiquidData {
+            cargo_id: 2,
+            space_id: "212".to_owned(),
+            mass: 100.,
+            volume: 100.,
+        }],
+        grain_bulkhead: Vec::new(),
+        damaged_compartment: vec!["212".to_owned()],
+        precision: 0.001,
+    };
+
+    let Ok(result) = model.floating_position(query) else {
+        return Ok(());
+    };
+
+    dbg!(result);
+
+    /*   let floating_position = model.floating_position(
+            3230.55,
+            center_mass,
+        ).eval().map_err(|err| error.pass_with("floating_position", err))?;
+    */
+    /*
     let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
     let path = "config.yaml";
@@ -135,7 +165,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 DSOTimberMaxEval::new(
                                     &dbg,
                                     DSOIcingMaxEval::new(
-                                        &dbg,        
+                                        &dbg,
                                         DSOMaxEval::new(
                                             &dbg,
                                             DSOAreaEval::new(
@@ -153,8 +183,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                     WindageEval::new(
                                                                         &dbg,
                                                                         LeverDiagramEval::new(
-                                                                            &dbg, 
-                                                                            //   link, 
+                                                                            &dbg,
+                                                                            //   link,
                                                                             MetacentricHeightEval::new(
                                                                                 &dbg,
                                                                                 // Before ZG

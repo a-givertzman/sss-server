@@ -18,6 +18,8 @@ pub struct DamagedCompartmentCache {
     cache_path: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
+    draught_min: f64,
+    draught_max: f64,
     draught_step: f64,
     ///
     /// Model representation used for cache calculation.
@@ -41,6 +43,8 @@ impl DamagedCompartmentCache {
         compartment_id: String,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
+        draught_min: f64,
+        draught_max: f64,
         draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
@@ -49,13 +53,15 @@ impl DamagedCompartmentCache {
             shape,
             heel_steps,
             trim_steps,
+            draught_min,
+            draught_max,
             draught_step,
             cache: Arc::new(RwLock::new(None)),
             cache_path: cache_dir.as_ref().join(compartment_id),
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
-        }
+        }        
     }
 }
 //
@@ -69,6 +75,8 @@ impl LocalCache for DamagedCompartmentCache {
             self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
+            self.draught_min,
+            self.draught_max,
             self.draught_step,
             self.scheduler.clone(),
             self.exit.clone(),

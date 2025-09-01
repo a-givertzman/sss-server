@@ -16,6 +16,7 @@ pub struct BuildDisplacementCache {
     trim_steps: Vec<f64>,
     /// Draught in meters
     draught_min: f64,
+    draught_max: f64,
     /// qnt draught steps for hull
     draught_step: f64,
     scheduler: Scheduler,
@@ -33,16 +34,20 @@ impl BuildDisplacementCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_min: f64,
+        draught_max: f64,
         draught_step: f64,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
+        debug_assert!(draught_min < draught_max);
+        debug_assert!(draught_step > 0.);
         Self {
             dbg: Dbg::new(parent, "BuildDisplacementCache"),
             shape: shape.clone(),
             heel_steps,
             trim_steps,
             draught_min,
+            draught_max,
             draught_step,
             scheduler,
             exit,
@@ -59,10 +64,21 @@ impl BuildDisplacementCache {
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        let draught_steps = match shape.read().draught_steps(self.draught_min, self.draught_step) {
+        let mut draught_steps = Vec::new();
+        let mut draught = self.draught_min;
+        loop {
+            draught_steps.push(draught);
+            if draught >= self.draught_max {
+                break;
+            }
+            draught += self.draught_step;
+        } 
+
+            /*match shape.read().draught_steps(self.draught_min, self.draught_step) {
             Ok(draught_steps) => draught_steps,
             Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
-        };
+        };*/
+
         'draught: for draught in draught_steps {
             if self.exit.load(Ordering::SeqCst) {
                 break 'draught;

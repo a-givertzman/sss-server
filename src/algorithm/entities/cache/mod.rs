@@ -129,7 +129,6 @@ impl Cache<f64> {
                 } else {
                     vec![data[0].0, data[1].0]
                 };
-                println!("{:?}", res);
                 Some(res)
             })
             .collect();
@@ -139,14 +138,14 @@ impl Cache<f64> {
             .iter()
             .filter(|v| {
                 for (c, v) in pairs.iter().zip(v.iter()).filter(|(p, _)| p.is_some()) {
-                    if !c.clone().unwrap().contains(v) {
+                    if !c.as_ref().clone().unwrap().contains(v) {
                         return false;
                     }
                 }
                 true
             })
             .collect();
-        //   println!("{:?}", data);
+        dbg!(&approx_vals, &data);
         // расчитываем дельту для каждого индекса
         let keys_and_delta: Vec<_> = approx_vals
             .iter()
@@ -159,12 +158,13 @@ impl Cache<f64> {
                 data.sort_by(|a, b| a.partial_cmp(b).unwrap());
                 data.dedup();
                 //   println!("{i} {:?}", data);
+                debug_assert!(data.len() > 0);
                 if data.len() == 1 {
-                    assert!(key == data[0]);
+                    debug_assert_eq!(key, data[0], "{}", format!("key:{key}, data:{:?} approx_vals:{:?}", data, approx_vals));
                     Some((key, 1.)) // ключ всегда будет равен значению, дельта не важна
                 } else {
-                    assert!(data.len() == 2);
-                    assert!(data[0] < key && key < data[1]);
+                    debug_assert_eq!(data.len(), 2);
+                    debug_assert!(data[0] < key && key < data[1], "{}", format!("key:{key}, data:{:?}", data));
                     Some((key, data[1] - data[0]))
                 }
             })

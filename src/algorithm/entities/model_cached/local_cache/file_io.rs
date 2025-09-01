@@ -11,6 +11,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// # Panics
 /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
 pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
+    dbg!(cache_path);
     let callee = "read_from_file";
     let file = File::open(cache_path).map_err(|err| {
         format!(

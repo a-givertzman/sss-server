@@ -29,7 +29,8 @@ use std::{collections::HashMap, path::PathBuf};
 use super::{LocalCache, ModelCachedConf};
 
 ///
-struct FloatingPositionResult {
+#[derive(Debug)]
+pub struct FloatingPositionResult {
     heel: f64,
     trim: f64,
     draught_mid: f64,
@@ -44,7 +45,7 @@ pub struct ModelCached {
     pub model_center_coord: Position,
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
-    /// Privides access to structure of the 3D element
+     /// Privides access to structure of the 3D element
     displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>>,
     windage_shape: Arc<RwLock<AreaShape>>,
     /// Provides a number of calculations:
@@ -110,8 +111,7 @@ impl ModelCached {
                     .map(|p| (p.file_name(), p))
                     .partition(|(s, r)| s.is_some());
         */
-        let (compartments, damaged_compartments): 
-            (IndexMap<String, CompartmentCache>, IndexMap<String, DamagedCompartmentCache>) = pathes
+        let compartments = pathes
             .iter()
             .filter(|path: &&PathBuf| path.file_name().is_some())
             .map(|path| {
@@ -129,7 +129,7 @@ impl ModelCached {
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone(), shape.clone());
-                Some(((
+                Some((
                     name.clone(),
                     CompartmentCache::new(
                         &dbg,
@@ -141,8 +141,29 @@ impl ModelCached {
                         conf.compartment_level_step,
                         scheduler.clone(),
                     ),
-                ),
-                (
+                ))
+            })
+            .flat_map(|v| v)
+            .collect();
+        let damaged_compartments = pathes
+            .iter()
+            .filter(|path: &&PathBuf| path.file_name().is_some())
+            .map(|path| {
+                let Some(name) = path.file_stem() else {
+                    return None;
+                };
+                let Some(name) = name.to_str() else {
+                    return None;
+                };
+                let name = name.to_string();
+                let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
+                    &dbg,
+                    path.clone(),
+                    Some(conf.model_center_coord.clone()),
+                    conf.model_scale,
+                )));
+                displacement_shapes.insert(name.clone() + "_damaged", shape.clone());
+                Some((
                     name.clone(),
                     DamagedCompartmentCache::new(
                         &dbg,
@@ -151,14 +172,15 @@ impl ModelCached {
                         name.clone(),
                         conf.heel_steps.clone(),
                         conf.trim_steps.clone(),
+                        conf.draught_min,
+                        conf.draught_max,
                         conf.compartment_level_step,
                         scheduler.clone(),
                     ),
-                )))
+                ))
             })
             .flat_map(|v| v)
-            .unzip();
-            //.collect();
+            .collect();
         let model_cached = Self {
             dbg: dbg.clone(),
             model_center_coord: conf.model_center_coord.clone(),
@@ -172,6 +194,7 @@ impl ModelCached {
                 conf.heel_steps.clone(),
                 conf.trim_steps.clone(),
                 conf.draught_min,
+                conf.draught_max,
                 conf.hull_draught_step,
                 scheduler.clone(),
             ),
@@ -344,7 +367,9 @@ impl ModelCached {
         };
     }    */
     /// Расчет равновесного положения
-    fn floating_position(&mut self, query: BalanceQuery) -> Result<FloatingPositionResult, Error> {
+    pub fn floating_position(&mut self, query: BalanceQuery) -> Result<FloatingPositionResult, Error> {
+        dbg!("floating_position start");
+
         let error = Error::new(&self.dbg, "eval");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
@@ -355,8 +380,11 @@ impl ModelCached {
         let moment_const = query.moment_const;
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
+        dbg!("floating_position bulk start");
         let (mass_bulk, moment_bulk, bulk_result) = {
             let mut vals = vec![None; 9];
+            vals[0] = Some(0.);
+            vals[1] = Some(0.);
             let result: Vec<_> = query
                 .bulk
                 .iter()
@@ -394,7 +422,9 @@ impl ModelCached {
                 result,
             )
         };
+        dbg!("floating_position bulk end");
 
+        dbg!("floating_position mass_liquid start");
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mut heel = 0.0;
         let mut trim = 0.0;
@@ -402,6 +432,8 @@ impl ModelCached {
         loop {
             let moment_liquid = {
                 let mut vals = vec![None; 9];
+                vals[0] = Some(heel);
+                vals[1] = Some(trim);
                 query
                     .liquid
                     .iter()
@@ -434,16 +466,18 @@ impl ModelCached {
                     })
                     .sum()
             };
+            dbg!("floating_position mass_liquid end");
+            dbg!("floating_position mass_damaged_compartment start");
             let (mass_damaged_compartment, moment_damaged_compartment) = {
-                let mut vals = vec![None; 9];
+                let mut vals = vec![None; 7];
+                vals[0] = Some(heel);
+                vals[1] = Some(trim);
+                vals[2] = Some(draught);
                 query
                     .damaged_compartment
                     .iter()
                     .map(|v| {
-                        vals[0] = Some(heel);
-                        vals[1] = Some(trim);
-                        vals[2] = Some(draught);
-                        let (volume, center) = match self.compartments.get(v).map(|c| c.get(&vals))
+                        let (volume, center) = match self.damaged_compartments.get(v).map(|c| c.get(&vals))
                         {
                             Some(v) => match v {
                                 Ok(v) => (v[3], Position::new(v[4], v[5], v[6])),
@@ -479,8 +513,11 @@ impl ModelCached {
                         },
                     )
             };
+            dbg!("floating_position mass_damaged_compartment end");
+
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             // считаем корпус
+            dbg!("floating_position hull start");
             let (new_draught, new_volume, cb) = {
                 // Prepare values (key) to extract data from `self.cache`.
                 // Note that 3rd parameter sets to None (as well as 5th and the rest).
@@ -505,6 +542,7 @@ impl ModelCached {
                     Position::new(result[4], result[5], result[6]),
                 )
             };
+            dbg!("floating_position hull end");
             // расчет ориентации корпуса
             let rotation = {
                 let heel_rad = -heel.to_radians();
@@ -579,6 +617,7 @@ dbg!(heel, trim, new_draught, precision_pos, precision_volume);
             trim += frac_delta_psi.to_degrees()/2.;
             draught = new_draught;
 dbg!(frac_delta_psi, frac_delta_theta, heel, trim, draught);
+dbg!("floating_position end");
         }
     }
 }

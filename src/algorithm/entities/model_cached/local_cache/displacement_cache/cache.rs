@@ -21,6 +21,7 @@ pub struct DisplacementCache {
     trim_steps: Vec<f64>,
     /// Draught in meters
     draught_min: f64,
+    draught_max: f64,
     /// qnt draught steps for hull
     draught_step: f64,
     /// Model representation used for cache calculation.
@@ -43,6 +44,7 @@ impl DisplacementCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         draught_min: f64,
+        draught_max: f64,
         draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
@@ -53,6 +55,7 @@ impl DisplacementCache {
             heel_steps,
             trim_steps,
             draught_min,
+            draught_max,
             draught_step,
             cache: Arc::new(RwLock::new(None)),
             cache_path: path,
@@ -74,6 +77,7 @@ impl LocalCache for DisplacementCache {
             self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.draught_min,
+            self.draught_max,
             self.draught_step,
             self.scheduler.clone(),
             self.exit.clone(),

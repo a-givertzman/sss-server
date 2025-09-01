@@ -19,6 +19,7 @@ pub struct ModelCachedConf {
     pub trim_steps: Vec<f64>,
     /// Draught in meters
     pub draught_min: f64,
+    pub draught_max: f64,
     /// Draught step for hull
     pub hull_draught_step: f64,
     /// Level step for compartments
