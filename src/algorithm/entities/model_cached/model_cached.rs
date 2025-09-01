@@ -7,10 +7,10 @@ use crate::{
                 DisplacementCache, DisplacementShape, Shape, WindageArea,
             },
         },
-        eval::BalanceCtx,
+  //      eval::BalanceCtx,
     },
     kernel::types::{Arc, RwLock},
-    ship_model::{query::BalanceQuery, reply::BoundArea},
+    ship_model::{query::BalanceQuery},
 };
 use indexmap::IndexMap;
 use log::*;
@@ -25,8 +25,7 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::path::PathBuf;
-//use super::floating_position::FloatingPosition;
+use std::{collections::HashMap, path::PathBuf};
 use super::{LocalCache, ModelCachedConf};
 
 ///
@@ -46,7 +45,7 @@ pub struct ModelCached {
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
     /// Privides access to structure of the 3D element
-    displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>>,
+    displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>>,
     windage_shape: Arc<RwLock<AreaShape>>,
     /// Provides a number of calculations:
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y ]
@@ -71,7 +70,7 @@ impl ModelCached {
     pub fn new(parent: &Dbg, conf: ModelCachedConf, scheduler: Scheduler) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
-        let mut displacement_shapes: Vec<Arc<RwLock<DisplacementShape>>> = Vec::new();
+        let mut displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>> = IndexMap::new();
         let delta_pos = Some(conf.model_center_coord.clone());
         let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg,
@@ -79,7 +78,7 @@ impl ModelCached {
             delta_pos,
             conf.model_scale,
         )));
-        displacement_shapes.push(displacement_shape.clone());
+        displacement_shapes.insert("hull".to_owned(), displacement_shape.clone());
         let windage_shape = Arc::new(RwLock::new(AreaShape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
@@ -111,9 +110,10 @@ impl ModelCached {
                     .map(|p| (p.file_name(), p))
                     .partition(|(s, r)| s.is_some());
         */
-        let compartments = pathes
+        let (compartments, damaged_compartments): 
+            (IndexMap<String, CompartmentCache>, IndexMap<String, DamagedCompartmentCache>) = pathes
             .iter()
-            .filter(|path| path.file_name().is_some())
+            .filter(|path: &&PathBuf| path.file_name().is_some())
             .map(|path| {
                 let Some(name) = path.file_stem() else {
                     return None;
@@ -128,57 +128,37 @@ impl ModelCached {
                     None,
                     conf.model_scale,
                 )));
-                displacement_shapes.push(shape.clone());
-                Some((
+                displacement_shapes.insert(name.clone(), shape.clone());
+                Some(((
                     name.clone(),
                     CompartmentCache::new(
                         &dbg,
                         shape.clone(),
                         conf.cache_dir.clone().join(PathBuf::from("compartments")),
-                        name,
+                        name.clone(),
                         conf.heel_steps.clone(),
                         conf.trim_steps.clone(),
                         conf.compartment_level_step,
                         scheduler.clone(),
                     ),
-                ))
-            })
-            .flat_map(|v| v)
-            .collect();
-        let damaged_compartments = pathes
-            .iter()
-            .filter(|path| path.file_name().is_some())
-            .map(|path| {
-                let Some(name) = path.file_stem() else {
-                    return None;
-                };
-                let Some(name) = name.to_str() else {
-                    return None;
-                };
-                let name = name.to_string();
-                let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-                    &dbg,
-                    path.clone(),
-                    delta_pos,
-                    conf.model_scale,
-                )));
-                displacement_shapes.push(shape.clone());
-                Some((
+                ),
+                (
                     name.clone(),
                     DamagedCompartmentCache::new(
                         &dbg,
                         shape.clone(),
-                        conf.cache_dir.clone().join(PathBuf::from("compartments")),
-                        name,
+                        conf.cache_dir.clone().join(PathBuf::from("damaged_compartments")),
+                        name.clone(),
                         conf.heel_steps.clone(),
                         conf.trim_steps.clone(),
                         conf.compartment_level_step,
                         scheduler.clone(),
                     ),
-                ))
+                )))
             })
             .flat_map(|v| v)
-            .collect();
+            .unzip();
+            //.collect();
         let model_cached = Self {
             dbg: dbg.clone(),
             model_center_coord: conf.model_center_coord.clone(),
@@ -223,7 +203,7 @@ impl ModelCached {
         let mut results: Vec<Result<(), Error>> = Vec::new();
         // Сначала считаем модели в разных потоках
         dbg!("shapes start");
-        for shape in &self.displacement_shapes {
+        for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
             let handle = self
@@ -234,7 +214,7 @@ impl ModelCached {
                     Ok(())
                 })
                 .map_err(|err| {
-                    error.pass_with(format!("spawn task displacement_shape"), err.to_string())
+                    error.pass_with(format!("spawn task displacement_shape {name}"), err.to_string())
                 });
             match handle {
                 Ok(task) => tasks.push(task),
@@ -301,7 +281,9 @@ impl ModelCached {
         Ok(())
     }
     //
-    pub fn rebuild_bounds(&self, bounds_qnt: usize) -> Result<Bounds, Error> {
+ /*   pub fn rebuild_bounds(&self, bounds_qnt: usize) -> Result<Bounds, Error> {
+
+        let bounds = 
         /*     TODO: rebuild
         model_bounded
         compartments_bounded
@@ -310,6 +292,7 @@ impl ModelCached {
 
         Ok(())
     }
+ */   
     //
     pub fn bounded_windage_area(&mut self, bounds: Bounds) -> Result<Vec<f64>, Error> {
         self.windage_area.bounded_windage_area(bounds).map_err(|err| {
@@ -322,6 +305,8 @@ impl ModelCached {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
     }
+
+ /*   
     //
     pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
         let error = Error::new(&self.dbg, "balance");
@@ -357,20 +342,17 @@ impl ModelCached {
             rad_trans: todo!(),
             pantocaren: todo!(),
         };
-    }
-    //
-    // (roll, trim, draught_mid, volume, precision)
+    }    */
+    /// Расчет равновесного положения
     fn floating_position(&mut self, query: BalanceQuery) -> Result<FloatingPositionResult, Error> {
         let error = Error::new(&self.dbg, "eval");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
         }
-
         // постоянная масса
         let mass_const = query.mass_const;
         // постоянный момент
         let moment_const = query.moment_const;
-
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let (mass_bulk, moment_bulk, bulk_result) = {
@@ -499,7 +481,7 @@ impl ModelCached {
             };
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             // считаем корпус
-            let (new_draught, volume, cb) = {
+            let (new_draught, new_volume, cb) = {
                 // Prepare values (key) to extract data from `self.cache`.
                 // Note that 3rd parameter sets to None (as well as 5th and the rest).
                 // This means we expect to get their approximated values from the cache.
@@ -523,22 +505,22 @@ impl ModelCached {
                     Position::new(result[4], result[5], result[6]),
                 )
             };
-            draught = new_draught;
-
+            // расчет ориентации корпуса
+            let rotation = {
+                let heel_rad = -heel.to_radians();
+                let trim_rad = trim.to_radians();
+                let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+                let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+                let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
+                let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+                heel_rotation * trim_rotation
+            };
+            // центр тяжести корпуса
             let cg = {
                 let moment_sum =
                     moment_const + moment_bulk + moment_liquid + moment_damaged_compartment;
                 moment_sum.to_pos(mass_sum)
             };
-
-            let heel_rad = -heel.to_radians();
-            let trim_rad = trim.to_radians();
-            let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
-            let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
-            let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
-            let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
-            let rotation = heel_rotation * trim_rotation;
-
             // Определение невязки
             let cg_h = {
                 let up_vector = rotation.transform_vector(&Vector3::z_axis());
@@ -549,20 +531,19 @@ impl ModelCached {
                 let cg_h = Position::from(my_plane.project_local_point(&cg.into(), false).point);
                 let precision_pos = (cg_h - cg).len();
                 let volume_sqr = mass_sum/query.water_density;
-                let precision_volume = (volume_sqr - volume).abs();
-                dbg!(heel, trim, draught, precision_pos, precision_volume);
+                let precision_volume = (volume_sqr - new_volume).abs();
+dbg!(heel, trim, new_draught, precision_pos, precision_volume);
                 if precision_pos < query.precision {
                     return Ok(FloatingPositionResult {
                         heel,
                         trim,
-                        draught_mid: draught,
+                        draught_mid: new_draught,
                         precision: precision_pos,
-                        volume,
+                        volume: new_volume,
                     });
                 }
                 cg_h + cg
             };
-
             // Определение посадки судна для следующего шага
             let cb_v = {
                 let up_vector = rotation.transform_vector(&Vector3::y_axis());
@@ -571,9 +552,8 @@ impl ModelCached {
                 let my_plane = HalfSpace::new(up_vector);
                 let cb = cg - cb;
                 let cb_v = Position::from(my_plane.project_local_point(&cb.into(), false).point);
-                cb_v + cb
+                cb_v + cb            
             };
-
             let cb_m = {
                 let up_vector = rotation.transform_vector(&Vector3::x_axis());
                 let up_vector = UnitVector::new_normalize(up_vector);
@@ -583,7 +563,6 @@ impl ModelCached {
                 let cb_m = Position::from(my_plane.project_local_point(&cb.into(), false).point);
                 cb_m + cg
             };
-
             // проекция точки cg_m на вертикальную плоскость параллельную основной линии
             let cg_m_h = {
                 let up_vector = rotation.transform_vector(&Vector3::y_axis());
@@ -594,12 +573,12 @@ impl ModelCached {
                 let cg_m_h = Position::from(my_plane.project_local_point(&cg_m.into(), false).point);
                 cg_m_h + cg
             };
-
-            let frac_delta_psi_2 = ((cg_h - cg).len()/(cb_v - cg).len()).acos();
-            let frac_delta_theta_2 = ((cb_m - cg).len()/(cg_m_h - cg).len()).acos();
-
-            heel += frac_delta_theta_2.to_degrees();
-            trim += frac_delta_psi_2.to_degrees();
+            let frac_delta_psi = ((cg_h - cg).len()/(cb_v - cg).len()).acos();
+            let frac_delta_theta = ((cb_m - cg).len()/(cg_m_h - cg).len()).acos();
+            heel += frac_delta_theta.to_degrees()/2.;
+            trim += frac_delta_psi.to_degrees()/2.;
+            draught = new_draught;
+dbg!(frac_delta_psi, frac_delta_theta, heel, trim, draught);
         }
     }
 }

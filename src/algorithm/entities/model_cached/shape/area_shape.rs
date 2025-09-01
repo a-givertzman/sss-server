@@ -114,7 +114,7 @@ impl AreaShape {
                     if p.coords.x > current_max_x {
                         current.sort();
                         current.dedup();
-                        result.push((x(current_max_x), current.iter().map(|&v| z(v) ).collect()));
+                        result.push((x(current_max_x), current.iter().map(|v: &u32| z(*v) ).collect()));
                         current = Vec::new();
                         current_max_x += 1;
                         while p.coords.x > current_max_x {
@@ -150,26 +150,6 @@ impl AreaShape {
         .collect();
         Ok(result)
     }
-   /* fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, f64)>, Error> {
-        let error = Error::new(&self.dbg, "windage_area_data");
-        let trim_sin = trim.to_radians().sin();
-        let trim_cos = trim.to_radians().cos();
-        let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
-        let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
-        let voxel_area = voxel_scale * voxel_scale;
-        let center =  self.center.ok_or(error.err("no center"))?;
-        let result: Vec<_> = voxels.iter().map(|(x, v)| {
-            let x_dz = x*trim_sin; 
-            (   *x + center.x, 
-                v.iter()
-                .map(|z| x_dz + ((z - draught)*trim_cos))
-                .filter(|&z| z >= 0.)
-                .count() as f64 * voxel_area
-            )
-        })
-        .collect();
-        Ok(result)
-    }*/
 }
 //
 impl Shape for AreaShape {
@@ -197,7 +177,7 @@ impl Shape for AreaShape {
                     ): (Vec<_>, Vec<_>) = pathes
                         .into_iter()
                         .map(|p| load_stl(&p))
-                        .partition(|r| r.is_ok());
+                        .partition(|r: &Result<_, Error>| r.is_ok());
                     meshes.into_iter().for_each(|m| mesh.append(&m.unwrap()));
                     let (indices, vertices) = (mesh.indices().to_vec(), mesh.vertices().to_vec());
                     let mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all())

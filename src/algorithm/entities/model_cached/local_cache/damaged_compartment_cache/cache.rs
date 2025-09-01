@@ -44,7 +44,7 @@ impl DamagedCompartmentCache {
         draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("Compartment_{compartment_id}_Cache"));
+        let dbg = Dbg::new(parent, format!("DamagedCompartment_{compartment_id}_Cache"));
         Self {
             shape,
             heel_steps,

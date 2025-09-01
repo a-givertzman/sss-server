@@ -4,22 +4,24 @@ mod app;
 mod conf;
 mod infrostructure;
 mod kernel;
-mod prelude;
+//mod prelude;
 mod ship_model;
 #[cfg(test)]
 mod tests;
 
 use algorithm::entities::{Position, Position2d};
-use algorithm::eval::*;
+
+//use algorithm::eval::*;
+
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
 use kernel::{eval::Eval, run::Run};
-use prelude::*;
+//use prelude::*;
 use sal_core::{error::Error, dbg::Dbg};
 use sal_sync::thread_pool::ThreadPool;
-use ship_model::ship_model::ShipModel;
+//use ship_model::ship_model::ShipModel;
 use std::path::PathBuf;
 use crate::algorithm::entities::model_cached;
 ///
@@ -72,11 +74,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cache_dir,
             model_scale: 1000.,
             model_center_coord,
-            heel_steps: vec![-10., -5., 0., 5., 10.],
-            trim_steps: vec![-5., -2., 0., 2., 5.],
+            heel_steps: vec![-20., 0., 20.],
+            trim_steps: vec![-20., 0., 20.],
             draught_min: 2.,
-            hull_draught_step: 1.,
-            compartment_level_step: 0.25,
+            hull_draught_step: 5.,
+            compartment_level_step: 3.,
         },
         thread_pool.scheduler(),
     ).unwrap();
