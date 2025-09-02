@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use crate::algorithm::entities::{model_cached::CacheConf, Position};
 ///
 /// [super::ModelCached] configuration.
@@ -9,7 +9,7 @@ pub struct ModelCachedConf {
     pub cache_dir: PathBuf,
     /// Directory containing model structure (e. g. in STL format).
     pub model_dir: PathBuf,
-    /// Scale of model, shape will be scaled by wvalue = 1/model_scale
+    /// Scale of model, shape will be scaled by value = 1/model_scale
     pub model_scale: f64,
     /// Waterline initial position in 3D space (midel).
     pub model_center_coord: Position,
@@ -22,6 +22,8 @@ pub struct ModelCachedConf {
     pub draught_max: f64,
     /// Draught step for hull
     pub hull_draught_step: f64,
-    /// Level step for compartments
-    pub compartment_level_step: f64,
+    /// qnt steps for compartments
+    pub compartment_qnt_steps: usize,
+    /// volume data for compartments
+    pub compartment_data: HashMap<String, (Option<f64>, Option<Position>)>,
 }

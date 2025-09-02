@@ -29,16 +29,10 @@ mod tests {
         let epsilon = 0.0000001;
         let mut shape = AreaShape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 1000, None, None);
         shape._voxelize().unwrap();
-        let result = shape.windage_area(0., 0.,);
-        let target = (1.0, 1.0);
+        let result: f64 = shape.windage_area_data(0.).unwrap().iter().map(|(a, _)| *a).sum();
+        let target = 1.0;
         assert!(
-            (result.0 - target.0).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.1 - target.1).abs() < epsilon,
+            (result - target).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
             result,
             target

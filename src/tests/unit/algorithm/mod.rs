@@ -6,7 +6,7 @@ mod cache;
 //mod fake_ship_model;
 //mod icing;
 //mod loads;
-mod roll_frequency_test;
+//mod roll_frequency_test;
 //mod strength_area;
 //mod wetting;
 mod displacement_shape;

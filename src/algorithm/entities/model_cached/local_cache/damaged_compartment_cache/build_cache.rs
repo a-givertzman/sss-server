@@ -56,7 +56,7 @@ impl BuildDamagedCompartmentCache {
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
     /// 
-    /// results: [[heel, trim, draught, volume, x, y, z]]
+    /// results: [[heel, trim, draught, volume, vx, vy, vz]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");

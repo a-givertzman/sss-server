@@ -93,9 +93,9 @@ mod tests {
 
         let b_src = Bounds::from_frames(&vec![(-10., 0.), (0., 10.)]).unwrap();
         let v_src = [10.,10.];
-        let b_trg = Bounds::from_min_max(-10., 10., 20).unwrap();     
+        let b_trg = Bounds::from_min_max(-10., 10., 10).unwrap();     
         let result = b_trg.intersect(&b_src, &v_src).unwrap();
-        let target = [1.; 20];
+        let target = [2.; 10];
         assert!(
             result.as_slice() == &target,
             "\nresult: {:?}\ntarget: {:?}",

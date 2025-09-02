@@ -41,19 +41,19 @@ fn cache_interpolation() {
         vec![-1.0, 0.0, 5.0],
         vec![-1.0, 1.0, 15.0],
     ];
-    let cache = Cache::new(&dbg);
+    let cache = Cache::new(&dbg, 2);
     let _ = cache.init(test_data);
-    let target = vec![0.0, 0.0, 10.0];
-    let result = cache.get(&[Some(0.0), Some(0.0), None]);
+    let target = vec![10.0];
+    let result = cache.get(&[0.0, 0.0]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
-    let target = vec![0.0, 0.5, 15.];
-    let result = cache.get(&[Some(0.0), Some(0.5), None]);
+    let target = vec![15.];
+    let result = cache.get(&[0.0, 0.5]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
-    let target = vec![1.0, 0.5, 20.];
-    let result = cache.get(&[Some(1.0), Some(0.5), None]);
+    let target = vec![20.];
+    let result = cache.get(&[1.0, 0.5]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
-    let target = vec![-0.5, 0.5, 12.5];
-    let result = cache.get(&[Some(-0.5), Some(0.5), None]);
+    let target = vec![12.5];
+    let result = cache.get(&[-0.5, 0.5]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
     test_duration.exit();
 }

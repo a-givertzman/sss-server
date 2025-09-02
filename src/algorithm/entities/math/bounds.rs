@@ -133,23 +133,70 @@ impl Bounds {
         if bounds.len() != values.len() {
             return Err(error.err("bounds.len() != values.len()"));
         }
-        let values = bounds.zip(values.iter());
-        let mut current_i = 0;
-        let mut current_value = 0.;
+        let q_v: Vec<_> = bounds.zip(values.iter()).collect();
+        let s_v = &self.values;
+        let (mut q_i, mut s_i) = (0, 0);
+        let mut delta_q = None;
         let mut result = Vec::new();
-        let mut self_b = &self.values[current_i];
-        for (query_b, a) in values {
-            if self_b.start().ok_or(error.err("query_b.start"))?
-                >= query_b.end().ok_or(error.err("src_b.end"))?
+        result.push(0.);
+        while q_i < q_v.len() {
+            let q_b = q_v[q_i].0;
+            let v = q_v[q_i].1;
+            let s_b = &s_v[s_i];
+            result[s_i] += v * q_b.part_ratio(s_b).map_err(|err| {
+                error.pass_with(
+                    format!("q_b.part_ratio(s_b), query_b:{q_b}, self_b:{s_b}, current_i:{s_i}"),
+                    err,
+                )
+            })?;
+            if q_b.start().ok_or(error.err("query_b.start"))?
+                >= s_b.end().ok_or(error.err("src_b.end"))?
             {
-                current_i += 1;
-                self_b = &self.values[current_i];
-                result.push(current_value);
-                if current_i >= self.values.len() {
+                println!(
+                    "{}",
+                    format!(
+                        "s_i+ qi- v:{v} {q_b}, {q_i}, {s_b}, {s_i}, {:?}, r:{:?}",
+                        delta_q, &result
+                    )
+                );
+                s_i += 1;
+                if delta_q.is_none() {
+                    delta_q = Some(q_i.max(1));
+                }
+                if s_i >= self.values.len() {
                     break;
                 }
+                if q_i > 0 {
+                    q_i -= delta_q.unwrap();
+                }
+                result.push(0.);
+                continue;
             }
-            current_value += a*query_b.part_ratio(self_b).map_err(|err| {
+            println!(
+                "{}",
+                format!(
+                    "q_i+ v:{v} {q_b}, {q_i}, {s_b}, {s_i}, {:?}, r:{:?}",
+                    delta_q, &result
+                )
+            );
+            q_i += 1;
+        }
+        /*
+
+        for (query_b, v) in values {
+            if query_b.start().ok_or(error.err("query_b.start"))?
+                >= self_b.end().ok_or(error.err("src_b.end"))?
+            {
+                index += 1;
+                self_b = &self.values[index];
+                if index >= self.values.len() {
+                    dbg!("2", self_b, query_b, v, index, &result);
+                    assert!(false);
+                    break;
+                }
+                result.push(0.);
+            }
+            result[index] += v*query_b.part_ratio(self_b).map_err(|err| {
                 error.pass_with(
                     format!(
                         "query_b.part_ratio(self_b), query_b:{query_b}, self_b:{self_b}, current_i: current_i"
@@ -157,8 +204,8 @@ impl Bounds {
                     err,
                 )
             })?;
-        }
-        result.push(current_value);
+            dbg!("3", self_b, query_b, v, index, &result);
+        }*/
         Ok(result)
     }
 }

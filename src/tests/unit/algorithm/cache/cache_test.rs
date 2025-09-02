@@ -43,18 +43,18 @@ fn init_cache() {
         vec![0.6, 4.6, 3.6, 70.6],
         vec![0.7, 0.7, 4.7, 80.7],
     ];
-    let cache = Cache::new(&dbg);
+    let cache = Cache::new(&dbg, 3);
     let result = cache.init(data.clone());
     println!("cache.init result={:?}", result);
     for (step, target) in data.into_iter().enumerate() {
-        let vals = [Some(target[0]), Some(target[1]), Some(target[2]), None];
+        let vals = [target[0], target[1], target[2]];
         let result = cache.get(&vals);
         println!(
             "step={} vals={:?} target={:?} result={:?}",
             step, vals, target, result
         );
         assert_eq!(
-            target, result,
+            target[3], result[0],
             "step={} vals={:?} target={:?} result={:?}",
             step, vals, target, result
         );

@@ -36,7 +36,7 @@ pub trait LocalCache {
 
     //
 //
-pub trait LocalCache {
+pub(crate) trait LocalCache {
     fn dbg(&self) -> &Dbg;
 
     fn cache_path(&self) -> &PathBuf;
@@ -55,10 +55,11 @@ pub trait LocalCache {
     fn calculate(&mut self) -> Vec<Error>;
     ///
     /// Returns approximated values based on given set.
-    fn get(&self, approx_vals: &[Option<f64>]) -> Result<Vec<f64>, Error> {
+    // TODO получение 
+    fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
         if self.cache().read().is_none() {
-            let cache = Cache::new(self.dbg());
+            let cache = Cache::new(self.dbg(), approx_vals.len());
             let vals = read(self.dbg(), self.cache_path())
                 .map_err(|err| error.pass_with("read cache data error", err))?;
             cache

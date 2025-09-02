@@ -23,7 +23,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{Moment, model_cached};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -79,38 +79,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             draught_min: 2.,
             draught_max: 22.,
             hull_draught_step: 10.,
-            compartment_level_step: 10.,
+            compartment_qnt_steps: 3,
+            compartment_data: HashMap::new(),
         },
         thread_pool.scheduler(),
     )
     .unwrap();
-  //  let res = model.rebuild_caches();
-//   dbg!(&res);
+  //  let res = model.rebuild_caches();   dbg!(&res);
 
     let query = ship_model::query::BalanceQuery {
         water_density: 1.025,
-        mass_const: 5000.,
+        mass_const: 10000.,
         moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
         bulk: vec![ship_model::query::BulkData {
             cargo_id: 1,
             space_id: "212".to_owned(),
-            mass: 100.,
-            volume: 100.,
+            mass: 50.,
+            volume: 50.,
         }],
         liquid: vec![ship_model::query::LiquidData {
             cargo_id: 2,
             space_id: "212".to_owned(),
-            mass: 100.,
-            volume: 100.,
+            mass: 50.,
+            volume: 50.,
         }],
         grain_bulkhead: Vec::new(),
         damaged_compartment: vec!["212".to_owned()],
         precision: 0.001,
     };
 
-    let Ok(result) = model.floating_position(query) else {
-        return Ok(());
-    };
+    let result = model.floating_position(query); 
 
     dbg!(result);
 

@@ -31,21 +31,22 @@ pub trait Shape {
             .ok_or(Error::new(self.dbg(), "position").err("no center"))?;
         Ok(position(center, heel, trim, draught))
     }
-    /// Разбиение от draught_min до h_max меша на draught_step шаги
-    fn draught_steps(&self, draught_min: f64, draught_step: f64) -> Result<Vec<f64>, Error> {
+    /// Разбиение от h_min до h_max меша на draught_qnt_steps шагов
+    fn draught_steps(&self, draught_qnt_steps: usize) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "draught_steps");
         let aabb = self.mesh().ok_or(error.err("no mesh"))?.local_aabb();
-        if draught_step <= 0. {
-            return Err(error.err("draught_step == 0"));
+        if draught_qnt_steps <= 1 {
+            return Err(error.err("draught_qnt_steps <= 1"));
         }
-        if draught_min >= aabb.maxs.z {
-            return Err(error.err("draught_min >= h_max"));
+        if aabb.mins.z >= aabb.maxs.z {
+            return Err(error.err("aabb.mins.z >= aabb.maxs.z"));
         }
         let mut result = vec![];
-        let mut current = draught_min;
+        let mut current = aabb.mins.z;
+        let step = (aabb.maxs.z - aabb.mins.z)/(draught_qnt_steps as f64 - 1.);
         while current < aabb.maxs.z {
             result.push(current);
-            current += draught_step;
+            current += step;
         }
         result.push(aabb.maxs.z);
         Ok(result)
