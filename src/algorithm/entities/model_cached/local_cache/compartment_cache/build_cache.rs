@@ -60,7 +60,7 @@ impl BuildCompartmentCache {
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
     ///
-    /// results: [[heel, trim, volume, draught, vx, vy, vz, ix, iy]]
+    /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -220,7 +220,7 @@ impl BuildCompartmentCache {
                         continue;
                     }
                 };
-                results.push(Ok(vec![heel, trim, volume, draught, vx, vy, vz, i_x, i_y]));
+                results.push(Ok(vec![heel, trim, draught, volume, vx, vy, vz, i_x, i_y]));
             }
         }
         //   dbg!(&results);

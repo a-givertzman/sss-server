@@ -85,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread_pool.scheduler(),
     )
     .unwrap();
-  //  let res = model.rebuild_caches();   dbg!(&res);
+//    let res = model.rebuild_caches();   dbg!(&res);
 
     let query = ship_model::query::BalanceQuery {
         water_density: 1.025,
@@ -109,7 +109,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let result = model.floating_position(query); 
-
     dbg!(result);
 
     /*   let floating_position = model.floating_position(

@@ -59,13 +59,7 @@ pub(crate) trait LocalCache {
     fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
         if self.cache().read().is_none() {
-            let cache = Cache::new(self.dbg(), approx_vals.len());
-            let vals = read(self.dbg(), self.cache_path())
-                .map_err(|err| error.pass_with("read cache data error", err))?;
-            cache
-                .init(vals)
-                .map_err(|err| error.pass_with("cache.init error", err))?;
-            let _ = self.cache().write().insert(cache);
+            self.init().map_err(|err| error.pass_with("self.init()", err))?;
         }
         Ok(self
             .cache()
@@ -85,5 +79,19 @@ pub(crate) trait LocalCache {
             Some(err) => Err(Error::new(self.dbg(), "rebuild").pass(err.to_owned())),
             None => Ok(()),
         }
+    }
+    /// инициализация кэша заранее посчитанными данными
+    fn init(&self) -> Result<(), Error> {
+        let error = Error::new(self.dbg(), "init");
+        if self.cache().read().is_none() {
+            let vals = read(self.dbg(), self.cache_path())
+                .map_err(|err| error.pass_with("read cache data error", err))?;
+            let cache = Cache::new(self.dbg());            
+            cache
+                .init(vals)
+                .map_err(|err| error.pass_with("cache.init error", err))?;
+            let _ = self.cache().write().insert(cache);
+        }
+        Ok(())
     }
 }

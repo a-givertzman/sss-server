@@ -55,7 +55,7 @@ impl BuildDisplacementCache {
     }
     ///
     /// Creates and starts worker for [DisplacementCache::calculate].
-    /// results: [[heel, trim, volume, draught, vx, vy, vz, area, ax, ay, az, wx, wy]]
+    /// results: [[heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, wx, wy]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -176,7 +176,7 @@ impl BuildDisplacementCache {
                             continue;
                         }
                     };
-                    results.push(Ok(vec!(heel, trim, volume, draught, vx, vy, vz, area, ax, ay, az, *l_x, *l_y)));
+                    results.push(Ok(vec!(heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, *l_x, *l_y)));
                 } else {
                     results.push(Err(error.err(format!("no aabb for draught:{draught}"))));
                 }

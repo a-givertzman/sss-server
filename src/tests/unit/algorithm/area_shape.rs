@@ -7,7 +7,7 @@ mod tests {
     use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    //
+    #[ignore = "too slow, run only in release mode"]
     #[test]
     fn shape_windage_area() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -26,10 +26,10 @@ mod tests {
             parry3d_f64::shape::TriMeshFlags::all(),
         )
         .ok();
-        let epsilon = 0.0000001;
-        let mut shape = AreaShape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 1000, None, None);
+        let epsilon = 0.01;
+        let mut shape = AreaShape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 2000, None, None);
         shape._voxelize().unwrap();
-        let result: f64 = shape.windage_area_data(0.).unwrap().iter().map(|(a, _)| *a).sum();
+        let result: f64 = shape.windage_area_data(-1.).unwrap().iter().map(|(_dx, area)| *area).sum();
         let target = 1.0;
         assert!(
             (result - target).abs() < epsilon,

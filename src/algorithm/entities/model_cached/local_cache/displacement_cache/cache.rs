@@ -65,18 +65,20 @@ impl DisplacementCache {
     }
     /// Return (draught, center of volume)
     pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<(f64, Position), Error> {
-        let error = Error::new(self.dbg(), "get");
-        let guard = self.cache().read();        
-        let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
+        let error = Error::new(self.dbg(), "get");     
         let mut step = (self.draught_max - self.draught_min)/2.;
         let mut draught = self.draught_min + step;
+        self.init().map_err(|err| error.pass_with("self.init()", err))?;
+        let guard = self.cache().read();  
+        let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
         for _ in 0..50 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
-            let delta = result.first().ok_or(error.pass("no result from cache.get(&query)"))? - volume;
+            let delta = volume - result.first().ok_or(error.pass("no result from cache.get(&query)"))?;
             if delta.abs() <= epsilon {
                 return Ok((result[0], Position::new(result[1], result[2], result[3])));
             }
+            dbg!(heel, trim, draught, result, delta, step);
             step = step/2.;
             draught += step*delta.signum();
         }
@@ -107,7 +109,7 @@ impl LocalCache for DisplacementCache {
             let cache = if let Some(cache) = guard.take() {
                 cache
             } else {
-                Cache::<f64>::new(&self.dbg, 3)
+                Cache::<f64>::new(&self.dbg)
             };
             if let Err(err) = cache.init(data.clone()) {
                 errors.push(error.pass_with("self.cache.get_mut", err));

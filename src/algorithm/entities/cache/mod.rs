@@ -26,7 +26,6 @@ type SyncVec<T> = std::sync::Arc<[T]>;
 /// ```
 pub struct Cache<T> {
     dbg: Dbg,
-    qnt_keys: usize,
     table: OnceLock<Vec<Vec<T>>>,
 }
 //
@@ -37,11 +36,9 @@ impl<T> Cache<T> {
     ///
     /// Note that this call doesn't read the file yet.
     /// The first access (see [Cache::get]) causes file reading.
-    pub fn new(parent: &Dbg, qnt_keys: usize) -> Self {
-        assert!(qnt_keys > 0);
+    pub fn new(parent: &Dbg) -> Self {
         Self {
             dbg: Dbg::new(parent, "Cache"),
-            qnt_keys,
             table: OnceLock::new(),
         }
     }
@@ -62,7 +59,6 @@ impl<T: PartialOrd> Cache<T> {
     {
         assert!(vals.len() > 1);
         assert!(vals[0].len() > 1);
-        assert!(self.qnt_keys < vals[0].len());
         self.table
             .set(vals.clone())
             .map_err(|_| Error::new("Cache", "init").err("table.set"))?;
@@ -114,8 +110,8 @@ impl Cache<f64> {
     /// }
     /// ```
    pub fn get(&self, query: &[f64]) -> Vec<f64> {
-        assert_eq!(self.qnt_keys, query.len());
-        dbg!(query);
+     //   assert_eq!(self.qnt_keys, query.len());
+    //    dbg!(query);
         let data = self
             .table
             .get()
@@ -152,7 +148,7 @@ impl Cache<f64> {
                 true
             })
             .collect();
-        dbg!(&data);
+     //   dbg!(&data);
         // расчитываем дельту для каждого индекса
         let keys_and_delta: Vec<_> = query
             .iter()
@@ -192,7 +188,7 @@ impl Cache<f64> {
             })
             .collect::<Vec<_>>();
         // последовательно суммируем вклад строк по каждому индексу
-        dbg!(query.len(), result.len(), &result);
+    //    dbg!(query.len(), result.len(), &result);
         let result = (query.len()..result[0].len())
             .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
             .collect::<Vec<_>>();

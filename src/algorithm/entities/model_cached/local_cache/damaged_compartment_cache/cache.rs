@@ -65,10 +65,9 @@ impl DamagedCompartmentCache {
     /// Return (volume, center of volume)
     pub fn get(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, Position), Error> {
         let error = Error::new(self.dbg(), "get");
-        let guard = self.cache().read();        
-        let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
         let query = [heel, trim, draught];
-        let result = cache.get(&query);
+            let result = LocalCache::get(self, &query)
+                .map_err(|err| error.pass_with(" LocalCache::get(self, &query)", err))?;
         Ok((result[0], Position::new(result[1], result[2], result[3])))
     }
 }
@@ -96,7 +95,7 @@ impl LocalCache for DamagedCompartmentCache {
             let cache = if let Some(cache) = guard.take() {
                 cache
             } else {
-                Cache::<f64>::new(&self.dbg, 3)
+                Cache::<f64>::new(&self.dbg)
             };
             if let Err(err) = cache.init(data.clone()) {
                 errors.push(error.pass_with("self.cache.get_mut", err));

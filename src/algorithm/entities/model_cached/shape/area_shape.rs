@@ -132,7 +132,7 @@ impl AreaShape {
             Ok(())
     }
     /// Расчет поверхности парусности
-    /// Возвращает повернутое и смещенное разбиение
+    /// Возвращает повернутое и смещенное разбиение [dx, area]
     pub fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, f64)>, Error> {
         let error = Error::new(&self.dbg, "windage_area_data");
         let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;

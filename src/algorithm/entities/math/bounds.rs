@@ -136,6 +136,39 @@ impl Bounds {
         let q_v: Vec<_> = bounds.zip(values.iter()).collect();
         let s_v = &self.values;
         let (mut q_i, mut s_i) = (0, 0);
+        let mut current_q_i = None;
+        let mut result = Vec::new();
+        while s_i < s_v.len() {
+            result.push(0.);
+            while q_i < q_v.len() {
+                let q_b = q_v[q_i].0;
+                let v = q_v[q_i].1;
+                let s_b = &s_v[s_i];
+                let part_ratio = q_b.part_ratio(s_b).map_err(|err| {
+                    error.pass_with(
+                        format!("q_b.part_ratio(s_b), query_b:{q_b}, self_b:{s_b}, current_i:{s_i}"),
+                        err,
+                    )
+                })?;
+                if current_q_i.is_some() && part_ratio == 0. {
+                    break;
+                } 
+                result[s_i] += v * part_ratio; 
+                if current_q_i.is_none() {
+                    if part_ratio < 1. {
+                        current_q_i = Some(q_i);
+                    }
+                }
+                q_i += 1;
+            }
+            if current_q_i.is_some() {
+                q_i = current_q_i.unwrap();
+            }
+            current_q_i = None;
+            s_i += 1;
+        }
+/*
+        
         let mut delta_q = None;
         let mut result = Vec::new();
         result.push(0.);
@@ -180,7 +213,8 @@ impl Bounds {
                 )
             );
             q_i += 1;
-        }
+        }*/
+
         /*
 
         for (query_b, v) in values {
