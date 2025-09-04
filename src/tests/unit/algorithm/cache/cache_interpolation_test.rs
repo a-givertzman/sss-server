@@ -41,7 +41,7 @@ fn cache_interpolation() {
         vec![-1.0, 0.0, 5.0],
         vec![-1.0, 1.0, 15.0],
     ];
-    let cache = Cache::new(&dbg, 2);
+    let cache = Cache::new(&dbg);
     let _ = cache.init(test_data);
     let target = vec![10.0];
     let result = cache.get(&[0.0, 0.0]);

@@ -526,7 +526,7 @@ impl ModelCached {
             let volume = mass_sum / query.water_density;
             // считаем корпус
             dbg!("floating_position hull start");
-            let (new_draught, cb) = 
+            let (new_draught, cb) =
                 self.displacement.get(heel, trim, mass_sum / query.water_density, query.precision)
                 .map_err(|err| error.pass_with(format!("self.displacement.get heel:{heel} trim:{trim} volume:{volume}"), err))?;
 
@@ -545,7 +545,7 @@ impl ModelCached {
             let cg = {
                 let moment_sum =
                     moment_const + moment_bulk + moment_liquid + moment_damaged_compartment;
-                moment_sum.to_pos(mass_sum)
+                moment_sum.to_pos(mass_sum) + self.model_center_coord
             };
             // Определение невязки
             let cg_h = {
@@ -553,10 +553,11 @@ impl ModelCached {
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CB проводится горизонтальная плоскость
                 let my_plane = HalfSpace::new(up_vector);
-                let cg = cb - cg;
-                let cg_h = Position::from(my_plane.project_local_point(&cg.into(), false).point);
-                let precision = (cg_h - cg).len();
-                dbg!(heel, trim, new_draught, precision);
+                let cg_local = cg - cb;
+                let cg_h = Position::from(my_plane.project_local_point(&cg_local.into(), false).point);
+          //      dbg!(cg, cb, cg_local, cg_h);
+                let precision = (cg_h - cg_local).len();
+       //         dbg!(self.model_center_coord, cb, cg, cg_h, heel, trim, new_draught, precision);
                 if precision < query.precision {
                     return Ok(FloatingPositionResult {
                         heel,
@@ -566,27 +567,31 @@ impl ModelCached {
                         volume,
                     });
                 }
-                cg_h + cg
+                cb + cg_h
             };
+    //        dbg!(cg, cb, cg_h);
             // Определение посадки судна для следующего шага
             let cb_v = {
                 let up_vector = rotation.transform_vector(&Vector3::y_axis());
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
                 let my_plane = HalfSpace::new(up_vector);
-                let cb = cg - cb;
-                let cb_v = Position::from(my_plane.project_local_point(&cb.into(), false).point);
-                cb_v + cb
+                let cb_local = cb - cg;
+                let cb_v = Position::from(my_plane.project_local_point(&cb_local.into(), false).point);
+         //       dbg!(cg, cb, cb_local, cb_v);
+                cg + cb_v
             };
+     //       dbg!(cb_v);
             let cb_m = {
                 let up_vector = rotation.transform_vector(&Vector3::x_axis());
                 let up_vector = UnitVector::new_normalize(up_vector);
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
                 let my_plane = HalfSpace::new(up_vector);
-                let cb = cb - cg;
-                let cb_m = Position::from(my_plane.project_local_point(&cb.into(), false).point);
-                cb_m + cg
+                let cb_local = cb - cg;
+                let cb_m = Position::from(my_plane.project_local_point(&cb_local.into(), false).point);
+                cg + cb_m
             };
+      //      dbg!(cb_m);
             // проекция точки cg_m на вертикальную плоскость параллельную основной линии
             let cg_m_h = {
                 let up_vector = rotation.transform_vector(&Vector3::y_axis());
@@ -596,14 +601,20 @@ impl ModelCached {
                 let cg_m = cb_m - cg;
                 let cg_m_h =
                     Position::from(my_plane.project_local_point(&cg_m.into(), false).point);
-                cg_m_h + cg
+                cg + cg_m_h
             };
-            let frac_delta_psi = ((cg_h - cg).len() / (cb_v - cg).len()).acos();
-            let frac_delta_theta = ((cb_m - cg).len() / (cg_m_h - cg).len()).acos();
-            heel += frac_delta_theta.to_degrees() / 2.;
-            trim += frac_delta_psi.to_degrees() / 2.;
+      //      dbg!(cg_m_h);
+
+            let d_gh = (cg_h - cg).len();
+            let d_bv = (cb_v - cg).len();
+            let frac_delta_psi = (d_gh / d_bv).acos().to_degrees();
+            let d_bm = (cb_m - cg).len();
+            let d_gmh = (cg_m_h - cg).len();
+            let frac_delta_theta = (d_gmh/ d_bm).acos().to_degrees();
+            heel += frac_delta_theta / 2.;
+            trim += frac_delta_psi / 2.;
             draught = new_draught;
-            dbg!(frac_delta_psi, frac_delta_theta, heel, trim, draught);
+            println!("cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h} d_gh:{d_gh} d_bv:{d_bv} psi:{frac_delta_psi} d_bm:{d_bm} d_gmh:{d_gmh} theta:{frac_delta_theta} heel:{heel} trim:{trim} draught:{draught}");
             dbg!("floating_position end");
         }
     }

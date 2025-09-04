@@ -75,7 +75,7 @@ impl CompartmentCache {
         self.init().map_err(|err| error.pass_with("self.init()", err))?;
         let guard = self.cache().read();  
         let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
-        let level_max = cache.max_value(3);
+        let level_max = cache.max_value(2);
         let mut step = level_max/2.;
         let mut draught = step;
         for _ in 0..50 {

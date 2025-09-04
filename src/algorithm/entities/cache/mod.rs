@@ -109,9 +109,14 @@ impl Cache<f64> {
     ///     let _ = cache.get(&[None, Some(0.1), None, Some(0.2)]);
     /// }
     /// ```
+    /// # Panics
+    /// non-comparable value (e. g. _NaN_)
+    /// qnt_keys >= vals len
+    /// value is out of range
+    /// value index is out of key index range - TODO описать подробнее
    pub fn get(&self, query: &[f64]) -> Vec<f64> {
      //   assert_eq!(self.qnt_keys, query.len());
-    //    dbg!(query);
+      //  dbg!(query);
         let data = self
             .table
             .get()
@@ -121,7 +126,30 @@ impl Cache<f64> {
             .iter()
             .enumerate()
             .map(|(key_i, key)| {
+                let data: Vec<_> = data
+                    .iter()
+                    .map(|v| (v[key_i], ((key - v[key_i]) as f64)))
+                    .collect();
+                //TODO проверять ключ на допустимость - ключ не должен выходить из диапазона ключей в данных
+                let d_up = data.iter().any(|v| v.1 > 0.);
+                let d_down = data.iter().any(|v| v.1 < 0.);
+                let d_eq = data.iter().any(|v| v.1 == 0.);
+                if !(d_up && d_down) && !d_eq {
+                    panic!("{}", format!("i:{key_i} key:{key} key is out of range!"));
+                }
                 let mut data: Vec<_> = data
+                    .iter()
+                    .map(|v| (v.0, v.1.abs()))
+                    .collect();
+                data.sort_by(|&a, &b| a.1.partial_cmp(&b.1).unwrap());
+                data.dedup();
+                let res = if data[0].1 == 0. {
+                    vec![data[0].0]
+                } else {
+                    vec![data[0].0, data[1].0]
+                };
+
+      /*          let mut data: Vec<_> = data
                     .iter()
                     .map(|v| (v[key_i], ((key - v[key_i]) as f64).abs()))
                     .collect();
@@ -131,11 +159,11 @@ impl Cache<f64> {
                     vec![data[0].0]
                 } else {
                     vec![data[0].0, data[1].0]
-                };
+                };*/
                 res
             })
             .collect();
-        //   println!("{:?}", pairs);
+         //  println!("{:?}", pairs);
         // фильтруем данные, оставляя только те строки, которые содержат какое-либо значение из пар
         let data: Vec<_> = data
             .iter()
@@ -148,7 +176,7 @@ impl Cache<f64> {
                 true
             })
             .collect();
-     //   dbg!(&data);
+    //    dbg!(&data);
         // расчитываем дельту для каждого индекса
         let keys_and_delta: Vec<_> = query
             .iter()
@@ -157,7 +185,7 @@ impl Cache<f64> {
                 let mut data: Vec<_> = data.iter().map(|v| v[i]).collect();
                 data.sort_by(|a, b| a.partial_cmp(b).unwrap());
                 data.dedup();
-                //   println!("{i} {:?}", data);
+          //      println!("{i} {:?}", data);
                 debug_assert!(data.len() > 0);
                 if data.len() == 1 {
                     debug_assert_eq!(key, data[0], "{}", format!("key:{key}, data:{:?} query:{:?}", data, query));
@@ -188,7 +216,7 @@ impl Cache<f64> {
             })
             .collect::<Vec<_>>();
         // последовательно суммируем вклад строк по каждому индексу
-    //    dbg!(query.len(), result.len(), &result);
+    //    dbg!(query.len(), result.len(), &keys_and_delta, &result);
         let result = (query.len()..result[0].len())
             .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
             .collect::<Vec<_>>();

@@ -59,13 +59,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     */
     let dbg = Dbg::new("ShipModel", "compute_balance");
     //   let model_path = "src/assets/sofia3.stp";
-    //    let center_coord = Position::new(65.22, 0., 0.);
+    //    let center_coord = Position::new(65.250, 0., 0.);
     //  let model_path = "src/assets/model_1510.stp";
     //    let model_path = "src/assets/ark-Part3.obj";
     //  let model_path = "src/assets/ark.stl";
+  //  let model_center_coord = Position::new(59.195, 0., 0.);
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
-    let model_center_coord = Position::new(59.195, 0., 0.);
+    let model_center_coord = Position::new(65.250, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(30));
     let mut model = model_cached::ModelCached::new(
         &dbg,
@@ -74,37 +75,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cache_dir,
             model_scale: 1000.,
             model_center_coord,
-            heel_steps: vec![-20., 0., 20.],
-            trim_steps: vec![-20., 0., 20.],
+            heel_steps: vec![-60., -30., -15., -10., -5., -2., 0., 2., 5., 10., 15., 30., 60.],
+            trim_steps: vec![-20., -10., -5.,  -3.,  -2., -1., 0., 1., 2., 3.,  5.,  10., 20.],
             draught_min: 2.,
-            draught_max: 22.,
-            hull_draught_step: 10.,
+            draught_max: 14.,
+            hull_draught_step: 1.,
             compartment_qnt_steps: 3,
             compartment_data: HashMap::new(),
         },
         thread_pool.scheduler(),
     )
     .unwrap();
-//    let res = model.rebuild_caches();   dbg!(&res);
+  //  let res = model.rebuild_caches();   dbg!(&res);
 
     let query = ship_model::query::BalanceQuery {
         water_density: 1.025,
         mass_const: 10000.,
-        moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
+    //    moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
+        moment_const: Moment::from_pos(Position::new(0., 0., 0.), 0.),
         bulk: vec![ship_model::query::BulkData {
             cargo_id: 1,
             space_id: "212".to_owned(),
-            mass: 50.,
-            volume: 50.,
+            mass: 0.,
+            volume: 0.,
         }],
         liquid: vec![ship_model::query::LiquidData {
             cargo_id: 2,
             space_id: "212".to_owned(),
-            mass: 50.,
-            volume: 50.,
+            mass: 0.,
+            volume: 0.,
         }],
         grain_bulkhead: Vec::new(),
-        damaged_compartment: vec!["212".to_owned()],
+        damaged_compartment: vec![],//"212".to_owned()],
         precision: 0.001,
     };
 

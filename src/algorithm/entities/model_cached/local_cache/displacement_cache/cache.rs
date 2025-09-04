@@ -71,14 +71,18 @@ impl DisplacementCache {
         self.init().map_err(|err| error.pass_with("self.init()", err))?;
         let guard = self.cache().read();  
         let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
-        for _ in 0..50 {
+        for _i in 0..100 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
             let delta = volume - result.first().ok_or(error.pass("no result from cache.get(&query)"))?;
-            if delta.abs() <= epsilon {
-                return Ok((result[0], Position::new(result[1], result[2], result[3])));
+            if delta.abs() > 30000. {
+                panic!("delta.abs() > 30000.");
             }
-            dbg!(heel, trim, draught, result, delta, step);
+            if delta.abs() <= epsilon {
+            //    dbg!(&query, &result, delta);
+                return Ok((draught, Position::new(result[1], result[2], result[3])));
+            }
+          //  println!("displacement_cache cache get: {_i} {step} {delta} {heel} {trim} {draught} {:?}",  result);
             step = step/2.;
             draught += step*delta.signum();
         }
