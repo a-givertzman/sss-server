@@ -5,7 +5,7 @@
 //! be taken to create a more specific cache structure.
 //
 use sal_core::{dbg::Dbg, error::Error};
-use std::{num::ParseFloatError, str::FromStr, sync::OnceLock};
+use std::{num::ParseFloatError, ops::Index, str::FromStr, sync::OnceLock};
 //
 type SyncVec<T> = std::sync::Arc<[T]>;
 ///
@@ -114,9 +114,7 @@ impl Cache<f64> {
     /// qnt_keys >= vals len
     /// value is out of range
     /// value index is out of key index range - TODO описать подробнее
-   pub fn get(&self, query: &[f64]) -> Vec<f64> {
-     //   assert_eq!(self.qnt_keys, query.len());
-      //  dbg!(query);
+    pub fn get(&self, query: &[f64]) -> Vec<f64> {
         let data = self
             .table
             .get()
@@ -126,44 +124,25 @@ impl Cache<f64> {
             .iter()
             .enumerate()
             .map(|(key_i, key)| {
-                let data: Vec<_> = data
-                    .iter()
-                    .map(|v| (v[key_i], ((key - v[key_i]) as f64)))
-                    .collect();
-                //TODO проверять ключ на допустимость - ключ не должен выходить из диапазона ключей в данных
-                let d_up = data.iter().any(|v| v.1 > 0.);
-                let d_down = data.iter().any(|v| v.1 < 0.);
-                let d_eq = data.iter().any(|v| v.1 == 0.);
-                if !(d_up && d_down) && !d_eq {
+                // выбираем столбец значений для ключа по его индексу
+                let mut data: Vec<_> = data.iter().map(|v| v[key_i]).collect();
+                // ищем диапазон значений, куда попадает ключ
+                data.sort_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                data.dedup();
+                if data.contains(key) {
+                    // ключ совпадает с одним из значений, возвращаем его
+                    return vec![*key];
+                }
+                if data.first().unwrap() > key || data.last().unwrap() < key {
+                    // ключ вышел за пределы значений
                     panic!("{}", format!("i:{key_i} key:{key} key is out of range!"));
                 }
-                let mut data: Vec<_> = data
-                    .iter()
-                    .map(|v| (v.0, v.1.abs()))
-                    .collect();
-                data.sort_by(|&a, &b| a.1.partial_cmp(&b.1).unwrap());
-                data.dedup();
-                let res = if data[0].1 == 0. {
-                    vec![data[0].0]
-                } else {
-                    vec![data[0].0, data[1].0]
-                };
-
-      /*          let mut data: Vec<_> = data
-                    .iter()
-                    .map(|v| (v[key_i], ((key - v[key_i]) as f64).abs()))
-                    .collect();
-                data.sort_by(|&a, &b| a.1.partial_cmp(&b.1).unwrap());
-                data.dedup();
-                let res = if data[0].1 == 0. {
-                    vec![data[0].0]
-                } else {
-                    vec![data[0].0, data[1].0]
-                };*/
-                res
+                // пара значений, между которыми попадает ключ
+                let low_index = data.partition_point(|x| x < &key);
+                return vec![data[low_index-1], data[low_index]];
             })
             .collect();
-         //  println!("{:?}", pairs);
+       // println!("{:?}", pairs);
         // фильтруем данные, оставляя только те строки, которые содержат какое-либо значение из пар
         let data: Vec<_> = data
             .iter()
@@ -176,7 +155,6 @@ impl Cache<f64> {
                 true
             })
             .collect();
-    //    dbg!(&data);
         // расчитываем дельту для каждого индекса
         let keys_and_delta: Vec<_> = query
             .iter()
@@ -185,14 +163,23 @@ impl Cache<f64> {
                 let mut data: Vec<_> = data.iter().map(|v| v[i]).collect();
                 data.sort_by(|a, b| a.partial_cmp(b).unwrap());
                 data.dedup();
-          //      println!("{i} {:?}", data);
                 debug_assert!(data.len() > 0);
                 if data.len() == 1 {
-                    debug_assert_eq!(key, data[0], "{}", format!("key:{key}, data:{:?} query:{:?}", data, query));
-                    Some((key, 1.)) // ключ всегда будет равен значению, дельта не важна
+                    debug_assert_eq!(
+                        key,
+                        data[0],
+                        "{}",
+                        format!("key:{key}, data:{:?} query:{:?}", data, query)
+                    );
+                    // если одно значение ключ всегда будет равен значению, дельта не важна
+                    Some((key, 1.)) 
                 } else {
                     debug_assert_eq!(data.len(), 2);
-                    debug_assert!(data[0] < key && key < data[1], "{}", format!("key:{key}, data:{:?}", data));
+                    debug_assert!(
+                        data[0] < key && key < data[1],
+                        "{}",
+                        format!("key:{key}, data:{:?}", data)
+                    );
                     Some((key, data[1] - data[0]))
                 }
             })
@@ -200,116 +187,29 @@ impl Cache<f64> {
         // для каждой строки считаем коэффициенты и перемножаем их на значения
         let result = data
             .iter()
-            .map(|v| {
+            .map(|data| {
                 // коэффициент для каждой строки, получается перемножением коэффициентов для каждого индекса
                 let multipler = keys_and_delta
                     .iter()
-                    .zip(v.iter())
+                    .zip(data.iter())
                     .filter(|(k, _)| k.is_some())
-                    .fold(1., |acc, (k, v)| {
+                    .fold(1., |acc, (k, data)| {
                         let (key, delta) = k.unwrap();
-                        acc * (1. - ((key - v) as f64).abs() / delta)
+                        //        let k = ((key - data) as f64).abs() / delta;
+                        //     dbg!(key, delta, data, k);
+                        acc * (1. - ((key - data) as f64).abs() / delta)
                     });
                 // перемножаем каждое значение в строке на коэффициент строки, это будет
-                // вклад значения строки по этому индексу в итоговое значение 
-                v.iter().map(|v| v * multipler).collect::<Vec<_>>()
+                // вклад значения строки по этому индексу в итоговое значение
+                data.iter().map(|v| v * multipler).collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
         // последовательно суммируем вклад строк по каждому индексу
-    //    dbg!(query.len(), result.len(), &keys_and_delta, &result);
         let result = (query.len()..result[0].len())
             .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
             .collect::<Vec<_>>();
         result
     }
-    // pub fn get(&self, approx_vals: &[Option<f64>]) -> Vec<f64> {
-    //     let data = self
-    //         .table
-    //         .get()
-    //         .unwrap_or_else(|| panic!("{}.{} | Error: no table!", self.dbg, "get"));
-    //     // пары значений для каждого индекса, между которыми попадает ключ
-    //     let pairs: Vec<_> = approx_vals
-    //         .iter()
-    //         .enumerate()
-    //         .map(|(key_i, key)| {
-    //             let Some(key) = *key else {
-    //                 return None;
-    //             };
-    //             let mut data: Vec<_> = data
-    //                 .iter()
-    //                 .map(|v| (v[key_i], ((key - v[key_i]) as f64).abs()))
-    //                 .collect();
-    //             data.sort_by(|&a, &b| a.1.partial_cmp(&b.1).unwrap());
-    //             data.dedup();
-    //             let res = if data[0].1 == 0. {
-    //                 vec![data[0].0]
-    //             } else {
-    //                 vec![data[0].0, data[1].0]
-    //             };
-    //             Some(res)
-    //         })
-    //         .collect();
-    //     //   println!("{:?}", pairs);
-    //     // фильтруем данные, оставляя только те строки, которые содержат какое-либо значение из пар
-    //     let data: Vec<_> = data
-    //         .iter()
-    //         .filter(|v| {
-    //             for (c, v) in pairs.iter().zip(v.iter()).filter(|(p, _)| p.is_some()) {
-    //                 if !c.as_ref().clone().unwrap().contains(v) {
-    //                     return false;
-    //                 }
-    //             }
-    //             true
-    //         })
-    //         .collect();
-    //     dbg!(&approx_vals, &data);
-    //     // расчитываем дельту для каждого индекса
-    //     let keys_and_delta: Vec<_> = approx_vals
-    //         .iter()
-    //         .enumerate()
-    //         .map(|(i, key)| {
-    //             let Some(key) = *key else {
-    //                 return None;
-    //             };
-    //             let mut data: Vec<_> = data.iter().map(|v| v[i]).collect();
-    //             data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    //             data.dedup();
-    //             //   println!("{i} {:?}", data);
-    //             debug_assert!(data.len() > 0);
-    //             if data.len() == 1 {
-    //                 debug_assert_eq!(key, data[0], "{}", format!("key:{key}, data:{:?} approx_vals:{:?}", data, approx_vals));
-    //                 Some((key, 1.)) // ключ всегда будет равен значению, дельта не важна
-    //             } else {
-    //                 debug_assert_eq!(data.len(), 2);
-    //                 debug_assert!(data[0] < key && key < data[1], "{}", format!("key:{key}, data:{:?}", data));
-    //                 Some((key, data[1] - data[0]))
-    //             }
-    //         })
-    //         .collect();
-    //     // для каждой строки считаем коэффициенты и перемножаем их на значения
-    //     let result = data
-    //         .iter()
-    //         .map(|v| {
-    //             // коэффициент для каждой строки, получается перемножением коэффициентов для каждого индекса
-    //             let multipler = keys_and_delta
-    //                 .iter()
-    //                 .zip(v.iter())
-    //                 .filter(|(k, _)| k.is_some())
-    //                 .fold(1., |acc, (k, v)| {
-    //                     let (key, delta) = k.unwrap();
-    //                     acc * (1. - ((key - v) as f64).abs() / delta)
-    //                 });
-    //             // перемножаем каждое значение в строке на коэффициент строки, это будет
-    //             // вклад значения строки по этому индексу в итоговое значение 
-    //             v.iter().map(|v| v * multipler).collect::<Vec<_>>()
-    //         })
-    //         .collect::<Vec<_>>();
-    //     // последовательно суммируем вклад строк по каждому индексу
-    //     let result = (0..approx_vals.len())
-    //         .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
-    //         .collect::<Vec<_>>();
-    //     result
-    // }
     pub fn max_value(&self, index: usize) -> f64 {
         let data = self
             .table
@@ -321,5 +221,4 @@ impl Cache<f64> {
         let v = v.into_iter().max_by(|&a, b| a.partial_cmp(b).unwrap());
         v.unwrap()
     }
-
 }

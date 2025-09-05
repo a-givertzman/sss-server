@@ -236,7 +236,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut results: Vec<Result<(), Error>> = Vec::new();
         // Сначала считаем модели в разных потоках
-        dbg!("shapes start");
+        // dbg!("shapes start");
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
@@ -281,32 +281,32 @@ impl ModelCached {
                 results.push(Err(error));
             }
         }
-        dbg!("shapes end");
-        dbg!("displacement start");
+        // dbg!("shapes end");
+        // dbg!("displacement start");
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
         if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-        dbg!("displacement end");
-        dbg!("windage_area start");
+        // dbg!("displacement end");
+        // dbg!("windage_area start");
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-        dbg!("windage_area end");
-        dbg!("compartments start");
+        // dbg!("windage_area end");
+        // dbg!("compartments start");
         for (name, compartment) in &mut self.compartments {
             if let Err(error) = compartment.rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-        dbg!("compartments end");
-        dbg!("damaged_compartments start");
+        // dbg!("compartments end");
+        // dbg!("damaged_compartments start");
         for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
-        dbg!("damaged_compartments end");
+        // dbg!("damaged_compartments end");
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -388,7 +388,7 @@ impl ModelCached {
         &mut self,
         query: BalanceQuery,
     ) -> Result<FloatingPositionResult, Error> {
-        dbg!("floating_position start");
+        // dbg!("floating_position start");
         let error = Error::new(&self.dbg, "eval");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
@@ -399,7 +399,7 @@ impl ModelCached {
         let moment_const = query.moment_const;
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
-        dbg!("floating_position bulk start");
+        // dbg!("floating_position bulk start");
         let (mass_bulk, moment_bulk, bulk_result) = {
             let result: Vec<_> = query
                 .bulk
@@ -437,14 +437,16 @@ impl ModelCached {
                 result,
             )
         };
-        dbg!("floating_position bulk end");
+        // dbg!("floating_position bulk end");
 
-        dbg!("floating_position mass_liquid start");
+        // dbg!("floating_position mass_liquid start");
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
-        loop {
+       // loop
+        for i in 1..=10000
+        {
             let moment_liquid = {
                 query
                     .liquid
@@ -477,8 +479,8 @@ impl ModelCached {
                     })
                     .sum()
             };
-            dbg!("floating_position mass_liquid end");
-            dbg!("floating_position mass_damaged_compartment start");
+            // dbg!("floating_position mass_liquid end");
+            // dbg!("floating_position mass_damaged_compartment start");
             let (mass_damaged_compartment, moment_damaged_compartment) = {
                 query
                     .damaged_compartment
@@ -520,17 +522,17 @@ impl ModelCached {
                         },
                     )
             };
-            dbg!("floating_position mass_damaged_compartment end");
+            // dbg!("floating_position mass_damaged_compartment end");
 
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             let volume = mass_sum / query.water_density;
             // считаем корпус
-            dbg!("floating_position hull start");
+            // dbg!("floating_position hull start");
             let (new_draught, cb) =
                 self.displacement.get(heel, trim, mass_sum / query.water_density, query.precision)
                 .map_err(|err| error.pass_with(format!("self.displacement.get heel:{heel} trim:{trim} volume:{volume}"), err))?;
 
-            dbg!("floating_position hull end");
+            // dbg!("floating_position hull end");
             // расчет ориентации корпуса
             let rotation = {
                 let heel_rad = -heel.to_radians();
@@ -555,9 +557,11 @@ impl ModelCached {
                 let my_plane = HalfSpace::new(up_vector);
                 let cg_local = cg - cb;
                 let cg_h = Position::from(my_plane.project_local_point(&cg_local.into(), false).point);
-          //      dbg!(cg, cb, cg_local, cg_h);
-                let precision = (cg_h - cg_local).len();
-       //         dbg!(self.model_center_coord, cb, cg, cg_h, heel, trim, new_draught, precision);
+                let cg_h = cb + cg_h;
+                let precision = (cg_h - cb).len();
+          //      dbg!(cg, cb, cg_local, cg_h);                
+           //     dbg!(self.model_center_coord, cb, cg, cg_h, heel, trim, new_draught, precision);
+               println!("heel:{heel} trim:{trim} draught:{draught} precision:{precision}");
                 if precision < query.precision {
                     return Ok(FloatingPositionResult {
                         heel,
@@ -567,7 +571,7 @@ impl ModelCached {
                         volume,
                     });
                 }
-                cb + cg_h
+                cg_h
             };
     //        dbg!(cg, cb, cg_h);
             // Определение посадки судна для следующего шага
@@ -607,15 +611,18 @@ impl ModelCached {
 
             let d_gh = (cg_h - cg).len();
             let d_bv = (cb_v - cg).len();
-            let frac_delta_psi = (d_gh / d_bv).acos().to_degrees();
+            let v_sign = (cg_h.x() - cb_v.x()).signum();
+            let frac_delta_psi = (d_gh / d_bv).acos().to_degrees()*v_sign;
             let d_bm = (cb_m - cg).len();
             let d_gmh = (cg_m_h - cg).len();
-            let frac_delta_theta = (d_gmh/ d_bm).acos().to_degrees();
-            heel += frac_delta_theta / 2.;
-            trim += frac_delta_psi / 2.;
+            let m_sign = (cb_m.y() - cg_m_h.y()).signum();
+            let frac_delta_theta = (d_gmh/ d_bm).acos().to_degrees()*m_sign;
+            heel += frac_delta_theta / 50.;
+            trim += frac_delta_psi / 50.;
             draught = new_draught;
-            println!("cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h} d_gh:{d_gh} d_bv:{d_bv} psi:{frac_delta_psi} d_bm:{d_bm} d_gmh:{d_gmh} theta:{frac_delta_theta} heel:{heel} trim:{trim} draught:{draught}");
-            dbg!("floating_position end");
+            println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h} d_gh:{d_gh} d_bv:{d_bv} psi:{frac_delta_psi} d_bm:{d_bm} d_gmh:{d_gmh} theta:{frac_delta_theta} heel:{heel} trim:{trim} draught:{draught}");
+            // dbg!("floating_position end");
         }
+        panic!();
     }
 }
