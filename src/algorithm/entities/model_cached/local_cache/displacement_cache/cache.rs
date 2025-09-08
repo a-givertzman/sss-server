@@ -86,7 +86,7 @@ impl DisplacementCache {
             step = step/2.;
             draught += step*delta.signum();
         }
-        Err(error.pass("no result"))
+        Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
 }
 //
