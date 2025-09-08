@@ -26,6 +26,7 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
+use core::f64;
 use std::{collections::HashMap, path::PathBuf};
 
 ///
@@ -444,10 +445,12 @@ impl ModelCached {
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
-        let mut step_trim = 8f64;
-        let mut step_heel = 20f64;
+        let mut step_trim = 0.5;
+        let mut step_heel = 1.0;
+        let mut d_v: Option<f64> = None;
+        let mut d_m: Option<f64> = None; 
        // loop
-        for i in 1..=10000
+        for i in 1..=1000
         {
             let epsilon = (step_trim + step_heel)/10.;
             let moment_liquid = {
@@ -566,7 +569,7 @@ impl ModelCached {
            //     dbg!(self.model_center_coord, cb, cg, cg_h, heel, trim, new_draught, precision);
               //      println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
                 if precision < query.precision {
-               //     println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
+                    println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
                     return Ok(FloatingPositionResult {
                         heel,
                         trim,
@@ -616,270 +619,34 @@ impl ModelCached {
             };
       //      dbg!(cg_m_h);
 
-            let d_v = cg_h.x() - cb_v.x();
-            let d_m = cg_m_h.y() - cb_m.y(); 
+            let new_d_v = cg_h.x() - cb_v.x();
+            let new_d_m = cg_m_h.y() - cb_m.y(); 
 
-            trim = trim + step_trim*d_v.signum();          
-            heel = heel + step_heel*d_m.signum();    
-          
-            step_trim *= 0.8; 
-            step_heel *= 0.8;     
+            if let Some(old_d_v) = d_v {
+                if old_d_v.signum() != new_d_v.signum() {
+                    step_trim *= 0.8; 
+                }
+            }
+            d_v = Some(new_d_v);
+
+            if let Some(old_d_m) = d_m {
+                if old_d_m.signum() != new_d_m.signum() {
+                    step_heel *= 0.8; 
+                }
+            }
+            d_m = Some(new_d_m);
+
+            trim = trim + step_trim*new_d_v.signum();          
+            heel = heel + step_heel*new_d_m.signum();   
 
             draught = new_draught;
 
-   //         println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h}");
-            println!("шаг {i}: d_v:{:.6} t:{:.6} e_t:{:.6} d_m:{:.6} h:{:.6} e_h:{:.6} d:{:.6} p:{:.6}", d_v,  trim, step_trim, d_m, heel, step_heel, draught, precision);
+     //       println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h}");
+      //      println!("шаг {i}: d_v:{:.6} t:{:.6} e_t:{:.6} d_m:{:.6} h:{:.6} e_h:{:.6} d:{:.6} p:{:.6}", new_d_v,  trim, step_trim, new_d_m, heel, step_heel, draught, precision);
 //            println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h} d_v:{d_v} trim:{current_trim} d_m:{d_m} heel:{curent_heel} epsilon:{epsilon} draught:{current_draught} precision:{precision}");
                         
             // dbg!("floating_position end");
         }
         panic!("{}", format!("query:{:?}", query));
     }
-
-
-    /*
-       /// Расчет равновесного положения
-    pub fn floating_position(
-        &mut self,
-        query: BalanceQuery,
-    ) -> Result<FloatingPositionResult, Error> {
-        // dbg!("floating_position start");
-        let error = Error::new(&self.dbg, "eval");
-        if query.water_density <= 0. {
-            return Err(error.err("water_density <= 0."));
-        }
-        // постоянная масса
-        let mass_const = query.mass_const;
-        // постоянный момент
-        let moment_const = query.moment_const;
-        // Считаем сыпучие грузы.
-        // На них крен и дифферент не влияет.
-        // dbg!("floating_position bulk start");
-        let (mass_bulk, moment_bulk, bulk_result) = {
-            let result: Vec<_> = query
-                .bulk
-                .iter()
-                .map(|v| {
-                    let (level, position) = 
-                        match self.compartments.get(&v.space_id).map(|c| c.get(0., 0., v.volume, query.precision)) {
-                            Some(v) => match v {
-                                Ok((draught, position)) => (draught, position),
-                                Err(err) => {
-                                    log::error!(
-                                        "{}",
-                                        error.pass_with("bulk self.compartments.get", err)
-                                    );
-                                    (0., Moment::zero())
-                                }
-                            },
-                            None => {
-                                log::error!(
-                                    "{}",
-                                    error.err(format!(
-                                        "bulk no compartment:{} in compartments",
-                                        v.space_id
-                                    ))
-                                );
-                                (0., Moment::zero())
-                            }
-                        };
-                    (v.space_id.clone(), level, Moment::from_pos(position, v.mass))
-                })
-                .collect();
-            (
-                query.bulk.iter().map(|v| v.mass).sum::<f64>(),
-                result.iter().map(|(_, _, m)| *m).sum(),
-                result,
-            )
-        };
-        // dbg!("floating_position bulk end");
-
-        // dbg!("floating_position mass_liquid start");
-        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
-        let mut heel = 0.0;
-        let mut trim = 0.0;
-        let mut draught = self.draught_min;
-       // loop
-        for i in 1..=10000
-        {
-            let moment_liquid = {
-                query
-                    .liquid
-                    .iter()
-                    .map(|v| {
-                        let (level, center) = 
-                            match self.compartments.get(&v.space_id).map(|c| c.get(heel, trim, v.volume, query.precision)) {
-                                Some(v) => match v {
-                                    Ok((level, position)) => (level, position),
-                                    Err(err) => {
-                                        log::error!(
-                                            "{}",
-                                            error.pass_with("liquid self.compartments.get", err)
-                                        );
-                                        (0., Moment::zero())
-                                    }
-                                },
-                                None => {
-                                    log::error!(
-                                        "{}",
-                                        error.err(format!(
-                                            "liquid no compartment:{} in compartments",
-                                            v.space_id
-                                        ))
-                                    );
-                                    (0., Moment::zero())
-                                }
-                            };
-                        Moment::from_pos(center, v.mass)
-                    })
-                    .sum()
-            };
-            // dbg!("floating_position mass_liquid end");
-            // dbg!("floating_position mass_damaged_compartment start");
-            let (mass_damaged_compartment, moment_damaged_compartment) = {
-                query
-                    .damaged_compartment
-                    .iter()
-                    .map(|v| {
-                        let (volume, center) =
-                            match self.damaged_compartments.get(v).map(|c| c.get(heel, trim, draught)) {
-                                Some(v) => match v {
-                                    Ok((volume, center)) => (volume, center),
-                                    Err(err) => {
-                                        log::error!(
-                                            "{}",
-                                            error.pass_with(
-                                                "damaged_compartment self.compartments.get",
-                                                err
-                                            )
-                                        );
-                                        (0., Moment::zero())
-                                    }
-                                },
-                                None => {
-                                    log::error!(
-                                        "{}",
-                                        error.err(format!(
-                                            "damaged_compartment no compartment:{} in compartments",
-                                            v
-                                        ))
-                                    );
-                                    (0., Moment::zero())
-                                }
-                            };
-                        let mass = volume * query.water_density;
-                        (mass, Moment::from_pos(center, mass))
-                    })
-                    .fold(
-                        (0., Moment::zero()),
-                        |(mass_sum, moment_sum), (mass, moment)| {
-                            (mass_sum + mass, moment_sum + moment)
-                        },
-                    )
-            };
-            // dbg!("floating_position mass_damaged_compartment end");
-
-            let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
-            let volume = mass_sum / query.water_density;
-            // считаем корпус
-            // dbg!("floating_position hull start");
-            let (new_draught, cb) =
-                self.displacement.get(heel, trim, mass_sum / query.water_density, query.precision)
-                .map_err(|err| error.pass_with(format!("self.displacement.get heel:{heel} trim:{trim} volume:{volume}"), err))?;
-
-            // dbg!("floating_position hull end");
-            // расчет ориентации корпуса
-            let rotation = {
-                let heel_rad = -heel.to_radians();
-                let trim_rad = trim.to_radians();
-                let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
-                let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
-                let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
-                let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
-                heel_rotation * trim_rotation
-            };
-            // центр тяжести корпуса
-            let cg = {
-                let moment_sum =
-                    moment_const + moment_bulk + moment_liquid + moment_damaged_compartment;
-                moment_sum.to_pos(mass_sum) + self.model_center_coord
-            };
-            // Определение невязки
-            let (cg_h, precision) = {
-                let up_vector = rotation.transform_vector(&Vector3::z_axis());
-                let up_vector = UnitVector::new_normalize(up_vector);
-                // Через центр плавучести CB проводится горизонтальная плоскость
-                let my_plane = HalfSpace::new(up_vector);
-                let cg_local = cg - cb;
-                let cg_h = Position::from(my_plane.project_local_point(&cg_local.into(), false).point);
-                let cg_h = cb + cg_h;
-                let precision = (cg_h - cb).len();
-          //      dbg!(cg, cb, cg_local, cg_h);                
-           //     dbg!(self.model_center_coord, cb, cg, cg_h, heel, trim, new_draught, precision);
-              //      println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
-                if precision < query.precision {
-                    println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
-                    return Ok(FloatingPositionResult {
-                        heel,
-                        trim,
-                        draught_mid: new_draught,
-                        precision,
-                        volume,
-                    });
-                }
-                (cg_h, precision)
-            };
-    //        dbg!(cg, cb, cg_h);
-            // Определение посадки судна для следующего шага
-            let cb_v = {
-                let up_vector = rotation.transform_vector(&Vector3::y_axis());
-                let up_vector = UnitVector::new_normalize(up_vector);
-                // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
-                let my_plane = HalfSpace::new(up_vector);
-                let cb_local = cb - cg;
-                let cb_v = Position::from(my_plane.project_local_point(&cb_local.into(), false).point);
-         //       dbg!(cg, cb, cb_local, cb_v);
-                cg + cb_v
-            };
-     //       dbg!(cb_v);
-            let cb_m = {
-                let up_vector = rotation.transform_vector(&Vector3::x_axis());
-                let up_vector = UnitVector::new_normalize(up_vector);
-                // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
-                let my_plane = HalfSpace::new(up_vector);
-                let cb_local = cb - cg;
-                let cb_m = Position::from(my_plane.project_local_point(&cb_local.into(), false).point);
-                cg + cb_m
-            };
-      //      dbg!(cb_m);
-            // проекция точки cg_m на вертикальную плоскость параллельную основной линии
-            let cg_m_h = {
-                let up_vector = rotation.transform_vector(&Vector3::y_axis());
-                let up_vector = UnitVector::new_normalize(up_vector);
-                // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
-                let my_plane = HalfSpace::new(up_vector);
-                let cg_m = cb_m - cg;
-                let cg_m_h =
-                    Position::from(my_plane.project_local_point(&cg_m.into(), false).point);
-                cg + cg_m_h
-            };
-      //      dbg!(cg_m_h);
-
-            let d_gh = (cg_h - cg).len();
-            let d_bv = (cb_v - cg).len();
-            let d_v = cg_h.x() - cb_v.x();
-            let frac_delta_psi = (d_gh / d_bv).min(1.).max(-1.).acos().to_degrees()*d_v.signum();//(d_gh / d_bv).min(1.).max(-1.).acos().to_degrees().min(10.)*d_v.abs().min(1.).sqrt().sqrt()*d_v.signum();
-            let d_bm = (cb_m - cg).len();
-            let d_gmh = (cg_m_h - cg).len();
-            let d_m = cg_m_h.y() - cb_m.y();
-            let frac_delta_theta = (d_gmh / d_bm).min(1.).max(-1.).acos().to_degrees()*d_m.signum();//(d_gmh / d_bm).min(1.).max(-1.).acos().to_degrees().min(10.)*d_m.abs().min(1.).sqrt().sqrt()*d_m.signum();
-            heel += frac_delta_theta/50.; //frac_delta_theta*precision.sqrt().sqrt().min(1.) / 100.;
-            trim += frac_delta_psi/50.;//frac_delta_psi*precision.sqrt().sqrt().min(1.) / 100.;
-            draught = new_draught;
-            println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h} d_gh:{d_gh} d_bv:{d_bv} psi:{frac_delta_psi} d_bm:{d_bm} d_gmh:{d_gmh} theta:{frac_delta_theta} heel:{heel} trim:{trim} draught:{draught} precision:{precision}");
-            // dbg!("floating_position end");
-        }
-        panic!();
-    }
-    */
 }

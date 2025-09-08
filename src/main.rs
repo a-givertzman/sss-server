@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_scale: 1000.,
             model_center_coord,
             heel_steps: vec![
-                -60., -30., -15., -10., -5., -2., 0., 2., 5., 10., 15., 30., 60.,
+                -50., -45., -40., -35., -25., -20., 20., 25., 35., 40., 45., 50.,
             ],
             trim_steps: vec![
                 -40., -20., -10., -5., -3., -2., -1., 0., 1., 2., 3., 5., 10., 20., 40.,
@@ -90,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread_pool.scheduler(),
     )
     .unwrap();
-    //  let res = model.rebuild_caches();   dbg!(&res);
+  //  let res = model.rebuild_caches();   dbg!(&res);
 
     let mut result = |mass: f64, x: f64, y: f64, z: f64| {
         model.floating_position(ship_model::query::BalanceQuery {
@@ -105,7 +105,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     };
 
-    let data = [[10000.,  63.371, -1., 6.6]];
+   // let data = [ [10000.,  70., 0., 6.],];
+
+
+    let data = [
+        [14194.5, 63.371, -0.001, 6.605],
+        [13163.9, 63.933, 0., 6.212], 
+        [13987., 65.231, 0., 4.99],
+        [14135.3, 64.898, 0., 4.882],
+        [13238.467, 65.409, 0., 6.463],
+        [10960.742, 66.471, 0.001, 5.810],
+        [7212.705, 66.404, 0., 5.391],
+        [10000.,  63.371, -0.2, 6.],
+        [10000.,  63.371, 0.4, 6.],
+        [10000.,  70., 0., 6.],
+        [10000.,  55., 0., 6.],
+        [10000.,  70., 0.1, 6.],
+    ];
 
   /*  let data = [
         [14194.5, 63.371, -0.001, 6.605],
@@ -122,7 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         [10000.,  70., 2., 6.6],
     ];*/
     for [m, x, y, z] in data {
-        println!("m:{m} x:{x} y:{y} z_fix:{z} result:");
+        print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
         result(m, x, y, z).unwrap();
     }
     

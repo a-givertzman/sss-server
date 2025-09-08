@@ -26,7 +26,10 @@ type SyncVec<T> = std::sync::Arc<[T]>;
 /// ```
 pub struct Cache<T> {
     dbg: Dbg,
+    //таблица данных
     table: OnceLock<Vec<Vec<T>>>,
+    //отсортированные вектора ключей, заполняются из таблицы при инициализации
+    keys: OnceLock<Vec<Vec<T>>>, 
 }
 //
 //
@@ -40,6 +43,7 @@ impl<T> Cache<T> {
         Self {
             dbg: Dbg::new(parent, "Cache"),
             table: OnceLock::new(),
+            keys: OnceLock::new(),
         }
     }
 }
@@ -59,9 +63,19 @@ impl<T: PartialOrd> Cache<T> {
     {
         assert!(vals.len() > 1);
         assert!(vals[0].len() > 1);
+        let keys: Vec<_> = (0..vals[0].len()).map(|i| {
+            // выбираем столбец по его индексу
+            let mut data: Vec<_> = vals.iter().map(|v| v[i].clone()).collect();
+            data.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+            data.dedup();
+            data
+        }).collect();
         self.table
             .set(vals.clone())
             .map_err(|_| Error::new("Cache", "init").err("table.set"))?;
+        self.keys
+            .set(keys)
+            .map_err(|_| Error::new("Cache", "init").err("keys.set"))?;
         Ok(())
     }
 }
@@ -119,27 +133,27 @@ impl Cache<f64> {
             .table
             .get()
             .unwrap_or_else(|| panic!("{}.{} | Error: no table!", self.dbg, "get"));
+        let keys = self
+            .keys
+            .get()
+            .unwrap_or_else(|| panic!("{}.{} | Error: no keys!", self.dbg, "get"));
         // пары значений для каждого индекса, между которыми попадает ключ
         let pairs: Vec<_> = query
             .iter()
             .enumerate()
             .map(|(key_i, key)| {
-                // выбираем столбец значений для ключа по его индексу
-                let mut data: Vec<_> = data.iter().map(|v| v[key_i]).collect();
-                // ищем диапазон значений, куда попадает ключ
-                data.sort_by(|&a, &b| a.partial_cmp(&b).unwrap());
-                data.dedup();
-                if data.contains(key) {
+                let keys = &keys[key_i];
+                if keys.contains(key) {
                     // ключ совпадает с одним из значений, возвращаем его
                     return vec![*key];
                 }
-                if data.first().unwrap() > key || data.last().unwrap() < key {
+                if keys.first().unwrap() > key || keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
                     panic!("{}", format!("i:{key_i} key:{key} key is out of range!"));
                 }
                 // пара значений, между которыми попадает ключ
-                let low_index = data.partition_point(|x| x < &key);
-                return vec![data[low_index-1], data[low_index]];
+                let low_index = keys.partition_point(|x| x < &key);
+                return vec![keys[low_index-1], keys[low_index]];
             })
             .collect();
        // println!("{:?}", pairs);
