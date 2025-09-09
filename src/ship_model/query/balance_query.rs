@@ -24,5 +24,5 @@ pub struct BalanceQuery {
     /// номера поврежденных помещений
     pub damaged_compartment: Vec<String>,
     /// точность расчета
-    pub precision: f64,
+    pub epsilon: f64,
 }

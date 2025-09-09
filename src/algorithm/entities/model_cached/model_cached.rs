@@ -1,18 +1,17 @@
 use super::{LocalCache, ModelCachedConf};
 use crate::{
-    algorithm::{
-        entities::{
-            Bounds, Moment, Position,
-            model_cached::{
-                AreaShape, CompartmentCache, DamagedCompartmentCache, DisplacementCache,
-                DisplacementShape, Shape, WindageArea,
-            },
+    algorithm::entities::{
+        Bounds, Moment, Position,
+        model_cached::{
+            AreaShape, CompartmentCache, DamagedCompartmentCache, DisplacementCache,
+            DisplacementShape, Shape, WindageArea,
         },
-        //      eval::BalanceCtx,
     },
     kernel::types::{Arc, RwLock},
-    ship_model::query::BalanceQuery,
+    ship_model::query::{BalanceQuery, BulkData, LiquidData},
 };
+use core::f64;
+use chrono::DateTime;
 use indexmap::IndexMap;
 use log::*;
 use nalgebra::{Point3, UnitQuaternion, UnitVector3, Vector3};
@@ -26,7 +25,6 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use core::f64;
 use std::{collections::HashMap, path::PathBuf};
 
 ///
@@ -53,9 +51,9 @@ pub struct ModelCached {
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y ]
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
-    compartments: IndexMap<String, CompartmentCache>,
+    compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
     /// - cache for damaged compartments, [index of compartments, [heel, trim, level, volume, x, y, z ]]
-    damaged_compartments: IndexMap<String, DamagedCompartmentCache>,
+    damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
     /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
     //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
@@ -139,7 +137,7 @@ impl ModelCached {
                     };
                 Some((
                     name.clone(),
-                    CompartmentCache::new(
+                    Arc::new(RwLock::new(CompartmentCache::new(
                         &dbg,
                         shape.clone(),
                         conf.cache_dir.clone().join(PathBuf::from("compartments")),
@@ -150,7 +148,7 @@ impl ModelCached {
                         center_max,
                         volume_max,
                         scheduler.clone(),
-                    ),
+                    ))),
                 ))
             })
             .flat_map(|v| v)
@@ -175,7 +173,7 @@ impl ModelCached {
                 displacement_shapes.insert(name.clone() + "_damaged", shape.clone());
                 Some((
                     name.clone(),
-                    DamagedCompartmentCache::new(
+                    Arc::new(RwLock::new(DamagedCompartmentCache::new(
                         &dbg,
                         shape.clone(),
                         conf.cache_dir
@@ -188,7 +186,7 @@ impl ModelCached {
                         conf.draught_max,
                         conf.hull_draught_step,
                         scheduler.clone(),
-                    ),
+                    ))),
                 ))
             })
             .flat_map(|v| v)
@@ -296,14 +294,14 @@ impl ModelCached {
         // dbg!("windage_area end");
         // dbg!("compartments start");
         for (name, compartment) in &mut self.compartments {
-            if let Err(error) = compartment.rebuild() {
+            if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
         // dbg!("compartments end");
         // dbg!("damaged_compartments start");
         for (name, compartment) in &mut self.damaged_compartments {
-            if let Err(error) = compartment.rebuild() {
+            if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
@@ -389,6 +387,9 @@ impl ModelCached {
         &mut self,
         query: BalanceQuery,
     ) -> Result<FloatingPositionResult, Error> {
+
+        let time = std::time::Instant::now();
+        
         // dbg!("floating_position start");
         let error = Error::new(&self.dbg, "eval");
         if query.water_density <= 0. {
@@ -401,46 +402,10 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         // dbg!("floating_position bulk start");
-        let (mass_bulk, moment_bulk, bulk_result) = {
-            let result: Vec<_> = query
-                .bulk
-                .iter()
-                .map(|v| {
-                    let (level, position) = 
-                        match self.compartments.get(&v.space_id).map(|c| c.get(0., 0., v.volume, query.precision)) {
-                            Some(v) => match v {
-                                Ok((draught, position)) => (draught, position),
-                                Err(err) => {
-                                    log::error!(
-                                        "{}",
-                                        error.pass_with("bulk self.compartments.get", err)
-                                    );
-                                    (0., Moment::zero())
-                                }
-                            },
-                            None => {
-                                log::error!(
-                                    "{}",
-                                    error.err(format!(
-                                        "bulk no compartment:{} in compartments",
-                                        v.space_id
-                                    ))
-                                );
-                                (0., Moment::zero())
-                            }
-                        };
-                    (v.space_id.clone(), level, Moment::from_pos(position, v.mass))
-                })
-                .collect();
-            (
-                query.bulk.iter().map(|v| v.mass).sum::<f64>(),
-                result.iter().map(|(_, _, m)| *m).sum(),
-                result,
-            )
-        };
-        // dbg!("floating_position bulk end");
-
-        // dbg!("floating_position mass_liquid start");
+        let moment_bulk = self
+            .moment_bulk(&query.bulk, query.epsilon)
+            .map_err(|err| error.pass_with("self.bulk_moment", err))?;
+        let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mut heel = 0.0;
         let mut trim = 0.0;
@@ -448,97 +413,28 @@ impl ModelCached {
         let mut step_trim = 0.5;
         let mut step_heel = 1.0;
         let mut d_v: Option<f64> = None;
-        let mut d_m: Option<f64> = None; 
-       // loop
-        for i in 1..=1000
-        {
-            let epsilon = (step_trim + step_heel)/10.;
-            let moment_liquid = {
-                query
-                    .liquid
-                    .iter()
-                    .map(|v| {
-                        let (level, center) = 
-                            match self.compartments.get(&v.space_id).map(|c| c.get(heel, trim, v.volume, epsilon)) {
-                                Some(v) => match v {
-                                    Ok((level, position)) => (level, position),
-                                    Err(err) => {
-                                        log::error!(
-                                            "{}",
-                                            error.pass_with("liquid self.compartments.get", err)
-                                        );
-                                        (0., Moment::zero())
-                                    }
-                                },
-                                None => {
-                                    log::error!(
-                                        "{}",
-                                        error.err(format!(
-                                            "liquid no compartment:{} in compartments",
-                                            v.space_id
-                                        ))
-                                    );
-                                    (0., Moment::zero())
-                                }
-                            };
-                        Moment::from_pos(center, v.mass)
-                    })
-                    .sum()
-            };
-            // dbg!("floating_position mass_liquid end");
-            // dbg!("floating_position mass_damaged_compartment start");
-            let (mass_damaged_compartment, moment_damaged_compartment) = {
-                query
-                    .damaged_compartment
-                    .iter()
-                    .map(|v| {
-                        let (volume, center) =
-                            match self.damaged_compartments.get(v).map(|c| c.get(heel, trim, draught)) {
-                                Some(v) => match v {
-                                    Ok((volume, center)) => (volume, center),
-                                    Err(err) => {
-                                        log::error!(
-                                            "{}",
-                                            error.pass_with(
-                                                "damaged_compartment self.compartments.get",
-                                                err
-                                            )
-                                        );
-                                        (0., Moment::zero())
-                                    }
-                                },
-                                None => {
-                                    log::error!(
-                                        "{}",
-                                        error.err(format!(
-                                            "damaged_compartment no compartment:{} in compartments",
-                                            v
-                                        ))
-                                    );
-                                    (0., Moment::zero())
-                                }
-                            };
-                        let mass = volume * query.water_density;
-                        (mass, Moment::from_pos(center, mass))
-                    })
-                    .fold(
-                        (0., Moment::zero()),
-                        |(mass_sum, moment_sum), (mass, moment)| {
-                            (mass_sum + mass, moment_sum + moment)
-                        },
-                    )
-            };
-            // dbg!("floating_position mass_damaged_compartment end");
-
+        let mut d_m: Option<f64> = None;
+        // loop
+        for _i in 1..=1000 {
+            let epsilon = (step_trim + step_heel) / 10.;
+            let moment_liquid = self
+                .moment_liquid(&query.liquid, heel, trim, query.epsilon)
+                .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+            let (mass_damaged_compartment, moment_damaged_compartment) = self
+                .calc_damaged_compartments(&query.damaged_compartment, heel, trim, draught, query.water_density)
+                .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             let volume = mass_sum / query.water_density;
             // считаем корпус
-            // dbg!("floating_position hull start");
-            let (new_draught, cb) =
-                self.displacement.get(heel, trim, mass_sum / query.water_density, epsilon)
-                .map_err(|err| error.pass_with(format!("self.displacement.get heel:{heel} trim:{trim} volume:{volume}"), err))?;
-
-            // dbg!("floating_position hull end");
+            let (new_draught, cb) = self
+                .displacement
+                .get(heel, trim, mass_sum / query.water_density, epsilon)
+                .map_err(|err| {
+                    error.pass_with(
+                        format!("self.displacement.get heel:{heel} trim:{trim} volume:{volume}"),
+                        err,
+                    )
+                })?;
             // расчет ориентации корпуса
             let rotation = {
                 let heel_rad = -heel.to_radians();
@@ -556,20 +452,27 @@ impl ModelCached {
                 moment_sum.to_pos(mass_sum) + self.model_center_coord
             };
             // Определение невязки
-            let (cg_h, precision) = {
+            let cg_h = {
                 // Через центр плавучести CB проводится горизонтальная плоскость
                 let my_plane = HalfSpace::new(Vector3::z_axis());
                 let cg_local = cg - cb;
                 let cg_local = rotation.transform_point(&cg_local.into());
-                let cg_h_local = my_plane.project_local_point( &cg_local.into(), false).point;
+                let cg_h_local = my_plane.project_local_point(&cg_local.into(), false).point;
                 let cg_h_local = rotation.inverse_transform_point(&cg_h_local.into());
                 let cg_h = cb + cg_h_local.into();
                 let precision = (cg_h - cb).len();
-             //   dbg!(cg, cb, cg_local, cg_h_local, cg_h);                
-           //     dbg!(self.model_center_coord, cb, cg, cg_h, heel, trim, new_draught, precision);
-              //      println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
-                if precision < query.precision {
-                    println!("heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}", heel, trim, new_draught, cb.x(), cb.y(), cb.z(), precision);
+                if precision < query.epsilon {
+           /*         println!(
+                        "steps:{_i} time:{:?} heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}",
+                        time.elapsed(),
+                        heel,
+                        trim,
+                        new_draught,
+                        cb.x(),
+                        cb.y(),
+                        cb.z(),
+                        precision
+                    );*/
                     return Ok(FloatingPositionResult {
                         heel,
                         trim,
@@ -578,75 +481,282 @@ impl ModelCached {
                         volume,
                     });
                 }
-                (cg_h, precision)
+                cg_h
             };
-    //        dbg!(cg, cb, cg_h);
+            //        dbg!(cg, cb, cg_h);
             // Определение посадки судна для следующего шага
             let cb_v = {
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
                 let my_plane = HalfSpace::new(Vector3::y_axis());
                 let cb_local = cb - cg;
                 let cb_local = rotation.transform_point(&cb_local.into());
-                let cg_v_local = my_plane.project_local_point( &cb_local.into(), false).point;
+                let cg_v_local = my_plane.project_local_point(&cb_local.into(), false).point;
                 let cg_v = rotation.inverse_transform_point(&cg_v_local.into());
                 let cb_v = cg + cg_v.into();
-             //   dbg!(cg, cb, cb_local, cg_v_local, cb_v);
                 cb_v
             };
-     //       dbg!(cb_v);
             let cb_m = {
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
-                let my_plane = HalfSpace::new(Vector3::x_axis());                
+                let my_plane = HalfSpace::new(Vector3::x_axis());
                 let cb_local = cb - cg;
                 let cb_local = rotation.transform_point(&cb_local.into());
-                let cb_m_local = my_plane.project_local_point( &cb_local.into(), false).point;
+                let cb_m_local = my_plane.project_local_point(&cb_local.into(), false).point;
                 let cb_m = rotation.inverse_transform_point(&cb_m_local.into());
                 let cb_m = cg + cb_m.into();
                 cb_m
             };
-      //      dbg!(cb_m);
             // проекция точки cg_m на вертикальную плоскость параллельную основной линии
             let cg_m_h = {
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
                 let my_plane = HalfSpace::new(Vector3::y_axis());
                 let cg_m_local = cb_m - cg;
                 let cg_m_local = rotation.transform_point(&cg_m_local.into());
-                let cg_m_h_local = my_plane.project_local_point( &cg_m_local.into(), false).point;
+                let cg_m_h_local = my_plane
+                    .project_local_point(&cg_m_local.into(), false)
+                    .point;
                 let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local.into());
-                let cg_m_h =
-                    cg + cg_m_h.into();
-                cg_m_h 
+                let cg_m_h = cg + cg_m_h.into();
+                cg_m_h
             };
-      //      dbg!(cg_m_h);
-
             let new_d_v = cg_h.x() - cb_v.x();
-            let new_d_m = cg_m_h.y() - cb_m.y(); 
-
+            let new_d_m = cg_m_h.y() - cb_m.y();
             if let Some(old_d_v) = d_v {
                 if old_d_v.signum() != new_d_v.signum() {
-                    step_trim *= 0.8; 
+                    step_trim *= 0.5;
                 }
             }
             d_v = Some(new_d_v);
-
             if let Some(old_d_m) = d_m {
                 if old_d_m.signum() != new_d_m.signum() {
-                    step_heel *= 0.8; 
+                    step_heel *= 0.5;
                 }
             }
             d_m = Some(new_d_m);
-
-            trim = trim + step_trim*new_d_v.signum();          
-            heel = heel + step_heel*new_d_m.signum();   
-
+            trim = trim + step_trim * new_d_v.signum();
+            heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
-
-     //       println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h}");
-      //      println!("шаг {i}: d_v:{:.6} t:{:.6} e_t:{:.6} d_m:{:.6} h:{:.6} e_h:{:.6} d:{:.6} p:{:.6}", new_d_v,  trim, step_trim, new_d_m, heel, step_heel, draught, precision);
-//            println!("шаг {i}: cg:{cg} cg_h:{cg_h} cb:{cb} cb_v:{cb_v} cb_m:{cb_m} cg_m_h:{cg_m_h} d_v:{d_v} trim:{current_trim} d_m:{d_m} heel:{curent_heel} epsilon:{epsilon} draught:{current_draught} precision:{precision}");
-                        
-            // dbg!("floating_position end");
         }
-        panic!("{}", format!("query:{:?}", query));
+        Err(error.err(format!("query:{:?} error: no result", query)))
+    }
+    // Считаем сыпучие грузы.
+    // На них крен и дифферент не влияет.
+    fn moment_bulk(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Moment, Error> {
+        let error = Error::new(&self.dbg, "moment_bulk");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let task_results = Arc::new(Stack::new());
+        let mut errors: Vec<Result<(), Error>> = Vec::new();
+        let mut values = Vec::new();
+        for bulk in bulks {
+            match self.compartments.get(&bulk.space_id) {
+                Some(compartment) => {
+                    let task_results = task_results.clone();
+                    let epsilon = epsilon.clone();
+                    let space_id = bulk.space_id.clone();
+                    let mass = bulk.mass;
+                    let volume = bulk.volume;
+                    let compartment = compartment.clone();
+                    let handle = self
+                        .scheduler
+                        .spawn(move || {
+                            task_results.push((
+                                space_id,
+                                mass,
+                                compartment.read().get(0., 0., volume, epsilon),
+                            ));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(
+                                format!("spawn task space_id:{}", bulk.space_id.clone()),
+                                err.to_string(),
+                            )
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => errors.push(Err(err)),
+                    };
+                }
+                None => {
+                    let error = error.err(format!(
+                        "no compartment:{} in self.compartments",
+                        bulk.space_id
+                    ));
+                    log::error!("{}", error);
+                    errors.push(Err(error));
+                }
+            }
+        }
+        for task in tasks {
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                errors.push(Err(error));
+            }
+        }
+        while !task_results.is_empty() {
+            if let Some((space_id, mass, data)) = task_results.pop() {
+                let (level, position) = match data {
+                    Ok((level, position)) => (level, position),
+                    Err(err) => {
+                        errors.push(Err(error.pass_with("data", err)));
+                        continue;
+                    }
+                };
+                values.push((space_id, level, Moment::from_pos(position, mass)));
+            }
+        }
+        let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
+        Ok(sum_moment)
+    }
+    /// Считаем жидкие грузы
+    fn moment_liquid(
+        &self,
+        liquids: &Vec<LiquidData>,
+        heel: f64,
+        trim: f64,
+        epsilon: f64,
+    ) -> Result<Moment, Error> {
+        let error = Error::new(&self.dbg, "moment_liquid");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let task_results = Arc::new(Stack::new());
+        let mut errors: Vec<Result<(), Error>> = Vec::new();
+        let mut values = Vec::new();
+        for liquid in liquids {
+            match self.compartments.get(&liquid.space_id) {
+                Some(compartment) => {
+                    let task_results = task_results.clone();
+                    let epsilon = epsilon.clone();
+                    let space_id = liquid.space_id.clone();
+                    let mass = liquid.mass;
+                    let volume = liquid.volume;
+                    let compartment = compartment.clone();
+                    let handle = self
+                        .scheduler
+                        .spawn(move || {
+                            task_results.push((
+                                space_id,
+                                mass,
+                                compartment.read().get(heel, trim, volume, epsilon),
+                            ));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(
+                                format!("spawn task space_id:{}", liquid.space_id.clone()),
+                                err.to_string(),
+                            )
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => errors.push(Err(err)),
+                    };
+                }
+                None => {
+                    let error = error.err(format!(
+                        "no compartment:{} in self.compartments",
+                        liquid.space_id
+                    ));
+                    log::error!("{}", error);
+                    errors.push(Err(error));
+                }
+            }
+        }
+        for task in tasks {
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                errors.push(Err(error));
+            }
+        }
+        while !task_results.is_empty() {
+            if let Some((space_id, mass, data)) = task_results.pop() {
+                let (level, position) = match data {
+                    Ok((level, position)) => (level, position),
+                    Err(err) => {
+                        errors.push(Err(error.pass_with("data", err)));
+                        continue;
+                    }
+                };
+                values.push((space_id, level, Moment::from_pos(position, mass)));
+            }
+        }
+        let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
+        Ok(sum_moment)
+    }
+    /// Считаем поврежденные отсеки
+    fn calc_damaged_compartments(
+        &self,
+        damaged_compartments: &Vec<String>,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+        water_density: f64,
+    ) -> Result<(f64, Moment), Error> {
+        let error = Error::new(&self.dbg, "moment_damaged_compartments");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let task_results = Arc::new(Stack::new());
+        let mut errors: Vec<Result<(), Error>> = Vec::new();
+        let mut values = Vec::new();
+        for damaged_compartment in damaged_compartments {
+            match self.damaged_compartments.get(damaged_compartment) {
+                Some(compartment) => {
+                    let task_results = task_results.clone();
+                    let space_id = damaged_compartment.clone();
+                    let compartment = compartment.clone();
+                    let handle = self
+                        .scheduler
+                        .spawn(move || {
+                            task_results
+                                .push((space_id, compartment.read().get(heel, trim, draught)));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(
+                                format!("spawn task space_id:{}", damaged_compartment.clone()),
+                                err.to_string(),
+                            )
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => {
+                            log::error!("{}", error);
+                            errors.push(Err(err));
+                        }
+                    };
+                }
+                None => {
+                    let error = error.err(format!(
+                        "no compartment:{} in self.compartments",
+                        damaged_compartment
+                    ));
+                    log::error!("{}", error);
+                    errors.push(Err(error));
+                }
+            }
+        }
+        for task in tasks {
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                errors.push(Err(error));
+            }
+        }
+        while !task_results.is_empty() {
+            if let Some((space_id, data)) = task_results.pop() {
+                let (mass, position) = match data {
+                    Ok((volume, position)) => (volume * water_density, position),
+                    Err(err) => {
+                        errors.push(Err(error.pass_with("data", err)));
+                        continue;
+                    }
+                };
+                values.push((space_id, mass, Moment::from_pos(position, mass)));
+            }
+        }
+        let result = values.iter().fold(
+            (0., Moment::zero()),
+            |(mass_sum, moment_sum), (_, mass, moment)| (mass_sum + mass, moment_sum + *moment),
+        );
+        Ok(result)
     }
 }

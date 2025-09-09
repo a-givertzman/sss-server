@@ -101,7 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             liquid: vec![],
             grain_bulkhead: Vec::new(),
             damaged_compartment: vec![], //"212".to_owned()],
-            precision: 0.0001,
+            epsilon: 0.0001,
         })
     };
 
