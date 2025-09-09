@@ -13,10 +13,8 @@ use crate::{
 use core::f64;
 use chrono::DateTime;
 use indexmap::IndexMap;
-use log::*;
-use nalgebra::{Point3, UnitQuaternion, UnitVector3, Vector3};
+use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
 use parry3d_f64::{
-    math::{UnitVector, Vector},
     query::PointQuery,
     shape::HalfSpace,
 };
@@ -462,7 +460,7 @@ impl ModelCached {
                 let cg_h = cb + cg_h_local.into();
                 let precision = (cg_h - cb).len();
                 if precision < query.epsilon {
-           /*         println!(
+                    println!(
                         "steps:{_i} time:{:?} heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}",
                         time.elapsed(),
                         heel,
@@ -472,7 +470,7 @@ impl ModelCached {
                         cb.y(),
                         cb.z(),
                         precision
-                    );*/
+                    );
                     return Ok(FloatingPositionResult {
                         heel,
                         trim,
