@@ -4,48 +4,58 @@ use parry3d_f64::shape::HalfSpace;
 
 use crate::algorithm::entities::model_cached::position;
 ///
-/// Pre-calculated cache for floating position algorithm.
-/// contains [heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
+/// Осадкт судна. Считаются из осадки на миделе и параметров судна
 pub struct Draught {
-    heel: f64,
+    midel_x: f64,             
+    length_lbp: f64,
+    draught_mid: f64, 
+    waterline_x: f64, 
+    waterline_y: f64,    
+    heel: f64,    
     trim: f64,
-    draught: f64,
-    center: Point3<f64>,
 }
 //
 //
 impl Draught {
     ///
-    /// Creates a new instance.
-    /// - cache_dir - folder contains all cache files
+    /// Главный конструктор
+    /// * midel_x - смещение миделя по Х
+    /// * length_lbp - длинна корпуса судна между перпендикулярами
+    /// * draught_mid - осадка на миделе 
+    /// * waterline_x - смещение центра тяжести ватеринии по Х
+    /// * waterline_y - смещение центра тяжести ватеринии по Y
+    /// * heel - крен в градусах
+    /// * trim - дифферент в градусах
     pub fn new(
+        midel_x: f64,         
+        length_lbp: f64,
+        draught_mid: f64,
+        waterline_x: f64,
+        waterline_y: f64,
         heel: f64,
         trim: f64,
-        draught: f64,
-        center: Point3<f64>,
     ) -> Self {
         Self {
-            heel,
+            midel_x,            
+            length_lbp,
+            draught_mid,
+            waterline_x,
+            waterline_y,   
+            heel,   
             trim,
-            draught,
-            center,
         }
     }
-    //
-    fn calculate(&self, x: f64, y: f64) -> f64 {
-        let isometry = position(
-            &self.center,
-            self.heel,
-            self.trim,
-            self.draught,  
-        );
-        let origin = isometry.transform_point(&Point3::new(x, y, 0.));
-        let dir = UnitVector::new_normalize(isometry.rotation.transform_vector(&Vector3::new(0., 0., 1.)));      
-        let plane = HalfSpace::new(UnitVector::new_normalize(Vector3::new(0., 0., -1.)));
-        plane.cast_local_ray(
-            &Ray::new(origin, *dir),           
-            1000.,
-            true,
-        ).unwrap_or(1000.)
+    /// Расчет осадок
+    /// (draught_bow, draught_stern, draught_mean)
+    pub fn calculate(&self) -> (f64, f64, f64) {
+        let bow_x = self.length_lbp - self.midel_x;
+        let stern_x = -self.midel_x;
+        let trim_m = self.trim.to_radians().sin()*self.length_lbp;
+        let draught_bow = self.draught_mid + bow_x*trim_m/self.length_lbp;
+        let draught_stern = self.draught_mid + stern_x*trim_m/self.length_lbp;
+        let draught_mean = self.draught_mid + (self.waterline_x - self.midel_x)*trim_m/self.length_lbp 
+            + self.waterline_y*self.trim.to_radians().cos()*self.heel.to_radians().sin();
+            dbg!(bow_x, stern_x, trim_m, draught_bow, draught_stern, draught_mean);
+        (draught_bow, draught_stern, draught_mean)
     }
 }

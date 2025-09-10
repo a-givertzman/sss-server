@@ -22,41 +22,27 @@ use kernel::{eval::Eval, run::Run};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
-use crate::algorithm::entities::{Moment, model_cached};
+use crate::algorithm::entities::{Moment, model_cached::{self, Draught}};
 use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
+/*
 
-    /*    let dbg = Dbg::new("ShipModel", "compute_balance");
-        let model_path = "src/assets/cube_1_1_1.step";
+    dbg!(Draught::new(
+        65.250,         
+        130.5,
+        6.,
+        65.250,
+        10.,
+        10.,
+        2.,        
+    ).calculate());
+*/
 
-       let cache_dir = "src/assets/cache/";
-        let center_coord = Position::new(0., 0., 0.);
 
-        let thread_pool = ThreadPool::new(&dbg, Some(12));
-        let mut model: model::ShipModel = model::ShipModel::new(
-            &dbg,
-            model::ShipModelConf {
-                model_path: PathBuf::from(model_path),
-                model_scale: 1.,
-                cache_dir: PathBuf::from(cache_dir),
-                floating_position_cache_conf: model::DisplacementCacheConf {
-                    center_coord: center_coord,
-          //                  heel_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
-          //  trim_steps: (-10..=10).step_by(5).map(|n| n as f64).collect(),
-          //  draught_steps: vec![0.0, 0.25],
-                    heel_steps: vec![-180., -90., -45., 0., 45., 90., 180.], //vec![0.,],//vec![-10., -5., 0., 5., 10.],//(-10..=10).step_by(1).map(|n| n as f64).collect(),
-                    trim_steps: vec![-180., -90., -45., 0., 45., 90., 180.],//vec![-5., -2., 0., 2., 5.],//(-8..=8).step_by(1).map(|n| (n as f64)*0.25).collect(),
-                    draught_steps: vec![-10., -5., -2.5, 0., 2.5, 5., 10.],//vec![2.5, 2.8, 3., 3.2, 3.3, 3.5, 3.6, 3.8, 3.9, 4.,],vec![2., 3., 4., 5., 6., 7., 8.,],//(8..=16).step_by(1).map(|n| (n as f64)*0.25).collect(),
-                },
-            },
-            thread_pool.scheduler(),
-        );
-        let res = model.rebuild_caches(&[&CacheKey::FloatingPostion]);
-        dbg!(&res);
-    */
+   
     let dbg = Dbg::new("ShipModel", "compute_balance");
     //   let model_path = "src/assets/sofia3.stp";
     //    let center_coord = Position::new(65.250, 0., 0.);
@@ -82,6 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             trim_steps: vec![
                 -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
             ],
+            ship_length_lbp: 130.5,
             draught_min: 2.,
             draught_max: 14.,
             hull_draught_step: 1.,
@@ -94,21 +81,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //  let res = model.rebuild_caches();   dbg!(&res);
 
     let mut result = |mass: f64, x: f64, y: f64, z: f64| {
-        model.floating_position(ship_model::query::BalanceQuery {
+        model.floating_position(model_cached::FloatingPositionQuery {
             water_density: 1.025,
             mass_const: mass,
             moment_const: Moment::from_pos(Position::new(x - model_center_coord.x(), y, z), mass),
             bulk: vec![],
             liquid: vec![],
             grain_bulkhead: Vec::new(),
-            damaged_compartment: vec![], //"212".to_owned()],
+            damaged_compartment: Vec::new(),
             epsilon: 0.0001,
         })
     };
 
-    let data = [ [10317.65, 90., 0., 6.],];
-//    let data = [ [10200., 62., 0., 3.15],];
-/*
+ //   let data = [ [10317.65, 90., 0., 6.],];
+   // let data = [ [10000., 63.371, -0.2, 6.]];
+
     let data = [
         [14194.5, 63.371, -0.001, 6.605],
         [13163.9, 63.933, 0., 6.212],
@@ -123,26 +110,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         [10000., 55., 0., 6.],
         [10000., 70., 0.1, 6.],
     ];
-*/
 
-    /*  let data = [
-        [14194.5, 63.371, -0.001, 6.605],
-        [13163.9, 63.933, 0., 6.212],
-        [13987., 65.231, 0., 4.99],
-        [14135.3, 64.898, 0., 4.882],
-        [13238.467, 65.409, 0., 6.463],
-        [10960.742, 66.471, 0.001, 5.810],
-        [7212.705, 66.404, 0., 5.391],
-        [10000.,  63.371, -1., 6.6],
-        [10000.,  63.371, 2., 6.6],
-        [10000.,  70., 0., 6.6],
-        [10000.,  55., 0., 6.6],
-        [10000.,  70., 2., 6.6],
-    ];*/
+
     for [m, x, y, z] in data {
-        print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
+  //      print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
         result(m, x, y, z).unwrap();
     }
+
 
     /*model.floating_position(ship_model::query::BalanceQuery {
         water_density: 1.025,

@@ -1,5 +1,5 @@
 use std::{collections::HashMap, path::PathBuf};
-use crate::algorithm::entities::{model_cached::CacheConf, Position};
+use crate::algorithm::entities::Position;
 ///
 /// [super::ModelCached] configuration.
 ///
@@ -13,6 +13,8 @@ pub struct ModelCachedConf {
     pub model_scale: f64,
     /// Waterline initial position in 3D space (midel).
     pub model_center_coord: Position,
+    /// Ship length between perpendiculars
+    pub ship_length_lbp: f64,
     /// Angle in degrees.
     pub heel_steps: Vec<f64>,
     /// Angle in degrees.

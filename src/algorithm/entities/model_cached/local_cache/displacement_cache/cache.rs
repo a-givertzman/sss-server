@@ -12,7 +12,8 @@ use std::{
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
-/// contains [heel, trim, draught, volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
+/// contains keys: [heel, trim, draught]
+/// values:[volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
 pub struct DisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
@@ -63,8 +64,8 @@ impl DisplacementCache {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
-    /// Return (draught, center of volume)
-    pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<(f64, Position), Error> {
+    /// Return (draught, center of volume, waterline_area_shift_x, waterline_area_shift_y)
+    pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<(f64, Position, f64, f64), Error> {
         let error = Error::new(self.dbg(), "get");     
         let mut step = (self.draught_max - self.draught_min)/2.;
         let mut draught = self.draught_min + step;
@@ -75,12 +76,15 @@ impl DisplacementCache {
         for _i in 0..100 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
-            let res_volume = result.first().ok_or(error.pass("no result from cache.get(&query)"))?;
+            if result.len() <= 5 {
+                return Err(error.pass("no result from cache.get(&query)"));
+            }
+            let res_volume = result[0];
             let delta = volume - res_volume;
             if delta.abs() <= epsilon {
             //    dbg!(&query, &result, delta);
            //     println!("displacement_cache cache get ok: {:?}", result);
-                return Ok((draught, Position::new(result[1], result[2], result[3])));
+                return Ok((draught, Position::new(result[1], result[2], result[3]), result[5], result[6]));
             }
          //   println!("displacement_cache cache get: {_i} {step} {draught} res_volume:{res_volume} {delta}");
             step = step/2.;

@@ -6,7 +6,8 @@ use std::path::PathBuf;
 
 use crate::algorithm::entities::model_cached::{compartment_center, load_stl, write_stl, Shape};
 use crate::algorithm::entities::Position;
-
+///
+/// Примитив для расчета площади горизонтальной поверхности фигуры
 #[derive(Clone)]
 pub struct AreaShape {
     dbg: Dbg,

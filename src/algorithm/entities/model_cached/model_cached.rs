@@ -3,41 +3,63 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, CompartmentCache, DamagedCompartmentCache, DisplacementCache,
-            DisplacementShape, Shape, WindageArea,
+            AreaShape, BalanceQuery, BalanceResult, BulkData, CompartmentCache,
+            DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData,
+            Shape, WindageArea,
         },
     },
     kernel::types::{Arc, RwLock},
-    ship_model::query::{BalanceQuery, BulkData, LiquidData},
 };
 use core::f64;
-use chrono::DateTime;
 use indexmap::IndexMap;
 use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
-use parry3d_f64::{
-    query::PointQuery,
-    shape::HalfSpace,
-};
+use parry3d_f64::{query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fs::ReadDir, path::PathBuf, result};
 
+/// Структура для ввода данных расчета баланса судна.
+#[derive(Debug, Clone)]
+pub(crate) struct FloatingPositionQuery {
+    /// Плотность забортной воды
+    pub water_density: f64,
+    /// масса судна порожнем и грузов размещенных на судне:
+    /// генерального груза (unitCargoAssignment), контейнеров (containerCargoAssignment),
+    /// газообразного груза (gaseousCargoAssignment), массы обледенения и намокания;
+    pub mass_const: f64,
+    /// Сумарный момент за вычетом смещяемых и насыпных грузов
+    pub moment_const: Moment,
+    /// навалочный груз
+    pub bulk: Vec<BulkData>,
+    /// жидкий груз
+    pub liquid: Vec<LiquidData>,
+    /// Положение зерновых перегородок, координата по х
+    pub grain_bulkhead: Vec<f64>,
+    /// номера поврежденных помещений
+    pub damaged_compartment: Vec<String>,
+    /// точность расчета
+    pub epsilon: f64,
+}
 ///
 #[derive(Debug)]
-pub struct FloatingPositionResult {
-    heel: f64,
-    trim: f64,
-    draught_mid: f64,
-    precision: f64,
-    volume: f64,
+pub(crate) struct FloatingPositionResult {
+    pub heel: f64,
+    pub trim: f64,
+    pub draught_mid: f64,
+    pub precision: f64,
+    pub volume: f64,
+    pub waterline_x: f64, // смещение центра тяжести ватеринии по Х
+    pub waterline_y: f64, // смещение центра тяжести ватеринии по Y
 }
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
 pub struct ModelCached {
     dbg: Dbg,
+    /// Ship length between perpendiculars
+    ship_length_lbp: f64,
     /// 3d model initial position in 3D space (midel).
     pub model_center_coord: Position,
     /// Waterline coord Z in 3D space (midel) initial position.
@@ -92,18 +114,25 @@ impl ModelCached {
             conf.draught_min,
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
-        let dir = std::fs::read_dir(&path).map_err(|err| {
-            error.pass_with(
-                format!("read additional dir {:?}", path.to_str()),
-                err.to_string(),
-            )
-        })?;
-        let pathes: Vec<_> = dir
-            .into_iter()
-            .filter_map(|f| f.ok())
-            .map(|f| f.path())
-            .collect();
-        // TODO: подумать, что делать с этими ошибками
+
+        let pathes: Vec<_> = match std::fs::read_dir(&path) {
+            Ok(dir) => dir
+                .into_iter()
+                .filter_map(|f| f.ok())
+                .map(|f| f.path())
+                .collect(),
+            Err(err) => {
+                log::error!(
+                    "{}",
+                    error.pass_with(
+                        format!("read additional dir {:?}", path.to_str()),
+                        err.to_string()
+                    )
+                );
+                Vec::new()
+            }
+        };
+        // TODO: подумать, что делать при неправильном имени файла
         /*    let (result, _errors): (Vec<_>, Vec<_>) = pathes
                     .into_iter()
                     .map(|p| (p.file_name(), p))
@@ -191,6 +220,7 @@ impl ModelCached {
             .collect();
         let model_cached = Self {
             dbg: dbg.clone(),
+            ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
             displacement_shapes,
@@ -233,7 +263,6 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut results: Vec<Result<(), Error>> = Vec::new();
         // Сначала считаем модели в разных потоках
-        // dbg!("shapes start");
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
@@ -278,32 +307,23 @@ impl ModelCached {
                 results.push(Err(error));
             }
         }
-        // dbg!("shapes end");
-        // dbg!("displacement start");
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
         if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-        // dbg!("displacement end");
-        // dbg!("windage_area start");
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-        // dbg!("windage_area end");
-        // dbg!("compartments start");
         for (name, compartment) in &mut self.compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-        // dbg!("compartments end");
-        // dbg!("damaged_compartments start");
         for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
-        // dbg!("damaged_compartments end");
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -342,10 +362,9 @@ impl ModelCached {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
     }
-
-    /*
     //
-    pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
+    pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceResult, Error> {
+        let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "balance");
         let FloatingPositionResult {
             heel,
@@ -353,11 +372,59 @@ impl ModelCached {
             draught_mid,
             precision,
             volume,
+            waterline_x,
+            waterline_y,
         } = self
-            .floating_position(query)
+            .floating_position(FloatingPositionQuery {
+                water_density: query.water_density,
+                mass_const: query.mass_const,
+                moment_const: query.moment_const,
+                bulk: query.bulk,
+                liquid: query.liquid,
+                grain_bulkhead: query.grain_bulkhead,
+                damaged_compartment: Vec::new(),
+                epsilon: query.epsilon,
+            })
             .map_err(|err| error.pass_with("self.floating_position", err))?;
+        /*          println!(
+                                "steps:{_i} time:{:?} heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}",
+                                time.elapsed(),
+                                heel,
+                                trim,
+                                new_draught,
+                                cb.x(),
+                                cb.y(),
+                                cb.z(),
+                                precision
+                            );
+        */
+        let (draught_bow, draught_stern, draught_mean) = Draught::new(
+            self.model_center_coord.x(),
+            self.ship_length_lbp,
+            draught_mid,
+            waterline_x,
+            waterline_y,
+            heel,
+            trim,
+        )
+        .calculate();
+        let result = BalanceResult {
+            heel,
+            trim,
+            draught_mid,
+            draught_bow,
+            draught_stern,
+            draught_mean,
+            center_waterline_shift: waterline_x,
+            volume,
+            displacement: todo!(),
+            gaseous: todo!(),
+            bulk: todo!(),
+            liquid: todo!(),
+        };
 
-        let result = BalanceCtx {
+        Ok(result)
+        /*        let result = BalanceCtx {
             roll: heel,
             trim,
             draught_mid,
@@ -378,17 +445,13 @@ impl ModelCached {
             rad_long: todo!(),
             rad_trans: todo!(),
             pantocaren: todo!(),
-        };
-    }    */
+        };*/
+    }
     /// Расчет равновесного положения
-    pub fn floating_position(
+    pub(crate) fn floating_position(
         &mut self,
-        query: BalanceQuery,
+        query: FloatingPositionQuery,
     ) -> Result<FloatingPositionResult, Error> {
-
-        let time = std::time::Instant::now();
-        
-        // dbg!("floating_position start");
         let error = Error::new(&self.dbg, "eval");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
@@ -415,16 +478,25 @@ impl ModelCached {
         // loop
         for _i in 1..=1000 {
             let epsilon = (step_trim + step_heel) / 10.;
+            // учет смещения жидкости
             let moment_liquid = self
                 .moment_liquid(&query.liquid, heel, trim, query.epsilon)
                 .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+            // учет изменения водоизмещения из-за поврежденных отсеков
+            // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
             let (mass_damaged_compartment, moment_damaged_compartment) = self
-                .calc_damaged_compartments(&query.damaged_compartment, heel, trim, draught, query.water_density)
+                .calc_damaged_compartments(
+                    &query.damaged_compartment,
+                    heel,
+                    trim,
+                    draught,
+                    query.water_density,
+                )
                 .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             let volume = mass_sum / query.water_density;
-            // считаем корпус
-            let (new_draught, cb) = self
+            // считаем корпус с учетом изменения массы
+            let (new_draught, cb, waterline_x, waterline_y) = self
                 .displacement
                 .get(heel, trim, mass_sum / query.water_density, epsilon)
                 .map_err(|err| {
@@ -461,15 +533,18 @@ impl ModelCached {
                 let precision = (cg_h - cb).len();
                 if precision < query.epsilon {
                     println!(
-                        "steps:{_i} time:{:?} heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}",
-                        time.elapsed(),
+//                        "steps:{_i} heel:{:.6} trim:{:.6} draught:{:.6} precision:{:6} volume:{:6} cb:({:.6} {:.6}) waterline_x:{:.6} waterline_y:{:.6})",
+                        "FloatingPositionResult [ heel:{:.6}, trim:{:.6}, draught_mid:{:.6}, precision:{:6}, volume:{:6}, waterline_x:{:.6}, waterline_y:{:.6} ]",
+                        // time.elapsed(),
                         heel,
                         trim,
                         new_draught,
-                        cb.x(),
-                        cb.y(),
-                        cb.z(),
-                        precision
+                        precision,
+                        volume,
+                     //   cb.x(),
+                     //   cb.y(),
+                        waterline_x,
+                        waterline_y
                     );
                     return Ok(FloatingPositionResult {
                         heel,
@@ -477,11 +552,12 @@ impl ModelCached {
                         draught_mid: new_draught,
                         precision,
                         volume,
+                        waterline_x,
+                        waterline_y,
                     });
                 }
                 cg_h
             };
-            //        dbg!(cg, cb, cg_h);
             // Определение посадки судна для следующего шага
             let cb_v = {
                 // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
