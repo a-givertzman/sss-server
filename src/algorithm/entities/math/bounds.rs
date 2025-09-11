@@ -127,39 +127,46 @@ impl Bounds {
     }
     /// Преобразование диапазона значений
     /// Возвращает вектор значений, пересчитанный к дипазону
-    /// TODO: test
-    pub fn intersect(&self, bounds: &Bounds, values: &Vec<f64>) -> Result<Vec<f64>, Error> {
+    pub fn intersect(&self, bounds: &Bounds, values: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new("Bounds", "intersect");
         let bounds = bounds.iter();
         if bounds.len() != values.len() {
             return Err(error.err("bounds.len() != values.len()"));
         }
-        let values = bounds.zip(values.iter());
-        let mut current_i = 0;
-        let mut current_value = 0.;
+        let q_v: Vec<_> = bounds.zip(values.iter()).collect();
+        let s_v = &self.values;
+        let (mut q_i, mut s_i) = (0, 0);
+        let mut current_q_i = None;
         let mut result = Vec::new();
-        let mut self_b = &self.values[current_i];
-        for (query_b, a) in values {
-            if self_b.start().ok_or(error.err("query_b.start"))?
-                >= query_b.end().ok_or(error.err("src_b.end"))?
-            {
-                current_i += 1;
-                self_b = &self.values[current_i];
-                result.push(current_value);
-                if current_i >= self.values.len() {
+        while s_i < s_v.len() {
+            result.push(0.);
+            while q_i < q_v.len() {
+                let q_b = q_v[q_i].0;
+                let v = q_v[q_i].1;
+                let s_b = &s_v[s_i];
+                let part_ratio = q_b.part_ratio(s_b).map_err(|err| {
+                    error.pass_with(
+                        format!("q_b.part_ratio(s_b), query_b:{q_b}, self_b:{s_b}, current_i:{s_i}"),
+                        err,
+                    )
+                })?;
+                if current_q_i.is_some() && part_ratio == 0. {
                     break;
+                } 
+                result[s_i] += v * part_ratio; 
+                if current_q_i.is_none() {
+                    if part_ratio < 1. {
+                        current_q_i = Some(q_i);
+                    }
                 }
+                q_i += 1;
             }
-            current_value += a*query_b.part_ratio(self_b).map_err(|err| {
-                error.pass_with(
-                    format!(
-                        "query_b.part_ratio(self_b), query_b:{query_b}, self_b:{self_b}, current_i: current_i"
-                    ),
-                    err,
-                )
-            })?;
+            if current_q_i.is_some() {
+                q_i = current_q_i.unwrap();
+            }
+            current_q_i = None;
+            s_i += 1;
         }
-        result.push(current_value);
         Ok(result)
     }
 }

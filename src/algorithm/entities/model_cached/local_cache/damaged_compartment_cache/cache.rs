@@ -1,7 +1,6 @@
 use crate::{
     algorithm::entities::{
-        cache::Cache,
-        model_cached::{local_cache::LocalCache, save, DisplacementShape},
+        Position, cache::Cache, model_cached::{DisplacementShape, local_cache::LocalCache, save}
     },
     kernel::types::{Arc, RwLock},
 };
@@ -18,6 +17,8 @@ pub struct DamagedCompartmentCache {
     cache_path: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
+    draught_min: f64,
+    draught_max: f64,
     draught_step: f64,
     ///
     /// Model representation used for cache calculation.
@@ -41,21 +42,33 @@ impl DamagedCompartmentCache {
         compartment_id: String,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
+        draught_min: f64,
+        draught_max: f64,
         draught_step: f64,
         scheduler: Scheduler,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("Compartment_{compartment_id}_Cache"));
+        let dbg = Dbg::new(parent, format!("DamagedCompartment_{compartment_id}_Cache"));
         Self {
             shape,
             heel_steps,
             trim_steps,
+            draught_min,
+            draught_max,
             draught_step,
             cache: Arc::new(RwLock::new(None)),
             cache_path: cache_dir.as_ref().join(compartment_id),
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
-        }
+        }        
+    }
+    /// Return (volume, center of volume)
+    pub fn get(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, Position), Error> {
+        let error = Error::new(self.dbg(), "get");
+        let query = [heel, trim, draught];
+            let result = LocalCache::get(self, &query)
+                .map_err(|err| error.pass_with(" LocalCache::get(self, &query)", err))?;
+        Ok((result[0], Position::new(result[1], result[2], result[3])))
     }
 }
 //
@@ -69,6 +82,8 @@ impl LocalCache for DamagedCompartmentCache {
             self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
+            self.draught_min,
+            self.draught_max,
             self.draught_step,
             self.scheduler.clone(),
             self.exit.clone(),

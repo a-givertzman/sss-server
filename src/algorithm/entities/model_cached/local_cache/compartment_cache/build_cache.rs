@@ -1,3 +1,4 @@
+use nalgebra::OPoint;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -6,7 +7,10 @@ use sal_sync::{
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
-    algorithm::entities::model_cached::{DisplacementShape, Shape},
+    algorithm::entities::{
+        Position,
+        model_cached::{DisplacementShape, Shape},
+    },
     kernel::types::{Arc, RwLock},
 };
 ///
@@ -16,7 +20,11 @@ pub struct BuildCompartmentCache {
     shape: Arc<RwLock<DisplacementShape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    draught_step: f64,
+    level_qnt_steps: usize,
+    /// центр полного объема из бд
+    center_max: Option<Position>,
+    /// полный объем из бд
+    volume_max: Option<f64>,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -31,7 +39,9 @@ impl BuildCompartmentCache {
         shape: Arc<RwLock<DisplacementShape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        draught_step: f64,
+        level_qnt_steps: usize,
+        center_max: Option<Position>,
+        volume_max: Option<f64>,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -40,15 +50,17 @@ impl BuildCompartmentCache {
             shape: shape.clone(),
             heel_steps,
             trim_steps,
-            draught_step,
+            level_qnt_steps,
+            center_max,
+            volume_max,
             scheduler,
             exit,
         }
     }
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
-    /// 
-    /// results: [[heel, trim, draught, volume, x, y, z, inertia_x, inertia_y]]
+    ///
+    /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -56,10 +68,95 @@ impl BuildCompartmentCache {
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
+        let mut draught_steps = match shape.read().draught_steps(self.level_qnt_steps) {
             Ok(draught_steps) => draught_steps,
             Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
         };
+        if draught_steps.len() < 2 {
+            return vec![Err(error.err("draught_steps.len < 2"))]
+        }
+        // для пустого объема значения заполняем руками для нормальной интерполяции
+        {
+            let draught_first = draught_steps.remove(0).max(0.);
+            let heel_steps = self.heel_steps.clone();
+            let trim_steps = self.trim_steps.clone();
+            let draft_results = draft_results.clone();
+            let shape = shape.clone();
+            let error1 = error.clone();
+            let error2 = error.clone();
+            let handle = self
+                .scheduler
+                .spawn(move || {
+                    let guard = shape.read();
+                    let (x, y, _, _) = guard
+                        .displacement(0., 0., draught_first)
+                        .map_err(|err| error1.pass_with("guard.displacement for volume_max", err))?;
+                    for &heel in &heel_steps {
+                        for &trim in &trim_steps {
+                            // для пустого отсека запоняем центр
+                            draft_results.push((heel, trim, 0., Ok((0., x, y, 0.)), Ok((0., 0.))));
+                        }
+                    }
+                    Ok(())
+                })
+                .map_err(|err| {
+                    error2.pass_with("spawn task for empty compartment", err.to_string())
+                });
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => results.push(Err(err)),
+            };
+        }
+        // для полного объема значения заполняем руками для нормальной интерполяции
+        {
+            let draught_last = draught_steps.pop().unwrap();
+            let heel_steps = self.heel_steps.clone();
+            let trim_steps = self.trim_steps.clone();
+            let draft_results = draft_results.clone();
+            let center_max = self.center_max.clone();
+            let volume_max = self.volume_max.clone();  
+            let shape = shape.clone();      
+            let error1 = error.clone();
+            let error2 = error.clone();
+            let handle = self
+                .scheduler
+                .spawn(move || {
+                    let guard = shape.read();
+                    let (x, y, z, volume) = match (center_max, volume_max) {
+                        (Some(center), Some(volume)) => {
+                            (center.x(), center.y(), center.z(), volume)
+                        }
+                        _ => {
+                            let (volume, x, y, z) = guard
+                                .displacement(0., 0., draught_last + 1.)
+                                .map_err(|err| {
+                                error1.pass_with("guard.displacement for volume_max", err)
+                            })?;
+                            (x, y, z, volume)
+                        }
+                    };
+                    for &heel in &heel_steps {
+                        for &trim in &trim_steps {
+                            // для полного отсека объем не меняется от крена/дифферента и инерция всегда нулевая
+                            draft_results.push((
+                                heel,
+                                trim,
+                                draught_last,
+                                Ok((volume, x, y, z)),
+                                Ok((0., 0.)),
+                            ));
+                        }
+                    }
+                    Ok(())
+                })
+                .map_err(|err| {
+                    error2.pass_with(format!("spawn task for full compartment"), err.to_string())
+                });
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => results.push(Err(err)),
+            };
+        }
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {

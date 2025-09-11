@@ -16,6 +16,8 @@ pub struct BuildDamagedCompartmentCache {
     shape: Arc<RwLock<DisplacementShape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
+    draught_min: f64,
+    draught_max: f64,
     draught_step: f64,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
@@ -31,15 +33,21 @@ impl BuildDamagedCompartmentCache {
         shape: Arc<RwLock<DisplacementShape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
+        draught_min: f64,
+        draught_max: f64,
         draught_step: f64,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
+        debug_assert!(draught_min < draught_max);
+        debug_assert!(draught_step > 0.);
         Self {
             dbg: Dbg::new(parent, "BuildCompartmentCache"),
             shape: shape.clone(),
             heel_steps,
             trim_steps,
+            draught_min,
+            draught_max,
             draught_step,
             scheduler,
             exit,
@@ -48,7 +56,7 @@ impl BuildDamagedCompartmentCache {
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
     /// 
-    /// results: [[heel, trim, draught, volume, x, y, z]]
+    /// results: [[heel, trim, draught, volume, vx, vy, vz]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -56,10 +64,19 @@ impl BuildDamagedCompartmentCache {
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let shape = self.shape.clone();
-        let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
+   /*     let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
             Ok(draught_steps) => draught_steps,
             Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
-        };
+        };*/
+        let mut draught_steps = Vec::new();
+        let mut draught = self.draught_min;
+        loop {
+            draught_steps.push(draught);
+            if draught >= self.draught_max {
+                break;
+            }
+            draught += self.draught_step;
+        } 
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {

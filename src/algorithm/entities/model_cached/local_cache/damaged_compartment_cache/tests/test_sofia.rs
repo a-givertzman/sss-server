@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 
-use crate::algorithm::entities::model_cached::DisplacementShape;
+use crate::algorithm::entities::model_cached::{DamagedCompartmentCache, DisplacementShape};
 #[cfg(test)]
 use crate::{algorithm::entities::{model_cached::{CompartmentCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
 use std::{fs, sync::Once, time::Duration};
@@ -46,13 +46,15 @@ fn calculated_damaged_compartments_sofia() {
     let mut shape = DisplacementShape::new_uninit(&dbg, model_path.into(), center_coord, 1000.);
     shape.init().unwrap();
     let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cache = CompartmentCache::new(
+    let mut cache = DamagedCompartmentCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,
         String::from("201"),
         vec![-20., 0., 20.],
         vec![4.],
+        4.,
+        4.,
         1.,
         thread_pool.scheduler().clone(),
     );
@@ -61,33 +63,34 @@ fn calculated_damaged_compartments_sofia() {
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
     let target = [
-        [20., 20., 4.,   9758.8, 96.072, 0.369, 5.662],
-        [20., -20., 4.,  9809.0, 33.856, 0.367, 5.787],
-        [-20., -20., 4., 9809.0, 33.856, -0.367, 5.787],
-        [-20., 20., 4.,  9758.9, 96.072, -0.369, 5.662],
-        [0., 0., 4.,     6456.3, 66.877, 0., 2.053],
-        [20., 0., 4.,    6527.4, 66.603, 1.769, 2.397],
-        [-20., 0., 4.,   6527.4, 66.603, -1.769, 2.397],
-        [0., 20., 4.,    9699.2, 96.306, 0., 5.623],
-        [0., -20., 4.,   9749.2, 33.620, 0., 5.749],
+        [20., 20., 9758.8, 4., 96.072, 0.369, 5.662],
+        [20., -20., 9809.0, 4., 33.856, 0.367, 5.787],
+        [-20., -20., 9809.0, 4., 33.856, -0.367, 5.787],
+        [-20., 20., 9758.9, 4., 96.072, -0.369, 5.662],
+        [0., 0., 6456.3, 4., 66.877, 0., 2.053],
+        [20., 0., 6527.4, 4., 66.603, 1.769, 2.397],
+        [-20., 0., 6527.4, 4., 66.603, -1.769, 2.397],
+        [0., 20., 9699.2, 4., 96.306, 0., 5.623],
+        [0., -20., 9749.2, 4., 33.620, 0., 5.749],
     ];
     for target in target {
-        let mut key = [None; 13];
-        key[0] = Some(target[0]);
-        key[1] = Some(target[1]);
-        key[2] = Some(target[2]);
-        let result: Result<Vec<f64>, Error> = cache.get(&key);
-        assert!(result.is_ok(), "*error*: {:?}", result.unwrap_err());
-        let result = result.unwrap();
-        for (r, t) in result.iter().zip(target.iter()) {
-            let delta = (r - t).abs();
-            assert!(
-                delta < epsilon_p * (r.abs().max(t.abs())) || delta < epsilon_abs,
-                "\nresult: {:?}\ntarget: {:?}",
-                result,
-                target
-            );
-        }
+        let target_draught = target[3];
+        let target_center = Position::new(target[4], target[5], target[6]);  
+        let (result_draught, result_center) = cache.get(target[0], target[1], target[2]).unwrap();
+        let delta = (result_draught - target_draught).abs();
+        assert!(
+            delta < epsilon_p * (result_draught.abs().max(target_draught.abs())) || delta < epsilon_abs,
+            "\nresult: {:?}\ntarget: {:?}",
+            result_draught,
+            target_draught
+        );
+        let delta = (result_center - target_center).len();
+        assert!(
+            delta < epsilon_abs,
+            "\nresult: {:?}\ntarget: {:?}",
+            result_center,
+            target_center
+        );
     }
  /*   // clean up
     if let Err(why) = fs::remove_file(cache_dir.to_owned()) {

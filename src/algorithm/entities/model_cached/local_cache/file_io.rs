@@ -11,6 +11,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// # Panics
 /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
 pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
+    dbg!(cache_path);
     let callee = "read_from_file";
     let file = File::open(cache_path).map_err(|err| {
         format!(
@@ -19,8 +20,9 @@ pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
         )
     })?;
     let reader = BufReader::new(file);
-    let mut vals = None;
+    let mut vals = Vec::new();
     for (try_line, line_id) in reader.lines().zip(1..) {
+        let mut v = Vec::new();
         let line = try_line.map_err(|err| {
             format!(
                 "{}.{} | Failed reading line={}: {}",
@@ -28,32 +30,25 @@ pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
             )
         })?;
         let ss = line.split_ascii_whitespace();
-        let ss_len = ss.clone().count();
-        let vals_mut = match vals.as_mut() {
-            None => vals.insert(vec![vec![]; ss_len]),
-            Some(vals) if vals.len() != ss_len => {
-                return Err(format!(
-                    "{}.{} | Inconsistent dataset at line={}",
-                    dbg, callee, line_id
-                )
-                .into());
-            }
-            Some(vals) => vals,
-        };
-        for (i, s) in ss.enumerate() {
+        for s in ss {
             let val = s.parse().map_err(|err| {
                 format!(
                     "{}.{} | Failed parsing value at line={}: {}",
                     dbg, callee, line_id, err
                 )
             })?;
-            vals_mut[i].push(val);
+            v.push(val);
+        }
+        vals.push(v);
+    }
+    let size = vals.first().ok_or(format!("{}.{} | Error: no vals", dbg, callee,))?.len();
+    for v in &vals {
+        if v.len() != size {
+            return Err(format!("{}.{} | Error: no vals", dbg, callee,).into());
         }
     }
-    vals.ok_or(format!("{}.{} | Error: no vals", dbg, callee,).into())
+    Ok(vals)
 }
-///
-/// save cache data to `path` file.
 ///
 pub fn save(dbg: &Dbg, cache_path: &PathBuf, vals: Vec<Vec<f64>>) -> Result<(), Error> {
     let error = Error::new(dbg, "save_to_file");
