@@ -6,16 +6,14 @@ use sal_sync::{
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
-    algorithm::entities::model_cached::{DisplacementShape, Shape},
+    algorithm::entities::model_cached::DisplacementShape,
     kernel::types::{Arc, RwLock},
 };
 ///
-/// Provides logic to calculate and store cache used by [super::DamagedCompartmentCache].
-pub struct BuildDamagedCompartmentCache {
+/// Provides logic to calculate and store cache used by [super::BoundCacheCache].
+pub struct BuildBoundCache {
     dbg: Dbg,
     shape: Arc<RwLock<DisplacementShape>>,
-    heel_steps: Vec<f64>,
-    trim_steps: Vec<f64>,
     draught_min: f64,
     draught_max: f64,
     draught_step: f64,
@@ -24,15 +22,13 @@ pub struct BuildDamagedCompartmentCache {
 }
 //
 //
-impl BuildDamagedCompartmentCache {
+impl BuildBoundCache {
     ///
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
         shape: Arc<RwLock<DisplacementShape>>,
-        heel_steps: Vec<f64>,
-        trim_steps: Vec<f64>,
         draught_min: f64,
         draught_max: f64,
         draught_step: f64,
@@ -42,10 +38,8 @@ impl BuildDamagedCompartmentCache {
         debug_assert!(draught_min < draught_max);
         debug_assert!(draught_step > 0.);
         Self {
-            dbg: Dbg::new(parent, "BuildCompartmentCache"),
+            dbg: Dbg::new(parent, "BuildBoundCache"),
             shape: shape.clone(),
-            heel_steps,
-            trim_steps,
             draught_min,
             draught_max,
             draught_step,
@@ -54,9 +48,9 @@ impl BuildDamagedCompartmentCache {
         }
     }
     ///
-    /// Creates and starts worker for [DamagedCompartmentCache::calculate].
+    /// Creates and starts worker for [BoundCache::calculate].
     /// 
-    /// results: [[heel, trim, draught, volume, vx, vy, vz]]
+    /// results: [[draught, volume]]
     pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
@@ -78,8 +72,6 @@ impl BuildDamagedCompartmentCache {
             draught += self.draught_step;
         } 
         'draught: for draught in draught_steps {
-            for &heel in &self.heel_steps {
-                for &trim in &self.trim_steps {
                     // _true_ if the caller has requisted to exit.
                     // Note that in this case the file may be partially filled.
                     if self.exit.load(Ordering::SeqCst) {
@@ -93,18 +85,15 @@ impl BuildDamagedCompartmentCache {
                         .spawn(move || {
                             let guard = shape.read();
                             draft_results.push((
-                                heel,
-                                trim,
                                 draught,
-                                guard.displacement(heel, trim, draught),
+                                guard.displacement(0., 0., draught),
                             ));
                             Ok(())
                         })
                         .map_err(|err| {
                             error.pass_with(
                                 format!(
-                                    "spawn task draught:{} heel:{} trim:{}",
-                                    draught, heel, trim
+                                    "spawn task draught:{draught}"
                                 ),
                                 err.to_string(),
                             )
@@ -113,8 +102,6 @@ impl BuildDamagedCompartmentCache {
                         Ok(task) => tasks.push(task),
                         Err(err) => results.push(Err(err)),
                     };
-                }
-            }
         }
         for task in tasks {
             if let Err(err) = task.join() {
@@ -124,15 +111,15 @@ impl BuildDamagedCompartmentCache {
             }
         }
         while !draft_results.is_empty() {
-            if let Some((heel, trim, draught, volume)) = draft_results.pop() {
-                let (volume, vx, vy, vz) = match volume {
-                    Ok((volume, x, y, z)) => (volume, x, y, z),
+            if let Some((draught, volume)) = draft_results.pop() {
+                let volume = match volume {
+                    Ok((volume, ..)) => volume,
                     Err(err) => {
                         results.push(Err(error.pass_with("draft_results volume", err)));
                         continue;
                     }
                 };
-                results.push(Ok(vec![heel, trim, draught, volume, vx, vy, vz]));
+                results.push(Ok(vec![draught, volume]));
             }
         }
         //   dbg!(&results);

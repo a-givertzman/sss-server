@@ -180,6 +180,17 @@ impl DisplacementShape {
         ))
     }
     ///
+    /// Полный размер судна (длинна, ширина, высота)
+    pub fn size(&self) -> Result<(f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "full_length");
+        let aabb = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .aabb(&Isometry::identity());
+        Ok(((aabb.maxs.x - aabb.mins.x), (aabb.maxs.y - aabb.mins.y), (aabb.maxs.z - aabb.mins.z)))
+    }
+    ///
     /// Расчет [длинны и ширины по ватерлинии](https://github.com/a-givertzman/sss/blob/6d91fb09de073995c3a165ebaaa76e4f1e202f36/design/algorithm/part04_stability/chapter05_criteria/section02_weatherCriteria.md)
     pub fn aabb(&self, draught: f64) -> Result<(f64, f64), Error> {
         let error = Error::new(&self.dbg, "aabb");
