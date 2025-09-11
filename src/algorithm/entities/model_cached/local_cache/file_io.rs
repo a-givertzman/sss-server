@@ -49,51 +49,6 @@ pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
     }
     Ok(vals)
 }
-// pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
-//     dbg!(cache_path);
-//     let callee = "read_from_file";
-//     let file = File::open(cache_path).map_err(|err| {
-//         format!(
-//             "{}.{} | Failed reading file='{}': {}",
-//             dbg, callee, cache_path.display(), err
-//         )
-//     })?;
-//     let reader = BufReader::new(file);
-//     let mut vals = None;
-//     for (try_line, line_id) in reader.lines().zip(1..) {
-//         let line = try_line.map_err(|err| {
-//             format!(
-//                 "{}.{} | Failed reading line={}: {}",
-//                 dbg, callee, line_id, err
-//             )
-//         })?;
-//         let ss = line.split_ascii_whitespace();
-//         let ss_len = ss.clone().count();
-//         let vals_mut = match vals.as_mut() {
-//             None => vals.insert(vec![vec![]; ss_len]),
-//             Some(vals) if vals.len() != ss_len => {
-//                 return Err(format!(
-//                     "{}.{} | Inconsistent dataset at line={}",
-//                     dbg, callee, line_id
-//                 )
-//                 .into());
-//             }
-//             Some(vals) => vals,
-//         };
-//         for (i, s) in ss.enumerate() {
-//             let val = s.parse().map_err(|err| {
-//                 format!(
-//                     "{}.{} | Failed parsing value at line={}: {}",
-//                     dbg, callee, line_id, err
-//                 )
-//             })?;
-//             vals_mut[i].push(val);
-//         }
-//     }
-//     vals.ok_or(format!("{}.{} | Error: no vals", dbg, callee,).into())
-// }
-///
-/// save cache data to `path` file.
 ///
 pub fn save(dbg: &Dbg, cache_path: &PathBuf, vals: Vec<Vec<f64>>) -> Result<(), Error> {
     let error = Error::new(dbg, "save_to_file");
