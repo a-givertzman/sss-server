@@ -3,9 +3,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BulkData, CompartmentCache,
-            DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData,
-            Shape, WindageArea,
+            AreaShape, BalanceQuery, BalanceResult, BoundCache, BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData, Shape, WindageArea
         },
     },
     kernel::types::{Arc, RwLock},
@@ -64,6 +62,8 @@ pub struct ModelCached {
     pub model_center_coord: Position,
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
+    /// Directory containing [super::ModelCached] caches.
+    cache_dir: PathBuf,
     /// Privides access to structure of the 3D element
     displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>>,
     windage_shape: Arc<RwLock<AreaShape>>,
@@ -74,12 +74,12 @@ pub struct ModelCached {
     compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
     /// - cache for damaged compartments, [index of compartments, [heel, trim, level, volume, x, y, z ]]
     damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
-    /// - cache for bounds of model, [index of bound, [trim, draught, volume ]]
-    //   model_bounded: IndexMap<usize, Vec<BoundCache>>,
-    /// - cache for bounds of compartments,  [index of bound, TODO]
-    //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
     /// - cache for windage area
     windage_area: WindageArea,
+    /// - cache for bounds of model
+    displacement_bounded: HashMap<usize, BoundCache>,
+    /// - cache for bounds of compartments,  [index of bound, TODO]
+    //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
     scheduler: Scheduler,
 }
 //
@@ -114,7 +114,6 @@ impl ModelCached {
             conf.draught_min,
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
-
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
             Ok(dir) => dir
                 .into_iter()
@@ -223,6 +222,7 @@ impl ModelCached {
             ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
+            cache_dir: conf.cache_dir.clone(),
             displacement_shapes,
             windage_shape,
             displacement: DisplacementCache::new(
@@ -239,6 +239,7 @@ impl ModelCached {
             compartments,
             damaged_compartments,
             windage_area,
+            displacement_bounded: HashMap::new(),
             scheduler: scheduler.clone(),
         };
         Ok(model_cached)
@@ -335,18 +336,45 @@ impl ModelCached {
         Ok(())
     }
     //
-    /*   pub fn rebuild_bounds(&self, bounds_qnt: usize) -> Result<Bounds, Error> {
+    pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "body_size");
+        Ok(self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?
+            .read()
+            .size()
+            .map_err(|err| error.pass_with("loa", err))?)
+    }
+    //
+    pub fn rebuild_bounds(&self, bounds: Bounds) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "rebuild_bounds");
 
-           let bounds =
-           /*     TODO: rebuild
-           model_bounded
-           compartments_bounded
-           bounded_windage_area
-           */
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
 
-           Ok(())
-       }
-    */
+        BoundCache::new(    
+                &self.dbg,
+                displacement_shape.clone(),
+                self.cache_dir.clone().join(format!("/displacement_bounded/{}/", bounds.len())),
+                self.draught_min,
+                self.draught_max,
+                self.hull_draught_step,
+                self.ship_length_lbp,
+                conf.model_center_coord.x(),
+                bounds.iter().map(|b| b.center()).collect(),
+                scheduler.clone(),
+            ),
+
+        /*     TODO: rebuild
+        model_bounded
+        compartments_bounded
+        bounded_windage_area
+        */
+        Ok(())
+    }
     //
     pub fn bounded_windage_area(&mut self, bounds: Bounds) -> Result<Vec<f64>, Error> {
         self.windage_area
@@ -407,7 +435,22 @@ impl ModelCached {
             heel,
             trim,
         )
-        .calculate();
+        .calculate(query.bounds);
+
+        let delta_draught = (draught_bow - draught_stern) / self.ship_length_lbp;
+        let draught_bounds = query.bounds
+            .iter()
+            .map(|b| {
+                draught_mid
+                    + delta_draught
+                        * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2. + self.model_center_coord.x())
+            })
+            .collect();
+
+        self.displacement_bounded
+
+query.bounds.iter().len()
+
         let result = BalanceResult {
             heel,
             trim,
@@ -533,7 +576,7 @@ impl ModelCached {
                 let precision = (cg_h - cb).len();
                 if precision < query.epsilon {
                     println!(
-//                        "steps:{_i} heel:{:.6} trim:{:.6} draught:{:.6} precision:{:6} volume:{:6} cb:({:.6} {:.6}) waterline_x:{:.6} waterline_y:{:.6})",
+                        //                        "steps:{_i} heel:{:.6} trim:{:.6} draught:{:.6} precision:{:6} volume:{:6} cb:({:.6} {:.6}) waterline_x:{:.6} waterline_y:{:.6})",
                         "FloatingPositionResult [ heel:{:.6}, trim:{:.6}, draught_mid:{:.6}, precision:{:6}, volume:{:6}, waterline_x:{:.6}, waterline_y:{:.6} ]",
                         // time.elapsed(),
                         heel,
@@ -541,8 +584,8 @@ impl ModelCached {
                         new_draught,
                         precision,
                         volume,
-                     //   cb.x(),
-                     //   cb.y(),
+                        //   cb.x(),
+                        //   cb.y(),
                         waterline_x,
                         waterline_y
                     );

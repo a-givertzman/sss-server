@@ -18,7 +18,7 @@ pub(crate) use windage_area::*;
 pub(crate) use draught::*;
 pub use shape::*;
 
-use crate::algorithm::entities::Moment;
+use crate::algorithm::entities::{Bounds, Moment};
 ///
 /// Структура для ввода данных расчета баланса судна.
 /// Содержит массу судна, грузов и положение зерновых перегородок
@@ -42,6 +42,8 @@ pub struct BalanceQuery {
 //    pub damaged_compartment: Vec<String>,
     /// точность расчета
     pub epsilon: f64,
+    /// шпации разбиения
+    pub bounds: Bounds,
 }
 ///
 /// Груз, для которого центр массы и распределение зависит от 
