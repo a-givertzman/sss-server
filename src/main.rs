@@ -28,47 +28,10 @@ use std::{collections::HashMap, path::PathBuf};
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
-  /*  dbg!(Draught::new(65.250, 130.500, 5.900, 65.250, 0.000, 0., 0.).calculate());
-    dbg!(Draught::new(65.250, 130.500, 5.900, 65.250, 0.000, 0., 2.).calculate());
-    dbg!(Draught::new(65.250, 130.500, 5.900, 65.250, 0.000, 10., 2.).calculate());
-    dbg!(Draught::new(65.250, 130.500, 5.900, 65.250, 0.000, 25., 2.).calculate());
-    */
-    dbg!(Draught::new(65.250, 130.500, 3.000, 60.000, 3.000, 0., 0.).calculate());
-    dbg!(Draught::new(65.250, 130.500, 3.000, 60.000, 3.000, 0., 4.).calculate());
-    dbg!(Draught::new(65.250, 130.500, 3.000, 60.000, 3.000, 10., 0.).calculate());
-    dbg!(Draught::new(65.250, 130.500, 3.000, 60.000, -3.000, 10., 4.).calculate());// 7.6331, -1.6331, 2.0982],
-
-/*
-    dbg!(Draught::new(
-        1.,         
-        2.,
-        1.,
-        1.,
-        1.,
-        0.,
-        30.,        
-    ).calculate());
-
-        dbg!(Draught::new(
-        1.,         
-        2.,
-        1.,
-        1.,
-        1.,
-        30.,
-        0.,        
-    ).calculate());
-
-        dbg!(Draught::new(
-        1.,         
-        2.,
-        1.,
-        1.,
-        1.,
-        30.,
-        30.,        
-    ).calculate());
-*/
+    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 0., 0.).calculate());
+    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 0., 4.).calculate());
+    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 10., 0.).calculate());
+    dbg!(Draught::new(130.500, 3.000, 60.000, -3.000, 10., 4.).calculate());
 
 /*
    
