@@ -115,7 +115,7 @@ impl BoundCache {
         .build();
         let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
         let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
-        if let Some(mut guard) = self.cache.try_write() {
+        if let Some(mut guard) = self.caches.try_write() {
             let cache = if let Some(cache) = guard.take() {
                 cache
             } else {

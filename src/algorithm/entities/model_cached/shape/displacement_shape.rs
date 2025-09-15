@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::{Bound, Bounds, Position};
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
 
 #[derive(Clone)]
@@ -85,6 +85,43 @@ impl DisplacementShape {
         }
         Ok(())
     }
+    pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
+        let error = Error::new(&self.dbg, "split");
+        let half_size_x = bound.length().ok_or(error.err("no bound.length"))?/2.;
+        let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
+        let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
+        let cuboid = Cuboid::new(Vector3::new(half_size_x, 100000., 100000.,));
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_local_cuboid(
+                false,
+                &cuboid,
+                &Isometry::from_parts(
+                    Translation3::new(position_x, 0., 0.),
+                    UnitQuaternion::identity(),
+                ),
+                false,
+                self.epsilon,
+            );
+        let mesh = match result {
+            Ok(mesh) => match mesh {
+                Some(mesh) => mesh,
+                None => return Ok(None),
+            },
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+        };
+        Ok(Some(Self::new(
+            &self.dbg,
+            Some(mesh),
+            None,
+            Some(Point3::new(position_x, 0., 0.)),
+            1.,
+            self.epsilon,
+            self.resolution,
+        )))
+    }
     ///
     /// Расчет водоизмещения судна и положение его центра в связанной с судной системой координат
     /// result: [volume, x, y, z]
@@ -123,7 +160,7 @@ impl DisplacementShape {
                     return Ok((0., center.x, center.y, center.z + draught));
                 } // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
             },
-            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
         };
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
         Ok((
@@ -167,9 +204,9 @@ impl DisplacementShape {
                 None => {
                     let center = self.center.unwrap();
                     return Ok((0., center.x, center.y, center.z + draught));
-                } //  return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                } //  return Err(error.err("mesh.intersection_with_cuboid error: no intersection!"));
             },
-            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
         };
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 0.5 / hdz);
         Ok((
@@ -180,7 +217,7 @@ impl DisplacementShape {
         ))
     }
     ///
-    /// Полный размер судна (длинна, ширина, высота)
+    /// Полный размер модели (длинна, ширина, высота)
     pub fn size(&self) -> Result<(f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "full_length");
         let aabb = self
@@ -189,6 +226,37 @@ impl DisplacementShape {
             .ok_or(error.err("no mesh"))?
             .aabb(&Isometry::identity());
         Ok(((aabb.maxs.x - aabb.mins.x), (aabb.maxs.y - aabb.mins.y), (aabb.maxs.z - aabb.mins.z)))
+    }
+    /// 
+    /// Расчет водоизмещения для разных осадок (для шпации)
+    pub fn displacement_by_steps(&self, step: f64) -> Result<Vec<(f64, f64)>, Error> {
+        let error = Error::new(&self.dbg, "displacement_by_steps");
+        let aabb = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .aabb(&Isometry::identity());
+        let mut draught = aabb.mins.y + step;
+        let draught_max = aabb.maxs.y;        
+        let mut steps = vec![(-100000., 0.), (aabb.mins.y, 0.)];
+        while draught < draught_max {
+            let volume = match self.displacement( 0., 0., draught) {
+                Ok((volume, ..)) => volume,
+                Err(err) => {
+                    log::error!("{}", &error.pass_with("self.displacement", err));
+                    draught += step;
+                    continue;
+                },
+            };
+            steps.push((draught, volume));
+        }
+        let full_volume = 1. / parry3d_f64::shape::Shape::mass_properties(self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?, 1.).inv_mass;
+        steps.push((aabb.maxs.y, full_volume));
+        steps.push((aabb.maxs.y + 1000000., full_volume));
+        Ok(steps)
     }
     ///
     /// Расчет [длинны и ширины по ватерлинии](https://github.com/a-givertzman/sss/blob/6d91fb09de073995c3a165ebaaa76e4f1e202f36/design/algorithm/part04_stability/chapter05_criteria/section02_weatherCriteria.md)

@@ -6,7 +6,7 @@ use sal_sync::{
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
-    algorithm::entities::model_cached::DisplacementShape,
+    algorithm::entities::{Bounds, model_cached::DisplacementShape},
     kernel::types::{Arc, RwLock},
 };
 ///
@@ -17,6 +17,7 @@ pub struct BuildBoundCache {
     draught_min: f64,
     draught_max: f64,
     draught_step: f64,
+    bounds: Bounds,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -29,20 +30,17 @@ impl BuildBoundCache {
     pub(super) fn new(
         parent: &Dbg,
         shape: Arc<RwLock<DisplacementShape>>,
-        draught_min: f64,
-        draught_max: f64,
         draught_step: f64,
+        bounds: Bounds,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
-        debug_assert!(draught_min < draught_max);
         debug_assert!(draught_step > 0.);
         Self {
             dbg: Dbg::new(parent, "BuildBoundCache"),
             shape: shape.clone(),
-            draught_min,
-            draught_max,
             draught_step,
+            bounds,
             scheduler,
             exit,
         }
@@ -57,43 +55,54 @@ impl BuildBoundCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let shape = self.shape.clone();
-   /*     let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
-            Ok(draught_steps) => draught_steps,
-            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
-        };*/
-        let mut draught_steps = Vec::new();
-        let mut draught = self.draught_min;
-        loop {
-            draught_steps.push(draught);
-            if draught >= self.draught_max {
-                break;
-            }
-            draught += self.draught_step;
-        } 
-        'draught: for draught in draught_steps {
+        let shape = self.shape.clone();     
+        for bound in self.bounds.iter() {
                     // _true_ if the caller has requisted to exit.
                     // Note that in this case the file may be partially filled.
                     if self.exit.load(Ordering::SeqCst) {
-                        break 'draught;
+                        break;
                     }
                     //  let dbg_ = self.dbg.clone();
                     let draft_results = draft_results.clone();
                     let shape = shape.clone();
+                    let bound = bound.clone();
+                    let center = match bound.center().ok_or(error.err("bound.center()")) {
+                        Ok(center) => center,
+                        Err(err) => {
+                            log::error!("{:?}", &err.into());
+                            results.push(Err(err));
+                            continue;
+                        }
+                    }; 
+                    let step = self.draught_step;
                     let handle = self
                         .scheduler
                         .spawn(move || {
                             let guard = shape.read();
-                            draft_results.push((
-                                draught,
-                                guard.displacement(0., 0., draught),
-                            ));
+                            let shape = guard.part(&bound);
+                            if let Ok(shape) = guard.part(&bound) {
+                                draft_results.push((
+                                        center,
+                                        shape.map(|shape| shape.displacement_by_steps(step)),
+                                ));
+                     /*           match shape {
+                                    Some(shape) => draft_results.push((
+                                        bound.center(),
+                                        Some(shape.displacement_by_steps(step)),
+                                    )),
+                                    None => draft_results.push((
+                                        bound.center(),
+                                        None,
+                                    )),
+                                }*/                              
+                            }
                             Ok(())
                         })
                         .map_err(|err| {
                             error.pass_with(
                                 format!(
-                                    "spawn task draught:{draught}"
+                                    "spawn task bound:{:?}",
+                                    bound
                                 ),
                                 err.to_string(),
                             )
@@ -111,18 +120,22 @@ impl BuildBoundCache {
             }
         }
         while !draft_results.is_empty() {
-            if let Some((draught, volume)) = draft_results.pop() {
-                let volume = match volume {
-                    Ok((volume, ..)) => volume,
-                    Err(err) => {
-                        results.push(Err(error.pass_with("draft_results volume", err)));
-                        continue;
-                    }
+            if let Some((dx, result)) = draft_results.pop() {
+                match result {
+                    Some(result) => match result {
+                        Ok(result) => results.push((dx, result)),
+                        Err(err) => {
+                            let error = error.pass_with("result", err.to_string());
+                            log::error!("{}", error);
+                            results.push((dx, Err(error)));
+                        }
+                    },
+                    None => results.push(Ok((dx, None))),
                 };
-                results.push(Ok(vec![draught, volume]));
             }
         }
         //   dbg!(&results);
-        results
+        results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        results.into_iter().map(|(x, v)| v).collect()
     }
 }

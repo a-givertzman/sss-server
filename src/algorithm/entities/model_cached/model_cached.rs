@@ -435,8 +435,7 @@ impl ModelCached {
             heel,
             trim,
         )
-        .calculate(query.bounds);
-
+        .calculate();
         let delta_draught = (draught_bow - draught_stern) / self.ship_length_lbp;
         let draught_bounds = query.bounds
             .iter()
@@ -446,6 +445,7 @@ impl ModelCached {
                         * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2. + self.model_center_coord.x())
             })
             .collect();
+        dbg!(draught_bounds);
 
         self.displacement_bounded
 
