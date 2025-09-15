@@ -14,34 +14,40 @@ mod tests {
         let dbg = Dbg::own("test draught");
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
-
-        let (draught_bow, draught_stern, draught_mean) = Draught::new(
-            65.250,         
-            130.5,
-            6.,
-            65.250,
-            10.,
-            10.,
-            2.,        
-        ).calculate();     
-           
-        let target =  IcingCtx {
-            mass: 67.460925,
-            mass_shift_x:1.2989097,
-            mass_values: Vec::new(),
-        };
-        assert!(
-            result.mass == target.mass,
-            "\nresult: {:?}\ntarget: {:?}",
-            result.mass,
-            target.mass
-        );
-        assert!(
-            result.mass_shift_x == target.mass_shift_x,
-            "\nresult: {:?}\ntarget: {:?}",
-            result.mass_shift_x,
-            target.mass_shift_x
-        );
-        test_duration.exit();
+        let data = [
+            [130.500, 5.900, 70.000, 2.000, 25., 2., 8.4141, 3.3859, 7.0156],
+            [130.500, 3.000, 60.000, -3.000, 10., 4., 7.6331, 0./*-1.6331*/, 2.0982],
+            [130.500, 8.000, 50.000, 2.000, 15., -1., 6.8209, 9.1791, 8.8115],
+        ];
+        let epsilon = 0.0001;
+        for data in data {
+            let (target_draught_bow, target_draught_stern, target_draught_mean) = (data[7], data[8], data[9]);
+            let (result_draught_bow, result_draught_stern, result_draught_mean) = Draught::new(
+                data[0],         
+                data[1],  
+                data[2],  
+                data[3],  
+                data[4],  
+                data[5],  
+            ).calculate();  
+            assert!(
+                (target_draught_bow - result_draught_bow).abs() < epsilon,
+                "\nresult: {:?} target: {:?}",
+                result_draught_bow,
+                target_draught_bow,
+            );
+            assert!(
+                (target_draught_stern - result_draught_stern).abs() < epsilon,
+                "\nresult: {:?} target: {:?}",
+                result_draught_stern,               
+                target_draught_stern,
+            );
+            assert!(
+                (target_draught_mean - result_draught_mean).abs() < epsilon,
+                "\nresult: {:?} target: {:?}",
+                result_draught_mean,                
+                target_draught_mean,
+            );
+        }
     }
 }

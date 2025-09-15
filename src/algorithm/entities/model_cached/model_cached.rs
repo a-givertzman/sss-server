@@ -427,7 +427,7 @@ impl ModelCached {
                             );
         */
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
-            self.model_center_coord.x(),
+        //    self.model_center_coord.x(),
             self.ship_length_lbp,
             draught_mid,
             waterline_x,

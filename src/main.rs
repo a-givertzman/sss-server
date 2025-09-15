@@ -28,20 +28,12 @@ use std::{collections::HashMap, path::PathBuf};
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 0., 0.).calculate());
+    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 0., 4.).calculate());
+    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 10., 0.).calculate());
+    dbg!(Draught::new(130.500, 3.000, 60.000, -3.000, 10., 4.).calculate());
+
 /*
-
-    dbg!(Draught::new(
-        65.250,         
-        130.5,
-        6.,
-        65.250,
-        10.,
-        10.,
-        2.,        
-    ).calculate());
-*/
-
-
    
     let dbg = Dbg::new("ShipModel", "compute_balance");
     //   let model_path = "src/assets/sofia3.stp";
@@ -116,7 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   //      print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
         result(m, x, y, z).unwrap();
     }
-
+*/
 
     /*model.floating_position(ship_model::query::BalanceQuery {
         water_density: 1.025,
