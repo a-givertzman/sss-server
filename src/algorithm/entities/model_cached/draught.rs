@@ -4,7 +4,7 @@ use parry3d_f64::query::{Ray, RayCast};
 ///
 /// Осадкт судна. Считаются из осадки на миделе и параметров судна
 pub struct Draught {
- //   midel_x: f64,
+//    midel_x: f64,
     length_lbp: f64,
     draught_mid: f64,
     waterline_x: f64,
@@ -34,7 +34,7 @@ impl Draught {
         trim: f64,
     ) -> Self {
         Self {
-  //          midel_x,
+ //           midel_x,
             length_lbp,
             draught_mid,
             waterline_x,
@@ -43,6 +43,27 @@ impl Draught {
             trim,
         }
     }
+
+    /// Расчет осадок
+    /// (draught_bow, draught_stern, draught_mean)
+    pub fn calculate(&self) -> (f64, f64, f64) {
+        let heel_rad = -self.heel.to_radians();
+        let trim_rad = self.trim.to_radians();
+        let tg_theta = heel_rad.tan();        
+        let tg_phi = trim_rad.tan();
+        let cos_phi = trim_rad.cos().max(f64::MIN);
+        let draught = |point: Point3<f64>| self.draught_mid + 
+            point.y*tg_theta + point.x*tg_phi/cos_phi;
+        let bow = Point3::new(self.length_lbp / 2., 0.0, -self.draught_mid);
+        let stern = Point3::new(-self.length_lbp / 2., 0.0, -self.draught_mid);
+        let mean = Point3::new(
+            self.waterline_x - self.length_lbp / 2.,
+            self.waterline_y,
+            -self.draught_mid,
+        );
+        (draught(bow), draught(stern), draught(mean))
+    }
+   /* 
     /// Расчет осадок
     /// (draught_bow, draught_stern, draught_mean)
     pub fn calculate(&self) -> (f64, f64, f64) {
@@ -82,4 +103,5 @@ impl Draught {
         };
         (draught(bow), draught(stern), draught(mean))
     }
+    */
 }

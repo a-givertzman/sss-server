@@ -62,6 +62,8 @@ pub struct ModelCached {
     pub model_center_coord: Position,
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
+    /// Draught step for hull
+    hull_draught_step: f64,    
     /// Directory containing [super::ModelCached] caches.
     cache_dir: PathBuf,
     /// Privides access to structure of the 3D element
@@ -222,6 +224,7 @@ impl ModelCached {
             ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
+            hull_draught_step: conf.hull_draught_step,
             cache_dir: conf.cache_dir.clone(),
             displacement_shapes,
             windage_shape,
@@ -325,6 +328,11 @@ impl ModelCached {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
+        for bound_cache in self.displacement_bounded.values_mut() {
+            if let Err(error) = bound_cache.rebuild() {
+                errors.push(("displacement_bounded".to_owned(), error));
+            }
+        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -347,26 +355,25 @@ impl ModelCached {
             .map_err(|err| error.pass_with("loa", err))?)
     }
     //
-    pub fn rebuild_bounds(&self, bounds: Bounds) -> Result<(), Error> {
+    pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "rebuild_bounds");
-
         let displacement_shape = self
             .displacement_shapes
             .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-
-        BoundCache::new(    
+            .ok_or(error.err("no displacement_shape"))?;  
+        let bounds_length_mm = (bounds.length()*1000.).ceil();
+        let bound_shift_x =  bounds.iter().map(|b| b.center().unwrap_or(0.)).collect();
+        let bound_cache = BoundCache::new(
                 &self.dbg,
                 displacement_shape.clone(),
-                self.cache_dir.clone().join(format!("/displacement_bounded/{}/", bounds.len())),
-                self.draught_min,
-                self.draught_max,
+                self.cache_dir.clone().join("disp_bounded").join(format!("{bounds_length_mm}")),
                 self.hull_draught_step,
                 self.ship_length_lbp,
-                conf.model_center_coord.x(),
-                bounds.iter().map(|b| b.center()).collect(),
-                scheduler.clone(),
-            ),
+                self.model_center_coord.x(),
+                bound_shift_x,
+                self.scheduler.clone(),
+            );
+        self.displacement_bounded.insert(bounds.iter().len(), bound_cache);
 
         /*     TODO: rebuild
         model_bounded
@@ -448,8 +455,6 @@ impl ModelCached {
         dbg!(draught_bounds);
 
         self.displacement_bounded
-
-query.bounds.iter().len()
 
         let result = BalanceResult {
             heel,

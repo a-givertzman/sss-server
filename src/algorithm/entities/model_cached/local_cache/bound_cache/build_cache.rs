@@ -14,8 +14,6 @@ use crate::{
 pub struct BuildBoundCache {
     dbg: Dbg,
     shape: Arc<RwLock<DisplacementShape>>,
-    draught_min: f64,
-    draught_max: f64,
     draught_step: f64,
     bounds: Bounds,
     scheduler: Scheduler,
@@ -47,95 +45,84 @@ impl BuildBoundCache {
     }
     ///
     /// Creates and starts worker for [BoundCache::calculate].
-    /// 
+    ///
     /// results: [[draught, volume]]
-    pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
+    pub fn build(self) -> Result<Vec<(f64, Option<Vec<(f64, f64)>>)>, Error> {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let shape = self.shape.clone();     
+        let mut errors = Vec::new();
+        let shape = self.shape.clone();
         for bound in self.bounds.iter() {
-                    // _true_ if the caller has requisted to exit.
-                    // Note that in this case the file may be partially filled.
-                    if self.exit.load(Ordering::SeqCst) {
-                        break;
+            // _true_ if the caller has requisted to exit.
+            // Note that in this case the file may be partially filled.
+            if self.exit.load(Ordering::SeqCst) {
+                break;
+            }
+            let draft_results = draft_results.clone();
+            let shape = shape.clone();
+            let bound = bound.clone();
+            let center = match bound.center().ok_or(error.err("bound.center()")) {
+                Ok(center) => center,
+                Err(err) => {
+                    log::error!("{:?}", &err);
+                    errors.push(Err(err));
+                    continue;
+                }
+            };
+            let step = self.draught_step;
+            let handle = self
+                .scheduler
+                .spawn(move || {
+                    let guard = shape.read();
+                    if let Ok(shape) = guard.part(&bound) {
+                        draft_results
+                            .push((center, shape.map(|shape| shape.displacement_by_steps(step))));
                     }
-                    //  let dbg_ = self.dbg.clone();
-                    let draft_results = draft_results.clone();
-                    let shape = shape.clone();
-                    let bound = bound.clone();
-                    let center = match bound.center().ok_or(error.err("bound.center()")) {
-                        Ok(center) => center,
-                        Err(err) => {
-                            log::error!("{:?}", &err.into());
-                            results.push(Err(err));
-                            continue;
-                        }
-                    }; 
-                    let step = self.draught_step;
-                    let handle = self
-                        .scheduler
-                        .spawn(move || {
-                            let guard = shape.read();
-                            let shape = guard.part(&bound);
-                            if let Ok(shape) = guard.part(&bound) {
-                                draft_results.push((
-                                        center,
-                                        shape.map(|shape| shape.displacement_by_steps(step)),
-                                ));
-                     /*           match shape {
-                                    Some(shape) => draft_results.push((
-                                        bound.center(),
-                                        Some(shape.displacement_by_steps(step)),
-                                    )),
-                                    None => draft_results.push((
-                                        bound.center(),
-                                        None,
-                                    )),
-                                }*/                              
-                            }
-                            Ok(())
-                        })
-                        .map_err(|err| {
-                            error.pass_with(
-                                format!(
-                                    "spawn task bound:{:?}",
-                                    bound
-                                ),
-                                err.to_string(),
-                            )
-                        });
-                    match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => results.push(Err(err)),
-                    };
+                    Ok(())
+                })
+                .map_err(|err| {
+                    error.pass_with(format!("spawn task bound:{:?}", bound), err.to_string())
+                });
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => {
+                    let error = error.pass_with("task handle", err.to_string());
+                    log::error!("{}", error);
+                    errors.push(Err(err));
+                }
+            };
         }
         for task in tasks {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                results.push(Err(error));
+                errors.push(Err(error));
             }
         }
         while !draft_results.is_empty() {
             if let Some((dx, result)) = draft_results.pop() {
                 match result {
                     Some(result) => match result {
-                        Ok(result) => results.push((dx, result)),
+                        Ok(result) => results.push((dx, Some(result))),
                         Err(err) => {
-                            let error = error.pass_with("result", err.to_string());
+                            let error =
+                                error.pass_with(format!("result, dx:{dx}"), err.to_string());
                             log::error!("{}", error);
-                            results.push((dx, Err(error)));
+                            errors.push(Err(error));
                         }
                     },
-                    None => results.push(Ok((dx, None))),
+                    None => results.push((dx, None)),
                 };
             }
         }
         //   dbg!(&results);
+        if let Some(error) = errors.first() {
+            return error.clone();
+        }
         results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        results.into_iter().map(|(x, v)| v).collect()
+        Ok(results)
     }
 }
