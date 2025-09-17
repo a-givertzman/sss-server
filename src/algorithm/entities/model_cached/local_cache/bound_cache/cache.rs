@@ -28,7 +28,7 @@ pub struct BoundCache {
     /// Cache read from `self.file_path`.
     caches: Vec<(f64, Option<Cache<f64>>)>,
     scheduler: Scheduler,
-    exit: Arc<AtomicBool>, //TODO - сейчас не используется
+    exit: Arc<AtomicBool>,
 }
 //
 //
@@ -63,7 +63,7 @@ impl BoundCache {
     }
     /// Return volume in bounds
     /// cause panic if caches not initialized
-    pub fn get(&self, draught_mid: &f64, trim: &f64) -> Vec<f64> {
+    pub fn get(&self, draught_mid: f64, trim: f64) -> Vec<f64> {
         let delta_draught = trim.to_radians().sin()*self.length_lbp;
         let result = self
             .caches
@@ -128,8 +128,11 @@ impl BoundCache {
             Ok(data) => data,
             Err(err) => return Err(error.pass_with("cache_data", err)),
         };
-        self.caches = Vec::new();
+        let mut caches = Vec::new();
         for (i, (dx, v)) in data.into_iter().enumerate() {
+            if self.exit.load(Ordering::Relaxed) {
+                return Err(error.err("exit"));
+            }
             let cache = if let Some(v) = v {
                 let v: Vec<Vec<f64>> = v.iter().map(|v| vec![v.0, v.1]).collect();
                 let cache = Cache::<f64>::new(&self.dbg);
@@ -152,8 +155,9 @@ impl BoundCache {
             } else {
                 None
             };
-            self.caches.push((dx, cache));
+            caches.push((dx, cache));
         }
+        self.caches = caches;
         Ok(())
     }
     //

@@ -17,21 +17,52 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{eval::Eval, run::Run};
+use kernel::{eval::Eval, run::Run, types::{Arc, RwLock},};
 //use prelude::*;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
-use crate::algorithm::entities::{Moment, model_cached::{self, Draught}};
+use crate::algorithm::entities::{Bounds, Moment, model_cached::{self, BoundCache, DisplacementShape, Draught}};
 use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
-    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 0., 0.).calculate());
-    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 0., 4.).calculate());
-    dbg!(Draught::new(130.500, 3.000, 60.000, 3.000, 10., 0.).calculate());
-    dbg!(Draught::new(130.500, 3.000, 60.000, -3.000, 10., 4.).calculate());
+        let dbg = Dbg::new("main", "bound_cache");
+        let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+        let model_dir: PathBuf = "src/assets/model/sofia".into();
+        let model_center_coord = Position::new(65.250, 0., 0.);
+        let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
+        let bounds_length_mm = (bounds.length()*1000.).ceil() as usize;
+        let thread_pool = ThreadPool::new(&dbg, Some(15));
+        let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
+            &dbg,
+            model_dir.clone().join(PathBuf::from("hull.stl")),
+            Some(model_center_coord),
+            1000.,
+        )));
+        displacement_shape.write().init().unwrap();
+        dbg!("displacement_shape init ok");
+        let mut bound_cache = BoundCache::new(
+            &dbg,
+            displacement_shape,
+            cache_dir
+                .clone()
+                .join("disp_bounded")
+                .join(format!("{bounds_length_mm}")),
+            1.,
+            130.5,
+            model_center_coord.x(),
+            bounds.clone(),
+            thread_pool.scheduler(),
+        );
+        dbg!("BoundCache::new ok");
+        let res = bound_cache.rebuild();
+        dbg!("BoundCache::new rebuild", res);
+        let res = bound_cache.get(5.9, 0.);
+        dbg!("BoundCache::new get", res);
+
+
 
 /*
    
@@ -45,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
-    let thread_pool = ThreadPool::new(&dbg, Some(30));
+    let thread_pool = ThreadPool::new(&dbg, Some(15));
     let mut model = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {

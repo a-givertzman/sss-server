@@ -363,7 +363,7 @@ impl ModelCached {
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
-        let bounds_length_mm = (bounds.length() * 1000.).ceil();
+        let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
         let bound_cache = BoundCache::new(
             &self.dbg,
             displacement_shape.clone(),
@@ -439,7 +439,7 @@ impl ModelCached {
                             );
         */
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
-            //    self.model_center_coord.x(),
+            self.model_center_coord.x(),
             self.ship_length_lbp,
             draught_mid,
             waterline_x,
@@ -464,7 +464,7 @@ impl ModelCached {
             .displacement_bounded
             .get(&query.bounds.len_qnt())
             .ok_or(error.err("no displacement_bounded"))?;
-        let displacement = displacement_bounded.get(&draught_mid, &trim);
+        let displacement = displacement_bounded.get(draught_mid, trim);
         let result = BalanceResult {
             heel,
             trim,

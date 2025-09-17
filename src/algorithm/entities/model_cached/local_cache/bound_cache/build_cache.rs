@@ -53,7 +53,7 @@ impl BuildBoundCache {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
-        let mut errors = Vec::new();
+        let errors = Arc::new(Stack::new());
         let shape = self.shape.clone();
         for bound in self.bounds.iter() {
             // _true_ if the caller has requisted to exit.
@@ -62,13 +62,16 @@ impl BuildBoundCache {
                 break;
             }
             let draft_results = draft_results.clone();
+            let _errors = errors.clone();
+            let _error = error.clone();
             let shape = shape.clone();
             let bound = bound.clone();
-            let center = match bound.center().ok_or(error.err("bound.center()")) {
-                Ok(center) => center,
-                Err(err) => {
-                    log::error!("{:?}", &err);
-                    errors.push(Err(err));
+            let center = match bound.center() {
+                Some(center) => center,
+                None => {
+                    let error = error.err("bound.center()");
+                    log::error!("{:?}", &error);
+                    errors.push(Err(error));
                     continue;
                 }
             };
@@ -77,9 +80,18 @@ impl BuildBoundCache {
                 .scheduler
                 .spawn(move || {
                     let guard = shape.read();
-                    if let Ok(shape) = guard.part(&bound) {
-                        draft_results
-                            .push((center, shape.map(|shape| shape.displacement_by_steps(step))));
+                    match guard.part(&bound) {
+                        Ok(shape) => match shape {
+                            Some(shape) => draft_results
+                                .push((center, Some(shape.displacement_by_steps(step)))),
+                            None => draft_results
+                                .push((center, None)),
+                        }
+                        Err(err) => {
+                            let error = _error.pass_with(format!("task center:{center} guard.part"), err.to_string());
+                            log::error!("{}", error);
+                            _errors.push(Err(error));
+                        },
                     }
                     Ok(())
                 })
@@ -91,7 +103,7 @@ impl BuildBoundCache {
                 Err(err) => {
                     let error = error.pass_with("task handle", err.to_string());
                     log::error!("{}", error);
-                    errors.push(Err(err));
+                    errors.push(Err(error));
                 }
             };
         }
@@ -119,7 +131,7 @@ impl BuildBoundCache {
             }
         }
         //   dbg!(&results);
-        if let Some(error) = errors.first() {
+        if let Some(error) = errors.pop() {
             return error.clone();
         }
         results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());

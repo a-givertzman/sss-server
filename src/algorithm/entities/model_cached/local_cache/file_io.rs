@@ -1,6 +1,7 @@
 use std::{
-    fs::File,
-    io::{BufRead, BufReader, Write}, path::PathBuf,
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    path::PathBuf,
 };
 
 use sal_core::{dbg::Dbg, error::Error};
@@ -11,12 +12,25 @@ use sal_core::{dbg::Dbg, error::Error};
 /// # Panics
 /// Panic occurs if the reader produces a non-comparable value (e. g. _NaN_).
 pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
-    dbg!(cache_path);
+    let error = Error::new(dbg, "read");
+    let parent_dir = cache_path.parent().ok_or(error.err(format!(
+        "cache_path.parent error! path:{}",
+        cache_path.display()
+    )))?;
+    std::fs::create_dir_all(parent_dir).map_err(|err| {
+        error.pass_with(
+            format!("std::fs::create_dir_all error! path:{}", cache_path.display()),
+            err.to_string(),
+        )
+    })?;
     let callee = "read_from_file";
     let file = File::open(cache_path).map_err(|err| {
         format!(
             "{}.{} | Failed reading file='{}': {}",
-            dbg, callee, cache_path.display(), err
+            dbg,
+            callee,
+            cache_path.display(),
+            err
         )
     })?;
     let reader = BufReader::new(file);
@@ -41,7 +55,10 @@ pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
         }
         vals.push(v);
     }
-    let size = vals.first().ok_or(format!("{}.{} | Error: no vals", dbg, callee,))?.len();
+    let size = vals
+        .first()
+        .ok_or(format!("{}.{} | Error: no vals", dbg, callee,))?
+        .len();
     for v in &vals {
         if v.len() != size {
             return Err(format!("{}.{} | Error: no vals", dbg, callee,).into());
@@ -51,7 +68,17 @@ pub fn read(dbg: &Dbg, cache_path: &PathBuf) -> Result<Vec<Vec<f64>>, Error> {
 }
 ///
 pub fn save(dbg: &Dbg, cache_path: &PathBuf, vals: Vec<Vec<f64>>) -> Result<(), Error> {
-    let error = Error::new(dbg, "save_to_file");
+    let error = Error::new(dbg, "save");
+    let parent_dir = cache_path.parent().ok_or(error.err(format!(
+        "cache_path.parent error! path:{}",
+        cache_path.display()
+    )))?;
+    std::fs::create_dir_all(parent_dir).map_err(|err| {
+        error.pass_with(
+            format!("std::fs::create_dir_all error! path:{}", cache_path.display()),
+            err.to_string(),
+        )
+    })?;
     let mut file = File::create(cache_path).map_err(|err| {
         error.pass_with(
             format!("File::create error! path:{}", cache_path.display()),

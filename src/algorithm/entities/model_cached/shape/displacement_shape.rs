@@ -236,26 +236,27 @@ impl DisplacementShape {
             .as_ref()
             .ok_or(error.err("no mesh"))?
             .aabb(&Isometry::identity());
-        let mut draught = aabb.mins.y + step;
-        let draught_max = aabb.maxs.y;        
-        let mut steps = vec![(-100000., 0.), (aabb.mins.y, 0.)];
+        let mut draught = aabb.mins.z + step;
+        let draught_max = aabb.maxs.z;        
+        let mut steps = vec![(-100000., 0.), (aabb.mins.z, 0.)];
         while draught < draught_max {
             let volume = match self.displacement( 0., 0., draught) {
                 Ok((volume, ..)) => volume,
                 Err(err) => {
-                    log::error!("{}", &error.pass_with("self.displacement", err));
-                    draught += step;
-                    continue;
+                    let error = error.pass_with("self.displacement", err);
+                    log::error!("{}", &error);
+                    return Err(error);
                 },
             };
             steps.push((draught, volume));
+            draught += step;
         }
         let full_volume = 1. / parry3d_f64::shape::Shape::mass_properties(self
             .mesh
             .as_ref()
             .ok_or(error.err("no mesh"))?, 1.).inv_mass;
-        steps.push((aabb.maxs.y, full_volume));
-        steps.push((aabb.maxs.y + 1000000., full_volume));
+        steps.push((aabb.maxs.z, full_volume));
+        steps.push((aabb.maxs.z + 1000000., full_volume));
         Ok(steps)
     }
     ///
