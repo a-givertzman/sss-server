@@ -10,8 +10,8 @@ use crate::{
     kernel::types::{Arc, RwLock},
 };
 ///
-/// Provides logic to calculate and store cache used by [super::BoundCacheCache].
-pub struct BuildBoundCache {
+/// Provides logic to calculate and store cache used by [super::BoundCompartmentCacheCache].
+pub struct BuildBoundCompartmentCache {
     dbg: Dbg,
     shape: Arc<RwLock<DisplacementShape>>,
     draught_step: f64,
@@ -21,7 +21,7 @@ pub struct BuildBoundCache {
 }
 //
 //
-impl BuildBoundCache {
+impl BuildBoundCompartmentCache {
     ///
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
@@ -35,7 +35,7 @@ impl BuildBoundCache {
     ) -> Self {
         debug_assert!(draught_step > 0.);
         Self {
-            dbg: Dbg::new(parent, "BuildBoundCache"),
+            dbg: Dbg::new(parent, "BuildBoundCompartmentCache"),
             shape: shape.clone(),
             draught_step,
             bounds,
@@ -44,7 +44,7 @@ impl BuildBoundCache {
         }
     }
     ///
-    /// Creates and starts worker for [BoundCache::calculate].
+    /// Creates and starts worker for [BoundCompartmentCache::calculate].
     ///
     /// results: [[draught, volume]]
     pub fn build(self) -> Result<Vec<(f64, Option<Vec<(f64, f64)>>)>, Error> {

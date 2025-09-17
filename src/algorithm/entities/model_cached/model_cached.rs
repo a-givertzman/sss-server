@@ -3,7 +3,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundCache, BulkData, CompartmentCache,
+            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache, BulkData, CompartmentCache,
             DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData,
             Shape, WindageArea,
         },
@@ -81,7 +81,7 @@ pub struct ModelCached {
     /// - cache for windage area
     windage_area: WindageArea,
     /// - cache for bounds of model
-    displacement_bounded: HashMap<usize, BoundCache>,
+    displacement_bounded: HashMap<usize, BoundDisplacementCache>,
     /// - cache for bounds of compartments,  [index of bound, TODO]
     //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
     scheduler: Scheduler,
@@ -364,7 +364,7 @@ impl ModelCached {
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
         let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
-        let bound_cache = BoundCache::new(
+        let bound_cache = BoundDisplacementCache::new(
             &self.dbg,
             displacement_shape.clone(),
             self.cache_dir

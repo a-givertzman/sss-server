@@ -22,7 +22,7 @@ use kernel::{eval::Eval, run::Run, types::{Arc, RwLock},};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
-use crate::algorithm::entities::{Bounds, Moment, model_cached::{self, BoundCache, DisplacementShape, Draught}};
+use crate::algorithm::entities::{Bounds, Moment, model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught}};
 use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )));
         displacement_shape.write().init().unwrap();
         dbg!("displacement_shape init ok");
-        let mut bound_cache = BoundCache::new(
+        let mut bound_cache = BoundDisplacementCache::new(
             &dbg,
             displacement_shape,
             cache_dir
