@@ -42,7 +42,7 @@ bincode = { version = "~2.0", features = ["std"] }
 regex = "~1.11"
 #
 # Collections
-indexmap = "~2.10"
+indexmap = "~2.11"
 rustc-hash = "~2.1"
 dashmap = "~6.1"
 #

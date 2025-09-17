@@ -3,7 +3,9 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundCache, BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData, Shape, WindageArea
+            AreaShape, BalanceQuery, BalanceResult, BoundCache, BulkData, CompartmentCache,
+            DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData,
+            Shape, WindageArea,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -63,7 +65,7 @@ pub struct ModelCached {
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
     /// Draught step for hull
-    hull_draught_step: f64,    
+    hull_draught_step: f64,
     /// Directory containing [super::ModelCached] caches.
     cache_dir: PathBuf,
     /// Privides access to structure of the 3D element
@@ -328,7 +330,7 @@ impl ModelCached {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
-        for bound_cache in self.displacement_bounded.values_mut() {
+        for bound_cache in &mut self.displacement_bounded.values_mut() {
             if let Err(error) = bound_cache.rebuild() {
                 errors.push(("displacement_bounded".to_owned(), error));
             }
@@ -360,20 +362,23 @@ impl ModelCached {
         let displacement_shape = self
             .displacement_shapes
             .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;  
-        let bounds_length_mm = (bounds.length()*1000.).ceil();
-        let bound_shift_x =  bounds.iter().map(|b| b.center().unwrap_or(0.)).collect();
+            .ok_or(error.err("no displacement_shape"))?;
+        let bounds_length_mm = (bounds.length() * 1000.).ceil();
         let bound_cache = BoundCache::new(
-                &self.dbg,
-                displacement_shape.clone(),
-                self.cache_dir.clone().join("disp_bounded").join(format!("{bounds_length_mm}")),
-                self.hull_draught_step,
-                self.ship_length_lbp,
-                self.model_center_coord.x(),
-                bound_shift_x,
-                self.scheduler.clone(),
-            );
-        self.displacement_bounded.insert(bounds.iter().len(), bound_cache);
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir
+                .clone()
+                .join("disp_bounded")
+                .join(format!("{bounds_length_mm}")),
+            self.hull_draught_step,
+            self.ship_length_lbp,
+            self.model_center_coord.x(),
+            bounds.clone(),
+            self.scheduler.clone(),
+        );
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), bound_cache);
 
         /*     TODO: rebuild
         model_bounded
@@ -434,7 +439,7 @@ impl ModelCached {
                             );
         */
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
-        //    self.model_center_coord.x(),
+            //    self.model_center_coord.x(),
             self.ship_length_lbp,
             draught_mid,
             waterline_x,
@@ -444,18 +449,22 @@ impl ModelCached {
         )
         .calculate();
         let delta_draught = (draught_bow - draught_stern) / self.ship_length_lbp;
-        let draught_bounds = query.bounds
+        let draught_bounds: Vec<_> = query
+            .bounds
             .iter()
             .map(|b| {
                 draught_mid
                     + delta_draught
-                        * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2. + self.model_center_coord.x())
+                        * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2.
+                            + self.model_center_coord.x())
             })
             .collect();
         dbg!(draught_bounds);
-
-        self.displacement_bounded
-
+        let displacement_bounded = self
+            .displacement_bounded
+            .get(&query.bounds.len_qnt())
+            .ok_or(error.err("no displacement_bounded"))?;
+        let displacement = displacement_bounded.get(&draught_mid, &trim);
         let result = BalanceResult {
             heel,
             trim,
@@ -465,7 +474,7 @@ impl ModelCached {
             draught_mean,
             center_waterline_shift: waterline_x,
             volume,
-            displacement: todo!(),
+            displacement,
             gaseous: todo!(),
             bulk: todo!(),
             liquid: todo!(),

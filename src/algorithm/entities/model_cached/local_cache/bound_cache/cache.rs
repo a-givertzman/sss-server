@@ -1,21 +1,26 @@
 use crate::{
     algorithm::entities::{
-        Bounds, cache::Cache, model_cached::{DisplacementShape, read, save}
+        Bounds,
+        cache::Cache,
+        model_cached::{DisplacementShape, read, save},
     },
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::Scheduler;
-use std::{path:: PathBuf, sync::atomic::{AtomicBool, Ordering}};
+use std::{
+    path::PathBuf,
+    sync::atomic::{AtomicBool, Ordering},
+};
 ///
 /// Pre-calculated cache for bounds
 pub struct BoundCache {
     dbg: Dbg,
-    cache_dir: PathBuf,
+    cache_path: PathBuf,
     draught_step: f64,
     length_lbp: f64,
     midel_x: f64,
-    bounds_shift_x: Vec<f64>,
+    bounds: Bounds,
     ///
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
@@ -38,39 +43,38 @@ impl BoundCache {
         draught_step: f64,
         length_lbp: f64,
         midel_x: f64,
-        bounds_shift_x: Vec<f64>,
+        bounds: Bounds,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("BoundCache"));
+        let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
             draught_step,
             length_lbp,
             midel_x,
-            bounds_shift_x,
+            bounds,
             caches: Vec::new(),
-            cache_dir,
+            cache_path,
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
-        }        
+        }
     }
     /// Return volume in bounds
     /// cause panic if caches not initialized
-    pub fn get(&self, draught_mid: f64, trim_m: f64) -> Vec<f64> {
-        let delta_draught = trim_m/self.length_lbp;
-        let result = self.caches
+    pub fn get(&self, draught_mid: &f64, trim: &f64) -> Vec<f64> {
+        let delta_draught = trim.to_radians().sin()*self.length_lbp;
+        let result = self
+            .caches
             .iter()
-            .map(|(dx, cache)| {
-                match cache {
-                    Some(cache) => {
-                        let draught = draught_mid
-                            + delta_draught
-                                * (dx - self.length_lbp / 2. + self.midel_x);
-                        cache.get(&vec![draught])[0]
-                    },
-                    None => 0.,
+            .map(|(dx, cache)| match cache {
+                Some(cache) => {
+                    let draught =
+                        draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.midel_x);
+                    cache.get(&vec![draught])[0]
                 }
+                None => 0.,
             })
             .collect();
         result
@@ -80,9 +84,10 @@ impl BoundCache {
     /// - do calculations
     /// - stores calculated table
     /// - loads recalculated table
-    pub fn rebuild(&mut self, bounds: Bounds) -> Result<(), Error> {
+    pub fn rebuild(&mut self) -> Result<(), Error> {
+    //    let error = Error::new(self.dbg.clone(), "rebuild");
         self.clear_exit();
-        match self.calculate(bounds) {
+        match self.calculate() {
             Ok(_) => Ok(()),
             Err(err) => Err(Error::new(self.dbg.clone(), "rebuild").pass(err.to_owned())),
         }
@@ -91,30 +96,30 @@ impl BoundCache {
     fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg.clone(), "init");
         self.caches = Vec::new();
-        for (i, shift_x) in self.bounds_shift_x.iter().enumerate() {
-            let cache = if let Ok(vals)  = read(&self.dbg, &self.cache_dir.clone().join(format!("{i}"))) {
-                let cache = Cache::new(&self.dbg);  
-                cache
-                    .init(vals)
-                    .map_err(|err| error.pass_with("cache.init error", err))?;
-                Some(cache)
-            } else {
-                None
-            };
+        for (i, bound) in self.bounds.iter().enumerate() {
+            let cache =
+                if let Ok(vals) = read(&self.dbg, &self.cache_path.clone().join(format!("{i}"))) {
+                    let cache = Cache::new(&self.dbg);
+                    cache
+                        .init(vals)
+                        .map_err(|err| error.pass_with("cache.init error", err))?;
+                    Some(cache)
+                } else {
+                    None
+                };
             let center = bound.center().ok_or(error.err("bound.center()"))?;
             self.caches.push((center, cache));
         }
         Ok(())
     }
     //
-    fn calculate(&mut self, bounds: Bounds) -> Result<(), Error> {
+    fn calculate(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_dir = self.cache_dir(&bounds);
         let data = super::build_cache::BuildBoundCache::new(
             &self.dbg,
             self.shape.clone(),
             self.draught_step,
-            bounds,
+            self.bounds.clone(),
             self.scheduler.clone(),
             self.exit.clone(),
         )
@@ -129,7 +134,7 @@ impl BoundCache {
                 let v: Vec<Vec<f64>> = v.iter().map(|v| vec![v.0, v.1]).collect();
                 let cache = Cache::<f64>::new(&self.dbg);
                 match cache.init(v.clone()) {
-                    Ok(()) => match save(&self.dbg, &cache_dir.clone().join(format!("{i}")), v) {
+                    Ok(()) => match save(&self.dbg, &self.cache_path.clone().join(format!("{i}")), v) {
                         Ok(()) => (),
                         Err(err) => {
                             let error = error.pass_with("save cache", err);
@@ -141,7 +146,7 @@ impl BoundCache {
                         let error = error.pass_with("cache.init()", err);
                         log::error!("{}", error);
                         return Err(error);
-                    },
+                    }
                 }
                 Some(cache)
             } else {
@@ -158,11 +163,5 @@ impl BoundCache {
     //
     fn clear_exit(&self) {
         self.exit.store(false, Ordering::SeqCst)
-    }
-    //
-    fn cache_dir(&self) -> PathBuf {
-        let bounds_length_mm = (bounds.length()*1000.).ceil();
-        let qnt_bounds = bounds.iter().len();
-        self.cache_dir.join(format!("{}_{}", bounds_length_mm, qnt_bounds))
     }
 }

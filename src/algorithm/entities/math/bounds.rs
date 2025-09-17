@@ -117,6 +117,11 @@ impl Bounds {
                 .start()
                 .expect("Bounds delta error: no start value for first element!")
     }
+    /// Количество разбиений
+    #[allow(unused)]
+    pub fn len_qnt(&self) -> usize {
+        self.values.len()
+    }
     /// Длинна элемента разбиения
     pub fn delta(&self) -> f64 {
         self.values

@@ -67,7 +67,7 @@ pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
     if !empty_normals.is_empty() {
         return Err(error.err(format!("calculate normal error, path:{:?}", path)));
     }
-    let triangles: Vec<_> = result.iter()
+    let triangles: Vec<_> = result.into_iter()
         .map(|(n, t)| {
             let n = n.unwrap();
             let normal = stl_io::Vector([

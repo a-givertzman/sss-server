@@ -279,12 +279,14 @@ impl DisplacementShape {
                     .iter()
                     .map(|p| Point2::new(p.x, p.y))
                     .collect();
-                let (vx, vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
-                let min_x = vx
-                    .iter()
-                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let max_x = vx
+                let (mut vx, mut vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
+                vx.sort_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                vy.sort_by(|&a, &b| a.partial_cmp(&b).unwrap());                
+                let min_x = vx.first().unwrap_or(&0.);
+                let max_x = vx.last().unwrap_or(&0.);         
+                let min_y = vy.first().unwrap_or(&0.);
+                let max_y = vy.last().unwrap_or(&0.);                     
+      /*          let max_x = vx
                     .iter()
                     .max_by(|&a, &b| a.partial_cmp(b).unwrap())
                     .unwrap();
@@ -295,7 +297,7 @@ impl DisplacementShape {
                 let max_y = vy
                     .iter()
                     .max_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
+                    .unwrap();*/
                 let dx = max_x - min_x;
                 let dy = max_y - min_y;
                 Ok((dx, dy))
