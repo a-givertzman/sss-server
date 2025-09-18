@@ -3,7 +3,9 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundCompartmentCache, BoundDisplacementCache, BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData, Shape, WindageArea
+            AreaShape, BalanceQuery, BalanceResult, BoundCompartmentCache, BoundDisplacementCache,
+            BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache,
+            DisplacementShape, Draught, LiquidData, Shape, WindageArea,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -371,7 +373,7 @@ impl ModelCached {
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
         let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
-        let bound_cache = BoundDisplacementCache::new(
+        let bound_displacement = BoundDisplacementCache::new(
             &self.dbg,
             displacement_shape.clone(),
             self.cache_dir
@@ -385,18 +387,16 @@ impl ModelCached {
             self.scheduler.clone(),
         );
         self.displacement_bounded
-            .insert(bounds.len_qnt(), bound_cache);
-
+            .insert(bounds.len_qnt(), bound_displacement);
         let mut cache_map = HashMap::new();
-        for compartment_shape in self.displacement_shapes
-
-            compartments_bounded
-
-        /*     TODO: rebuild
-        model_bounded
-        compartments_bounded
-        bounded_windage_area
-        */
+        for (compartment_id, compartment) in self.compartments {
+            let compartment_bounded = compartment
+                .build_bounded(bounds)
+                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+            cache_map.insert(compartment_id, compartment_bounded);
+        }
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
         Ok(())
     }
     //
@@ -477,6 +477,39 @@ impl ModelCached {
             .get(&query.bounds.len_qnt())
             .ok_or(error.err("no displacement_bounded"))?;
         let displacement = displacement_bounded.get(draught_mid, trim);
+
+        let compartments_bounded = self
+            .compartments_bounded
+            .get(&query.bounds.len_qnt())
+            .ok_or(error.err("no compartments_bounded"))?;
+
+        let liquid = HashMap::new();
+        for liquid in query.liquid {
+            let space_id = liquid.space_id;
+            let compartment = self
+                .compartments
+                .get(&liquid.space_id)
+                .ok_or(error.err(format!("liquid - no compartment:{space_id}")))?;
+            let (level, center) = compartment
+                .read()
+                .get(heel, trim, volume, query.epsilon)
+                .map_err(|err| {
+                    error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
+                })?;
+            let compartment_bounded = compartments_bounded.get(&space_id)
+                .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
+            let volume_bounded = compartment_bounded.get(trim, level);
+        }
+
+        for (compartment_id, compartment) in self.compartments {
+            let compartment_bounded = compartment
+                .build_bounded(bounds)
+                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+            cache_map.insert(compartment_id, compartment_bounded);
+        }
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
+
         let result = BalanceResult {
             heel,
             trim,
