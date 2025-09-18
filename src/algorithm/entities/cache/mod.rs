@@ -232,7 +232,7 @@ impl Cache<f64> {
         assert!(data[0].len() > index);
         let v: Vec<_> = data.iter().map(|v| v[index]).collect();
         assert!(v.len() > 0);
-        let v = v.into_iter().max_by(|&a, b| a.partial_cmp(b).unwrap());
+        let v = v.into_iter().max_by(|a, b| a.partial_cmp(b).unwrap());
         v.unwrap()
     }
 }

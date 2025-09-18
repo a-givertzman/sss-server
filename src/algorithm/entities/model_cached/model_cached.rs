@@ -3,9 +3,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache, BulkData, CompartmentCache,
-            DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData,
-            Shape, WindageArea,
+            AreaShape, BalanceQuery, BalanceResult, BoundCompartmentCache, BoundDisplacementCache, BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData, Shape, WindageArea
         },
     },
     kernel::types::{Arc, RwLock},
@@ -76,14 +74,14 @@ pub struct ModelCached {
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
-    /// - cache for damaged compartments, [index of compartments, [heel, trim, level, volume, x, y, z ]]
+    /// - cache for damaged compartments, [index of compartments, [heel, trim, draught, volume, x, y, z ]]
     damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
     /// - cache for windage area
     windage_area: WindageArea,
-    /// - cache for bounds of model
+    /// - cache for bounds of model, [qnt_bounds, cache]
     displacement_bounded: HashMap<usize, BoundDisplacementCache>,
-    /// - cache for bounds of compartments,  [index of bound, TODO]
-    //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
+    /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
+    compartments_bounded: HashMap<usize, HashMap<String, BoundCompartmentCache>>,
     scheduler: Scheduler,
 }
 //
@@ -245,6 +243,7 @@ impl ModelCached {
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
+            compartments_bounded: HashMap::new(),
             scheduler: scheduler.clone(),
         };
         Ok(model_cached)
@@ -330,9 +329,16 @@ impl ModelCached {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
-        for bound_cache in &mut self.displacement_bounded.values_mut() {
-            if let Err(error) = bound_cache.rebuild() {
+        for bound_displacement_cache in &mut self.displacement_bounded.values_mut() {
+            if let Err(error) = bound_displacement_cache.rebuild() {
                 errors.push(("displacement_bounded".to_owned(), error));
+            }
+        }
+        for cache_map in &mut self.compartments_bounded.values_mut() {
+            for bound_compartment_cache in &mut cache_map.values_mut() {
+                if let Err(error) = bound_compartment_cache.rebuild() {
+                    errors.push(("compartments_bounded".to_owned(), error));
+                }
             }
         }
         if !errors.is_empty() {
@@ -348,13 +354,14 @@ impl ModelCached {
     //
     pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "body_size");
-        Ok(self
+        let (x, y, z, _) = self
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?
             .read()
             .size()
-            .map_err(|err| error.pass_with("loa", err))?)
+            .map_err(|err| error.pass_with("loa", err))?;
+        Ok((x, y, z))
     }
     //
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
@@ -379,6 +386,11 @@ impl ModelCached {
         );
         self.displacement_bounded
             .insert(bounds.len_qnt(), bound_cache);
+
+        let mut cache_map = HashMap::new();
+        for compartment_shape in self.displacement_shapes
+
+            compartments_bounded
 
         /*     TODO: rebuild
         model_bounded

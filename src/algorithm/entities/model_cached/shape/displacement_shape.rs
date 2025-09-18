@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 
-use crate::algorithm::entities::{Bound, Bounds, Position};
+use crate::algorithm::entities::{Bound, Position};
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
 
 #[derive(Clone)]
@@ -130,7 +130,7 @@ impl DisplacementShape {
         heel: f64,
         trim: f64,
         draught: f64,
-    ) -> Result<(f64, f64, f64, f64), Error> {
+    ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "displacement");
         let position = self
             .position(heel, trim, draught)
@@ -157,7 +157,7 @@ impl DisplacementShape {
                 Some(mesh) => mesh,
                 None => {
                     let center = self.center.unwrap();
-                    return Ok((0., center.x, center.y, center.z + draught));
+                    return Ok((0., Position::new(center.x, center.y, center.z + draught)));
                 } // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
@@ -165,9 +165,11 @@ impl DisplacementShape {
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
         Ok((
             1. / properties.inv_mass,
-            properties.local_com.x,
-            properties.local_com.y,
-            properties.local_com.z,
+            Position::new(
+                properties.local_com.x,
+                properties.local_com.y,
+                properties.local_com.z,
+            )
         ))
     }
     ///
@@ -178,7 +180,7 @@ impl DisplacementShape {
         heel: f64,
         trim: f64,
         draught: f64,
-    ) -> Result<(f64, f64, f64, f64), Error> {
+    ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "area");
         let position = self
             .position(heel, trim, draught)
@@ -203,7 +205,7 @@ impl DisplacementShape {
                 Some(mesh) => mesh,
                 None => {
                     let center = self.center.unwrap();
-                    return Ok((0., center.x, center.y, center.z + draught));
+                    return Ok((0., Position::new(center.x, center.y, center.z + draught)));
                 } //  return Err(error.err("mesh.intersection_with_cuboid error: no intersection!"));
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
@@ -211,21 +213,40 @@ impl DisplacementShape {
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 0.5 / hdz);
         Ok((
             1. / properties.inv_mass,
-            properties.local_com.x,
-            properties.local_com.y,
-            properties.local_com.z,
+            Position::new(
+                properties.local_com.x,
+                properties.local_com.y,
+                properties.local_com.z,
+            )
         ))
     }
     ///
-    /// Полный размер модели (длинна, ширина, высота)
-    pub fn size(&self) -> Result<(f64, f64, f64), Error> {
-        let error = Error::new(&self.dbg, "full_length");
+    /// Полный размер модели (длинна, ширина, высота, минимальная высота)
+    pub fn size(&self) -> Result<(f64, f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "size");
         let aabb = self
             .mesh
             .as_ref()
             .ok_or(error.err("no mesh"))?
             .aabb(&Isometry::identity());
-        Ok(((aabb.maxs.x - aabb.mins.x), (aabb.maxs.y - aabb.mins.y), (aabb.maxs.z - aabb.mins.z)))
+        Ok(((aabb.maxs.x - aabb.mins.x), (aabb.maxs.y - aabb.mins.y), (aabb.maxs.z - aabb.mins.z), aabb.mins.z))
+    }
+    /// полный объем модели
+    pub fn properties(&self) -> Result<(f64,Position), Error> {
+        let error = Error::new(&self.dbg, "volume");
+        let mesh = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?;    
+        let properties = parry3d_f64::shape::Shape::mass_properties(mesh, 1.);    
+        Ok((
+            1. / properties.inv_mass,
+            Position::new(
+                properties.local_com.x,
+                properties.local_com.y,
+                properties.local_com.z,
+            )
+        ))
     }
     /// 
     /// Расчет водоизмещения для разных осадок (для шпации)

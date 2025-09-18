@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tests {
-    use crate::algorithm::entities::model_cached::{AreaShape, Shape};
+    use crate::algorithm::entities::model_cached::AreaShape;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use nalgebra::{Point3, Vector3};
     use sal_core::dbg::Dbg;

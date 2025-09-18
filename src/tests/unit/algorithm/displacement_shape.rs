@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tests {
-    use crate::algorithm::entities::model_cached::{DisplacementShape, Shape};
+    use crate::algorithm::entities::{Position, model_cached::DisplacementShape};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use nalgebra::{Point3, Vector3};
     use sal_core::dbg::Dbg;
@@ -28,57 +28,33 @@ mod tests {
         .ok();
         let epsilon = 0.0000001;
         let shape = DisplacementShape::new(&dbg, mesh, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000);
-        let result = shape.displacement(0., 0., 0.).unwrap();
-        let target = (0.5, 0., 0., -0.125);
+        let (result, res_center) = shape.displacement(0., 0., 0.).unwrap();
+        let (target, target_center) = (0.5, Position::new(0., 0., -0.125));
         assert!(
-            (result.0 - target.0).abs() < epsilon,
+            (result - target).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
             result,
             target
         );
         assert!(
-            (result.1 - target.1).abs() < epsilon,
+            (res_center - target_center).len() < epsilon,
+            "\nresult: {:?}\ntarget: {:?}",
+            res_center,
+            target_center
+        );
+        let (result, res_center) = shape.displacement(30., -45., 0.1).unwrap();
+        let (target, target_center) = (0.9788957917996584, Position::new(-0.01951159263505106, 0.006684388264638706, -0.003025428479409796));
+        assert!(
+            (result - target).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
             result,
             target
         );
         assert!(
-            (result.2 - target.2).abs() < epsilon,
+            (res_center - target_center).len() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.3 - target.3).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        let result = shape.displacement(30., -45., 0.1).unwrap();
-        let target = (0.9788957917996584, -0.01951159263505106, 0.006684388264638706, -0.003025428479409796);
-        assert!(
-            (result.0 - target.0).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.1 - target.1).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.2 - target.2).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.3 - target.3).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
+            res_center,
+            target_center
         );
         test_duration.exit();
     }
@@ -103,57 +79,33 @@ mod tests {
         .ok();
         let epsilon = 0.0000001;
         let shape = DisplacementShape::new(&dbg, mesh, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000);
-        let result = shape.waterline_area(0., 0., 0.).unwrap();
-        let target = (2.0, 0., 0., 0.);
+        let (result, res_center) = shape.waterline_area(0., 0., 0.).unwrap();
+        let (target, target_center) = (2.0, Position::new(0., 0., 0.));
         assert!(
-            (result.0 - target.0).abs() < epsilon,
+            (result - target).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
             result,
             target
         );
         assert!(
-            (result.1 - target.1).abs() < epsilon,
+            (res_center - target_center).len() < epsilon,
+            "\nresult: {:?}\ntarget: {:?}",
+            res_center,
+            target_center
+        );
+        let (result, res_center) = shape.waterline_area(30., -45., 0.1).unwrap();
+        let (target, target_center) = (0.2357120659516771, Position::new(0.8733361526851109, -0.24667230537003976, 0.10374118731217521));
+        assert!(
+            (result - target).abs() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
             result,
             target
         );
         assert!(
-            (result.2 - target.2).abs() < epsilon,
+            (res_center - target_center).len() < epsilon,
             "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.3 - target.3).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        let result = shape.waterline_area(30., -45., 0.1).unwrap();
-        let target = (0.2357120659516771, 0.8733361526851109, -0.24667230537003976, 0.10374118731217521);
-        assert!(
-            (result.0 - target.0).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.1 - target.1).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.2 - target.2).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
-        );
-        assert!(
-            (result.3 - target.3).abs() < epsilon,
-            "\nresult: {:?}\ntarget: {:?}",
-            result,
-            target
+            res_center,
+            target_center
         );
         test_duration.exit();
     }

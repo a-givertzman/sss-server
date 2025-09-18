@@ -97,7 +97,7 @@ impl LocalCache for CompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildCompartmentCache::new(
+        let (data, mut errors) = super::build_cache::BuildCompartmentCache::new(
             &self.dbg,
             self.shape.clone(),
             self.heel_steps.clone(),
@@ -109,8 +109,6 @@ impl LocalCache for CompartmentCache {
             self.exit.clone(),
         )
         .build();
-        let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
-        let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
         if let Some(mut guard) = self.cache.try_write() {
             let cache = if let Some(cache) = guard.take() {
                 cache
