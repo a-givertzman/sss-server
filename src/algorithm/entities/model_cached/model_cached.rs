@@ -3,7 +3,9 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundCache, BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, LiquidData, Shape, WindageArea
+            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache,
+            BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache,
+            DisplacementShape, Draught, LiquidData, Shape, WindageArea,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -48,7 +50,7 @@ pub(crate) struct FloatingPositionResult {
     pub trim: f64,
     pub draught_mid: f64,
     pub precision: f64,
-    pub volume: f64,
+    pub displacement: f64,
     pub waterline_x: f64, // смещение центра тяжести ватеринии по Х
     pub waterline_y: f64, // смещение центра тяжести ватеринии по Y
 }
@@ -62,6 +64,8 @@ pub struct ModelCached {
     pub model_center_coord: Position,
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
+    /// Draught step for hull
+    hull_draught_step: f64,
     /// Directory containing [super::ModelCached] caches.
     cache_dir: PathBuf,
     /// Privides access to structure of the 3D element
@@ -72,14 +76,14 @@ pub struct ModelCached {
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
-    /// - cache for damaged compartments, [index of compartments, [heel, trim, level, volume, x, y, z ]]
+    /// - cache for damaged compartments, [index of compartments, [heel, trim, draught, volume, x, y, z ]]
     damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
     /// - cache for windage area
     windage_area: WindageArea,
-    /// - cache for bounds of model
-    displacement_bounded: HashMap<usize, BoundCache>,
-    /// - cache for bounds of compartments,  [index of bound, TODO]
-    //    compartments_bounded: IndexMap<usize, IndexMap<usize, IndexMap<usize, BoundCache>>>,
+    /// - cache for bounds of model, [qnt_bounds, cache]
+    displacement_bounded: HashMap<usize, BoundDisplacementCache>,
+    /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
+    compartments_bounded: HashMap<usize, HashMap<String, BoundDisplacementCache>>,
     scheduler: Scheduler,
 }
 //
@@ -222,6 +226,7 @@ impl ModelCached {
             ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
+            hull_draught_step: conf.hull_draught_step,
             cache_dir: conf.cache_dir.clone(),
             displacement_shapes,
             windage_shape,
@@ -240,6 +245,7 @@ impl ModelCached {
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
+            compartments_bounded: HashMap::new(),
             scheduler: scheduler.clone(),
         };
         Ok(model_cached)
@@ -325,6 +331,18 @@ impl ModelCached {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }
+        for bound_displacement_cache in &mut self.displacement_bounded.values_mut() {
+            if let Err(error) = bound_displacement_cache.rebuild() {
+                errors.push(("displacement_bounded".to_owned(), error));
+            }
+        }
+        for cache_map in &mut self.compartments_bounded.values_mut() {
+            for bound_compartment_cache in &mut cache_map.values_mut() {
+                if let Err(error) = bound_compartment_cache.rebuild() {
+                    errors.push(("compartments_bounded".to_owned(), error));
+                }
+            }
+        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -338,41 +356,45 @@ impl ModelCached {
     //
     pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "body_size");
-        Ok(self
+        let (x, y, z, _) = self
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?
             .read()
             .size()
-            .map_err(|err| error.pass_with("loa", err))?)
+            .map_err(|err| error.pass_with("loa", err))?;
+        Ok((x, y, z))
     }
     //
-    pub fn rebuild_bounds(&self, bounds: Bounds) -> Result<(), Error> {
+    pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "rebuild_bounds");
-
         let displacement_shape = self
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
-
-        BoundCache::new(    
-                &self.dbg,
-                displacement_shape.clone(),
-                self.cache_dir.clone().join(format!("/displacement_bounded/{}/", bounds.len())),
-                self.draught_min,
-                self.draught_max,
-                self.hull_draught_step,
-                self.ship_length_lbp,
-                conf.model_center_coord.x(),
-                bounds.iter().map(|b| b.center()).collect(),
-                scheduler.clone(),
-            ),
-
-        /*     TODO: rebuild
-        model_bounded
-        compartments_bounded
-        bounded_windage_area
-        */
+        let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
+        let bound_displacement = BoundDisplacementCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir
+                .clone()
+                .join("disp_bounded")
+                .join(format!("{bounds_length_mm}")),
+            self.hull_draught_step,
+            bounds.clone(),
+            self.scheduler.clone(),
+        );
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), bound_displacement);
+        let mut cache_map = HashMap::new();
+        for (compartment_id, compartment) in &self.compartments {
+            let compartment_bounded = compartment.read()
+                .build_bounded(bounds.clone())
+                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+            cache_map.insert(compartment_id.clone(), compartment_bounded);
+        }
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
         Ok(())
     }
     //
@@ -399,7 +421,7 @@ impl ModelCached {
             trim,
             draught_mid,
             precision,
-            volume,
+            displacement,
             waterline_x,
             waterline_y,
         } = self
@@ -407,9 +429,9 @@ impl ModelCached {
                 water_density: query.water_density,
                 mass_const: query.mass_const,
                 moment_const: query.moment_const,
-                bulk: query.bulk,
-                liquid: query.liquid,
-                grain_bulkhead: query.grain_bulkhead,
+                bulk: query.bulk.clone(),
+                liquid: query.liquid.clone(),
+                grain_bulkhead: query.grain_bulkhead.clone(),
                 damaged_compartment: Vec::new(),
                 epsilon: query.epsilon,
             })
@@ -427,7 +449,7 @@ impl ModelCached {
                             );
         */
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
-        //    self.model_center_coord.x(),
+            self.model_center_coord.x(),
             self.ship_length_lbp,
             draught_mid,
             waterline_x,
@@ -435,22 +457,91 @@ impl ModelCached {
             heel,
             trim,
         )
-        .calculate(query.bounds);
-
+        .calculate();
         let delta_draught = (draught_bow - draught_stern) / self.ship_length_lbp;
-        let draught_bounds = query.bounds
+        let draught_bounds: Vec<_> = query
+            .bounds
             .iter()
             .map(|b| {
                 draught_mid
                     + delta_draught
-                        * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2. + self.model_center_coord.x())
+                        * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2.
+                            + self.model_center_coord.x())
             })
             .collect();
-
-        self.displacement_bounded
-
-query.bounds.iter().len()
-
+        let displacement_bounded = self
+            .displacement_bounded
+            .get(&query.bounds.len_qnt())
+            .ok_or(error.err("no displacement_bounded"))?;
+        let displacement_distr = displacement_bounded.get(draught_mid, trim);
+        let compartments_bounded = self
+            .compartments_bounded
+            .get(&query.bounds.len_qnt())
+            .ok_or(error.err("no compartments_bounded"))?;
+        let liquid_distr = {
+            let mut result = vec![0.; query.bounds.len_qnt()];
+            for cargo in query.liquid {
+                assert!(cargo.mass > 0.);
+                let space_id = &cargo.space_id;
+                let density = cargo.mass/cargo.volume;
+                let compartment = self
+                    .compartments
+                    .get(space_id)
+                    .ok_or(error.err(format!("liquid - no compartment:{space_id}")))?;
+                let (level, center) = compartment
+                    .read()
+                    .get(0., trim, cargo.volume, query.epsilon)
+                    .map_err(|err| {
+                        error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
+                    })?;
+                let compartment_bounded = compartments_bounded
+                    .get(space_id)
+                    .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
+                let volume_bounded = compartment_bounded.get(level, trim);
+                result = result.iter().zip(volume_bounded.iter()).map(|(a, b)| a + b*density).collect();
+            }
+            result
+        };
+        let bulk_distr = {
+            let mut result = vec![0.; query.bounds.len_qnt()];
+            for cargo in query.bulk {
+                assert!(cargo.mass > 0.);
+                let space_id = &cargo.space_id;
+                let density = cargo.mass/cargo.volume;
+                let compartment = self
+                    .compartments
+                    .get(space_id)
+                    .ok_or(error.err(format!("liquid - no compartment:{space_id}")))?;
+                let (level, center) = compartment
+                    .read()
+                    .get(0., 0., cargo.volume, query.epsilon.clone())
+                    .map_err(|err| {
+                        error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
+                    })?;
+                let compartment_bounded = compartments_bounded
+                    .get(space_id)
+                    .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
+                let volume_bounded = compartment_bounded.get(level, 0.);
+                result = result.iter().zip(volume_bounded.iter()).map(|(a, b)| a + b*density).collect();
+            }
+            result
+        };
+        let gaseous_distr = {
+            let mut result = vec![0.; query.bounds.len_qnt()];
+            for cargo in query.gaseous {
+                assert!(cargo.mass > 0.);
+                let space_id = &cargo.space_id;
+                let compartment_bounded = compartments_bounded
+                    .get(space_id)
+                    .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
+                let volume_bounded = compartment_bounded.get_max();
+                let volume: f64 = volume_bounded.iter().sum();
+                assert!(volume > 0.);
+                let density = cargo.mass/volume;
+                result = result.iter().zip(volume_bounded.iter()).map(|(a, b)| a + b*density).collect();
+            }
+            result
+        };
         let result = BalanceResult {
             heel,
             trim,
@@ -459,11 +550,11 @@ query.bounds.iter().len()
             draught_stern,
             draught_mean,
             center_waterline_shift: waterline_x,
-            volume,
-            displacement: todo!(),
-            gaseous: todo!(),
-            bulk: todo!(),
-            liquid: todo!(),
+            displacement,
+            displacement_distr,
+            gaseous_distr,
+            bulk_distr,
+            liquid_distr,
         };
 
         Ok(result)
@@ -537,14 +628,14 @@ query.bounds.iter().len()
                 )
                 .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
-            let volume = mass_sum / query.water_density;
+            let displacement = mass_sum / query.water_density;
             // считаем корпус с учетом изменения массы
             let (new_draught, cb, waterline_x, waterline_y) = self
                 .displacement
                 .get(heel, trim, mass_sum / query.water_density, epsilon)
                 .map_err(|err| {
                     error.pass_with(
-                        format!("self.displacement.get heel:{heel} trim:{trim} volume:{volume}"),
+                        format!("self.displacement.get heel:{heel} trim:{trim} displacement:{displacement}"),
                         err,
                     )
                 })?;
@@ -577,13 +668,13 @@ query.bounds.iter().len()
                 if precision < query.epsilon {
                     println!(
                         //                        "steps:{_i} heel:{:.6} trim:{:.6} draught:{:.6} precision:{:6} volume:{:6} cb:({:.6} {:.6}) waterline_x:{:.6} waterline_y:{:.6})",
-                        "FloatingPositionResult [ heel:{:.6}, trim:{:.6}, draught_mid:{:.6}, precision:{:6}, volume:{:6}, waterline_x:{:.6}, waterline_y:{:.6} ]",
+                        "FloatingPositionResult [ heel:{:.6}, trim:{:.6}, draught_mid:{:.6}, precision:{:6}, displacement:{:6}, waterline_x:{:.6}, waterline_y:{:.6} ]",
                         // time.elapsed(),
                         heel,
                         trim,
                         new_draught,
                         precision,
-                        volume,
+                        displacement,
                         //   cb.x(),
                         //   cb.y(),
                         waterline_x,
@@ -594,7 +685,7 @@ query.bounds.iter().len()
                         trim,
                         draught_mid: new_draught,
                         precision,
-                        volume,
+                        displacement,
                         waterline_x,
                         waterline_y,
                     });

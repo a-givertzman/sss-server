@@ -1,10 +1,8 @@
-use nalgebra::{Point3, UnitQuaternion, UnitVector3, Vector3};
-use parry3d_f64::shape::HalfSpace;
-use parry3d_f64::query::{Ray, RayCast};
+use nalgebra::Point3;
 ///
 /// Осадкт судна. Считаются из осадки на миделе и параметров судна
 pub struct Draught {
- //   midel_x: f64,
+    midel_x: f64,
     length_lbp: f64,
     draught_mid: f64,
     waterline_x: f64,
@@ -17,7 +15,7 @@ pub struct Draught {
 impl Draught {
     ///
     /// Главный конструктор
-   // /// * midel_x - смещение миделя по Х
+    /// * midel_x - смещение миделя по Х
     /// * length_lbp - длинна корпуса судна между перпендикулярами
     /// * draught_mid - осадка на миделе
     /// * waterline_x - смещение центра тяжести ватеринии по Х
@@ -25,7 +23,7 @@ impl Draught {
     /// * heel - крен в градусах
     /// * trim - дифферент в градусах
     pub fn new(
-//        midel_x: f64,
+        midel_x: f64,
         length_lbp: f64,
         draught_mid: f64,
         waterline_x: f64,
@@ -34,7 +32,7 @@ impl Draught {
         trim: f64,
     ) -> Self {
         Self {
-  //          midel_x,
+            midel_x,
             length_lbp,
             draught_mid,
             waterline_x,
@@ -43,6 +41,25 @@ impl Draught {
             trim,
         }
     }
+
+    /// Расчет осадок
+    /// (draught_bow, draught_stern, draught_mean)
+    pub fn calculate(&self) -> (f64, f64, f64) {
+        let theta_rad = self.heel.min(89.9999999).max(-89.9999999).to_radians();
+        let phi_rad = self.trim.min(89.9999999).max(-89.9999999).to_radians();
+        let tg_theta = theta_rad.tan();
+        let cos_theta = theta_rad.cos();        
+        let tg_phi = phi_rad.tan();
+        let draught = |point: Point3<f64>| {
+            dbg!(point, tg_theta, cos_theta, tg_phi);
+            self.draught_mid + point.y * tg_theta + (point.x - self.midel_x) * tg_phi / cos_theta
+        };
+        let bow = Point3::new(self.length_lbp, 0.0, -self.draught_mid);
+        let stern = Point3::new(0., 0.0, -self.draught_mid);
+        let mean = Point3::new(self.waterline_x, self.waterline_y, -self.draught_mid);
+        (draught(bow), draught(stern), draught(mean))
+    }
+    /*
     /// Расчет осадок
     /// (draught_bow, draught_stern, draught_mean)
     pub fn calculate(&self) -> (f64, f64, f64) {
@@ -82,4 +99,5 @@ impl Draught {
         };
         (draught(bow), draught(stern), draught(mean))
     }
+    */
 }

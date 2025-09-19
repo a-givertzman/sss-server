@@ -224,15 +224,26 @@ impl Cache<f64> {
             .collect::<Vec<_>>();
         result
     }
+    /// Максимальное значение по индексу
     pub fn max_value(&self, index: usize) -> f64 {
         let data = self
             .table
             .get()
-            .unwrap_or_else(|| panic!("{}.{} | Cache error: no table!", self.dbg, "max_value"));
+            .unwrap_or_else(|| panic!("{}.{} | Cache error: no table! index:{index}", self.dbg, "max_value"));
         assert!(data[0].len() > index);
         let v: Vec<_> = data.iter().map(|v| v[index]).collect();
         assert!(v.len() > 0);
-        let v = v.into_iter().max_by(|&a, b| a.partial_cmp(b).unwrap());
+        let v = v.into_iter().max_by(|a, b| a.partial_cmp(b).unwrap());
         v.unwrap()
+    }
+    /// Максимальное значение ключа по индексу
+    pub fn max_key(&self, index: usize) -> f64 {
+        let keys = self
+            .keys
+            .get()
+            .unwrap_or_else(|| panic!("{}.{} | Cache error: no keys! index:{index}", self.dbg, "max_key"));
+        assert!(keys.len() > index);
+        assert!(keys[index].len() > 0);
+        keys[index].last().unwrap().clone()
     }
 }

@@ -6,7 +6,7 @@ use sal_sync::{
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
-    algorithm::entities::model_cached::{DisplacementShape, Shape},
+    algorithm::entities::model_cached::DisplacementShape,
     kernel::types::{Arc, RwLock},
 };
 ///
@@ -125,14 +125,14 @@ impl BuildDamagedCompartmentCache {
         }
         while !draft_results.is_empty() {
             if let Some((heel, trim, draught, volume)) = draft_results.pop() {
-                let (volume, vx, vy, vz) = match volume {
-                    Ok((volume, x, y, z)) => (volume, x, y, z),
+                let (volume, center) = match volume {
+                    Ok((volume, center)) => (volume, center),
                     Err(err) => {
                         results.push(Err(error.pass_with("draft_results volume", err)));
                         continue;
                     }
                 };
-                results.push(Ok(vec![heel, trim, draught, volume, vx, vy, vz]));
+                results.push(Ok(vec![heel, trim, draught, volume, center.x(), center.y(), center.z()]));
             }
         }
         //   dbg!(&results);

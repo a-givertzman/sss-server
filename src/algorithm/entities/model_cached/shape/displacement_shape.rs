@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::{Bound, Position};
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
 
 #[derive(Clone)]
@@ -85,6 +85,49 @@ impl DisplacementShape {
         }
         Ok(())
     }
+    /// часть меша, пападающая в bound
+    pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
+        let error = Error::new(&self.dbg, "split");
+        let half_size_x = bound.length().ok_or(error.err("no bound.length"))?/2.;
+        let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
+        let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
+        let cuboid = Cuboid::new(Vector3::new(half_size_x, 100000., 100000.,));
+        let result = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .intersection_with_local_cuboid(
+                false,
+                &cuboid,
+                &Isometry::from_parts(
+                    Translation3::new(position_x, 0., 0.),
+                    UnitQuaternion::identity(),
+                ),
+                false,
+                self.epsilon,
+            );
+        let mesh = match result {
+            Ok(mesh) => match mesh {
+                Some(mesh) => mesh,
+                None => return Ok(None),
+            },
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+        };
+        Ok(Some(Self::new(
+            &self.dbg,
+            Some(mesh),
+            None,
+            Some(Point3::new(position_x, 0., 0.)),
+            1.,
+            self.epsilon,
+            self.resolution,
+        )))
+    }
+    /// Смещение центра модели по Х
+    pub fn center_x(&self) -> f64 {
+        assert!(self.center.is_some());
+        self.center.unwrap().x
+    }
     ///
     /// Расчет водоизмещения судна и положение его центра в связанной с судной системой координат
     /// result: [volume, x, y, z]
@@ -93,7 +136,7 @@ impl DisplacementShape {
         heel: f64,
         trim: f64,
         draught: f64,
-    ) -> Result<(f64, f64, f64, f64), Error> {
+    ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "displacement");
         let position = self
             .position(heel, trim, draught)
@@ -120,17 +163,19 @@ impl DisplacementShape {
                 Some(mesh) => mesh,
                 None => {
                     let center = self.center.unwrap();
-                    return Ok((0., center.x, center.y, center.z + draught));
+                    return Ok((0., Position::new(center.x, center.y, center.z + draught)));
                 } // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
             },
-            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
         };
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
         Ok((
             1. / properties.inv_mass,
-            properties.local_com.x,
-            properties.local_com.y,
-            properties.local_com.z,
+            Position::new(
+                properties.local_com.x,
+                properties.local_com.y,
+                properties.local_com.z,
+            )
         ))
     }
     ///
@@ -141,7 +186,7 @@ impl DisplacementShape {
         heel: f64,
         trim: f64,
         draught: f64,
-    ) -> Result<(f64, f64, f64, f64), Error> {
+    ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "area");
         let position = self
             .position(heel, trim, draught)
@@ -166,29 +211,80 @@ impl DisplacementShape {
                 Some(mesh) => mesh,
                 None => {
                     let center = self.center.unwrap();
-                    return Ok((0., center.x, center.y, center.z + draught));
-                } //  return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                    return Ok((0., Position::new(center.x, center.y, center.z + draught)));
+                } //  return Err(error.err("mesh.intersection_with_cuboid error: no intersection!"));
             },
-            Err(e) => return Err(error.pass_with("mesh.intersection_with_plane", e.to_string())),
+            Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
         };
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 0.5 / hdz);
         Ok((
             1. / properties.inv_mass,
-            properties.local_com.x,
-            properties.local_com.y,
-            properties.local_com.z,
+            Position::new(
+                properties.local_com.x,
+                properties.local_com.y,
+                properties.local_com.z,
+            )
         ))
     }
     ///
-    /// Полный размер судна (длинна, ширина, высота)
-    pub fn size(&self) -> Result<(f64, f64, f64), Error> {
-        let error = Error::new(&self.dbg, "full_length");
+    /// Полный размер модели (длинна, ширина, высота, минимальная высота)
+    pub fn size(&self) -> Result<(f64, f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "size");
         let aabb = self
             .mesh
             .as_ref()
             .ok_or(error.err("no mesh"))?
             .aabb(&Isometry::identity());
-        Ok(((aabb.maxs.x - aabb.mins.x), (aabb.maxs.y - aabb.mins.y), (aabb.maxs.z - aabb.mins.z)))
+        Ok(((aabb.maxs.x - aabb.mins.x), (aabb.maxs.y - aabb.mins.y), (aabb.maxs.z - aabb.mins.z), aabb.mins.z))
+    }
+    /// полный объем модели
+    pub fn properties(&self) -> Result<(f64,Position), Error> {
+        let error = Error::new(&self.dbg, "volume");
+        let mesh = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?;    
+        let properties = parry3d_f64::shape::Shape::mass_properties(mesh, 1.);    
+        Ok((
+            1. / properties.inv_mass,
+            Position::new(
+                properties.local_com.x,
+                properties.local_com.y,
+                properties.local_com.z,
+            )
+        ))
+    }
+    /// 
+    /// Расчет водоизмещения для разных осадок (для шпации)
+    pub fn displacement_by_steps(&self, step: f64) -> Result<Vec<(f64, f64)>, Error> {
+        let error = Error::new(&self.dbg, "displacement_by_steps");
+        let aabb = self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?
+            .aabb(&Isometry::identity());
+        let mut draught = aabb.mins.z + step;
+        let draught_max = aabb.maxs.z;        
+        let mut steps = vec![(-100000., 0.), (aabb.mins.z, 0.)];
+        while draught < draught_max {
+            let volume = match self.displacement( 0., 0., draught) {
+                Ok((volume, ..)) => volume,
+                Err(err) => {
+                    let error = error.pass_with("self.displacement", err);
+                    log::error!("{}", &error);
+                    return Err(error);
+                },
+            };
+            steps.push((draught, volume));
+            draught += step;
+        }
+        let full_volume = 1. / parry3d_f64::shape::Shape::mass_properties(self
+            .mesh
+            .as_ref()
+            .ok_or(error.err("no mesh"))?, 1.).inv_mass;
+        steps.push((aabb.maxs.z, full_volume));
+        steps.push((aabb.maxs.z + 1000000., full_volume));
+        Ok(steps)
     }
     ///
     /// Расчет [длинны и ширины по ватерлинии](https://github.com/a-givertzman/sss/blob/6d91fb09de073995c3a165ebaaa76e4f1e202f36/design/algorithm/part04_stability/chapter05_criteria/section02_weatherCriteria.md)
@@ -211,12 +307,14 @@ impl DisplacementShape {
                     .iter()
                     .map(|p| Point2::new(p.x, p.y))
                     .collect();
-                let (vx, vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
-                let min_x = vx
-                    .iter()
-                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let max_x = vx
+                let (mut vx, mut vy): (Vec<_>, Vec<_>) = vertices.iter().map(|p| (p.x, p.y)).unzip();
+                vx.sort_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                vy.sort_by(|&a, &b| a.partial_cmp(&b).unwrap());                
+                let min_x = vx.first().unwrap_or(&0.);
+                let max_x = vx.last().unwrap_or(&0.);         
+                let min_y = vy.first().unwrap_or(&0.);
+                let max_y = vy.last().unwrap_or(&0.);                     
+      /*          let max_x = vx
                     .iter()
                     .max_by(|&a, &b| a.partial_cmp(b).unwrap())
                     .unwrap();
@@ -227,7 +325,7 @@ impl DisplacementShape {
                 let max_y = vy
                     .iter()
                     .max_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
+                    .unwrap();*/
                 let dx = max_x - min_x;
                 let dy = max_y - min_y;
                 Ok((dx, dy))

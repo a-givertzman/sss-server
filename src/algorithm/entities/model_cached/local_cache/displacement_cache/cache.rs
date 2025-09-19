@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Position, cache::Cache, model_cached::{DisplacementShape, draught, local_cache::LocalCache, save}
+        Position, cache::Cache, model_cached::{DisplacementShape, local_cache::LocalCache, save}
     },
     kernel::types::{Arc, RwLock},
 };
