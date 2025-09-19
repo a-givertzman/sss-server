@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Position, cache::Cache, model_cached::{DisplacementShape, local_cache::LocalCache, save}
+        Bounds, Position, cache::Cache, model_cached::{BoundDisplacementCache, DisplacementShape, local_cache::LocalCache, save}
     },
     kernel::types::{Arc, RwLock},
 };
@@ -90,6 +90,22 @@ impl CompartmentCache {
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
+    //
+    pub fn build_bounded(&self, bounds: Bounds) -> Result<BoundDisplacementCache, Error> {
+        let error = Error::new(self.dbg(), "build_bounded");
+        let draught_step = match self.shape.read().size() {
+            Ok((_, _, height, _)) => height/(self.level_qnt_steps as f64),
+            Err(err) => return Err(error.pass_with("shape.size", err)),
+        };
+        Ok(BoundDisplacementCache::new(
+            &self.dbg,
+            self.shape.clone(),
+            self.cache_path.clone(),
+            draught_step,
+            bounds,
+            self.scheduler.clone(),
+        ))
+    }
 }
 //
 //
@@ -97,7 +113,7 @@ impl LocalCache for CompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildCompartmentCache::new(
+        let (data, mut errors) = super::build_cache::BuildCompartmentCache::new(
             &self.dbg,
             self.shape.clone(),
             self.heel_steps.clone(),
@@ -109,8 +125,6 @@ impl LocalCache for CompartmentCache {
             self.exit.clone(),
         )
         .build();
-        let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
-        let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
         if let Some(mut guard) = self.cache.try_write() {
             let cache = if let Some(cache) = guard.take() {
                 cache

@@ -31,8 +31,41 @@ pub trait Shape {
             .ok_or(Error::new(self.dbg(), "position").err("no center"))?;
         Ok(position(center, heel, trim, draught))
     }
-    /// Разбиение от h_min до h_max меша на draught_qnt_steps шагов
+
+    /// Разбиение меша по высоте на draught_qnt_steps шагов.
+    /// Макимальный и минимальный уровень считаются с учетом наклона
     fn draught_steps(&self, draught_qnt_steps: usize) -> Result<Vec<f64>, Error> {
+        let error = Error::new(self.dbg(), "draught_steps");
+        let mesh = self.mesh().ok_or(error.err("no mesh"))?;
+        let aabb = mesh.local_aabb();
+        let center = if let Some(center) = self.center() {
+            center
+        } else {
+            &compartment_center(mesh)
+        };
+        assert!(aabb.maxs.x >= center.x);
+        assert!(aabb.mins.x <= center.x);
+        assert!(aabb.maxs.y >= center.y);
+        assert!(aabb.mins.y <= center.y);    
+        let max_dx = (aabb.maxs.x - center.x).max(center.x - aabb.mins.x);
+        let max_dy = (aabb.maxs.y - center.y).max(center.y - aabb.mins.y);
+        let max_dz = max_dy.max(max_dx);
+        if draught_qnt_steps <= 1 {
+            return Err(error.err("draught_qnt_steps <= 1"));
+        }
+        let mut result = vec![];
+        let min_z = aabb.mins.z - max_dz;
+        let max_z = aabb.maxs.z + max_dz;
+        let mut current = min_z;
+        let step = (max_z - min_z)/(draught_qnt_steps as f64 - 1.);
+        while current < max_z {
+            result.push(current);
+            current += step;
+        }
+        result.push(max_z);
+        Ok(result)
+    }
+  /*  fn draught_steps(&self, draught_qnt_steps: usize) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "draught_steps");
         let aabb = self.mesh().ok_or(error.err("no mesh"))?.local_aabb();
         if draught_qnt_steps <= 1 {
@@ -50,7 +83,7 @@ pub trait Shape {
         }
         result.push(aabb.maxs.z);
         Ok(result)
-    }
+    }*/
 }
 ///
 /// Расчет начала координат для отсеков как

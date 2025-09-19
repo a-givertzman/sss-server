@@ -5,7 +5,10 @@ use sal_sync::{
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::{algorithm::entities::model_cached::{DisplacementShape, Shape}, kernel::types::{Arc, RwLock}};
+use crate::{
+    algorithm::entities::model_cached::DisplacementShape,
+    kernel::types::{Arc, RwLock},
+};
 ///
 /// Provides logic to calculate and store cache used by [super::DisplacementCache].
 ///
@@ -72,9 +75,9 @@ impl BuildDisplacementCache {
                 break;
             }
             draught += self.draught_step;
-        } 
+        }
 
-            /*match shape.read().draught_steps(self.draught_min, self.draught_step) {
+        /*match shape.read().draught_steps(self.draught_min, self.draught_step) {
             Ok(draught_steps) => draught_steps,
             Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
         };*/
@@ -84,7 +87,7 @@ impl BuildDisplacementCache {
                 break 'draught;
             }
             {
-                let aabb_results = aabb_results.clone();            
+                let aabb_results = aabb_results.clone();
                 let shape = shape.clone();
                 let handle = self
                     .scheduler
@@ -162,21 +165,35 @@ impl BuildDisplacementCache {
         while !draft_results.is_empty() {
             if let Some((heel, trim, draught, volume, area)) = draft_results.pop() {
                 if let Some((_, (l_x, l_y))) = aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
-                    let (volume, vx, vy, vz) = match volume {
-                        Ok((volume, x, y, z)) => (volume, x, y, z),
+                    let (volume, v_center) = match volume {
+                        Ok((volume, center)) => (volume, center),
                         Err(err) => {
                             results.push(Err(error.pass_with("draft_results volume", err)));
                             continue;
                         }
                     };
-                    let (area, ax, ay, az) = match area {
-                        Ok((area, x, y, z)) => (area, x, y, z),
+                    let (area, a_center) = match area {
+                        Ok((area, center)) => (area, center),
                         Err(err) => {
                             results.push(Err(error.pass_with("draft_results area", err)));
                             continue;
                         }
                     };
-                    results.push(Ok(vec!(heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, *l_x, *l_y)));
+                    results.push(Ok(vec![
+                        heel,
+                        trim,
+                        draught,
+                        volume,
+                        v_center.x(),
+                        v_center.y(),
+                        v_center.z(),
+                        area,
+                        a_center.x(),
+                        a_center.y(),
+                        a_center.z(),
+                        *l_x,
+                        *l_y,
+                    ]));
                 } else {
                     results.push(Err(error.err(format!("no aabb for draught:{draught}"))));
                 }

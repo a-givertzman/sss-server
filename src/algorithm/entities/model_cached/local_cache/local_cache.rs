@@ -1,7 +1,5 @@
-use std::{path::PathBuf, sync::atomic::{AtomicBool, Ordering}};
-
+use std::path::PathBuf;
 use sal_core::{dbg::Dbg, error::Error};
-
 use crate::{algorithm::entities::{cache::Cache, model_cached::read}, kernel::types::{Arc, RwLock}};
 
 ///
