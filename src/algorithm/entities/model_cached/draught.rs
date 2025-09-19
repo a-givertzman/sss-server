@@ -51,7 +51,7 @@ impl Draught {
         let cos_theta = theta_rad.cos();        
         let tg_phi = phi_rad.tan();
         let draught = |point: Point3<f64>| {
-            dbg!(point, tg_theta, cos_theta, tg_phi);
+        //    dbg!(point, tg_theta, cos_theta, tg_phi);
             self.draught_mid + point.y * tg_theta + (point.x - self.midel_x) * tg_phi / cos_theta
         };
         let bow = Point3::new(self.length_lbp, 0.0, -self.draught_mid);

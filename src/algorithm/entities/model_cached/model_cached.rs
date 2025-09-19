@@ -250,25 +250,12 @@ impl ModelCached {
         };
         Ok(model_cached)
     }
-    ///
-    ///
-    /// Generates and reload the internal caches.
-    ///
-    /// The field `caches` contains cache keys to update.
-    /// Remaining it empty builds and reloads all the caches.
-    ///
-    /// Note that it may take some time to complete
-    /// due to the size of datasets and algorithm complexity.
-    ///
-    /// # Errors
-    /// Internally it creates worker threads while building.
-    /// The result error is a collection of all failed worker errors joined by '\n'.
-    pub fn rebuild_caches(&mut self) -> Result<(), Error> {
-        let error = Error::new(&self.dbg, "rebuild_caches");
+    /// reload all shapes
+    pub fn reload_shapes(&mut self) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "reload_shapes");
         let mut errors = Vec::new();
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
-        let mut results: Vec<Result<(), Error>> = Vec::new();
         // Сначала считаем модели в разных потоках
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
@@ -288,7 +275,7 @@ impl ModelCached {
                 });
             match handle {
                 Ok(task) => tasks.push(task),
-                Err(err) => results.push(Err(err)),
+                Err(err) => errors.push(err),
             };
         }
         {
@@ -304,16 +291,42 @@ impl ModelCached {
                 .map_err(|err| error.pass_with(format!("spawn task area_shape"), err.to_string()));
             match handle {
                 Ok(task) => tasks.push(task),
-                Err(err) => results.push(Err(err)),
+                Err(err) => errors.push(err),
             };
         }
         for task in tasks {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                results.push(Err(error));
+                errors.push(error);
             }
         }
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_caches",
+                errors.iter().fold(String::new(), |acc, err| {
+                    acc + &format!(" error: {err}")
+                }),
+            ));
+        }
+        Ok(())
+    }
+    ///
+    ///
+    /// Generates and reload the internal caches.
+    ///
+    /// The field `caches` contains cache keys to update.
+    /// Remaining it empty builds and reloads all the caches.
+    ///
+    /// Note that it may take some time to complete
+    /// due to the size of datasets and algorithm complexity.
+    ///
+    /// # Errors
+    /// Internally it creates worker threads while building.
+    /// The result error is a collection of all failed worker errors joined by '\n'.
+    pub fn rebuild_caches(&mut self) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "rebuild_caches");
+        let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
         if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
@@ -458,17 +471,6 @@ impl ModelCached {
             trim,
         )
         .calculate();
-        let delta_draught = (draught_bow - draught_stern) / self.ship_length_lbp;
-        let draught_bounds: Vec<_> = query
-            .bounds
-            .iter()
-            .map(|b| {
-                draught_mid
-                    + delta_draught
-                        * (b.center().unwrap_or(0.) - self.ship_length_lbp / 2.
-                            + self.model_center_coord.x())
-            })
-            .collect();
         let displacement_bounded = self
             .displacement_bounded
             .get(&query.bounds.len_qnt())

@@ -17,127 +17,168 @@ use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use infrostructure::api::client::api_client::ApiClient;
-use kernel::{eval::Eval, run::Run, types::{Arc, RwLock},};
+use kernel::{
+    eval::Eval,
+    run::Run,
+    types::{Arc, RwLock},
+};
 //use prelude::*;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 //use ship_model::ship_model::ShipModel;
-use crate::algorithm::entities::{Bounds, Moment, model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught}};
+use crate::algorithm::entities::{
+    Bounds, Moment,
+    model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught},
+};
 use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
-        let dbg = Dbg::new("main", "bound_cache");
-        let cache_dir: PathBuf = "src/assets/cache/sofia".into();
-        let model_dir: PathBuf = "src/assets/model/sofia".into();
-        let model_center_coord = Position::new(65.250, 0., 0.);
-        let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
-        let bounds_length_mm = (bounds.length()*1000.).ceil() as usize;
-        let thread_pool = ThreadPool::new(&dbg, Some(15));
-        let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-            &dbg,
-            model_dir.clone().join(PathBuf::from("hull.stl")),
-            Some(model_center_coord),
-            1000.,
-        )));
-        displacement_shape.write().init().unwrap();
-        dbg!("displacement_shape init ok");
-        let mut bound_cache = BoundDisplacementCache::new(
-            &dbg,
-            displacement_shape,
-            cache_dir
-                .clone()
-                .join("disp_bounded")
-                .join(format!("{bounds_length_mm}")),
-            1.,
-            bounds.clone(),
-            thread_pool.scheduler(),
-        );
-        dbg!("BoundCache::new ok");
-        let res = bound_cache.rebuild();
-        dbg!("BoundCache::new rebuild", res);
-        let res = bound_cache.get(5.9, 0.);
-        dbg!("BoundCache::new get", res);
 
-
-
-/*
-   
-    let dbg = Dbg::new("ShipModel", "compute_balance");
-    //   let model_path = "src/assets/sofia3.stp";
-    //    let center_coord = Position::new(65.250, 0., 0.);
-    //  let model_path = "src/assets/model_1510.stp";
-    //    let model_path = "src/assets/ark-Part3.obj";
-    //  let model_path = "src/assets/ark.stl";
-    //  let model_center_coord = Position::new(59.195, 0., 0.);
-    let cache_dir = "src/assets/cache/sofia".into();
-    let model_dir = "src/assets/model/sofia".into();
+ /*   
+    let dbg = Dbg::new("main", "bound_cache");
+    let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+    let model_dir: PathBuf = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
+    let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
+    let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
     let thread_pool = ThreadPool::new(&dbg, Some(15));
-    let mut model = model_cached::ModelCached::new(
+    let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
         &dbg,
-        model_cached::ModelCachedConf {
-            model_dir,
-            cache_dir,
-            model_scale: 1000.,
-            model_center_coord,
-            heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
-                10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
-            ],
-            trim_steps: vec![
-                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
-            ],
-            ship_length_lbp: 130.5,
-            draught_min: 2.,
-            draught_max: 14.,
-            hull_draught_step: 1.,
-            compartment_qnt_steps: 3,
-            compartment_data: HashMap::new(),
-        },
+        model_dir.clone().join(PathBuf::from("hull.stl")),
+        Some(model_center_coord),
+        1000.,
+    )));
+    displacement_shape.write().init().unwrap();
+    dbg!("displacement_shape init ok");
+    let mut bound_cache = BoundDisplacementCache::new(
+        &dbg,
+        displacement_shape,
+        cache_dir
+            .clone()
+            .join("disp_bounded")
+            .join(format!("{bounds_length_mm}")),
+        1.,
+        bounds.clone(),
         thread_pool.scheduler(),
-    )
-    .unwrap();
-    //  let res = model.rebuild_caches();   dbg!(&res);
-
-    let mut result = |mass: f64, x: f64, y: f64, z: f64| {
-        model.floating_position(model_cached::FloatingPositionQuery {
-            water_density: 1.025,
-            mass_const: mass,
-            moment_const: Moment::from_pos(Position::new(x - model_center_coord.x(), y, z), mass),
-            bulk: vec![],
-            liquid: vec![],
-            grain_bulkhead: Vec::new(),
-            damaged_compartment: Vec::new(),
-            epsilon: 0.0001,
-        })
-    };
-
- //   let data = [ [10317.65, 90., 0., 6.],];
-   // let data = [ [10000., 63.371, -0.2, 6.]];
-
-    let data = [
-        [14194.5, 63.371, -0.001, 6.605],
-        [13163.9, 63.933, 0., 6.212],
-        [13987., 65.231, 0., 4.99],
-        [14135.3, 64.898, 0., 4.882],
-        [13238.467, 65.409, 0., 6.463],
-        [10960.742, 66.471, 0.001, 5.810],
-        [7212.705, 66.404, 0., 5.391],
-        [10000., 63.371, -0.2, 6.],
-        [10000., 63.371, 0.4, 6.],
-        [10000., 70., 0., 6.],
-        [10000., 55., 0., 6.],
-        [10000., 70., 0.1, 6.],
-    ];
-
-
-    for [m, x, y, z] in data {
-  //      print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
-        result(m, x, y, z).unwrap();
-    }
+    );
+    dbg!("BoundCache::new ok");
+    let res = bound_cache.rebuild();
+    dbg!("BoundCache::new rebuild", res);
+    let res = bound_cache.get(5.9, 0.);
+    dbg!("BoundCache::new get", res);
 */
+
+    
+
+        let dbg = Dbg::new("ShipModel", "compute_balance");
+        //   let model_path = "src/assets/sofia3.stp";
+        //    let center_coord = Position::new(65.250, 0., 0.);
+        //  let model_path = "src/assets/model_1510.stp";
+        //    let model_path = "src/assets/ark-Part3.obj";
+        //  let model_path = "src/assets/ark.stl";
+        //  let model_center_coord = Position::new(59.195, 0., 0.);
+        let cache_dir = "src/assets/cache/sofia".into();
+        let model_dir = "src/assets/model/sofia".into();
+        let model_center_coord = Position::new(65.250, 0., 0.);
+        let thread_pool = ThreadPool::new(&dbg, Some(15));
+        let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
+        let mut model = model_cached::ModelCached::new(
+            &dbg,
+            model_cached::ModelCachedConf {
+                model_dir,
+                cache_dir,
+                model_scale: 1000.,
+                model_center_coord,
+                heel_steps: vec![
+                    -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
+                    10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
+                ],
+                trim_steps: vec![
+                    -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+                ],
+                ship_length_lbp: 130.5,
+                draught_min: 2.,
+                draught_max: 14.,
+                hull_draught_step: 1.,
+                compartment_qnt_steps: 3,
+                compartment_data: HashMap::new(),
+            },
+            thread_pool.scheduler(),
+        )
+        .unwrap();
+        let res = model.reload_shapes();   dbg!(&res);
+        //  let res = model.rebuild_caches();   dbg!(&res);
+        let res = model.rebuild_bounds(&bounds);   dbg!(&res);
+
+        let query = model_cached::BalanceQuery {
+            bounds,
+            water_density: 1.025,
+            mass_const: 10000.,
+        //    moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
+            moment_const: Moment::from_pos(Position::new(0., 0., 0.), 0.),
+            bulk: vec![model_cached::BulkData {
+                cargo_id: 1,
+                space_id: "212".to_owned(),
+                mass: 5.,
+                volume: 5.,
+            }],
+            liquid: vec![model_cached::LiquidData {
+                cargo_id: 2,
+                space_id: "212".to_owned(),
+                mass: 5.,
+                volume: 5.,
+            }],
+            gaseous: vec![model_cached::GaseousData {
+                cargo_id: 3,
+                space_id: "212".to_owned(),
+                mass: 5.,
+            }],
+            grain_bulkhead: Vec::new(),
+      //      damaged_compartment: vec![],//"212".to_owned()],
+            epsilon: 0.00001,
+        };
+
+        let res = model.balance(query);
+        dbg!(res);
+ /*       let mut result = |mass: f64, x: f64, y: f64, z: f64| {
+            model.floating_position(model_cached::FloatingPositionQuery {
+                water_density: 1.025,
+                mass_const: mass,
+                moment_const: Moment::from_pos(Position::new(x - model_center_coord.x(), y, z), mass),
+                bulk: vec![],
+                liquid: vec![],
+                grain_bulkhead: Vec::new(),
+                damaged_compartment: Vec::new(),
+                epsilon: 0.0001,
+            })
+        };
+
+     //   let data = [ [10317.65, 90., 0., 6.],];
+       // let data = [ [10000., 63.371, -0.2, 6.]];
+
+        let data = [
+            [14194.5, 63.371, -0.001, 6.605],
+            [13163.9, 63.933, 0., 6.212],
+            [13987., 65.231, 0., 4.99],
+            [14135.3, 64.898, 0., 4.882],
+            [13238.467, 65.409, 0., 6.463],
+            [10960.742, 66.471, 0.001, 5.810],
+            [7212.705, 66.404, 0., 5.391],
+            [10000., 63.371, -0.2, 6.],
+            [10000., 63.371, 0.4, 6.],
+            [10000., 70., 0., 6.],
+            [10000., 55., 0., 6.],
+            [10000., 70., 0.1, 6.],
+        ];
+
+
+        for [m, x, y, z] in data {
+      //      print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
+            result(m, x, y, z).unwrap();
+        }
+  */  
 
     /*model.floating_position(ship_model::query::BalanceQuery {
         water_density: 1.025,
