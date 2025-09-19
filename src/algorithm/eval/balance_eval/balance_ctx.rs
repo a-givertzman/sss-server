@@ -1,5 +1,5 @@
 use bincode::{Decode, Encode};
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::{Bounds, Position};
 
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
@@ -12,6 +12,8 @@ pub struct BalanceCtx {
     pub draught_mid: f64,
     /// Крен, градус
     pub roll: f64,
+    /// разбиение на шпации - фреймы
+    pub bounds: Bounds,
     /// Груз, для которого центр массы и распределение зависит от 
     /// объема и/или положения корпуса.
     pub bulk: Vec<BulkResult>,

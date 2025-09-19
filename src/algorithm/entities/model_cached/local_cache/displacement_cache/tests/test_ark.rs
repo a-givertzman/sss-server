@@ -53,7 +53,8 @@ fn calculated_displacement_ark() {
         vec![0., 20.],
         vec![-20., 0., 20.],
         4.,
-        100.,
+        4.,
+        1.,
         thread_pool.scheduler().clone(),
     );
     let error = cache.rebuild();

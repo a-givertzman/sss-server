@@ -10,8 +10,6 @@ use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::Mul
 pub struct InitialCtx {
     pub ship_id: String,
     pub project_id: String,
-    /// разбиение на шпации - фреймы
-    pub bounds: Option<Bounds>,
     /// Текстовые данные по судну
     pub ship: Option<Ship>,
     /// Тип судна

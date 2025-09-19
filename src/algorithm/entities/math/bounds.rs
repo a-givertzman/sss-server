@@ -98,6 +98,10 @@ impl Bounds {
     pub fn iter(&self) -> std::slice::Iter<'_, Bound> {
         self.values.iter()
     }
+    /// Данные коллекции
+    pub fn data(self) -> Vec<Bound> {
+        self.values
+    }
     /// Длинна диапазона
     #[allow(unused)]
     pub fn length(&self) -> f64 {
@@ -113,6 +117,11 @@ impl Bounds {
                 .start()
                 .expect("Bounds delta error: no start value for first element!")
     }
+    /// Количество разбиений
+    #[allow(unused)]
+    pub fn len_qnt(&self) -> usize {
+        self.values.len()
+    }
     /// Длинна элемента разбиения
     pub fn delta(&self) -> f64 {
         self.values
@@ -120,5 +129,49 @@ impl Bounds {
             .expect("Bounds delta error: no values!")
             .length()
             .expect("Bounds delta error: no length for first element!")
+    }
+    /// Преобразование диапазона значений
+    /// Возвращает вектор значений, пересчитанный к дипазону
+    pub fn intersect(&self, bounds: &Bounds, values: &[f64]) -> Result<Vec<f64>, Error> {
+        let error = Error::new("Bounds", "intersect");
+        let bounds = bounds.iter();
+        if bounds.len() != values.len() {
+            return Err(error.err("bounds.len() != values.len()"));
+        }
+        let q_v: Vec<_> = bounds.zip(values.iter()).collect();
+        let s_v = &self.values;
+        let (mut q_i, mut s_i) = (0, 0);
+        let mut current_q_i = None;
+        let mut result = Vec::new();
+        while s_i < s_v.len() {
+            result.push(0.);
+            while q_i < q_v.len() {
+                let q_b = q_v[q_i].0;
+                let v = q_v[q_i].1;
+                let s_b = &s_v[s_i];
+                let part_ratio = q_b.part_ratio(s_b).map_err(|err| {
+                    error.pass_with(
+                        format!("q_b.part_ratio(s_b), query_b:{q_b}, self_b:{s_b}, current_i:{s_i}"),
+                        err,
+                    )
+                })?;
+                if current_q_i.is_some() && part_ratio == 0. {
+                    break;
+                } 
+                result[s_i] += v * part_ratio; 
+                if current_q_i.is_none() {
+                    if part_ratio < 1. {
+                        current_q_i = Some(q_i);
+                    }
+                }
+                q_i += 1;
+            }
+            if current_q_i.is_some() {
+                q_i = current_q_i.unwrap();
+            }
+            current_q_i = None;
+            s_i += 1;
+        }
+        Ok(result)
     }
 }

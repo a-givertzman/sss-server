@@ -59,28 +59,6 @@ impl Eval<(), EvalResult> for Initial {
         let error = Error::new(&self.dbg, "eval");
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
-        // Расчет баланса в модели
-        let bounds: Bounds = match self.model.bounds() {
-            Ok(bounds) => bounds,
-            Err(err) => return Err(error.pass_with("model.bounds error", err)),
-        };
-        /*
-                    let bounds = self.api_client.fetch(&format!(
-                        "SELECT index, start_x, end_x FROM computed_frame_space WHERE ship_id={};",
-                        initial_ctx.ship_id
-                    ));
-                    match bounds {
-                        Ok(bounds) => match ComputedFrameDataArray::parse(&bounds) {
-                            Ok(bounds) => {
-                                let bounds: DataArray<ComputedFrameData> = bounds;
-                                initial_ctx.bounds = Some(bounds.data());
-                                self.ctx.clone().write(initial_ctx.to_owned())
-                            }
-                            Err(err) => Err(error.pass_with("Error bounds", err)),
-                        },
-                        Err(err) => Err(error.pass_with("Error bounds", err)),
-                    }
-        */
         let ship = ShipArray::parse(
             &self
                 .api_client
@@ -331,7 +309,6 @@ impl Eval<(), EvalResult> for Initial {
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("h_subdivision fetch", err))?
         ).map_err(|err| error.pass_with("h_subdivision parse", err))?;
-        initial_ctx.bounds = Some(bounds);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
         initial_ctx.navigation_area = Some(navigation_area);
