@@ -18,8 +18,7 @@ pub struct BoundDisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
     draught_step: f64,
-    length_lbp: f64,
-    midel_x: f64,
+    shift_x: f64, // смещение центра отсека по Х
     bounds: Bounds,
     ///
     /// Model representation used for cache calculation.
@@ -41,18 +40,16 @@ impl BoundDisplacementCache {
         shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: PathBuf,
         draught_step: f64,
-        length_lbp: f64,
-        midel_x: f64,
         bounds: Bounds,
         scheduler: Scheduler,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("BoundDisplacementCache"));
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
+        let shift_x = shape.read().center_x();
         Self {
             shape,
             draught_step,
-            length_lbp,
-            midel_x,
+            shift_x,
             bounds,
             caches: Vec::new(),
             cache_path,
@@ -64,15 +61,30 @@ impl BoundDisplacementCache {
     /// Return volume in bounds
     /// cause panic if caches not initialized
     pub fn get(&self, draught_mid: f64, trim: f64) -> Vec<f64> {
-        let delta_draught = trim.to_radians().sin()*self.length_lbp;
+   //    let delta_draught = trim.to_radians().sin()*self.length_lbp;
         let result = self
             .caches
             .iter()
             .map(|(dx, cache)| match cache {
                 Some(cache) => {
-                    let draught =
-                        draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.midel_x);
+        //            let draught = draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.midel_x);
+                    let draught = draught_mid + (self.shift_x + dx)*trim.to_radians().sin();
                     cache.get(&vec![draught])[0]
+                }
+                None => 0.,
+            })
+            .collect();
+        result
+    }
+    /// Return max volume in bounds
+    /// cause panic if caches not initialized
+    pub fn get_max(&self) -> Vec<f64> {
+        let result = self
+            .caches
+            .iter()
+            .map(|(_, cache)| match cache {
+                Some(cache) => {
+                    cache.max_value(1)
                 }
                 None => 0.,
             })

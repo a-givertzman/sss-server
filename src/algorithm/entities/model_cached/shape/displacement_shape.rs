@@ -85,6 +85,7 @@ impl DisplacementShape {
         }
         Ok(())
     }
+    /// часть меша, пападающая в bound
     pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
         let error = Error::new(&self.dbg, "split");
         let half_size_x = bound.length().ok_or(error.err("no bound.length"))?/2.;
@@ -121,6 +122,11 @@ impl DisplacementShape {
             self.epsilon,
             self.resolution,
         )))
+    }
+    /// Смещение центра модели по Х
+    pub fn center_x(&self) -> f64 {
+        assert!(self.center.is_some());
+        self.center.unwrap().x
     }
     ///
     /// Расчет водоизмещения судна и положение его центра в связанной с судной системой координат

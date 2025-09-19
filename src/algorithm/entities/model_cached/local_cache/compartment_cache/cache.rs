@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Position, cache::Cache, model_cached::{DisplacementShape, local_cache::LocalCache, save}
+        Bounds, Position, cache::Cache, model_cached::{BoundDisplacementCache, DisplacementShape, local_cache::LocalCache, save}
     },
     kernel::types::{Arc, RwLock},
 };
@@ -89,6 +89,22 @@ impl CompartmentCache {
             draught += step*delta.signum();
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
+    }
+    //
+    pub fn build_bounded(&self, bounds: Bounds) -> Result<BoundDisplacementCache, Error> {
+        let error = Error::new(self.dbg(), "build_bounded");
+        let draught_step = match self.shape.read().size() {
+            Ok((_, _, height, _)) => height/(self.level_qnt_steps as f64),
+            Err(err) => return Err(error.pass_with("shape.size", err)),
+        };
+        Ok(BoundDisplacementCache::new(
+            &self.dbg,
+            self.shape.clone(),
+            self.cache_path.clone(),
+            draught_step,
+            bounds,
+            self.scheduler.clone(),
+        ))
     }
 }
 //

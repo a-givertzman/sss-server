@@ -5,8 +5,15 @@ use testing::stuff::max_test_duration::TestDuration;
 
 use crate::algorithm::entities::model_cached::{DamagedCompartmentCache, DisplacementShape};
 #[cfg(test)]
-use crate::{algorithm::entities::{model_cached::{CompartmentCache, LocalCache, Shape}, Position}, kernel::types::{Arc, RwLock}};
-use std::{fs, sync::Once, time::Duration};
+use crate::{
+    BoundDisplacementCache, Bounds,
+    algorithm::entities::{
+        Position,
+        model_cached::{CompartmentCache, LocalCache, Shape},
+    },
+    kernel::types::{Arc, RwLock},
+};
+use std::{fs, path::PathBuf, sync::Once, time::Duration};
 //
 //
 static INIT: Once = Once::new();
@@ -29,70 +36,63 @@ fn init_each() -> () {}
 /// During the test a file called `fpc_result` is created in ./tmpdir/.
 /// At the end of the test it tries (safely) remove it.
 /// Pay attention on loggin info (WARN level) to catch it fails cleaning up.
-#[ignore = "TODO"]
+#[ignore = "too slow, run only in release mode"]
 #[test]
 fn calculated_damaged_compartments_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = Dbg::new("test models", "calculated_damaged_compartments_sofia");
+    let dbg = Dbg::new("test models", "bound_displacement_cache_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
-    let dbg = Dbg::new("ShipModel", "calculated_damaged_compartments_sofia");
-    let model_path = "src/assets/sofia.stl";
-    let cache_dir = "src/algorithm/entities/cache/tests/";
-    let center_coord = Some(Position::new(65.250, 0., 0.));
-    let mut shape = DisplacementShape::new_uninit(&dbg, model_path.into(), center_coord, 1000.);
-    shape.init().unwrap();
-    let thread_pool = ThreadPool::new(&dbg, None);
-    let mut cache = DamagedCompartmentCache::new(
+    let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+    let model_dir: PathBuf = "src/assets/model/sofia".into();
+    let model_center_coord = Position::new(65.250, 0., 0.);
+    let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
+    let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
+    let thread_pool = ThreadPool::new(&dbg, Some(15));
+    let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
         &dbg,
-        Arc::new(RwLock::new(shape)),
-        cache_dir,
-        String::from("201"),
-        vec![-20., 0., 20.],
-        vec![4.],
-        4.,
-        4.,
+        model_dir.clone().join(PathBuf::from("hull.stl")),
+        Some(model_center_coord),
+        1000.,
+    )));
+    displacement_shape.write().init().unwrap();
+    dbg!("displacement_shape init ok");
+    let mut bound_cache = BoundDisplacementCache::new(
+        &dbg,
+        displacement_shape,
+        cache_dir
+            .clone()
+            .join("disp_bounded")
+            .join(format!("{bounds_length_mm}")),
         1.,
-        thread_pool.scheduler().clone(),
+        bounds.clone(),
+        thread_pool.scheduler(),
     );
-    let error = cache.rebuild();
-    assert!(error.is_ok(), "*error*: {:?}", error);
-    let epsilon_p = 0.01; //1%
-    let epsilon_abs = 0.01; //1см
-    let target = [
-        [20., 20., 9758.8, 4., 96.072, 0.369, 5.662],
-        [20., -20., 9809.0, 4., 33.856, 0.367, 5.787],
-        [-20., -20., 9809.0, 4., 33.856, -0.367, 5.787],
-        [-20., 20., 9758.9, 4., 96.072, -0.369, 5.662],
-        [0., 0., 6456.3, 4., 66.877, 0., 2.053],
-        [20., 0., 6527.4, 4., 66.603, 1.769, 2.397],
-        [-20., 0., 6527.4, 4., 66.603, -1.769, 2.397],
-        [0., 20., 9699.2, 4., 96.306, 0., 5.623],
-        [0., -20., 9749.2, 4., 33.620, 0., 5.749],
-    ];
-    for target in target {
-        let target_draught = target[3];
-        let target_center = Position::new(target[4], target[5], target[6]);  
-        let (result_draught, result_center) = cache.get(target[0], target[1], target[2]).unwrap();
-        let delta = (result_draught - target_draught).abs();
-        assert!(
-            delta < epsilon_p * (result_draught.abs().max(target_draught.abs())) || delta < epsilon_abs,
-            "\nresult: {:?}\ntarget: {:?}",
-            result_draught,
-            target_draught
-        );
-        let delta = (result_center - target_center).len();
-        assert!(
-            delta < epsilon_abs,
-            "\nresult: {:?}\ntarget: {:?}",
-            result_center,
-            target_center
-        );
-    }
- /*   // clean up
+    bound_cache.rebuild().unwrap();
+    let result = bound_cache.get(5.9, 0.);
+/*
+    let target_draught = target[3];
+    let target_center = Position::new(target[4], target[5], target[6]);
+    let (result_draught, result_center) = cache.get(target[0], target[1], target[2]).unwrap();
+    let delta = (result_draught - target_draught).abs();
+    assert!(
+        delta < epsilon_p * (result_draught.abs().max(target_draught.abs())) || delta < epsilon_abs,
+        "\nresult: {:?}\ntarget: {:?}",
+        result_draught,
+        target_draught
+    );
+    let delta = (result_center - target_center).len();
+    assert!(
+        delta < epsilon_abs,
+        "\nresult: {:?}\ntarget: {:?}",
+        result_center,
+        target_center
+    );
+*/
+    /*   // clean up
     if let Err(why) = fs::remove_file(cache_dir.to_owned()) {
         log::warn!(
             "Clean up (optional) | Failed removing result file='{}': {}",

@@ -75,7 +75,7 @@ impl BuildCompartmentCache {
         };
         let center_max = self.center_max.clone().unwrap_or(center_max);
         let volume_max = self.volume_max.clone().unwrap_or(volume_max);
-        let mut draught_steps = match shape.read().draught_steps(self.level_qnt_steps) {
+        let draught_steps = match shape.read().draught_steps(self.level_qnt_steps) {
             Ok(draught_steps) => draught_steps,
             Err(err) => return (vec![], vec![error.pass_with("shape.read().draught_steps()", err)]),
         };

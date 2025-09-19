@@ -51,8 +51,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .join("disp_bounded")
                 .join(format!("{bounds_length_mm}")),
             1.,
-            130.5,
-            model_center_coord.x(),
             bounds.clone(),
             thread_pool.scheduler(),
         );

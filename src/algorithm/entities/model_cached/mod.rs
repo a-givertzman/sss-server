@@ -36,9 +36,11 @@ pub struct BalanceQuery {
     pub bulk: Vec<BulkData>,
     /// жидкий груз
     pub liquid: Vec<LiquidData>,
+    /// газообразный груз
+    pub gaseous: Vec<GaseousData>,
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>,
-    /// номера поврежденных помещений, TODO - только для аварийного расчета
+//    /// номера поврежденных помещений, TODO - только для аварийного расчета
 //    pub damaged_compartment: Vec<String>,
     /// точность расчета
     pub epsilon: f64,
@@ -48,6 +50,7 @@ pub struct BalanceQuery {
 ///
 /// Груз, для которого центр массы и распределение зависит от 
 /// объема и/или положения корпуса, считается в модели
+/// Сыпучий груз
 #[derive(Debug, Clone)]
 pub struct BulkData {
     pub cargo_id: usize, // ID груза
@@ -56,14 +59,23 @@ pub struct BulkData {
     pub volume: f64,
 }
 ///
-/// Груз, для которого центр массы и распределение зависит от 
-/// объема и/или положения корпуса, считается в модели
+/// Жидкий груз
 #[derive(Debug, Clone)]
 pub struct LiquidData {
     pub cargo_id: usize, // ID груза
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
+}
+///
+/// Газообразный груз
+/// Для него распределение не зависит от обьема или массы,
+/// считаем распределение по отсеку при максимальном объеме отсека
+#[derive(Debug, Clone)]
+pub struct GaseousData {
+    pub cargo_id: usize, // ID груза
+    pub space_id: String, // ID помещения
+    pub mass: f64,
 }
 ///
 #[derive(Debug, Clone)]
@@ -83,11 +95,11 @@ pub struct BalanceResult {
     draught_stern: f64, // осадка на кормовом перпендикуляре
     draught_mean: f64, // средняя осадка (в центре тяжести ватерлинии)
     center_waterline_shift: f64, // Отстояние центра тяжести ватерлинии по длине от миделя    
-    volume: f64,
-    displacement: Vec<f64>, // распределение осадки по шпациям
-    gaseous: HashMap<String, Vec<f64>>, // распределение массы газообразных грузов по шпациям 
-    bulk: HashMap<String, Vec<f64>>,    // распределение массы сыпучих грузов по шпациям  
-    liquid: HashMap<String, Vec<f64>>,  // распределение массы жидких грузов по шпациям  
+    displacement: f64,    // объемное водоизмещение
+    displacement_distr: Vec<f64>,  // распределение водоизмещения по шпациям
+    gaseous_distr: Vec<f64>, // распределение массы газообразных грузов по шпациям 
+    bulk_distr: Vec<f64>,    // распределение массы сыпучих грузов по шпациям  
+    liquid_distr: Vec<f64>,  // распределение массы жидких грузов по шпациям  
 }
 
 
