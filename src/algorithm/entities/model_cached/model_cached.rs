@@ -3,9 +3,9 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache,
-            BulkData, CompartmentCache, DamagedCompartmentCache, DisplacementCache,
-            DisplacementShape, Draught, LiquidData, Shape, WindageArea,
+            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache, BulkData,
+            CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape,
+            Draught, LiquidData, Shape, WindageArea,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -250,6 +250,53 @@ impl ModelCached {
         };
         Ok(model_cached)
     }
+    /// инициализация кэшей заранее посчитанными данными
+    pub fn init(&mut self) -> Result<(), Error> {
+        let error = Error::new(self.dbg.clone(), "init");
+        self.displacement
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+        for (name, compartment) in self.compartments.iter_mut() {
+            compartment
+                .write()
+                .init()
+                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
+        }
+        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+            damaged_compartment
+                .write()
+                .init()
+                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
+        }
+        self.windage_area
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+        Ok(())
+    }
+    /// инициализация кэшей заранее посчитанными данными
+    pub fn init_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error = Error::new(self.dbg.clone(), "init_bounded");
+        let bounds_qnt = bounds.len_qnt();
+        self.displacement_bounded
+            .get_mut(&bounds_qnt)
+            .ok_or(error.err(format!(
+                "displacement_bounded.get_mut bounds_qnt:{bounds_qnt}"
+            )))?
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement_bounded.init"), err))?;
+        let compartments_bounded =
+            self.compartments_bounded
+                .get_mut(&bounds_qnt)
+                .ok_or(error.err(format!(
+                    "compartments_bounded.get_mut bounds_qnt:{bounds_qnt}"
+                )))?;
+        for (name, compartment_bounded) in compartments_bounded {
+            compartment_bounded
+                .init()
+                .map_err(|err| error.pass_with(format!("compartment_bounded:{name}.init"), err))?
+        }
+        Ok(())
+    }
     /// reload all shapes
     pub fn reload_shapes(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "reload_shapes");
@@ -268,10 +315,7 @@ impl ModelCached {
                     Ok(())
                 })
                 .map_err(|err| {
-                    error.pass_with(
-                        format!("spawn task displacement_shape {name}"),
-                        err.to_string(),
-                    )
+                    error.pass_with(format!("spawn task displacement_shape {name}"), err)
                 });
             match handle {
                 Ok(task) => tasks.push(task),
@@ -304,9 +348,9 @@ impl ModelCached {
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
-                errors.iter().fold(String::new(), |acc, err| {
-                    acc + &format!(" error: {err}")
-                }),
+                errors
+                    .iter()
+                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
             ));
         }
         Ok(())
@@ -401,7 +445,8 @@ impl ModelCached {
             .insert(bounds.len_qnt(), bound_displacement);
         let mut cache_map = HashMap::new();
         for (compartment_id, compartment) in &self.compartments {
-            let compartment_bounded = compartment.read()
+            let compartment_bounded = compartment
+                .read()
                 .build_bounded(bounds.clone())
                 .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
             cache_map.insert(compartment_id.clone(), compartment_bounded);
@@ -475,7 +520,9 @@ impl ModelCached {
             .displacement_bounded
             .get(&query.bounds.len_qnt())
             .ok_or(error.err("no displacement_bounded"))?;
-        let displacement_distr = displacement_bounded.get(draught_mid, trim);
+        let displacement_distr = displacement_bounded
+            .get(draught_mid, trim)
+            .map_err(|err| error.pass_with(format!("displacement_distr get"), err))?;
         let compartments_bounded = self
             .compartments_bounded
             .get(&query.bounds.len_qnt())
@@ -485,7 +532,7 @@ impl ModelCached {
             for cargo in query.liquid {
                 assert!(cargo.mass > 0.);
                 let space_id = &cargo.space_id;
-                let density = cargo.mass/cargo.volume;
+                let density = cargo.mass / cargo.volume;
                 let compartment = self
                     .compartments
                     .get(space_id)
@@ -496,11 +543,18 @@ impl ModelCached {
                     .map_err(|err| {
                         error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
                     })?;
-                let compartment_bounded = compartments_bounded
-                    .get(space_id)
-                    .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
-                let volume_bounded = compartment_bounded.get(level, trim);
-                result = result.iter().zip(volume_bounded.iter()).map(|(a, b)| a + b*density).collect();
+                let compartment_bounded = compartments_bounded.get(space_id).ok_or(
+                    error.err(format!("compartments_bounded - no compartment:{space_id}")),
+                )?;
+                let volume_bounded = compartment_bounded.get(level, trim).map_err(|err| {
+                    error.pass_with(format!("compartment_bounded.get, space_id:{space_id}"), err)
+                })?;
+                dbg!(level, trim, &volume_bounded);
+                result = result
+                    .iter()
+                    .zip(volume_bounded.iter())
+                    .map(|(a, b)| a + b * density)
+                    .collect();
             }
             result
         };
@@ -509,7 +563,7 @@ impl ModelCached {
             for cargo in query.bulk {
                 assert!(cargo.mass > 0.);
                 let space_id = &cargo.space_id;
-                let density = cargo.mass/cargo.volume;
+                let density = cargo.mass / cargo.volume;
                 let compartment = self
                     .compartments
                     .get(space_id)
@@ -520,11 +574,18 @@ impl ModelCached {
                     .map_err(|err| {
                         error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
                     })?;
-                let compartment_bounded = compartments_bounded
-                    .get(space_id)
-                    .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
-                let volume_bounded = compartment_bounded.get(level, 0.);
-                result = result.iter().zip(volume_bounded.iter()).map(|(a, b)| a + b*density).collect();
+                let compartment_bounded = compartments_bounded.get(space_id).ok_or(
+                    error.err(format!("compartments_bounded - no compartment:{space_id}")),
+                )?;
+                let volume_bounded = compartment_bounded.get(level, 0.).map_err(|err| {
+                    error.pass_with(format!("volume_bounded get, space_id:{space_id}"), err)
+                })?;
+                dbg!(level, trim, &volume_bounded);
+                result = result
+                    .iter()
+                    .zip(volume_bounded.iter())
+                    .map(|(a, b)| a + b * density)
+                    .collect();
             }
             result
         };
@@ -533,14 +594,21 @@ impl ModelCached {
             for cargo in query.gaseous {
                 assert!(cargo.mass > 0.);
                 let space_id = &cargo.space_id;
-                let compartment_bounded = compartments_bounded
-                    .get(space_id)
-                    .ok_or(error.err(format!("compartments_bounded - no compartment:{space_id}")))?;
-                let volume_bounded = compartment_bounded.get_max();
+                let compartment_bounded = compartments_bounded.get(space_id).ok_or(
+                    error.err(format!("compartments_bounded - no compartment:{space_id}")),
+                )?;
+                let volume_bounded = compartment_bounded.get_max().map_err(|err| {
+                    error.pass_with(format!("volume_bounded get_max, space_id:{space_id}"), err)
+                })?;
+                dbg!(&volume_bounded);
                 let volume: f64 = volume_bounded.iter().sum();
                 assert!(volume > 0.);
-                let density = cargo.mass/volume;
-                result = result.iter().zip(volume_bounded.iter()).map(|(a, b)| a + b*density).collect();
+                let density = cargo.mass / volume;
+                result = result
+                    .iter()
+                    .zip(volume_bounded.iter())
+                    .map(|(a, b)| a + b * density)
+                    .collect();
             }
             result
         };
@@ -778,7 +846,7 @@ impl ModelCached {
                         .map_err(|err| {
                             error.pass_with(
                                 format!("spawn task space_id:{}", bulk.space_id.clone()),
-                                err.to_string(),
+                                err,
                             )
                         });
                     match handle {
@@ -853,7 +921,7 @@ impl ModelCached {
                         .map_err(|err| {
                             error.pass_with(
                                 format!("spawn task space_id:{}", liquid.space_id.clone()),
-                                err.to_string(),
+                                err,
                             )
                         });
                     match handle {
@@ -923,7 +991,7 @@ impl ModelCached {
                         .map_err(|err| {
                             error.pass_with(
                                 format!("spawn task space_id:{}", damaged_compartment.clone()),
-                                err.to_string(),
+                                err,
                             )
                         });
                     match handle {

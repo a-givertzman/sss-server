@@ -1,6 +1,8 @@
 use crate::{
     algorithm::entities::{
-        Bounds, Position, cache::Cache, model_cached::{BoundDisplacementCache, DisplacementShape, local_cache::LocalCache, save}
+        Bounds, Position,
+        cache::Cache,
+        model_cached::{BoundDisplacementCache, DisplacementShape, local_cache::LocalCache, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -29,7 +31,7 @@ pub struct CompartmentCache {
     shape: Arc<RwLock<DisplacementShape>>,
     ///
     /// Cache read from `self.file_path`.
-    cache: Arc<RwLock<Option<Cache<f64>>>>,
+    cache: Option<Cache<f64>>,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -62,7 +64,7 @@ impl CompartmentCache {
             center_max,
             volume_max,
             level_max: None,
-            cache: Arc::new(RwLock::new(None)),
+            cache: None,
             cache_path: cache_dir.as_ref().join(compartment_id),
             dbg,
             scheduler,
@@ -70,23 +72,30 @@ impl CompartmentCache {
         }
     }
     /// Return (level, center of volume)
-    pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<(f64, Position), Error> {
+    pub fn get(
+        &self,
+        heel: f64,
+        trim: f64,
+        volume: f64,
+        epsilon: f64,
+    ) -> Result<(f64, Position), Error> {
         let error = Error::new(self.dbg(), "get");
-        self.init().map_err(|err| error.pass_with("self.init()", err))?;
-        let guard = self.cache().read();  
-        let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let level_max = cache.max_value(2);
-        let mut step = level_max/2.;
+        let mut step = level_max / 2.;
         let mut draught = step;
         for _ in 0..100 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
-            let delta = volume - result.first().ok_or(error.pass("no result from cache.get(&query)"))?;
+            let delta = volume
+                - result
+                    .first()
+                    .ok_or(error.pass("no result from cache.get(&query)"))?;
             if delta.abs() <= epsilon {
                 return Ok((result[0], Position::new(result[1], result[2], result[3])));
             }
-            step = step/2.;
-            draught += step*delta.signum();
+            step = step / 2.;
+            draught += step * delta.signum();
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
@@ -94,7 +103,7 @@ impl CompartmentCache {
     pub fn build_bounded(&self, bounds: Bounds) -> Result<BoundDisplacementCache, Error> {
         let error = Error::new(self.dbg(), "build_bounded");
         let draught_step = match self.shape.read().size() {
-            Ok((_, _, height, _)) => height/(self.level_qnt_steps as f64),
+            Ok((_, _, height, _)) => height / (self.level_qnt_steps as f64),
             Err(err) => return Err(error.pass_with("shape.size", err)),
         };
         Ok(BoundDisplacementCache::new(
@@ -125,21 +134,17 @@ impl LocalCache for CompartmentCache {
             self.exit.clone(),
         )
         .build();
-        if let Some(mut guard) = self.cache.try_write() {
-            let cache = if let Some(cache) = guard.take() {
-                cache
-            } else {
-                Cache::<f64>::new(&self.dbg)
-            };
-            if let Err(err) = cache.init(data.clone()) {
-                errors.push(error.pass_with("self.cache.get_mut", err));
-            }
-            let _ = guard.insert(cache);
-            if let Err(err) = save(&self.dbg, &self.cache_path, data) {
-                errors.push(error.pass_with("save data", err));
-            }
+        let cache = if let Some(cache) = self.cache.take() {
+            cache
         } else {
-            errors.push(error.err("self.cache.get_mut error: no cache"));
+            Cache::<f64>::new(&self.dbg)
+        };
+        if let Err(err) = cache.init(data.clone()) {
+            errors.push(error.pass_with("self.cache.get_mut", err));
+        }
+        self.cache = Some(cache);
+        if let Err(err) = save(&self.dbg, &self.cache_path, data) {
+            errors.push(error.pass_with("save data", err));
         }
         errors
     }
@@ -160,7 +165,11 @@ impl LocalCache for CompartmentCache {
         &self.cache_path
     }
     //
-    fn cache(&self) -> &crate::kernel::types::Arc<RwLock<Option<Cache<f64>>>> {
-        &self.cache
+    fn cache(&self) -> Option<&Cache<f64>> {
+        self.cache.as_ref()
+    }
+    //
+    fn set_cache(&mut self, cache: Cache<f64>) {
+        self.cache.insert(cache);
     }
 }

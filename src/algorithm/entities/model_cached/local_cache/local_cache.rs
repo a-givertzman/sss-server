@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use crate::{
+    algorithm::entities::{cache::Cache, model_cached::read},
+    kernel::types::{Arc, RwLock},
+};
 use sal_core::{dbg::Dbg, error::Error};
-use crate::{algorithm::entities::{cache::Cache, model_cached::read}, kernel::types::{Arc, RwLock}};
+use std::path::PathBuf;
 
 ///
 /// A common trait for caches, which work with file systems.
@@ -31,15 +34,16 @@ pub trait LocalCache {
 }
     */
 
-
-    //
+//
 //
 pub(crate) trait LocalCache {
     fn dbg(&self) -> &Dbg;
 
     fn cache_path(&self) -> &PathBuf;
 
-    fn cache(&self) -> &Arc<RwLock<Option<Cache<f64>>>>;
+    fn cache(&self) -> Option<&Cache<f64>>;
+
+    fn set_cache(&mut self, cache: Cache<f64>);
     ///
     /// Sends exit signal to hawy calculations
     fn exit(&self);
@@ -53,15 +57,14 @@ pub(crate) trait LocalCache {
     fn calculate(&mut self) -> Vec<Error>;
     ///
     /// Returns approximated values based on given set.
-    // TODO получение 
+    // TODO получение
     fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
-        if self.cache().read().is_none() {
-            self.init().map_err(|err| error.pass_with("self.init()", err))?;
+        if self.cache().is_none() {
+            return Err(error.err("no cache"));
         }
         Ok(self
             .cache()
-            .read()
             .as_ref()
             .ok_or(error.pass("no cache"))?
             .get(approx_vals))
@@ -79,17 +82,15 @@ pub(crate) trait LocalCache {
         }
     }
     /// инициализация кэша заранее посчитанными данными
-    fn init(&self) -> Result<(), Error> {
+    fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "init");
-        if self.cache().read().is_none() {
-            let vals = read(self.dbg(), self.cache_path())
-                .map_err(|err| error.pass_with("read cache data error", err))?;
-            let cache = Cache::new(self.dbg());            
-            cache
-                .init(vals)
-                .map_err(|err| error.pass_with("cache.init error", err))?;
-            let _ = self.cache().write().insert(cache);
-        }
+        let vals = read(self.dbg(), self.cache_path())
+            .map_err(|err| error.pass_with("read cache data error", err))?;
+        let cache = Cache::new(self.dbg());
+        cache
+            .init(vals)
+            .map_err(|err| error.pass_with("cache.init error", err))?;
+        self.set_cache(cache);
         Ok(())
     }
 }

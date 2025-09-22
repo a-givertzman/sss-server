@@ -59,47 +59,35 @@ impl WindageArea {
         self.area_data = Some(area_data);
         Ok(())
     }
+    /// инициализация заранее посчитанными данными
+    pub fn init(&mut self) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "init");
+        let area_data = file_io::read(&self.dbg, &self.cache_path)
+            .map_err(|err| error.pass_with("file_io::read", err))?;
+        let mut area_sum = 0.;
+        let mut moment = 0.;
+        for (x, area) in area_data.iter() {
+            moment += x * area;
+            area_sum += area;
+        }
+        let center_x = moment / area_sum;
+        self.area = Some((area_sum, center_x));
+        self.area_data = Some(area_data);
+        Ok(())
+    }
     /// Расчет площади и центра площади парусности
     /// Возвращает [площадь, смещение площади по x]
-    pub fn windage_area(&mut self) -> Result<(f64, f64), Error> {
+    pub fn windage_area(&self) -> Result<(f64, f64), Error> {
         let error = Error::new(&self.dbg, "windage_area");
-        if let Some((area_sum, center_x)) = self.area.as_ref() {
-            Ok((*area_sum, *center_x))
-        } else {
-            let area_data = if let Some(area_data) = self.area_data.as_ref() {
-                area_data
-            } else {
-                self.area_data = Some(
-                    file_io::read(&self.dbg, &self.cache_path)
-                        .map_err(|err| error.pass_with("file_io::read", err))?,
-                );
-                self.area_data.as_ref().unwrap()
-            };
-            let mut area_sum = 0.;
-            let mut moment = 0.;
-            for (x, area) in area_data.iter() {
-                moment += x * area;
-                area_sum += area;
-            }
-            let center_x = moment / area_sum;
-            self.area = Some((area_sum, center_x));
-            Ok((area_sum, center_x))
-        }
+        let (area_sum, center_x) = self.area.as_ref().ok_or(error.pass("no area"))?;
+        Ok((*area_sum, *center_x))
     }
     /// Расчет распределения площади парусности
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
-    pub fn bounded_windage_area(&mut self, bounds: Bounds) -> Result<Vec<f64>, Error> {
+    pub fn bounded_windage_area(&self, bounds: Bounds) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "bounded_windage_area");
         // набор значений площади в разбиении по площади части модели над водой
-        let area_data = if let Some(area_data) = self.area_data.as_ref() {
-            area_data
-        } else {
-            self.area_data = Some(
-                file_io::read(&self.dbg, &self.cache_path)
-                    .map_err(|err| error.pass_with("file_io::read", err))?,
-            );
-            self.area_data.as_ref().unwrap()
-        };
+        let area_data = self.area_data.as_ref().ok_or(error.pass("no area_data"))?;
         let src_bounds = {
             let x_min = area_data
                 .first()

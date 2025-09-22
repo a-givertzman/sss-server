@@ -27,7 +27,7 @@ pub struct DisplacementCache {
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
     /// Cache read from `self.file_path`.
-    cache: Arc<RwLock<Option<Cache<f64>>>>,
+    cache: Option<Cache<f64>>,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -57,7 +57,7 @@ impl DisplacementCache {
             draught_min,
             draught_max,
             draught_step,
-            cache: Arc::new(RwLock::new(None)),
+            cache: None,
             cache_path: path,
             dbg,
             scheduler,
@@ -69,9 +69,7 @@ impl DisplacementCache {
         let error = Error::new(self.dbg(), "get");     
         let mut step = (self.draught_max - self.draught_min)/2.;
         let mut draught = self.draught_min + step;
-        self.init().map_err(|err| error.pass_with("self.init()", err))?;
-        let guard = self.cache().read();  
-        let cache = guard.as_ref().ok_or(error.pass("no cache"))?;
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
     //    println!("displacement_cache cache get {heel} {trim} {volume}");
         for _i in 0..100 {
             let query = [heel, trim, draught];
@@ -113,21 +111,17 @@ impl LocalCache for DisplacementCache {
         .build();
         let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
         let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
-        if let Some(mut guard) = self.cache.try_write() {
-            let cache = if let Some(cache) = guard.take() {
-                cache
-            } else {
-                Cache::<f64>::new(&self.dbg)
-            };
-            if let Err(err) = cache.init(data.clone()) {
-                errors.push(error.pass_with("self.cache.get_mut", err));
-            }
-            let _ = guard.insert(cache);
-            if let Err(err) = save(&self.dbg, &self.cache_path, data) {
-                errors.push(error.pass_with("save data", err));
-            }
+        let cache = if let Some(cache) = self.cache.take() {
+            cache
         } else {
-            errors.push(error.err("self.cache.get_mut error: no cache"));
+            Cache::<f64>::new(&self.dbg)
+        };
+        if let Err(err) = cache.init(data.clone()) {
+            errors.push(error.pass_with("self.cache.get_mut", err));
+        }
+        self.cache = Some(cache);
+        if let Err(err) = save(&self.dbg, &self.cache_path, data) {
+            errors.push(error.pass_with("save data", err));
         }
         errors
     }
@@ -148,7 +142,11 @@ impl LocalCache for DisplacementCache {
         &self.cache_path
     }
     //
-    fn cache(&self) -> &crate::kernel::types::Arc<RwLock<Option<Cache<f64>>>> {
-        &self.cache
+    fn cache(&self) -> Option<&Cache<f64>> {
+        self.cache.as_ref()
+    }
+    
+    fn set_cache(&mut self, cache: Cache<f64>) {
+        self.cache.insert(cache);
     }
 }

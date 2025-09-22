@@ -42,6 +42,7 @@ fn model_cached_sofia() {
         thread_pool.scheduler(),
     )
     .unwrap();
+    model.init().unwrap();
     let mut result = |mass: f64, x: f64, y: f64, z: f64| {
         model.floating_position(model_cached::FloatingPositionQuery {
             water_density: 1.025,

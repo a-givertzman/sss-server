@@ -1,6 +1,8 @@
 use crate::{
     algorithm::entities::{
-        Position, cache::Cache, model_cached::{DisplacementShape, local_cache::LocalCache, save}
+        Position,
+        cache::Cache,
+        model_cached::{DisplacementShape, local_cache::LocalCache, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -25,7 +27,7 @@ pub struct DamagedCompartmentCache {
     shape: Arc<RwLock<DisplacementShape>>,
     ///
     /// Cache read from `self.file_path`.
-    cache: Arc<RwLock<Option<Cache<f64>>>>,
+    cache: Option<Cache<f64>>,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
 }
@@ -55,19 +57,19 @@ impl DamagedCompartmentCache {
             draught_min,
             draught_max,
             draught_step,
-            cache: Arc::new(RwLock::new(None)),
+            cache: None,
             cache_path: cache_dir.as_ref().join(compartment_id),
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
-        }        
+        }
     }
     /// Return (volume, center of volume)
     pub fn get(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, Position), Error> {
         let error = Error::new(self.dbg(), "get");
         let query = [heel, trim, draught];
-            let result = LocalCache::get(self, &query)
-                .map_err(|err| error.pass_with(" LocalCache::get(self, &query)", err))?;
+        let result = LocalCache::get(self, &query)
+            .map_err(|err| error.pass_with(" LocalCache::get(self, &query)", err))?;
         Ok((result[0], Position::new(result[1], result[2], result[3])))
     }
 }
@@ -91,21 +93,17 @@ impl LocalCache for DamagedCompartmentCache {
         .build();
         let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
         let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
-        if let Some(mut guard) = self.cache.try_write() {
-            let cache = if let Some(cache) = guard.take() {
-                cache
-            } else {
-                Cache::<f64>::new(&self.dbg)
-            };
-            if let Err(err) = cache.init(data.clone()) {
-                errors.push(error.pass_with("self.cache.get_mut", err));
-            }
-            let _ = guard.insert(cache);
-            if let Err(err) = save(&self.dbg, &self.cache_path, data) {
-                errors.push(error.pass_with("save data", err));
-            }
+        let cache = if let Some(cache) = self.cache.take() {
+            cache
         } else {
-            errors.push(error.err("self.cache.get_mut error: no cache"));
+            Cache::<f64>::new(&self.dbg)
+        };
+        if let Err(err) = cache.init(data.clone()) {
+            errors.push(error.pass_with("self.cache.get_mut", err));
+        }
+        self.cache = Some(cache);
+        if let Err(err) = save(&self.dbg, &self.cache_path, data) {
+            errors.push(error.pass_with("save data", err));
         }
         errors
     }
@@ -126,7 +124,11 @@ impl LocalCache for DamagedCompartmentCache {
         &self.cache_path
     }
     //
-    fn cache(&self) -> &crate::kernel::types::Arc<RwLock<Option<Cache<f64>>>> {
-        &self.cache
+    fn cache(&self) -> Option<&Cache<f64>> {
+        self.cache.as_ref()
+    }
+    
+    fn set_cache(&mut self, cache: Cache<f64>) {
+        self.cache.insert(cache);
     }
 }

@@ -108,9 +108,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             thread_pool.scheduler(),
         )
         .unwrap();
-        let res = model.reload_shapes();   dbg!(&res);
+    //    let res = model.reload_shapes();   dbg!(&res);
         //  let res = model.rebuild_caches();   dbg!(&res);
-        let res = model.rebuild_bounds(&bounds);   dbg!(&res);
+    //    let res = model.rebuild_bounds(&bounds);   dbg!(&res);
+        model.init().unwrap();
+        model.init_bounded(&bounds).unwrap();
 
         let query = model_cached::BalanceQuery {
             bounds,
