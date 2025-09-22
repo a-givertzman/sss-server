@@ -39,7 +39,7 @@ pub trait LocalCache {
 pub(crate) trait LocalCache {
     fn dbg(&self) -> &Dbg;
 
-    fn cache_path(&self) -> &PathBuf;
+    fn cache_path(&self) -> PathBuf;
 
     fn cache(&self) -> Option<&Cache<f64>>;
 
@@ -60,9 +60,6 @@ pub(crate) trait LocalCache {
     // TODO получение
     fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
-        if self.cache().is_none() {
-            return Err(error.err("no cache"));
-        }
         Ok(self
             .cache()
             .as_ref()
@@ -84,8 +81,8 @@ pub(crate) trait LocalCache {
     /// инициализация кэша заранее посчитанными данными
     fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "init");
-        let vals = read(self.dbg(), self.cache_path())
-            .map_err(|err| error.pass_with("read cache data error", err))?;
+        let vals = read(self.dbg(), &self.cache_path())
+            .map_err(|err| error.pass_with(format!("read cache data error"), err))?;
         let cache = Cache::new(self.dbg());
         cache
             .init(vals)

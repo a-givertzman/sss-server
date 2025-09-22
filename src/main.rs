@@ -102,6 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 draught_min: 2.,
                 draught_max: 14.,
                 hull_draught_step: 1.,
+                compartment_level_step: 1.,
                 compartment_qnt_steps: 3,
                 compartment_data: HashMap::new(),
             },
@@ -109,10 +110,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .unwrap();
     //    let res = model.reload_shapes();   dbg!(&res);
-        //  let res = model.rebuild_caches();   dbg!(&res);
+        //  let res = model.rebuild_caches();   dbg!(&res);        
     //    let res = model.rebuild_bounds(&bounds);   dbg!(&res);
-        model.init().unwrap();
-        model.init_bounded(&bounds).unwrap();
+        let res = model.init();   dbg!(&res);
+        let res = model.init_bounded(&bounds);   dbg!(&res);
 
         let query = model_cached::BalanceQuery {
             bounds,

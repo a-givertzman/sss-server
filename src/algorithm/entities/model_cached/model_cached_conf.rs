@@ -24,6 +24,8 @@ pub struct ModelCachedConf {
     pub draught_max: f64,
     /// Draught step for hull
     pub hull_draught_step: f64,
+    /// Level step for compartments
+    pub compartment_level_step: f64,
     /// qnt steps for compartments
     pub compartment_qnt_steps: usize,
     /// volume data for compartments

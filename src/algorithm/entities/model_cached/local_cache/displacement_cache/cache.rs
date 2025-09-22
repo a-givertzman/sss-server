@@ -138,8 +138,8 @@ impl LocalCache for DisplacementCache {
         &self.dbg
     }
     //
-    fn cache_path(&self) -> &PathBuf {
-        &self.cache_path
+    fn cache_path(&self) -> PathBuf {
+        self.cache_path.clone()
     }
     //
     fn cache(&self) -> Option<&Cache<f64>> {

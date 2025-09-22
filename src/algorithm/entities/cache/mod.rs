@@ -222,6 +222,7 @@ impl Cache<f64> {
         let result = (query.len()..result[0].len())
             .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
             .collect::<Vec<_>>();
+    //    dbg!(query, &result);
         result
     }
     /// Максимальное значение по индексу

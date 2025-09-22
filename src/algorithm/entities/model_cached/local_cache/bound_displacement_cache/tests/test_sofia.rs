@@ -50,7 +50,6 @@ fn calculated_damaged_compartments_sofia() {
     let model_dir: PathBuf = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
     let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
-    let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
     let thread_pool = ThreadPool::new(&dbg, Some(15));
     let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
         &dbg,
@@ -65,8 +64,7 @@ fn calculated_damaged_compartments_sofia() {
         displacement_shape,
         cache_dir
             .clone()
-            .join("disp_bounded")
-            .join(format!("{bounds_length_mm}")),
+            .join("disp_bounded"),
         1.,
         bounds.clone(),
         thread_pool.scheduler(),

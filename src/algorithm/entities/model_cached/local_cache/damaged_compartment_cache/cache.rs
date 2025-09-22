@@ -120,8 +120,8 @@ impl LocalCache for DamagedCompartmentCache {
         &self.dbg
     }
     //
-    fn cache_path(&self) -> &PathBuf {
-        &self.cache_path
+    fn cache_path(&self) -> PathBuf {
+        self.cache_path.clone()
     }
     //
     fn cache(&self) -> Option<&Cache<f64>> {
@@ -129,6 +129,6 @@ impl LocalCache for DamagedCompartmentCache {
     }
     
     fn set_cache(&mut self, cache: Cache<f64>) {
-        self.cache.insert(cache);
+        self.cache = Some(cache);
     }
 }

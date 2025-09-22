@@ -66,6 +66,8 @@ pub struct ModelCached {
     draught_min: f64,
     /// Draught step for hull
     hull_draught_step: f64,
+    /// Level step for compartments
+    compartment_level_step: f64,
     /// Directory containing [super::ModelCached] caches.
     cache_dir: PathBuf,
     /// Privides access to structure of the 3D element
@@ -227,6 +229,7 @@ impl ModelCached {
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
             hull_draught_step: conf.hull_draught_step,
+            compartment_level_step: conf.compartment_level_step,
             cache_dir: conf.cache_dir.clone(),
             displacement_shapes,
             windage_shape,
@@ -249,53 +252,6 @@ impl ModelCached {
             scheduler: scheduler.clone(),
         };
         Ok(model_cached)
-    }
-    /// инициализация кэшей заранее посчитанными данными
-    pub fn init(&mut self) -> Result<(), Error> {
-        let error = Error::new(self.dbg.clone(), "init");
-        self.displacement
-            .init()
-            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
-        for (name, compartment) in self.compartments.iter_mut() {
-            compartment
-                .write()
-                .init()
-                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
-        }
-        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
-            damaged_compartment
-                .write()
-                .init()
-                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
-        }
-        self.windage_area
-            .init()
-            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
-        Ok(())
-    }
-    /// инициализация кэшей заранее посчитанными данными
-    pub fn init_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        let error = Error::new(self.dbg.clone(), "init_bounded");
-        let bounds_qnt = bounds.len_qnt();
-        self.displacement_bounded
-            .get_mut(&bounds_qnt)
-            .ok_or(error.err(format!(
-                "displacement_bounded.get_mut bounds_qnt:{bounds_qnt}"
-            )))?
-            .init()
-            .map_err(|err| error.pass_with(format!("displacement_bounded.init"), err))?;
-        let compartments_bounded =
-            self.compartments_bounded
-                .get_mut(&bounds_qnt)
-                .ok_or(error.err(format!(
-                    "compartments_bounded.get_mut bounds_qnt:{bounds_qnt}"
-                )))?;
-        for (name, compartment_bounded) in compartments_bounded {
-            compartment_bounded
-                .init()
-                .map_err(|err| error.pass_with(format!("compartment_bounded:{name}.init"), err))?
-        }
-        Ok(())
     }
     /// reload all shapes
     pub fn reload_shapes(&mut self) -> Result<(), Error> {
@@ -353,6 +309,68 @@ impl ModelCached {
                     .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
             ));
         }
+        Ok(())
+    }
+    /// инициализация кэшей заранее посчитанными данными
+    pub fn init(&mut self) -> Result<(), Error> {
+    //    dbg!(self.dbg.clone(), "init");
+        let error = Error::new(self.dbg.clone(), "init");
+        self.displacement
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+        for (name, compartment) in self.compartments.iter_mut() {
+            compartment
+                .write()
+                .init()
+                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
+        }
+        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+            damaged_compartment
+                .write()
+                .init()
+                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
+        }
+        self.windage_area
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+        Ok(())
+    }
+    /// инициализация кэшей заранее посчитанными данными
+    pub fn init_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
+     //   dbg!(self.dbg.clone(), "init_bounded");
+        let error = Error::new(self.dbg.clone(), "init_bounded");
+        let bounds_qnt = bounds.len_qnt();
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let bound_displacement = BoundDisplacementCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir
+                .clone()
+                .join("disp_bounded"),
+            self.compartment_level_step,
+            bounds.clone(),
+            self.scheduler.clone(),
+        );
+        bound_displacement
+            .init()
+            .map_err(|err| error.pass_with(format!("bound_displacement.init"), err))?;
+        self.displacement_bounded.insert(bounds_qnt, bound_displacement);
+        let mut cache_map = HashMap::new();
+        for (compartment_id, compartment) in &self.compartments {
+            let compartment_bounded = compartment
+                .read()
+                .build_bounded(bounds.clone(), self.compartment_level_step)
+                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+            compartment_bounded
+                .init()
+                .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
+            cache_map.insert(compartment_id.clone(), compartment_bounded);
+        }
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
         Ok(())
     }
     ///
@@ -429,26 +447,30 @@ impl ModelCached {
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
-        let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
-        let bound_displacement = BoundDisplacementCache::new(
+        let mut bound_displacement = BoundDisplacementCache::new(
             &self.dbg,
             displacement_shape.clone(),
             self.cache_dir
                 .clone()
-                .join("disp_bounded")
-                .join(format!("{bounds_length_mm}")),
-            self.hull_draught_step,
+                .join("disp_bounded"),
+            self.compartment_level_step,
             bounds.clone(),
             self.scheduler.clone(),
         );
+        bound_displacement
+            .rebuild()
+            .map_err(|err| error.pass_with("bound_displacement.rebuild", err))?;
         self.displacement_bounded
             .insert(bounds.len_qnt(), bound_displacement);
         let mut cache_map = HashMap::new();
         for (compartment_id, compartment) in &self.compartments {
-            let compartment_bounded = compartment
+            let mut compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone())
+                .build_bounded(bounds.clone(), self.compartment_level_step,)
                 .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+            compartment_bounded
+                .rebuild()
+                .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
             cache_map.insert(compartment_id.clone(), compartment_bounded);
         }
         self.compartments_bounded
@@ -523,6 +545,7 @@ impl ModelCached {
         let displacement_distr = displacement_bounded
             .get(draught_mid, trim)
             .map_err(|err| error.pass_with(format!("displacement_distr get"), err))?;
+      //  dbg!(&displacement_distr);
         let compartments_bounded = self
             .compartments_bounded
             .get(&query.bounds.len_qnt())
@@ -549,7 +572,7 @@ impl ModelCached {
                 let volume_bounded = compartment_bounded.get(level, trim).map_err(|err| {
                     error.pass_with(format!("compartment_bounded.get, space_id:{space_id}"), err)
                 })?;
-                dbg!(level, trim, &volume_bounded);
+            //    dbg!(level, trim, &volume_bounded, cargo.mass, cargo.volume, density);
                 result = result
                     .iter()
                     .zip(volume_bounded.iter())
@@ -580,7 +603,7 @@ impl ModelCached {
                 let volume_bounded = compartment_bounded.get(level, 0.).map_err(|err| {
                     error.pass_with(format!("volume_bounded get, space_id:{space_id}"), err)
                 })?;
-                dbg!(level, trim, &volume_bounded);
+             //   dbg!(level, trim, &volume_bounded, cargo.mass, cargo.volume, density);
                 result = result
                     .iter()
                     .zip(volume_bounded.iter())
@@ -600,10 +623,10 @@ impl ModelCached {
                 let volume_bounded = compartment_bounded.get_max().map_err(|err| {
                     error.pass_with(format!("volume_bounded get_max, space_id:{space_id}"), err)
                 })?;
-                dbg!(&volume_bounded);
                 let volume: f64 = volume_bounded.iter().sum();
                 assert!(volume > 0.);
                 let density = cargo.mass / volume;
+             //   dbg!(&volume_bounded, cargo.mass, volume, density);
                 result = result
                     .iter()
                     .zip(volume_bounded.iter())

@@ -123,11 +123,6 @@ impl DisplacementShape {
             self.resolution,
         )))
     }
-    /// Смещение центра модели по Х
-    pub fn center_x(&self) -> f64 {
-        assert!(self.center.is_some());
-        self.center.unwrap().x
-    }
     ///
     /// Расчет водоизмещения судна и положение его центра в связанной с судной системой координат
     /// result: [volume, x, y, z]

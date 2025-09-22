@@ -16,7 +16,7 @@ use std::{
 /// Pre-calculated cache for floating position algorithm.
 pub struct CompartmentCache {
     dbg: Dbg,
-    cache_path: PathBuf,
+    cache_dir: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_qnt_steps: usize,
@@ -65,7 +65,7 @@ impl CompartmentCache {
             volume_max,
             level_max: None,
             cache: None,
-            cache_path: cache_dir.as_ref().join(compartment_id),
+            cache_dir: cache_dir.as_ref().join(compartment_id),
             dbg,
             scheduler,
             exit: Arc::new(AtomicBool::new(false)),
@@ -92,7 +92,7 @@ impl CompartmentCache {
                     .first()
                     .ok_or(error.pass("no result from cache.get(&query)"))?;
             if delta.abs() <= epsilon {
-                return Ok((result[0], Position::new(result[1], result[2], result[3])));
+                return Ok((draught, Position::new(result[1], result[2], result[3])));
             }
             step = step / 2.;
             draught += step * delta.signum();
@@ -100,17 +100,17 @@ impl CompartmentCache {
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
     //
-    pub fn build_bounded(&self, bounds: Bounds) -> Result<BoundDisplacementCache, Error> {
-        let error = Error::new(self.dbg(), "build_bounded");
-        let draught_step = match self.shape.read().size() {
+    pub fn build_bounded(&self, bounds: Bounds, level_step: f64) -> Result<BoundDisplacementCache, Error> {
+       // let error = Error::new(self.dbg(), "build_bounded");
+      /*  let draught_step = match self.shape.read().size() {
             Ok((_, _, height, _)) => height / (self.level_qnt_steps as f64),
             Err(err) => return Err(error.pass_with("shape.size", err)),
-        };
+        };*/
         Ok(BoundDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
-            self.cache_path.clone(),
-            draught_step,
+            self.cache_dir.clone().join("distr"),
+            level_step,
             bounds,
             self.scheduler.clone(),
         ))
@@ -143,7 +143,7 @@ impl LocalCache for CompartmentCache {
             errors.push(error.pass_with("self.cache.get_mut", err));
         }
         self.cache = Some(cache);
-        if let Err(err) = save(&self.dbg, &self.cache_path, data) {
+        if let Err(err) = save(&self.dbg, &self.cache_path(), data) {
             errors.push(error.pass_with("save data", err));
         }
         errors
@@ -161,8 +161,8 @@ impl LocalCache for CompartmentCache {
         &self.dbg
     }
     //
-    fn cache_path(&self) -> &PathBuf {
-        &self.cache_path
+    fn cache_path(&self) -> PathBuf {
+        self.cache_dir.clone().join("disp")
     }
     //
     fn cache(&self) -> Option<&Cache<f64>> {

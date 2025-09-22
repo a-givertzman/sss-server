@@ -14,7 +14,7 @@ use crate::{
 pub struct BuildBoundDisplacementCache {
     dbg: Dbg,
     shape: Arc<RwLock<DisplacementShape>>,
-    draught_step: f64,
+    level_step: f64,
     bounds: Bounds,
     scheduler: Scheduler,
     exit: Arc<AtomicBool>,
@@ -28,16 +28,16 @@ impl BuildBoundDisplacementCache {
     pub(super) fn new(
         parent: &Dbg,
         shape: Arc<RwLock<DisplacementShape>>,
-        draught_step: f64,
+        level_step: f64,
         bounds: Bounds,
         scheduler: Scheduler,
         exit: Arc<AtomicBool>,
     ) -> Self {
-        debug_assert!(draught_step > 0.);
+        debug_assert!(level_step > 0.);
         Self {
             dbg: Dbg::new(parent, "BuildBoundDisplacementCache"),
             shape: shape.clone(),
-            draught_step,
+            level_step,
             bounds,
             scheduler,
             exit,
@@ -75,7 +75,7 @@ impl BuildBoundDisplacementCache {
                     continue;
                 }
             };
-            let step = self.draught_step;
+            let step = self.level_step;
             let handle = self
                 .scheduler
                 .spawn(move || {
