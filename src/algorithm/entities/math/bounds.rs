@@ -94,6 +94,20 @@ impl Bounds {
         );
         Self::new(values)
     }
+    /// Вспомогательный конструктор
+    pub fn from_array(array: &[f64], midel_x: f64) -> Result<Self, Error> {
+        let error = Error::new("Bounds", "from_array");
+        if array.len() <= 1 {
+            return Err(error.err("array.len() <= 1"));
+        }
+        let mut last = array[0];
+        let frames: Vec<_> = (1..array.len()).map(|i| {
+            let res = (last - midel_x, array[i] - midel_x);
+            last = array[i];
+            res
+        }).collect();
+        Self::from_frames(&frames)
+    }
     /// Итератор по коллекции
     pub fn iter(&self) -> std::slice::Iter<'_, Bound> {
         self.values.iter()
@@ -122,14 +136,14 @@ impl Bounds {
     pub fn len_qnt(&self) -> usize {
         self.values.len()
     }
-    /// Длинна элемента разбиения
+ /*   /// Длинна элемента разбиения
     pub fn delta(&self) -> f64 {
         self.values
             .first()
             .expect("Bounds delta error: no values!")
             .length()
             .expect("Bounds delta error: no length for first element!")
-    }
+    }*/
     /// Преобразование диапазона значений
     /// Возвращает вектор значений, пересчитанный к дипазону
     pub fn intersect(&self, bounds: &Bounds, values: &[f64]) -> Result<Vec<f64>, Error> {

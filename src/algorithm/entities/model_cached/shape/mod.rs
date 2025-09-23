@@ -34,7 +34,8 @@ pub trait Shape {
 
     /// Разбиение меша по высоте на draught_qnt_steps шагов.
     /// Макимальный и минимальный уровень считаются с учетом наклона
-    fn draught_steps(&self, draught_qnt_steps: usize) -> Result<Vec<f64>, Error> {
+    fn draught_steps(&self, level_step: f64) -> Result<Vec<f64>, Error> {
+        assert!(level_step > 0.);
         let error = Error::new(self.dbg(), "draught_steps");
         let mesh = self.mesh().ok_or(error.err("no mesh"))?;
         let aabb = mesh.local_aabb();
@@ -50,14 +51,11 @@ pub trait Shape {
         let max_dx = (aabb.maxs.x - center.x).max(center.x - aabb.mins.x);
         let max_dy = (aabb.maxs.y - center.y).max(center.y - aabb.mins.y);
         let max_dz = max_dy.max(max_dx);
-        if draught_qnt_steps <= 1 {
-            return Err(error.err("draught_qnt_steps <= 1"));
-        }
         let mut result = vec![];
         let min_z = aabb.mins.z - max_dz;
         let max_z = aabb.maxs.z + max_dz;
         let mut current = min_z;
-        let step = (max_z - min_z)/(draught_qnt_steps as f64 - 1.);
+        let step = level_step;//(max_z - min_z)/(draught_qnt_steps as f64 - 1.);
         while current < max_z {
             result.push(current);
             current += step;

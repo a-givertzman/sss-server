@@ -58,14 +58,15 @@ impl BuildDisplacementCache {
     }
     ///
     /// Creates and starts worker for [DisplacementCache::calculate].
-    /// results: [[heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, wx, wy]]
-    pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
+    /// results: [[heel, trim, draught, volume, vx, vy, vz, area, ax, ay, az, ix, iy, wx, wy]]
+    pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let aabb_results = Arc::new(Stack::new());
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
+        let mut errors = Vec::new();
         let shape = self.shape.clone();
         let mut draught_steps = Vec::new();
         let mut draught = self.draught_min;
@@ -76,12 +77,6 @@ impl BuildDisplacementCache {
             }
             draught += self.draught_step;
         }
-
-        /*match shape.read().draught_steps(self.draught_min, self.draught_step) {
-            Ok(draught_steps) => draught_steps,
-            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
-        };*/
-
         'draught: for draught in draught_steps {
             if self.exit.load(Ordering::SeqCst) {
                 break 'draught;
@@ -104,7 +99,7 @@ impl BuildDisplacementCache {
                     });
                 match handle {
                     Ok(task) => tasks.push(task),
-                    Err(err) => results.push(Err(err)),
+                    Err(err) => errors.push(err),
                 };
             }
             for &heel in &self.heel_steps {
@@ -127,6 +122,7 @@ impl BuildDisplacementCache {
                                 draught,
                                 guard.displacement(heel, trim, draught),
                                 guard.waterline_area(heel, trim, draught),
+                                guard.inertia(heel, trim, draught),
                             ));
                             Ok(())
                         })
@@ -141,7 +137,7 @@ impl BuildDisplacementCache {
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
-                        Err(err) => results.push(Err(err)),
+                        Err(err) => errors.push(err),
                     };
                 }
             }
@@ -150,7 +146,7 @@ impl BuildDisplacementCache {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                results.push(Err(error));
+                errors.push(error);
             }
         }
         let mut aabb = Vec::new();
@@ -158,28 +154,35 @@ impl BuildDisplacementCache {
             if let Some((draught, data)) = aabb_results.pop() {
                 match data {
                     Ok(data) => aabb.push((draught, data)),
-                    Err(err) => results.push(Err(error.pass_with("aabb_results", err))),
+                    Err(err) => errors.push(error.pass_with("aabb_results", err)),
                 }
             }
         }
         while !draft_results.is_empty() {
-            if let Some((heel, trim, draught, volume, area)) = draft_results.pop() {
+            if let Some((heel, trim, draught, volume, area, inertia)) = draft_results.pop() {
                 if let Some((_, (l_x, l_y))) = aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
                     let (volume, v_center) = match volume {
                         Ok((volume, center)) => (volume, center),
                         Err(err) => {
-                            results.push(Err(error.pass_with("draft_results volume", err)));
+                            errors.push(error.pass_with("draft_results volume", err));
                             continue;
                         }
                     };
                     let (area, a_center) = match area {
                         Ok((area, center)) => (area, center),
                         Err(err) => {
-                            results.push(Err(error.pass_with("draft_results area", err)));
+                            errors.push(error.pass_with("draft_results area", err));
                             continue;
                         }
                     };
-                    results.push(Ok(vec![
+                    let (i_x, i_y) = match inertia {
+                        Ok((x, y)) => (x, y),
+                        Err(err) => {
+                            errors.push(error.pass_with("draft_results inertia", err));
+                            continue;
+                        }
+                    };
+                    results.push(vec![
                         heel,
                         trim,
                         draught,
@@ -191,15 +194,17 @@ impl BuildDisplacementCache {
                         a_center.x(),
                         a_center.y(),
                         a_center.z(),
+                        i_x,
+                        i_y,
                         *l_x,
                         *l_y,
-                    ]));
+                    ]);
                 } else {
-                    results.push(Err(error.err(format!("no aabb for draught:{draught}"))));
+                    errors.push(error.err(format!("no aabb for draught:{draught}")));
                 }
             }
         }
         //   dbg!(&results);
-        results
+        (results, errors)
     }
 }

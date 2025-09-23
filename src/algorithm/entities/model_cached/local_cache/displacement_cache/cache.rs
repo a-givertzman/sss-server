@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Position, cache::Cache, model_cached::{DisplacementShape, local_cache::LocalCache, save}
+        Position, cache::Cache, model_cached::{DisplacementCacheResult, DisplacementShape, local_cache::LocalCache, save}
     },
     kernel::types::{Arc, RwLock},
 };
@@ -64,8 +64,9 @@ impl DisplacementCache {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
-    /// Return (draught, center of volume, waterline_area_shift_x, waterline_area_shift_y)
-    pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<(f64, Position, f64, f64), Error> {
+    /// Получение данных кэша для текущего положения
+    /// Итерационно подбирает значение водоизмещения по осадке
+    pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<DisplacementCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");     
         let mut step = (self.draught_max - self.draught_min)/2.;
         let mut draught = self.draught_min + step;
@@ -74,15 +75,25 @@ impl DisplacementCache {
         for _i in 0..100 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
-            if result.len() <= 5 {
-                return Err(error.pass("no result from cache.get(&query)"));
-            }
+            assert!(result.len() == 12);
             let res_volume = result[0];
             let delta = volume - res_volume;
             if delta.abs() <= epsilon {
             //    dbg!(&query, &result, delta);
            //     println!("displacement_cache cache get ok: {:?}", result);
-                return Ok((draught, Position::new(result[1], result[2], result[3]), result[5], result[6]));
+                return Ok(DisplacementCacheResult {
+                    heel,
+                    trim,
+                    draught,
+                    volume,
+                    volume_center: Position::new(result[1], result[2], result[3]),
+                    area_wl: result[4],
+                    area_wl_center: Position::new(result[5], result[6], result[7]),
+                    inertia_trans_x: result[8],
+                    inertia_long_y: result[9],
+                    length_wl: result[10],
+                    breadth_wl: result[11],
+                });
             }
          //   println!("displacement_cache cache get: {_i} {step} {draught} res_volume:{res_volume} {delta}");
             step = step/2.;
@@ -97,7 +108,7 @@ impl LocalCache for DisplacementCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildDisplacementCache::new(
+       let (data, mut errors) = super::build_cache::BuildDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
             self.heel_steps.clone(),
@@ -109,8 +120,6 @@ impl LocalCache for DisplacementCache {
             self.exit.clone(),
         )
         .build();
-        let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
-        let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
         let cache = if let Some(cache) = self.cache.take() {
             cache
         } else {

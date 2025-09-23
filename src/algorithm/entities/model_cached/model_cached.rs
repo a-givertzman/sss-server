@@ -3,9 +3,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache, BulkData,
-            CompartmentCache, DamagedCompartmentCache, DisplacementCache, DisplacementShape,
-            Draught, LiquidData, Shape, WindageArea,
+            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache, BulkData, CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache, DisplacementCacheResult, DisplacementShape, Draught, LiquidData, Shape, WindageArea
         },
     },
     kernel::types::{Arc, RwLock},
@@ -19,9 +17,9 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, Scheduler},
 };
-use std::{collections::HashMap, fs::ReadDir, path::PathBuf, result};
+use std::{collections::HashMap, path::PathBuf};
 
-/// Структура для ввода данных расчета баланса судна.
+/// Структура для ввода данных расчета равновесного положения корпуса судна.
 #[derive(Debug, Clone)]
 pub(crate) struct FloatingPositionQuery {
     /// Плотность забортной воды
@@ -43,16 +41,33 @@ pub(crate) struct FloatingPositionQuery {
     /// точность расчета
     pub epsilon: f64,
 }
-///
+/// Результат расчета равновесного положения корпуса судна
 #[derive(Debug)]
 pub(crate) struct FloatingPositionResult {
+    /// Крен, градусы
     pub heel: f64,
+    /// Дифферент, градусы
     pub trim: f64,
+    /// Осадка на миделе
     pub draught_mid: f64,
+    /// Точность - расстояние в горизонтальной плоскости между центрами масс и водоизмещения
     pub precision: f64,
+    /// Объемное водоизмещение, м^3
     pub displacement: f64,
-    pub waterline_x: f64, // смещение центра тяжести ватеринии по Х
-    pub waterline_y: f64, // смещение центра тяжести ватеринии по Y
+    /// Смещение центра объемного водоизмещения, м
+    pub displacement_center: Position,
+    /// Площадь ватерлинии, м^2
+    pub area_wl: f64,
+    /// Смещение центра тяжести ватеринии, м
+    pub area_wl_center: Position,
+    /// Длинна по ватерлинии при текущей осадке, м
+    pub length_wl: f64,
+    ///  Ширина по ватерлинии при текущей осадке, м
+    pub breadth_wl: f64,
+    /// Продольный метацентрический радиус, м
+    pub rad_long: f64,
+    /// Поперечный метацентрические радиус, м
+    pub rad_trans: f64,
 }
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
@@ -66,8 +81,8 @@ pub struct ModelCached {
     draught_min: f64,
     /// Draught step for hull
     hull_draught_step: f64,
-    /// Level step for compartments
-    compartment_level_step: f64,
+    /// Level step for bounds
+    bounds_level_step: f64,
     /// Directory containing [super::ModelCached] caches.
     cache_dir: PathBuf,
     /// Privides access to structure of the 3D element
@@ -176,7 +191,7 @@ impl ModelCached {
                         name.clone(),
                         conf.heel_steps.clone(),
                         conf.trim_steps.clone(),
-                        conf.compartment_qnt_steps,
+                        conf.compartment_level_step,
                         center_max,
                         volume_max,
                         scheduler.clone(),
@@ -229,7 +244,7 @@ impl ModelCached {
             model_center_coord: conf.model_center_coord.clone(),
             draught_min: conf.draught_min,
             hull_draught_step: conf.hull_draught_step,
-            compartment_level_step: conf.compartment_level_step,
+            bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
             displacement_shapes,
             windage_shape,
@@ -348,7 +363,7 @@ impl ModelCached {
             &self.dbg,
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
-            self.compartment_level_step,
+            self.bounds_level_step,
             bounds.clone(),
             self.scheduler.clone(),
         );
@@ -361,7 +376,7 @@ impl ModelCached {
         for (compartment_id, compartment) in &self.compartments {
             let compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.compartment_level_step)
+                .build_bounded(bounds.clone(), self.bounds_level_step)
                 .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
             compartment_bounded
                 .init()
@@ -453,7 +468,7 @@ impl ModelCached {
             &self.dbg,
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
-            self.compartment_level_step,
+            self.bounds_level_step,
             bounds.clone(),
             self.scheduler.clone(),
         );
@@ -466,7 +481,7 @@ impl ModelCached {
         for (compartment_id, compartment) in &self.compartments {
             let mut compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.compartment_level_step)
+                .build_bounded(bounds.clone(), self.bounds_level_step)
                 .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
             compartment_bounded
                 .rebuild()
@@ -505,8 +520,13 @@ impl ModelCached {
             draught_mid,
             precision,
             displacement,
-            waterline_x,
-            waterline_y,
+            displacement_center,
+            area_wl,
+            area_wl_center,
+            length_wl,
+            breadth_wl,
+            rad_long,
+            rad_trans,
         } = self
             .floating_position(FloatingPositionQuery {
                 water_density: query.water_density,
@@ -535,8 +555,8 @@ impl ModelCached {
             self.model_center_coord.x(),
             self.ship_length_lbp,
             draught_mid,
-            waterline_x,
-            waterline_y,
+            area_wl_center.x(),
+            area_wl_center.y(),
             heel,
             trim,
         )
@@ -570,9 +590,6 @@ impl ModelCached {
             Ok(task) => tasks.push(task),
             Err(err) => errors.push(err),
         };
-        /* let displacement_distr = displacement_bounded
-        .get(draught_mid, trim)
-        .map_err(|err| error.pass_with(format!("displacement_distr get"), err))?;*/
         //  dbg!(&displacement_distr);
         let compartments_bounded = self
             .compartments_bounded
@@ -596,7 +613,7 @@ impl ModelCached {
             let handle = self
                 .scheduler
                 .spawn(move || {
-                    let (level, _center) = compartment
+                    let compartment_result = compartment
                         .read()
                         .get(0., trim, volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
@@ -606,7 +623,7 @@ impl ModelCached {
                             error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
                         )?
                         .read();
-                    let volume_bounded = compartment_bounded.get(level, trim).map_err(|err| {
+                    let volume_bounded = compartment_bounded.get(compartment_result.level, trim).map_err(|err| {
                         error_
                             .pass_with(format!("compartment_bounded.get, space_id:{space_id}"), err)
                     })?;
@@ -619,37 +636,6 @@ impl ModelCached {
                 Err(err) => errors.push(err),
             };
         }
-        /*     let liquid_distr = {
-            let mut result = vec![0.; query.bounds.len_qnt()];
-            for cargo in query.liquid {
-                assert!(cargo.mass > 0.);
-                let space_id = &cargo.space_id;
-                let density = cargo.mass / cargo.volume;
-                let compartment = self
-                    .compartments
-                    .get(space_id)
-                    .ok_or(error.err(format!("liquid - no compartment:{space_id}")))?;
-                let (level, center) = compartment
-                    .read()
-                    .get(0., trim, cargo.volume, query.epsilon)
-                    .map_err(|err| {
-                        error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
-                    })?;
-                let compartment_bounded = compartments_bounded.get(space_id).ok_or(
-                    error.err(format!("compartments_bounded - no compartment:{space_id}")),
-                )?;
-                let volume_bounded = compartment_bounded.get(level, trim).map_err(|err| {
-                    error.pass_with(format!("compartment_bounded.get, space_id:{space_id}"), err)
-                })?;
-                //    dbg!(level, trim, &volume_bounded, cargo.mass, cargo.volume, density);
-                result = result
-                    .iter()
-                    .zip(volume_bounded.iter())
-                    .map(|(a, b)| a + b * density)
-                    .collect();
-            }
-            result
-        };*/
         for cargo in query.bulk {
             assert!(cargo.mass > 0.);
             let space_id = cargo.space_id.clone();
@@ -668,7 +654,7 @@ impl ModelCached {
             let handle = self
                 .scheduler
                 .spawn(move || {
-                    let (level, _center) = compartment
+                    let compartment_result = compartment
                         .read()
                         .get(0., trim, volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
@@ -678,7 +664,7 @@ impl ModelCached {
                             error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
                         )?
                         .read();
-                    let volume_bounded = compartment_bounded.get(level, trim).map_err(|err| {
+                    let volume_bounded = compartment_bounded.get(compartment_result.level, trim).map_err(|err| {
                         error_
                             .pass_with(format!("compartment_bounded.get, space_id:{space_id}"), err)
                     })?;
@@ -691,39 +677,6 @@ impl ModelCached {
                 Err(err) => errors.push(err),
             };
         }
-        /*
-        let bulk_distr = {
-            let mut result = vec![0.; query.bounds.len_qnt()];
-            for cargo in query.bulk {
-                assert!(cargo.mass > 0.);
-                let space_id = &cargo.space_id;
-                let density = cargo.mass / cargo.volume;
-                let compartment = self
-                    .compartments
-                    .get(space_id)
-                    .ok_or(error.err(format!("liquid - no compartment:{space_id}")))?;
-                let (level, center) = compartment
-                    .read()
-                    .get(0., 0., cargo.volume, query.epsilon.clone())
-                    .map_err(|err| {
-                        error.pass_with(format!("compartment.get, space_id:{space_id}"), err)
-                    })?;
-                let compartment_bounded = compartments_bounded.get(space_id).ok_or(
-                    error.err(format!("compartments_bounded - no compartment:{space_id}")),
-                )?;
-                let volume_bounded = compartment_bounded.get(level, 0.).map_err(|err| {
-                    error.pass_with(format!("volume_bounded get, space_id:{space_id}"), err)
-                })?;
-                //   dbg!(level, trim, &volume_bounded, cargo.mass, cargo.volume, density);
-                result = result
-                    .iter()
-                    .zip(volume_bounded.iter())
-                    .map(|(a, b)| a + b * density)
-                    .collect();
-            }
-            result
-        };
-        */
         for cargo in query.gaseous {
             assert!(cargo.mass > 0.);
             let space_id = cargo.space_id.clone();
@@ -754,30 +707,6 @@ impl ModelCached {
                 Err(err) => errors.push(err),
             };
         }
-
-        /*     let gaseous_distr = {
-            let mut result = vec![0.; query.bounds.len_qnt()];
-            for cargo in query.gaseous {
-                assert!(cargo.mass > 0.);
-                let space_id = &cargo.space_id;
-                let compartment_bounded = compartments_bounded.get(space_id).ok_or(
-                    error.err(format!("compartments_bounded - no compartment:{space_id}")),
-                )?;
-                let volume_bounded = compartment_bounded.get_max().map_err(|err| {
-                    error.pass_with(format!("volume_bounded get_max, space_id:{space_id}"), err)
-                })?;
-                let volume: f64 = volume_bounded.iter().sum();
-                assert!(volume > 0.);
-                let density = cargo.mass / volume;
-                //   dbg!(&volume_bounded, cargo.mass, volume, density);
-                result = result
-                    .iter()
-                    .zip(volume_bounded.iter())
-                    .map(|(a, b)| a + b * density)
-                    .collect();
-            }
-            result
-        };*/
         for task in tasks {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
@@ -797,6 +726,7 @@ impl ModelCached {
             .pop()
             .ok_or(error.err("no hull_result"))?
             .map_err(|err| error.pass_with("hull_result", err))?;
+        dbg!(&displacement_distr);
         let liquid_distr = {
             let mut result = vec![0.; query.bounds.len_qnt()];
             while !liquid_results.is_empty() {
@@ -836,50 +766,26 @@ impl ModelCached {
             }
             result
         };
-        let result = BalanceResult {
+        Ok(BalanceResult {
             heel,
             trim,
             draught_mid,
             draught_bow,
             draught_stern,
             draught_mean,
-            center_waterline_shift: waterline_x,
-            area_wl: todo!(),
-            length_wl: todo!(),
-            breadth_wl: todo!(),
-            volume_shift_z: todo!(),
-            rad_long: todo!(),
-            rad_trans: todo!(),
             displacement,
+            displacement_center,
             displacement_distr,
             gaseous_distr,
             bulk_distr,
             liquid_distr,
-        };
-
-        Ok(result)
-        /*        let result = BalanceCtx {
-            roll: heel,
-            trim,
-            draught_mid,
-            bounds: todo!(),
-            bulk: todo!(),
-            liquid: todo!(),
-            bounds_volume: todo!(),
-            volume,
-            area_wl: todo!(),
-            length_wl: todo!(),
-            breadth_wl: todo!(),
-            volume_shift_z: todo!(),
-            entry_angle: todo!(),
-            flooding_angle: todo!(),
-            bow_area: todo!(),
-            const_area_v: todo!(),
-            const_area_h: todo!(),
-            rad_long: todo!(),
-            rad_trans: todo!(),
-            pantocaren: todo!(),
-        };*/
+            area_wl,
+            area_wl_center,
+            length_wl,
+            breadth_wl,
+            rad_long,
+            rad_trans,
+        })
     }
     /// Расчет равновесного положения
     pub(crate) fn floating_position(
@@ -930,7 +836,7 @@ impl ModelCached {
             let mass_sum = mass_const + mass_bulk + mass_liquid + mass_damaged_compartment;
             let displacement = mass_sum / query.water_density;
             // считаем корпус с учетом изменения массы
-            let (new_draught, cb, waterline_x, waterline_y) = self
+            let disp_result = self
                 .displacement
                 .get(heel, trim, mass_sum / query.water_density, epsilon)
                 .map_err(|err| {
@@ -939,6 +845,7 @@ impl ModelCached {
                         err,
                     )
                 })?;
+            let (new_draught, cb) = (disp_result.draught, disp_result.volume_center);            
             // расчет ориентации корпуса
             let rotation = {
                 let heel_rad = -heel.to_radians();
@@ -966,7 +873,7 @@ impl ModelCached {
                 let cg_h = cb + cg_h_local.into();
                 let precision = (cg_h - cb).len();
                 if precision < query.epsilon {
-                    println!(
+                    /* println!(
                         //                        "steps:{_i} heel:{:.6} trim:{:.6} draught:{:.6} precision:{:6} volume:{:6} cb:({:.6} {:.6}) waterline_x:{:.6} waterline_y:{:.6})",
                         "FloatingPositionResult [ heel:{:.6}, trim:{:.6}, draught_mid:{:.6}, precision:{:6}, displacement:{:6}, waterline_x:{:.6}, waterline_y:{:.6} ]",
                         // time.elapsed(),
@@ -979,15 +886,20 @@ impl ModelCached {
                         //   cb.y(),
                         waterline_x,
                         waterline_y
-                    );
+                    );*/
                     return Ok(FloatingPositionResult {
                         heel,
                         trim,
                         draught_mid: new_draught,
                         precision,
                         displacement,
-                        waterline_x,
-                        waterline_y,
+                        displacement_center: disp_result.volume_center,
+                        area_wl: disp_result.area_wl,
+                        area_wl_center: disp_result.area_wl_center,
+                        length_wl: disp_result.length_wl,
+                        breadth_wl: disp_result.breadth_wl,
+                        rad_long: disp_result.inertia_long_y/displacement,
+                        rad_trans: disp_result.inertia_trans_x/displacement,
                     });
                 }
                 cg_h
@@ -1103,14 +1015,14 @@ impl ModelCached {
         }
         while !task_results.is_empty() {
             if let Some((space_id, mass, data)) = task_results.pop() {
-                let (level, position) = match data {
-                    Ok((level, position)) => (level, position),
+                let CompartmentCacheResult{ heel, trim, level, volume, volume_center, inertia_trans_x, inertia_long_y } = match data {
+                    Ok(data) => data,
                     Err(err) => {
                         errors.push(Err(error.pass_with("data", err)));
                         continue;
                     }
                 };
-                values.push((space_id, level, Moment::from_pos(position, mass)));
+                values.push((space_id, level, Moment::from_pos(volume_center, mass)));
             }
         }
         let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
@@ -1178,14 +1090,14 @@ impl ModelCached {
         }
         while !task_results.is_empty() {
             if let Some((space_id, mass, data)) = task_results.pop() {
-                let (level, position) = match data {
-                    Ok((level, position)) => (level, position),
+                let CompartmentCacheResult{ heel, trim, level, volume, volume_center, inertia_trans_x, inertia_long_y } = match data {
+                    Ok(data) => data,
                     Err(err) => {
                         errors.push(Err(error.pass_with("data", err)));
                         continue;
                     }
                 };
-                values.push((space_id, level, Moment::from_pos(position, mass)));
+                values.push((space_id, level, Moment::from_pos(volume_center, mass)));
             }
         }
         let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();

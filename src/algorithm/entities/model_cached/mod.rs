@@ -18,7 +18,7 @@ pub(crate) use windage_area::*;
 pub(crate) use draught::*;
 pub use shape::*;
 
-use crate::algorithm::entities::{Bounds, Moment};
+use crate::algorithm::entities::{Bounds, Moment, Position};
 ///
 /// Структура для ввода данных расчета баланса судна.
 /// Содержит массу судна, грузов и положение зерновых перегородок
@@ -100,10 +100,10 @@ pub struct BalanceResult {
     pub draught_stern: f64,
     /// средняя осадка (в центре тяжести ватерлинии)
     pub draught_mean: f64, 
-    /// Отстояние центра тяжести ватерлинии по длине от миделя
-    pub center_waterline_shift: f64, 
-    /// объемное водоизмещение
-    pub displacement: f64,    
+    /// Объемное водоизмещение, м^3
+    pub displacement: f64,
+    /// Смещение центра объемного водоизмещения, м
+    pub displacement_center: Position,
     /// распределение водоизмещения по шпациям
     pub displacement_distr: Vec<f64>,  
     /// распределение массы газообразных грузов по шпациям 
@@ -113,13 +113,17 @@ pub struct BalanceResult {
     /// распределение массы жидких грузов по шпациям 
     pub liquid_distr: Vec<f64>,   
     /// Площадь ватерлинии, м^2
-    pub area_wl: f64, 
+    pub area_wl: f64,
+    /// Смещение центра тяжести ватеринии, м
+    pub area_wl_center: Position,
     /// Длинна по ватерлинии при текущей осадке, м
     pub length_wl: f64, 
     ///  Ширина по ватерлинии при текущей осадке, м
     pub breadth_wl: f64, 
-    ///  Отстояние по вертикали центра площади проекции подводной части корпуса, м
-    pub volume_shift_z: f64, 
+    /// Продольный метацентрический радиус, м
+    pub rad_long: f64,
+    /// Поперечный метацентрические радиус, м
+    pub rad_trans: f64,
    // ///  Угол входа в воду кромки палубы, градусы
   //  pub entry_angle: f64, 
   //  ///  Угол заливания отверстий, градусы
@@ -131,10 +135,6 @@ pub struct BalanceResult {
   //  /// Площади боковой и горизонтальной поверхностей для расчета остойчивости, м^2
   //  pub const_area_v: Vec<(f64, Position)>,
   //  pub const_area_h: Vec<(f64, Position)>,
-    /// Продольный метацентрический радиус, м
-    pub rad_long: f64,
-    /// Поперечный метацентрические радиус, м
-    pub rad_trans: f64,
   //  /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы 
   //  pub pantocaren: Vec<(f64, f64)>,    
 }

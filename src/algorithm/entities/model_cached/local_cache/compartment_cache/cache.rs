@@ -2,7 +2,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Position,
         cache::Cache,
-        model_cached::{BoundDisplacementCache, DisplacementShape, local_cache::LocalCache, save},
+        model_cached::{BoundDisplacementCache, CompartmentCacheResult, DisplacementShape, local_cache::LocalCache, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -19,7 +19,7 @@ pub struct CompartmentCache {
     cache_dir: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    level_qnt_steps: usize,
+    level_step: f64,
     /// центр полного объема из бд
     center_max: Option<Position>,
     /// полный объем из бд
@@ -50,7 +50,7 @@ impl CompartmentCache {
         compartment_id: String,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        level_qnt_steps: usize,
+        level_step: f64,
         center_max: Option<Position>,
         volume_max: Option<f64>,
         scheduler: Scheduler,
@@ -60,7 +60,7 @@ impl CompartmentCache {
             shape,
             heel_steps,
             trim_steps,
-            level_qnt_steps,
+            level_step,
             center_max,
             volume_max,
             level_max: None,
@@ -78,24 +78,33 @@ impl CompartmentCache {
         trim: f64,
         volume: f64,
         epsilon: f64,
-    ) -> Result<(f64, Position), Error> {
+    ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let level_max = cache.max_value(2);
         let mut step = level_max / 2.;
-        let mut draught = step;
+        let mut level = step;
         for _ in 0..100 {
-            let query = [heel, trim, draught];
+            let query = [heel, trim, level];
             let result = cache.get(&query);
+            assert!(result.len() == 6);
             let delta = volume
                 - result
                     .first()
                     .ok_or(error.pass("no result from cache.get(&query)"))?;
             if delta.abs() <= epsilon {
-                return Ok((draught, Position::new(result[1], result[2], result[3])));
+                return Ok(CompartmentCacheResult {
+                    heel,
+                    trim,
+                    level,
+                    volume,
+                    volume_center: Position::new(result[1], result[2], result[3]),
+                    inertia_trans_x: result[4],
+                    inertia_long_y: result[5],
+                });
             }
             step = step / 2.;
-            draught += step * delta.signum();
+            level += step * delta.signum();
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
@@ -127,7 +136,7 @@ impl LocalCache for CompartmentCache {
             self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
-            self.level_qnt_steps,
+            self.level_step,
             self.center_max,
             self.volume_max,
             self.scheduler.clone(),
