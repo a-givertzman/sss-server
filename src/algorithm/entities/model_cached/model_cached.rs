@@ -173,6 +173,7 @@ impl ModelCached {
                 .map(|f| f.path())
                 .collect(),
             Err(err) => {
+                // TODO: подумать, что делать при неправильном имени файла
                 log::error!(
                     "{}",
                     error.pass_with(
@@ -183,12 +184,6 @@ impl ModelCached {
                 Vec::new()
             }
         };
-        // TODO: подумать, что делать при неправильном имени файла
-        /*    let (result, _errors): (Vec<_>, Vec<_>) = pathes
-                    .into_iter()
-                    .map(|p| (p.file_name(), p))
-                    .partition(|(s, r)| s.is_some());
-        */
         let compartments = pathes
             .iter()
             .filter(|path: &&PathBuf| path.file_name().is_some())
@@ -543,7 +538,7 @@ impl ModelCached {
     }
     //
     pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceResult, Error> {
-        let time = std::time::Instant::now();
+        //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "balance");
         let FloatingPositionResult {
             heel,
@@ -570,18 +565,7 @@ impl ModelCached {
                 epsilon: query.epsilon,
             })
             .map_err(|err| error.pass_with("self.floating_position", err))?;
-        /*          println!(
-                                "steps:{_i} time:{:?} heel:{:.6} trim:{:.6} draught:{:.6} cb:({:.6} {:.6} {:.6}) L:{:.6}",
-                                time.elapsed(),
-                                heel,
-                                trim,
-                                new_draught,
-                                cb.x(),
-                                cb.y(),
-                                cb.z(),
-                                precision
-                            );
-        */
+        // println!("steps:{_i} time:{:?}", time.elapsed());
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
             self.model_center_coord.x(),
             self.ship_length_lbp,
@@ -854,7 +838,6 @@ impl ModelCached {
         let mut step_heel = 1.0;
         let mut d_v: Option<f64> = None;
         let mut d_m: Option<f64> = None;
-        // loop
         for _i in 1..=1000 {
             let epsilon = (step_trim + step_heel) / 10.;
             // учет смещения жидкости

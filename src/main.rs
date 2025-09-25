@@ -11,7 +11,7 @@ mod tests;
 
 use algorithm::entities::{Position, Position2d};
 
-//use algorithm::eval::*;
+use algorithm::eval::*;
 
 use app::app::App;
 use conf::conf::Conf;
@@ -25,7 +25,7 @@ use kernel::{
 //use prelude::*;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-//use ship_model::ship_model::ShipModel;
+use ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{
     Bounds, Moment,
     model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught},
@@ -69,10 +69,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let res = bound_cache.get(5.9, 0.);
         dbg!("BoundCache::new get", res);
     */
-
-
     
-    let physical_frames = [
+ /*   let physical_frames = [
         -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
         6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
         17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
@@ -136,6 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dbg!(&res);
     let res = model.init_bounded(&bounds);
     dbg!(&res);
+*/
 
  /*   let mut result = |mass: f64, x: f64, y: f64, z: f64| {
               model.floating_position(model_cached::FloatingPositionQuery {
@@ -223,7 +222,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-    /*
+    
     let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
     let path = "config.yaml";
@@ -376,6 +375,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .eval(());
     ship_model.exit();
     ship_model_handle.join().unwrap();
-    */
+    
     Ok(())
 }
