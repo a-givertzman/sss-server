@@ -11,6 +11,9 @@ use crate::algorithm::entities::data::{
     ScrewDataArray, loads::*, MetacentricHeightSubdivisionArray,
 };
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
+use crate::algorithm::entities::ship_model::ship_model::ShipModel;
+use crate::kernel::types::RwLock;
+use crate::kernel::types::eval_result::EvalResult;
 use crate::{
     algorithm::context::{
         context::Context,
@@ -26,7 +29,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// для расчетов.
 pub struct Initial {
     dbg: Dbg,
-    model: Arc<ShipModel>,
+    model: Arc<RwLock<ShipModel>>,
     api_client: ApiClient,
     ctx: Context,
 }
@@ -37,7 +40,7 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Arc<ShipModel>,
+        model: Arc<RwLock<ShipModel>>,
         api_client: ApiClient,
         ctx: Context,
     ) -> Self {

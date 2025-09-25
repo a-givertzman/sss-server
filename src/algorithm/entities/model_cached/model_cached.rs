@@ -6,7 +6,7 @@ use crate::{
             AreaShape, BoundDisplacementCache, 
             CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache,
             DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
-        },
+        }, ship_model::*,
     },
     kernel::types::{Arc, RwLock},
 };

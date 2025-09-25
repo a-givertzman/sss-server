@@ -2,17 +2,17 @@ use super::strength_area_ctx::StrengthAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{Bound, Position, data::loads::UnitCargoType},
+        entities::{Bound, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel},
         eval::IcingTimberCtx,
     }, 
-    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{InitialCtx, ContextWrite},
+    kernel::{eval::Eval, types::{Arc, RwLock, eval_result::EvalResult}}, prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Площади боковой и горизонтальной поверхностей для расчета прочности
 pub struct StrengthAreaEval {
     dbg: Dbg,
-    model: Link,
+    model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -21,7 +21,7 @@ impl StrengthAreaEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: Link,
+        model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "StrengthAreaEval");
@@ -60,18 +60,9 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 // Но так много действий и так сложно получается,
                 // может получится хотябы часть из низ вынести в метод,
                 // вроде бы действия однообразные все время должны быть
-                let (const_area_v, const_area_h) = match self.model.call(Query::BoundAreas) {
-                    Ok(reply) => {
-                        let reply: Reply = reply;
-                        match reply {
-                            Reply::BoundAreas(areas) => match areas {
-                                Ok(areas) => (areas.v, areas.h),
-                                Err(err) => return Err(error.pass_with("Read bound_areas error", err)),
-                            }
-                            _ => return Err(error.err(format!("Read bound_areas - Wrong reply: {:?}", reply))),
-                        }
-                    }
-                    Err(err) => return Err(error.pass_with("Read bound_areas error", err)),
+                let (const_area_v, const_area_h) = match self.model.write().bound_areas(&bounds) {
+                         Ok(areas) => (areas.v, areas.h),
+                    Err(err) => return Err(error.pass_with("model.bound_areas", err)),
                 };
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {

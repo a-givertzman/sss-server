@@ -24,10 +24,13 @@ use kernel::{
 //use prelude::*;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
+use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{
     Bounds, Moment,
     model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught},
 };
+use crate::prelude::{Context, Initial, InitialCtx};
+use std::rc::Rc;
 use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
@@ -230,8 +233,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let ship_id = 2;
     let project_id = "NULL";
+    let cache_dir = "src/assets/cache/sofia".into();
+    let model_dir = "src/assets/model/sofia".into();
+    let model_center_coord = Position::new(65.250, 0., 0.);
     let thread_pool = ThreadPool::new(&dbg, Some(conf.thread_pool.size));
-    let mut model_cached = model_cached::ModelCached::new(
+    let model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
             model_dir,
@@ -279,7 +285,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &dbg,
         ship_id,
         project_id.to_owned(),
-        bounds,
         model_cached,
         ApiClient::new(
             &dbg,
@@ -289,7 +294,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         thread_pool.scheduler(),
     );
-    let ship_model = Rc::new(RwLock::new(ship_model));
+    let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
     let ctx = CriterionStabilityEval::new(
         &dbg,
@@ -359,7 +364,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                                         conf.api.address.host.clone(),
                                                                                                                         conf.api.address.port.clone(),
                                                                                                                     ),
-                                                                                                                    Context::new(InitialCtx::new(ship_id, project_id)),
+                                                                                                                    Context::new(InitialCtx::new(ship_id, project_id, bounds)),
                                                                                                                 ),
                                                                                                             ),
                                                                                                         ),
@@ -413,8 +418,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .eval(());
-    ship_model.exit();
-    ship_model_handle.join().unwrap();
     
     Ok(())
 }

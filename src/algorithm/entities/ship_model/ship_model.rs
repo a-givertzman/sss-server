@@ -7,6 +7,7 @@ use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::model_cached;
+use crate::algorithm::entities::ship_model::BalanceQuery;
 use crate::algorithm::entities::ship_model::BoundArea;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
@@ -40,7 +41,6 @@ pub struct ShipModel {
     ship_id: usize,
  //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
-    bounds: Option<Bounds>,
     bound_areas: Option<BoundArea>,
     model_cached: ModelCached,
     scheduler: Scheduler,
@@ -64,7 +64,6 @@ impl ShipModel {
         ship_id: usize,        
     //    ship_file_name: String,
         project_id: String,
-        bounds: Bounds,
         model_cached: ModelCached,
         api_client: ApiClient,
         scheduler: Scheduler,
@@ -78,7 +77,6 @@ impl ShipModel {
             ship_id,
       //      ship_file_name,
             project_id,
-            bounds: Some(bounds),
             bound_areas: None,
             model_cached,
             scheduler,
@@ -118,7 +116,7 @@ impl ShipModel {
  */   
     ///
     /// TODO: Doc
-    pub fn bound_areas(&mut self, bounds: Bounds) -> Result<BoundArea, Error> {
+    pub fn bound_areas(&self, bounds: &Bounds) -> Result<BoundArea, Error> {
         let error = Error::new(&self.dbg, "bound_areas");
         match &self.bound_areas {
             Some(bound_areas) => Ok(bound_areas.clone()),
@@ -148,8 +146,31 @@ impl ShipModel {
     /// TODO: Doc
     pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
-        self.model_cached.balance(query)
-            .map_err(|err| error.pass_with("model_cached.balance", err))
+        let result = self.model_cached.balance(query)
+            .map_err(|err| error.pass_with("model_cached.balance", err))?;
+        
+        Ok(BalanceCtx {
+            trim: todo!(),
+            draught_mid: todo!(),
+            roll: todo!(),
+            bounds: todo!(),
+            bulk: todo!(),
+            liquid: todo!(),
+            bounds_volume: todo!(),
+            volume: todo!(),
+            area_wl: todo!(),
+            length_wl: todo!(),
+            breadth_wl: todo!(),
+            volume_shift_z: todo!(),
+            entry_angle: todo!(),
+            flooding_angle: todo!(),
+            bow_area: todo!(),
+            const_area_v: todo!(),
+            const_area_h: todo!(),
+            rad_long: todo!(),
+            rad_trans: todo!(),
+            pantocaren: todo!(),
+        })
     }
     ///
 /*    fn bounded_windage_area(

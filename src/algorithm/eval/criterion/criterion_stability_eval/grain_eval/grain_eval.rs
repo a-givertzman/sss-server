@@ -2,7 +2,7 @@ use super::grain_ctx::GrainCtx;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx};
+use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::*,

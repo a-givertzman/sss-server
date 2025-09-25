@@ -6,19 +6,18 @@ use super::balance_ctx::BalanceCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::Moment,
+        entities::{Moment, ship_model::{BalanceQuery, ship_model::ShipModel}},
         eval::{IcingCtx, LoadsCtx, WettingCtx},
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::ContextWrite,
-    prelude::InitialCtx,
+    kernel::{eval::Eval, types::{RwLock, eval_result::EvalResult}},
+    prelude::{ContextWrite, InitialCtx},
 };
 
 ///
 /// Расчет равновесного положения судна
 pub struct BalanceEval {
     dbg: Dbg,
-    model: Arc<ShipModel>,
+    model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -27,7 +26,7 @@ impl BalanceEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: Arc<ShipModel>,
+        model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "BalanceEval");
@@ -74,12 +73,16 @@ impl Eval<(), EvalResult> for BalanceEval {
                     bulk: loads.bulk.clone(),
                     liquid: loads.liquid.clone(),
                     grain_bulkhead: loads.grain_bulkhead,
-                    damaged_compartment: Vec::new(), //TODO
-                    precision: 0.001,                //TODO
+                //    damaged_compartment: Vec::new(), //TODO
+                    precision: 0.001,
+                    gaseous: todo!(),
+                    epsilon: todo!(),
+                    bounds: todo!(),                //TODO
                 };
                 // Расчет баланса в модели
                 let result_data: BalanceCtx = self
                     .model
+                    .read()
                     .compute_balance(balance_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
 

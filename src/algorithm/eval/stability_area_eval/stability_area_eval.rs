@@ -2,15 +2,16 @@ use super::stability_area_ctx::StabilityAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{data::loads::UnitCargoType, Bound, Moment, Position}, eval::{BalanceCtx, IcingTimberCtx},
-    }, kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx}
+        entities::{Bound, Moment, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel}, eval::{BalanceCtx, IcingTimberCtx},
+    }, kernel::{eval::Eval, types::{Arc, eval_result::EvalResult}}, prelude::{ContextWrite, InitialCtx}
 };
 use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::sync::RwLock;
 ///
 /// Площади боковой и горизонтальной поверхностей для расчета остойчивости
 pub struct StabilityAreaEval {
     dbg: Dbg,
-    model: Link,
+    model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -19,7 +20,7 @@ impl StabilityAreaEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-        model: Link,
+        model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "StabilityAreaEval");
