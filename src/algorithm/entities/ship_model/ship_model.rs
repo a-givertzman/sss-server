@@ -1,6 +1,3 @@
-use super::query::*;
-use super::reply::*;
-use super::{query::Query, reply::Reply};
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::Position2d;
@@ -10,6 +7,7 @@ use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::model_cached;
+use crate::algorithm::entities::ship_model::BoundArea;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
@@ -66,6 +64,7 @@ impl ShipModel {
         ship_id: usize,        
     //    ship_file_name: String,
         project_id: String,
+        bounds: Bounds,
         model_cached: ModelCached,
         api_client: ApiClient,
         scheduler: Scheduler,
@@ -79,7 +78,7 @@ impl ShipModel {
             ship_id,
       //      ship_file_name,
             project_id,
-            bounds: None,
+            bounds: Some(bounds),
             bound_areas: None,
             model_cached,
             scheduler,
@@ -90,9 +89,10 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn bounds(&mut self, qnt_bounds: usize) -> Result<Bounds, Error> {
+  /*    pub fn bounds(&mut self, qnt_bounds: usize) -> Result<Bounds, Error> {
         let error = Error::new(&self.dbg, "bounds");
-        match &self.bounds {
+
+      match &self.bounds {
             Some(bounds) => Ok(bounds.clone()),
             None => match get_bounds(
                 &self.api_client.read(),
@@ -115,13 +115,14 @@ impl ShipModel {
             }
         }
     }
+ */   
     ///
     /// TODO: Doc
     pub fn bound_areas(&mut self, bounds: Bounds) -> Result<BoundArea, Error> {
         let error = Error::new(&self.dbg, "bound_areas");
         match &self.bound_areas {
             Some(bound_areas) => Ok(bound_areas.clone()),
-            None => match bound_areas(
+            None => match self.bound_areas(
                 bounds,
                 self.ship_id,
                 &self.api_client.read(),
@@ -131,8 +132,9 @@ impl ShipModel {
                     self.bound_areas = Some(bound_areas.clone());
                     Ok(bound_areas)
                 },
-                Err(_) => {
-                    let bound_areas = self.model_cached.rebuild_windage_area(bounds).map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
+                Err(_) => {                    
+
+                    let windage_area = self.model_cached.bounded_windage_area(bounds).map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
                     self.bound_areas = Some(bound_areas.clone());
                     let sql = format!("INSERT INTO computed_frame_space\n\t(ship_id, qnt_bounds, index, start_x, end_x)\nVALUES{};",
                         bounds.iter().filter(|v| v.is_value()).enumerate().map(|(i, v)| format!("\n\t({}, '{}', {i}, {}, {})", self.ship_id, qnt_bounds, v.start().unwrap(), v.end().unwrap())).collect::<Vec<_>>().join(","));
@@ -144,78 +146,40 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn compute_balance(&self, query: BalanceQuery) -> Future<Result<BalanceCtx, Error>> {
+    pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
-        let (result, sink) = Future::new();
-        let scheduler = self.scheduler.clone();
-        let exit = self.exit.clone();
-        let ship_id = self.ship_id;
-        let sink_clone = sink.clone();
-
-        let floating_position = self.model_cached
-        .floating_position(
-            query,
-        )
-        .map_err(|err| error.pass_with("floating_position", err))?;
-
-    let result = BalanceCtx {
-        trim: todo!(),//floating_position.trim_angle,
-        roll: todo!(),//floating_position.heel_angle,
-        draught_mid: todo!(),//floating_position.draught_at_amidships,
-        bulk: todo!(),
-        liquid: todo!(),
-        bounds_volume: todo!(),
-        volume: todo!(),//floating_position.displacement,
-        area_wl: todo!(),
-        length_wl: todo!(),
-        breadth_wl: todo!(),
-        volume_shift_z: todo!(),//floating_position.disp_center[2],
-        entry_angle: todo!(),
-        flooding_angle: todo!(),
-        bow_area: todo!(),
-        const_area_v: todo!(),
-        const_area_h: todo!(),
-        rad_long: todo!(),
-        rad_trans: todo!(),
-        pantocaren: todo!(),
-    };
-    Ok(result)
-
-        let bounds = match self.bounds() {
-            Ok(bounds) => bounds,
-            Err(err) => {
-                sink.add(Err(error.pass_with("self.bounds", err)));
-                return result;},
-        };
-        let model_conf = model_cached::ModelCachedConf {
-            cache_dir: PathBuf::from(cache_dir),
-            model_dir: PathBuf::from(model_dir),
-            model_scale: 1000.,
-            model_center_coord: Position::new(59.195, 0., 0.),
-            heel_steps: (-20..=20).step_by(5).map(|n| n as f64).collect(),
-            trim_steps: (-20..=20).step_by(5).map(|n| n as f64).collect(),
-            draught_min: 2.,
-            hull_draught_step: 1.,
-            compartment_level_step: 0.1,
-        };
-        let handle = self.scheduler.spawn(move || {
-            let result = compute_balance(
-                model_conf,
-                bounds,
-                query,
-                ship_id,
-                scheduler,
-                exit,
-            );
-            sink_clone.add(result);
-            Ok(())
-        });
-        match handle {
-            Ok(handle) => self.handles.push(handle),
-            Err(err) => sink.add(Err(error.pass(err))),
-        }
-        result
+        self.model_cached.balance(query)
+            .map_err(|err| error.pass_with("model_cached.balance", err))
     }
+    ///
+/*    fn bounded_windage_area(
+        bounds: Bounds,
+        ship_id: usize,
+    ) -> Result<BoundArea, Error> {
+        let err = Error::new("ShipModel", "bounded_windage_area");
+        let area = strength::VerticalAreaArray::parse(
+            &api_client.fetch(&format!(
+                "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
+                ship_id
+            )).map_err(|e| err.pass(e.to_string()))?
+        ).map_err(|e| err.pass(e.to_string()))?;
+        let area: Vec<_> = area
+            .data()
+            .into_iter()
+            .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
+            .collect();
+        let area: Vec<f64> = bounds
+            .iter()
+            .map(|b1| {
+                (
+                    area.iter().fold(0., |sum, &(v, b2)| 
+                        sum + v * b1.part_ratio(&b2).unwrap_or(0.)
+                    ),
+                )
+            })
+            .collect();
+        Ok(area)
+    }*/
     ///
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
@@ -227,8 +191,8 @@ impl ShipModel {
 impl Debug for ShipModel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ShipModel")
-            .field("txid", &self.txid)
-            .field("name", &self.name)
+            .field("ship_id", &self.ship_id)
+            .field("project_id", &self.project_id)
             // .field("send", &self.send)
             // .field("recv", &self.recv)
             // .field("subscribers", &self.subscribers)
@@ -333,38 +297,6 @@ fn bounded_horisontal_area(
         .collect();
     Ok(area)
 }
-///
-/// Computes ...
-/// - `exit` - used to breake long havy computation if possible
-fn bounded_windage_area(
-    bounds: Bounds,
-    ship_id: usize,
-    api_client: &ApiClient,
-    _: Arc<AtomicBool>,
-) -> Result<BoundArea, Error> {
-    let err = Error::new("ShipModel", "bounded_windage_area");
-    let area = strength::VerticalAreaArray::parse(
-        &api_client.fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
-            ship_id
-        )).map_err(|e| err.pass(e.to_string()))?
-    ).map_err(|e| err.pass(e.to_string()))?;
-    let area: Vec<_> = area
-        .data()
-        .into_iter()
-        .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
-        .collect();
-    let area: Vec<f64> = bounds
-        .iter()
-        .map(|b1| {
-            (
-                area.iter().fold(0., |sum, &(v, b2)| 
-                    sum + v * b1.part_ratio(&b2).unwrap_or(0.)
-                ),
-            )
-        })
-        .collect();
-    Ok(area)
-}
+
 
 

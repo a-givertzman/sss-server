@@ -5,7 +5,7 @@ use crate::{
         eval::{
             zg_eval::Zg, CriterionData, CriterionID, LeverDiagramCtx, MetacentricHeightCtx, WheatherCtx
         },
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

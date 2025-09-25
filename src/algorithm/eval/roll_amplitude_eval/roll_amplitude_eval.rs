@@ -3,13 +3,12 @@ use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::{
-    ContextWrite,
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead, ContextReadRef},
         eval::{BalanceCtx, MetacentricHeightCtx, RollingPeriodCtx, parameters::ParameterID},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
+    prelude::{InitialCtx, ContextWrite}
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

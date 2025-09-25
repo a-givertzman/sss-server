@@ -3,8 +3,7 @@ use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
-    ContextWrite,
+    prelude::{InitialCtx, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use super::wetting_ctx::WettingCtx;

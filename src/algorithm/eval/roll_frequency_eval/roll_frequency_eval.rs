@@ -11,7 +11,7 @@ use crate::{
         eval::Eval, 
         types::eval_result::EvalResult
     }, 
-    ContextWrite,
+    prelude::ContextWrite,
 };
 use sal_core::{
     dbg::Dbg, 

@@ -1,10 +1,11 @@
 use super::dso_area_ctx::DSOAreaCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
         entities::data::ship_type::ShipType,
-        eval::{zg_eval::Zg, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
+        eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, zg_eval::Zg},
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -17,7 +18,10 @@ pub struct DSOAreaEval {
 //
 impl DSOAreaEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "DSOAreaEval");
         Self {
             dbg,

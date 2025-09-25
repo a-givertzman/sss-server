@@ -4,7 +4,7 @@ use crate::algorithm::context::context_access::{ContextParamsRead, ContextParams
 use crate::algorithm::entities::{Curve, ICurve};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::{
-    ContextWrite,
+    prelude::ContextWrite,
     algorithm::context::context_access::ContextReadRef,
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,

@@ -4,8 +4,7 @@ use crate::algorithm::entities::Moment;
 use crate::algorithm::eval::{IcingStabCtx, StrengthAreaCtx};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
-    ContextWrite,
+    prelude::{InitialCtx, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};
 

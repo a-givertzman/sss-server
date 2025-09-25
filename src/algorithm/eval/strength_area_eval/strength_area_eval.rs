@@ -1,12 +1,11 @@
 use super::strength_area_ctx::StrengthAreaCtx;
 use crate::{
-    ContextWrite,
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{Bound, Position, data::loads::UnitCargoType},
         eval::IcingTimberCtx,
     }, 
-    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::InitialCtx, ship_model::{query::Query, reply::Reply},
+    kernel::{eval::Eval, sync::Link, types::eval_result::EvalResult}, prelude::{InitialCtx, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

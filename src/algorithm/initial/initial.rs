@@ -11,16 +11,13 @@ use crate::algorithm::entities::data::{
     ScrewDataArray, loads::*, MetacentricHeightSubdivisionArray,
 };
 use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
-use crate::kernel::sync::Link;
-use crate::ship_model::query;
-use crate::ship_model::ship_model::ShipModel;
 use crate::{
     algorithm::context::{
         context::Context,
         context_access::{ContextReadRef, ContextWrite},
     },
     infrostructure::api::client::api_client::ApiClient,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::eval::Eval,
 };
 use sal_core::{dbg::Dbg, error::Error};
 

@@ -10,6 +10,8 @@ use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::Mul
 pub struct InitialCtx {
     pub ship_id: String,
     pub project_id: String,
+    /// Разбиение на теоретические шпации
+    pub bounds: Option<Bounds>,
     /// Текстовые данные по судну
     pub ship: Option<Ship>,
     /// Тип судна
@@ -56,10 +58,11 @@ impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize, project_id: &str) -> Self {
+    pub fn new(ship_id: usize, project_id: &str, bounds: Bounds) -> Self {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),
+            bounds: Some(bounds),
             ..Default::default()
         }
     }

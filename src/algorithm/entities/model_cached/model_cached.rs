@@ -3,9 +3,9 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BalanceQuery, BalanceResult, BoundDisplacementCache, BulkData,
+            AreaShape, BoundDisplacementCache, 
             CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache,
-            DisplacementCacheResult, DisplacementShape, Draught, LiquidData, Shape, WindageArea,
+            DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
         },
     },
     kernel::types::{Arc, RwLock},

@@ -1,4 +1,4 @@
-use crate::{algorithm::entities::Position, ship_model::query::*};
+use crate::algorithm::entities::Position;
 
 ///
 /// Общая структура для ввода данных. Содержит все данные

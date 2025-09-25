@@ -4,8 +4,8 @@ use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
-    BalanceCtx, ContextWrite, algorithm::context::context_access::ContextRead,
     kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -18,7 +18,10 @@ pub struct GrainEval {
 //
 impl GrainEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "GrainEval");
         Self {
             dbg,
@@ -35,11 +38,7 @@ impl Eval<Zg, EvalResult> for GrainEval {
             Ok(mut ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: BalanceCtx = ctx.read();
-                let m_grain = balance
-                    .bulk
-                    .iter()
-                    .map(|v| v.moment )
-                    .sum();
+                let m_grain = balance.bulk.iter().map(|v| v.moment).sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
                 let balance: BalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
@@ -184,8 +183,6 @@ impl Eval<Zg, EvalResult> for GrainEval {
 //
 impl std::fmt::Debug for GrainEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GrainEval")
-            .field("dbg", &self.dbg)
-            .finish()
+        f.debug_struct("GrainEval").field("dbg", &self.dbg).finish()
     }
 }

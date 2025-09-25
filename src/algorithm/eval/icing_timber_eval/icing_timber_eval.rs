@@ -1,8 +1,10 @@
-use sal_core::{dbg::Dbg, error::Error};
-use crate::{
-    algorithm::context::context_access::ContextReadRef, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
-};
 use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
+use crate::{
+    algorithm::context::context_access::ContextReadRef,
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::{InitialCtx, ContextWrite},
+};
+use sal_core::{dbg::Dbg, error::Error};
 
 ///
 /// Ограничение горизонтальной площади обледенения палубного груза - леса
@@ -33,12 +35,22 @@ impl Eval<(), EvalResult> for IcingTimberEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
                 let icing_timber_stab = IcingTimberType::from_str(&voyage.icing_timber_type)
                     .map_err(|err| error.pass_with("icing_timber_stab", err))?;
-                let ship_parameters = initial.ship_parameters.as_ref().ok_or(error.err("ship_parameters error: no data!"))?; 
-                let length_loa = *ship_parameters.get("L.O.A").ok_or(error.err("length_loa error: no data!"))?; 
-                let width = *ship_parameters.get("MouldedBreadth").ok_or(error.err("width error: no data!"))?;                
+                let ship_parameters = initial
+                    .ship_parameters
+                    .as_ref()
+                    .ok_or(error.err("ship_parameters error: no data!"))?;
+                let length_loa = *ship_parameters
+                    .get("L.O.A")
+                    .ok_or(error.err("length_loa error: no data!"))?;
+                let width = *ship_parameters
+                    .get("MouldedBreadth")
+                    .ok_or(error.err("width error: no data!"))?;
                 let result = IcingTimberCtx::new(width, length_loa, icing_timber_stab);
                 ctx.write(result)
             }

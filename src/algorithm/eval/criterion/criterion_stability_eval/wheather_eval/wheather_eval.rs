@@ -1,11 +1,11 @@
 use super::wheather_ctx::WheatherCtx;
 use crate::{
-    algorithm::{
-        context::context_access::{ContextParamsWrite, ContextRead},
-        eval::{
-            parameters::ParameterID, zg_eval::Zg, BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx
-        },
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, ContextWrite
+    algorithm::eval::{
+        BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx,
+        parameters::ParameterID, zg_eval::Zg,
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -18,7 +18,10 @@ pub struct WheatherEval {
 //
 impl WheatherEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "WheatherEval");
         Self {
             dbg,
@@ -42,12 +45,12 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                 let theta_w1 = lever_diagram
                     .angle(l_w1)
                     .map_err(|e| error.pass_with("theta_w1", e))?
-                    .first()                    
+                    .first()
                     .ok_or(error.err("No angle for l_w1"))?
                     .clone();
                 let sunset_angle = lever_diagram
                     .angle(0.)
-                    .map_err(|e|error.pass_with("sunset_angle", e))?
+                    .map_err(|e| error.pass_with("sunset_angle", e))?
                     .get(1)
                     .unwrap_or(&90.)
                     .clone();
@@ -82,11 +85,7 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                     .map_err(|e| error.pass_with("b_s1", e))?;
                 let b_s2 = b_delta_angle * l_w2.to_radians();
                 let b = b_s1 - b_s2;
-                let k = if a > 0. {
-                    Some(b / a)
-                } else {
-                    None
-                };
+                let k = if a > 0. { Some(b / a) } else { None };
                 log::trace!("\t l_w1:{l_w1} l_w2:{l_w2} theta_w1:{theta_w1}  theta_w2:{theta_w2} theta_c:{theta_c} theta_f:{theta_f}
                     a_angle1:{a_angle_first} a_angle2:{l_w2_angle_first} a_s1:{a_s1} a_s2:{a_s2} a:{a} 
                     b_angle1:{l_w2_angle_first} b_angle2:{b_angle_second} b_s1:{b_s1} b_s2:{b_s2} b:{b} k:{:?}", k);
@@ -119,7 +118,7 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                         let error = error.err("computing k error");
                         log::error!("WheatherEval eval error: {}", error);
                         CriterionData::new_error(CriterionID::Wheather, error.to_string())
-                    },
+                    }
                 };
                 let result = WheatherCtx { data };
                 ctx.write(result)

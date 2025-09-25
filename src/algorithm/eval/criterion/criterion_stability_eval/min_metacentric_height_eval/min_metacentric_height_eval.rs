@@ -1,10 +1,11 @@
 use super::min_metacentric_height_ctx::MinMetacentricHeightCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
         entities::data::{loads::UnitCargoType, ship_type::ShipType},
-        eval::{zg_eval::Zg, CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
+        eval::{CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx, zg_eval::Zg},
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -17,7 +18,10 @@ pub struct MinMetacentricHeightEval {
 //
 impl MinMetacentricHeightEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "MinMetacentricHeightEval");
         Self {
             dbg,
@@ -47,7 +51,9 @@ impl Eval<Zg, EvalResult> for MinMetacentricHeightEval {
                         log::error!("{}", error);
                         let result = CriterionData::new_error(
                             CriterionID::MinMetacentricHight,
-                            "Ошибка расчета критерия минимальной метацентрической высоты: ".to_owned() + &error.to_string(),
+                            "Ошибка расчета критерия минимальной метацентрической высоты: "
+                                .to_owned()
+                                + &error.to_string(),
                         );
                         let result = MinMetacentricHeightCtx { data: result };
                         return ctx.write(result);

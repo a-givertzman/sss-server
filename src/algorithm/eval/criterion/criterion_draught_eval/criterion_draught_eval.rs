@@ -1,10 +1,8 @@
 use super::criterion_draught_ctx::CriterionDraughtCtx;
 use crate::{
-    algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        entities::data::ship_type::ShipType,
-        eval::*,
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
+    algorithm::{entities::data::ship_type::ShipType, eval::*},
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -17,7 +15,10 @@ pub struct CriterionDraughtEval {
 //
 impl CriterionDraughtEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "CriterionDraughtEval");
         Self {
             dbg,
@@ -39,7 +40,7 @@ impl Eval<(), EvalResult> for CriterionDraughtEval {
                 data.append(&mut ContextRead::<LoadLineCtx>::read(&ctx).data);
                 //    out_data.append(&mut ContextRead::<TrimCtx>::read(&ctx).data);
                 data.append(&mut ContextRead::<BowBoardCtx>::read(&ctx).data);
-                data.append(&mut ContextRead::<ScrewCtx>::read(&ctx).data); 
+                data.append(&mut ContextRead::<ScrewCtx>::read(&ctx).data);
                 if ship.freeboard_type == "B"
                     && !(ship_type == ShipType::Tanker
                         && ship_type == ShipType::OilTanker

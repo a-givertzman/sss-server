@@ -5,10 +5,8 @@ use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx,
-    ContextWrite,
-    algorithm::context::context_access::{ContextRead, ContextReadRef},
+    prelude::*,
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
 };
 use crate::algorithm::entities::{ Curve, ICurve };
 use sal_core::{dbg::Dbg, error::Error};

@@ -2,7 +2,7 @@ use super::wind_ctx::WindCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, eval::{parameters::ParameterID, zg_eval::Zg, WindageCtx}
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite,
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, prelude::ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

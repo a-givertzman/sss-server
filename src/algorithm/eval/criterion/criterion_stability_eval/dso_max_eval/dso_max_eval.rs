@@ -3,13 +3,9 @@ use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
-    ContextWrite,
-    algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::LeverDiagramCtx,
-    },
+    algorithm::eval::LeverDiagramCtx,
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::InitialCtx,
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -22,7 +18,10 @@ pub struct DSOMaxEval {
 //
 impl DSOMaxEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "DSOMaxEval");
         Self {
             dbg,
@@ -47,9 +46,14 @@ impl Eval<Zg, EvalResult> for DSOMaxEval {
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
                 let data = match Curve::new_linear(&[(105., 0.20), (80., 0.25)]) {
-                    Ok(curve) => match (lever_diagram.dso_lever_max(30., 90.), curve.value(ship_length)) {
-                        (Ok(result), Ok(target)) => CriterionData::new_result(CriterionID::MaximumLC, result, target),
-                        _ => { 
+                    Ok(curve) => match (
+                        lever_diagram.dso_lever_max(30., 90.),
+                        curve.value(ship_length),
+                    ) {
+                        (Ok(result), Ok(target)) => {
+                            CriterionData::new_result(CriterionID::MaximumLC, result, target)
+                        }
+                        _ => {
                             let error = error.err("lever_diagram.dso_lever_max + curve.value");
                             log::error!("DSOMaxEval eval error: {}", error);
                             CriterionData::new_error(

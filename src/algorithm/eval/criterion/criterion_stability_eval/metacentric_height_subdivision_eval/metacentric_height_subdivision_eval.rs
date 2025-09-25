@@ -1,11 +1,12 @@
 use super::metacentric_height_subdivision_ctx::MetacentricHeightSubdivisionCtx;
-use crate::{
-    algorithm::{
-        context::context_access::{ContextParamsRead, ContextRead, ContextReadRef},
-        eval::{parameters::ParameterID, zg_eval::Zg, CriterionData, CriterionID, MetacentricHeightCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::InitialCtx, ContextWrite
-};
 use crate::algorithm::entities::{Curve, ICurve};
+use crate::{
+    algorithm::eval::{
+        CriterionData, CriterionID, MetacentricHeightCtx, parameters::ParameterID, zg_eval::Zg,
+    },
+    kernel::{eval::Eval, types::eval_result::EvalResult},
+    prelude::*,
+};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критерия метацентрической высоты
@@ -17,7 +18,10 @@ pub struct MetacentricHeightSubdivisionEval {
 //
 impl MetacentricHeightSubdivisionEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "MetacentricHeightSubdivisionEval");
         Self {
             dbg,
