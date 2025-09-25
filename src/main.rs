@@ -70,6 +70,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dbg!("BoundCache::new get", res);
     */
 
+
+    
     let physical_frames = [
         -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
         6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
@@ -127,13 +129,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread_pool.scheduler(),
     )
     .unwrap();
-    let res = model.reload_shapes();   dbg!(&res);
-    let res = model.rebuild_caches();   dbg!(&res);
-    let res = model.rebuild_bounds(&bounds);   dbg!(&res);
+  //  let res = model.reload_shapes();   dbg!(&res);
+  //  let res = model.rebuild_caches();   dbg!(&res);
+  //  let res = model.rebuild_bounds(&bounds);   dbg!(&res);
     let res = model.init();
     dbg!(&res);
     let res = model.init_bounded(&bounds);
     dbg!(&res);
+
+ /*   let mut result = |mass: f64, x: f64, y: f64, z: f64| {
+              model.floating_position(model_cached::FloatingPositionQuery {
+                  water_density: 1.025,
+                  mass_const: mass,
+                  moment_const: Moment::from_pos(Position::new(x - model_center_coord.x(), y, z), mass),
+                  bulk: vec![],
+                  liquid: vec![],
+                  grain_bulkhead: Vec::new(),
+                  damaged_compartment: Vec::new(),
+                  epsilon: 0.0001,
+              })
+          };
+
+          
+       //   let data = [ [10317.65, 90., 0., 6.],];
+         // let data = [ [10000., 63.371, -0.2, 6.]];
+
+            let data = [
+                [14194.5, 63.371, -0.001, 6.605],
+                [13163.9, 63.933, 0., 6.212],
+                [13987., 65.231, 0., 4.99],
+                [14135.3, 64.898, 0., 4.882],
+                [13238.467, 65.409, 0., 6.463],
+                [10960.742, 66.471, 0.001, 5.810],
+                [7212.705, 66.404, 0., 5.391],
+                [10000., 63.371, -0.2, 6.],
+                [10000., 63.371, 0.4, 6.],
+                [10000., 70., 0., 6.],
+                [10000., 55., 0., 6.],
+                [10000., 70., 0.1, 6.],
+            ];
+
+          for [m, x, y, z] in data {
+            //  print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
+              println!("{}", result(m, x, y, z).unwrap());
+          }
+*/
+
+/*
     let query = model_cached::BalanceQuery {
         bounds,
         water_density: 1.025,
@@ -147,7 +189,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         //      damaged_compartment: vec![],//"212".to_owned()],
         epsilon: 0.00001,
     };
-
  /*   let query = model_cached::BalanceQuery {
         bounds,
         water_density: 1.025,
@@ -178,88 +219,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 */
     let res = model.balance(query);
     dbg!(res);
-    /*       let mut result = |mass: f64, x: f64, y: f64, z: f64| {
-              model.floating_position(model_cached::FloatingPositionQuery {
-                  water_density: 1.025,
-                  mass_const: mass,
-                  moment_const: Moment::from_pos(Position::new(x - model_center_coord.x(), y, z), mass),
-                  bulk: vec![],
-                  liquid: vec![],
-                  grain_bulkhead: Vec::new(),
-                  damaged_compartment: Vec::new(),
-                  epsilon: 0.0001,
-              })
-          };
-
-       //   let data = [ [10317.65, 90., 0., 6.],];
-         // let data = [ [10000., 63.371, -0.2, 6.]];
-
-          let data = [
-              [14194.5, 63.371, -0.001, 6.605],
-              [13163.9, 63.933, 0., 6.212],
-              [13987., 65.231, 0., 4.99],
-              [14135.3, 64.898, 0., 4.882],
-              [13238.467, 65.409, 0., 6.463],
-              [10960.742, 66.471, 0.001, 5.810],
-              [7212.705, 66.404, 0., 5.391],
-              [10000., 63.371, -0.2, 6.],
-              [10000., 63.371, 0.4, 6.],
-              [10000., 70., 0., 6.],
-              [10000., 55., 0., 6.],
-              [10000., 70., 0.1, 6.],
-          ];
-
-
-          for [m, x, y, z] in data {
-        //      print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
-              result(m, x, y, z).unwrap();
-          }
     */
 
-    /*model.floating_position(ship_model::query::BalanceQuery {
-        water_density: 1.025,
-        mass_const: 14194.500,
-        moment_const: Moment::from_pos(Position::new(63.371 - model_center_coord.x(), -0.001, 6.605), 14194.5),
-        bulk: vec![],
-        liquid: vec![],
-        grain_bulkhead: Vec::new(),
-        damaged_compartment: vec![],//"212".to_owned()],
-        precision: 0.00001,
-    }); */
-    //    dbg!(result);
 
-    /*
-        let query = ship_model::query::BalanceQuery {
-            water_density: 1.025,
-            mass_const: 10000.,
-        //    moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
-            moment_const: Moment::from_pos(Position::new(0., 0., 0.), 0.),
-            bulk: vec![ship_model::query::BulkData {
-                cargo_id: 1,
-                space_id: "212".to_owned(),
-                mass: 0.,
-                volume: 0.,
-            }],
-            liquid: vec![ship_model::query::LiquidData {
-                cargo_id: 2,
-                space_id: "212".to_owned(),
-                mass: 0.,
-                volume: 0.,
-            }],
-            grain_bulkhead: Vec::new(),
-            damaged_compartment: vec![],//"212".to_owned()],
-            precision: 0.00001,
-        };
 
-        let result = model.floating_position(query);
-        dbg!(result);
-    */
-
-    /*   let floating_position = model.floating_position(
-            3230.55,
-            center_mass,
-        ).eval().map_err(|err| error.pass_with("floating_position", err))?;
-    */
     /*
     let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
