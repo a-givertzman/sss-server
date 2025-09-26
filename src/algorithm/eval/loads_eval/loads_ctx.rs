@@ -1,4 +1,4 @@
-use crate::algorithm::entities::{Position, ship_model::{BulkData, LiquidData}};
+use crate::algorithm::entities::{Position, ship_model::{BulkData, GaseousData, LiquidData}};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
@@ -21,6 +21,9 @@ pub struct LoadsCtx {
     /// объема и/или положения корпуса, считается в модели
     pub bulk: Vec<BulkData>,
     pub liquid: Vec<LiquidData>,
+    /// Для газообразного груза в модели считается распределение
+    /// по шпациям
+    pub gaseous: Vec<GaseousData>,
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>,
 }

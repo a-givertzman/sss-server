@@ -537,7 +537,7 @@ impl ModelCached {
         })
     }
     //
-    pub fn balance(&mut self, query: BalanceQuery) -> Result<BalanceResult, Error> {
+    pub fn balance(&self, query: BalanceQuery) -> Result<BalanceResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "balance");
         let FloatingPositionResult {
@@ -812,7 +812,7 @@ impl ModelCached {
     }
     /// Расчет равновесного положения
     pub(crate) fn floating_position(
-        &mut self,
+        &self,
         query: FloatingPositionQuery,
     ) -> Result<FloatingPositionResult, Error> {
         let error = Error::new(&self.dbg, "eval");

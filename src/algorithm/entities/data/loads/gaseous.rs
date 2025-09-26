@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use serde::Deserialize;
-use crate::algorithm::entities::{data::DataArray, Position};
+use crate::algorithm::entities::{Position, data::DataArray, ship_model::GaseousData};
 use super::AssignmentType;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -23,6 +23,16 @@ pub struct LoadGaseousData {
     pub volume: Option<f64>,
     /// Центр отсека, размещающего груз, м
     pub mass_shift: Option<Position>,
+}
+//
+impl LoadGaseousData {
+    pub fn data(&self) -> GaseousData {
+        GaseousData {
+            cargo_id: self.cargo_id,
+            space_id: self.space_id.clone(),
+            mass: self.mass,
+        }
+    }
 }
 //
 /*impl std::fmt::Display for LoadGaseousData {

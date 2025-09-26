@@ -48,6 +48,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     .voyage
                     .as_ref()
                     .ok_or(error.err("voyage error: no data!"))?;
+                let bounds = initial.bounds.as_ref().ok_or(error.err("initial error: no bounds!"))?;
                 let loads: LoadsCtx = ctx.read();
                 let icing: IcingCtx = ctx.read();
                 let wetting: WettingCtx = ctx.read();
@@ -73,11 +74,10 @@ impl Eval<(), EvalResult> for BalanceEval {
                     bulk: loads.bulk.clone(),
                     liquid: loads.liquid.clone(),
                     grain_bulkhead: loads.grain_bulkhead,
-                //    damaged_compartment: Vec::new(), //TODO
-                    precision: 0.001,
-                    gaseous: todo!(),
-                    epsilon: todo!(),
-                    bounds: todo!(),                //TODO
+                    gaseous: loads.gaseous,
+                //    damaged_compartment: loads.damaged_compartment, //TODO           
+                    bounds: bounds.clone(),   
+                    epsilon: 0.001,
                 };
                 // Расчет баланса в модели
                 let result_data: BalanceCtx = self

@@ -41,7 +41,7 @@ pub struct ShipModel {
     ship_id: usize,
  //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
-    bound_areas: Option<BoundArea>,
+    windage_area: Option<BoundArea>,
     model_cached: ModelCached,
     scheduler: Scheduler,
 //    timeout: Duration,
@@ -130,8 +130,7 @@ impl ShipModel {
                     self.bound_areas = Some(bound_areas.clone());
                     Ok(bound_areas)
                 },
-                Err(_) => {                    
-
+                Err(_) => {            
                     let windage_area = self.model_cached.bounded_windage_area(bounds).map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
                     self.bound_areas = Some(bound_areas.clone());
                     let sql = format!("INSERT INTO computed_frame_space\n\t(ship_id, qnt_bounds, index, start_x, end_x)\nVALUES{};",
@@ -150,9 +149,10 @@ impl ShipModel {
             .map_err(|err| error.pass_with("model_cached.balance", err))?;
         
         Ok(BalanceCtx {
-            trim: todo!(),
-            draught_mid: todo!(),
-            roll: todo!(),
+            TODO
+            trim
+            draught_mid
+            roll
             bounds: todo!(),
             bulk: todo!(),
             liquid: todo!(),

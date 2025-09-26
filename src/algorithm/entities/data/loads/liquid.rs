@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use super::{AssignmentType, LiquidCargoType};
-use crate::algorithm::entities::{Position, data::DataArray};
+use crate::algorithm::entities::{Position, data::DataArray, ship_model::LiquidData};
 use serde::{Deserialize, Serialize};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

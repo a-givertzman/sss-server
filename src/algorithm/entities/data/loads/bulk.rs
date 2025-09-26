@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use super::{AssignmentType, BulkCargoType};
-use crate::algorithm::entities::{Position, data::DataArray};
+use crate::algorithm::entities::{Position, data::DataArray, ship_model::BulkData};
 use serde::{Deserialize, Serialize};
 ///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

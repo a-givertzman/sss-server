@@ -128,8 +128,27 @@ impl Eval<(), EvalResult> for LoadsEval {
                     }
                     None => return Err(error.err("Read unit error: no data!")),
                 };
-                let (mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
-                    Some(data) => data
+                let (gaseous, mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
+                    Some(data) => {
+                        let gaseous: Vec<_> = data.iter().map(|v| v.data()).collect();
+                        let (mass, shift) = data
+                            .iter()
+                            .filter_map(|v| match v.mass_shift {
+                                Some(mass_shift) => Some((v.mass, mass_shift)),
+                                None => None,
+                            })
+                            .fold(
+                                (0., Moment::zero()),
+                                |(mass_sum, moment_sum), (mass, mass_shift)| {
+                                    (
+                                        mass_sum + mass,
+                                        moment_sum + Moment::from_pos(mass_shift, mass),
+                                    )
+                                },
+                            );
+                        (gaseous, mass, shift)
+                    },
+                  /*      data
                         .iter()
                         .filter_map(|v| match v.mass_shift {
                             Some(mass_shift) => Some((v.mass, mass_shift)),
@@ -143,7 +162,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                                     moment_sum + Moment::from_pos(mass_shift, mass),
                                 )
                             },
-                        ),
+                        ),*/
                     None => return Err(error.err("Read gaseous error: no data!")),
                 };
                 let result = LoadsCtx {
@@ -159,6 +178,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                     shift_bulk,
                     bulk,
                     liquid,
+                    gaseous,
                     grain_bulkhead,
                 };
                 ctx.write(result)
