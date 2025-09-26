@@ -84,7 +84,7 @@ impl WindageArea {
     }
     /// Расчет распределения площади парусности
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
-    pub fn bounded_windage_area(&self, bounds: Bounds) -> Result<Vec<f64>, Error> {
+    pub fn bounded_windage_area(&self, bounds: &Bounds) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "bounded_windage_area");
         // набор значений площади в разбиении по площади части модели над водой
         let area_data = self.area_data.as_ref().ok_or(error.pass("no area_data"))?;

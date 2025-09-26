@@ -1,3 +1,4 @@
+use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::Position2d;
@@ -41,7 +42,7 @@ pub struct ShipModel {
     ship_id: usize,
  //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
-    windage_area: Option<BoundArea>,
+    horisontal_area: Arc<RwLock<Option<Vec<HStrArea>>>>,
     model_cached: ModelCached,
     scheduler: Scheduler,
 //    timeout: Duration,
@@ -118,28 +119,34 @@ impl ShipModel {
     /// TODO: Doc
     pub fn bound_areas(&self, bounds: &Bounds) -> Result<BoundArea, Error> {
         let error = Error::new(&self.dbg, "bound_areas");
-        match &self.bound_areas {
-            Some(bound_areas) => Ok(bound_areas.clone()),
-            None => match self.bound_areas(
-                bounds,
+        let windage_area = self.model_cached.bounded_windage_area(bounds).map_err(|err| error.pass_with("model_cached.bounded_windage_area", err))?;
+        let horisontal_area = if let Some(horisontal_area) = self.horisontal_area.read().clone() {
+            horisontal_area
+        } else {
+            let horisontal_area = horisontal_area(
                 self.ship_id,
-                &self.api_client.read(),
-                self.exit.clone(),
-            ) {
-                Ok(bound_areas) => {
-                    self.bound_areas = Some(bound_areas.clone());
-                    Ok(bound_areas)
-                },
-                Err(_) => {            
-                    let windage_area = self.model_cached.bounded_windage_area(bounds).map_err(|err| error.pass_with("self.model_cached.rebuild_bounds", err))?;
-                    self.bound_areas = Some(bound_areas.clone());
-                    let sql = format!("INSERT INTO computed_frame_space\n\t(ship_id, qnt_bounds, index, start_x, end_x)\nVALUES{};",
-                        bounds.iter().filter(|v| v.is_value()).enumerate().map(|(i, v)| format!("\n\t({}, '{}', {i}, {}, {})", self.ship_id, qnt_bounds, v.start().unwrap(), v.end().unwrap())).collect::<Vec<_>>().join(","));
-                    self.api_client.read().fetch(&sql).map_err(|err| error.pass_with("self.api_client.fetch", err))?;         
-                    Ok(bound_areas)
-                }
-            }
+                &self.api_client.write()
+            ).map_err(|err| error.pass_with("model_cached.bounded_windage_area", err))?;
+            *self.horisontal_area.write() = Some(horisontal_area);
+            horisontal_area
+        };       
+        let (horisontal_area, errors): (Vec<_>, Vec<_>) = horisontal_area
+            .into_iter()
+            .map(|v| {
+                let bound = match Bound::new(v.bound_x1, v.bound_x2) {
+                    Ok(bound) => bound,
+                    Err(err) => return Err(error.pass_with(format!("Bound::new, name:{}", v.name), err)),
+                };
+                Ok((v.value, bound))
+            })
+            .partition(|v| v.is_ok());
+        if !errors.is_empty() {            
+            TODO
         }
+        let (area_values, area_bounds) = horisontal_area.into_iter().map(|v| v.unwrap()).unzip();
+        let area_bounds = Bounds::new(area_bounds).map_err(|err| error.pass_with("Bounds::new", err))?;
+        let horisontal_area: Vec<f64> = bounds.intersect(&area_bounds, area_values).map_err(|err| error.pass_with("bounds.intersect", err))?;
+ 
     }
     ///
     /// TODO: Doc
@@ -290,11 +297,27 @@ fn get_bounds(
 ///
 /// Computes ...
 /// - `exit` - used to breake long havy computation if possible
-fn bounded_horisontal_area(
-    bounds: Bounds,
+fn horisontal_area(
     ship_id: usize,
     api_client: &ApiClient,
-    _: Arc<AtomicBool>,
+) -> Result<Vec<HStrArea>, Error> {
+    let err = Error::new("ShipModel", "bounded_horisontal_area");
+    let area = HStrAreaArray::parse(
+        &api_client.fetch(&format!(
+            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
+            ship_id
+        )).map_err(|e| err.pass(e.to_string()))?
+    ).map_err(|e| err.pass(e.to_string()))?;
+    Ok(area.data())
+}
+/*
+///
+/// Computes ...
+/// - `exit` - used to breake long havy computation if possible
+fn bounded_horisontal_area(
+    bounds: &Bounds,
+    ship_id: usize,
+    api_client: &ApiClient,
 ) -> Result<Vec<f64>, Error> {
     let err = Error::new("ShipModel", "bounded_horisontal_area");
     let area = HStrAreaArray::parse(
@@ -318,6 +341,6 @@ fn bounded_horisontal_area(
         .collect();
     Ok(area)
 }
-
+*/
 
 

@@ -58,7 +58,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 // 
                 // Тут все вроде правильно раскрыл,
                 // Но так много действий и так сложно получается,
-                // может получится хотябы часть из низ вынести в метод,
+                // может получится хотя бы часть из них вынести в метод,
                 // вроде бы действия однообразные все время должны быть
                 let (const_area_v, const_area_h) = match self.model.write().bound_areas(&bounds) {
                          Ok(areas) => (areas.v, areas.h),

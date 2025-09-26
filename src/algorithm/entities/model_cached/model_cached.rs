@@ -522,9 +522,9 @@ impl ModelCached {
         Ok(())
     }
     //
-    pub fn bounded_windage_area(&mut self, bounds: Bounds) -> Result<Vec<f64>, Error> {
+    pub fn bounded_windage_area(&mut self, bounds: &Bounds) -> Result<Vec<f64>, Error> {
         self.windage_area
-            .bounded_windage_area(bounds)
+            .bounded_windage_area(&bounds)
             .map_err(|err| {
                 Error::new(&self.dbg, "bounded_windage_area")
                     .pass_with("self.windage_area.bounded_windage_area", err)
