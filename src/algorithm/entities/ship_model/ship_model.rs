@@ -1,3 +1,4 @@
+use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Position;
@@ -10,21 +11,21 @@ use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::model_cached;
 use crate::algorithm::entities::ship_model::BalanceQuery;
 use crate::algorithm::entities::ship_model::BoundArea;
+use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
-use crate::kernel::sync::Hub;
 use crate::kernel::types::RwLock;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use sal_sync::services::entity::Name;
 use sal_sync::services::entity::PointTxId;
 use sal_sync::services::future::Future;
-use sal_sync::sync::Handles;
-use sal_sync::sync::Owner;
+use sal_sync::sync::*;
+use sal_sync::thread_pool::JoinHandle;
 use sal_sync::thread_pool::Scheduler;
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::thread::JoinHandle;
 use std::{
     fmt::Debug,
     sync::{
@@ -42,8 +43,9 @@ pub struct ShipModel {
     ship_id: usize,
  //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
-    horisontal_area: Arc<RwLock<Option<Vec<HStrArea>>>>,
-    model_cached: ModelCached,
+    horisontal_area: Option<Vec<HStrArea>>,
+    grain_moment: Option<HashMap<String, Curve<f64>>>, 
+    model_cached:ModelCached,
     scheduler: Scheduler,
 //    timeout: Duration,
     api_client: Arc<RwLock<ApiClient>>,
@@ -78,13 +80,35 @@ impl ShipModel {
             ship_id,
       //      ship_file_name,
             project_id,
-            bound_areas: None,
-            model_cached,
+            horisontal_area: None,
+            grain_moment: None,
+            model_cached: model_cached,
             scheduler,
         //    timeout: Self::DEFAULT_TIMEOUT,
             api_client: Arc::new(RwLock::new(api_client)),
             exit: Arc::new(AtomicBool::new(false)),
         }
+    }
+    /// TODO - Doc
+    pub fn init(&mut self) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "init");  
+        let horisontal_area = horisontal_area(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.write()
+        ).map_err(|err| error.pass_with("horisontal_area", err))?;
+        self.horisontal_area = Some(horisontal_area.clone());
+        let grain_moment = grain_moment(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.write()
+        ).map_err(|err| error.pass_with("grain_moment", err))?;
+        self.grain_moment = Some(grain_moment.clone());
+        self.model_cached.init().map_err(|err| Error::new(&self.dbg, "init").pass(err))
+    }
+    /// TODO - Doc
+    pub fn init_cache_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        self.model_cached.init_bounded(bounds).map_err(|err| Error::new(&self.dbg, "init").pass(err))
     }
     ///
     /// TODO: Doc
@@ -120,16 +144,7 @@ impl ShipModel {
     pub fn bound_areas(&self, bounds: &Bounds) -> Result<BoundArea, Error> {
         let error = Error::new(&self.dbg, "bound_areas");
         let windage_area = self.model_cached.bounded_windage_area(bounds).map_err(|err| error.pass_with("model_cached.bounded_windage_area", err))?;
-        let horisontal_area = if let Some(horisontal_area) = self.horisontal_area.read().clone() {
-            horisontal_area
-        } else {
-            let horisontal_area = horisontal_area(
-                self.ship_id,
-                &self.api_client.write()
-            ).map_err(|err| error.pass_with("model_cached.bounded_windage_area", err))?;
-            *self.horisontal_area.write() = Some(horisontal_area);
-            horisontal_area
-        };       
+        let horisontal_area = self.horisontal_area.clone().ok_or(error.err("no horisontal_area"))?;   
         let (horisontal_area, errors): (Vec<_>, Vec<_>) = horisontal_area
             .into_iter()
             .map(|v| {
@@ -140,28 +155,35 @@ impl ShipModel {
                 Ok((v.value, bound))
             })
             .partition(|v| v.is_ok());
-        if !errors.is_empty() {            
-            TODO
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "horisontal_area",
+                errors.iter().fold(String::new(), |acc, err| {
+                    format!("{acc}\n\t error: {:?}", err)
+                }),
+            ));
         }
-        let (area_values, area_bounds) = horisontal_area.into_iter().map(|v| v.unwrap()).unzip();
+        let (area_values, area_bounds): (Vec<f64>, Vec<Bound>)  = 
+            horisontal_area.into_iter().map(|v| v.unwrap())
+                .collect::<Vec<_>>()
+                .into_iter()
+                .unzip();
         let area_bounds = Bounds::new(area_bounds).map_err(|err| error.pass_with("Bounds::new", err))?;
-        let horisontal_area: Vec<f64> = bounds.intersect(&area_bounds, area_values).map_err(|err| error.pass_with("bounds.intersect", err))?;
- 
+        let horisontal_area: Vec<f64> = bounds.intersect(&area_bounds, &area_values).map_err(|err| error.pass_with("bounds.intersect", err))?;
+        Ok(BoundArea{ v: windage_area, h: horisontal_area })
     }
     ///
     /// TODO: Doc
     pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
         let result = self.model_cached.balance(query)
-            .map_err(|err| error.pass_with("model_cached.balance", err))?;
-        
+            .map_err(|err| error.pass_with("model_cached.balance", err))?;     
+           
         Ok(BalanceCtx {
-            TODO
-            trim
-            draught_mid
-            roll
-            bounds: todo!(),
-            bulk: todo!(),
+            trim: result.trim,
+            draught_mid: result.draught_mid,
+            roll: result.heel,
+            bulk: result.bulk,
             liquid: todo!(),
             bounds_volume: todo!(),
             volume: todo!(),
@@ -179,35 +201,6 @@ impl ShipModel {
             pantocaren: todo!(),
         })
     }
-    ///
-/*    fn bounded_windage_area(
-        bounds: Bounds,
-        ship_id: usize,
-    ) -> Result<BoundArea, Error> {
-        let err = Error::new("ShipModel", "bounded_windage_area");
-        let area = strength::VerticalAreaArray::parse(
-            &api_client.fetch(&format!(
-                "SELECT name, value, bound_x1, bound_x2 FROM vertical_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
-                ship_id
-            )).map_err(|e| err.pass(e.to_string()))?
-        ).map_err(|e| err.pass(e.to_string()))?;
-        let area: Vec<_> = area
-            .data()
-            .into_iter()
-            .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
-            .collect();
-        let area: Vec<f64> = bounds
-            .iter()
-            .map(|b1| {
-                (
-                    area.iter().fold(0., |sum, &(v, b2)| 
-                        sum + v * b1.part_ratio(&b2).unwrap_or(0.)
-                    ),
-                )
-            })
-            .collect();
-        Ok(area)
-    }*/
     ///
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
@@ -299,12 +292,13 @@ fn get_bounds(
 /// - `exit` - used to breake long havy computation if possible
 fn horisontal_area(
     ship_id: usize,
+    project_id: String,
     api_client: &ApiClient,
 ) -> Result<Vec<HStrArea>, Error> {
-    let err = Error::new("ShipModel", "bounded_horisontal_area");
+    let err = Error::new("ShipModel", "horisontal_area");
     let area = HStrAreaArray::parse(
         &api_client.fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
+            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} AND project_id={project_id} ORDER BY bound_x1 ASC;",
             ship_id
         )).map_err(|e| err.pass(e.to_string()))?
     ).map_err(|e| err.pass(e.to_string()))?;
@@ -342,5 +336,27 @@ fn bounded_horisontal_area(
     Ok(area)
 }
 */
+/// Чтение данных объемного кренящего момента для зерна.
+/// Возвращает мапу (ид отсека, кривая момента от уровня заполнения отсека) 
+fn grain_moment(
+    ship_id: usize,
+    project_id: String,
+    api_client: &ApiClient,
+) -> Result<HashMap<String, Curve<f64>>, Error> {
+    let error = Error::new("ShipModel", "grain_moment");
+    let data = GrainMomentDataArray::parse(
+        &api_client.fetch(&format!(
+            "SELECT space_id, level, moment FROM hold_grain_moment WHERE ship_id={ship_id} AND project_id={project_id};"
+        )).map_err(|err| error.pass_with("api_client.fetch", err))?
+    ).map_err(|err| error.pass_with("parse", err))?;    
+    let data: Vec<(String, Result<Curve<f64>, Error>)> = data.data()
+    .iter()
+    .map(|(space_id, v)| (space_id.clone(), Curve::new_linear(v)))
+    .collect();
+    if let Some(error_data) = data.iter().filter(|v| v.1.is_err()).next() {
+        error_data.1.clone().map_err(|err| error.pass_with("Curve::new_linear", err))?;
+    }
+    Ok(data.into_iter().map(|v| (v.0, v.1.unwrap())).collect())
+}
 
 

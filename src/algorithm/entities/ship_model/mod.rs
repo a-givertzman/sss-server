@@ -1,8 +1,8 @@
 //pub mod query;
 //pub mod reply;
 pub mod ship_model;
+mod grain_moment;
 
-use std::collections::HashMap;
 use crate::algorithm::entities::{Bounds, Moment, Position};
 
 ///
@@ -92,12 +92,16 @@ pub struct BalanceResult {
     pub displacement_center: Position,
     /// распределение водоизмещения по шпациям
     pub displacement_distr: Vec<f64>,  
+
+
     /// распределение массы газообразных грузов по шпациям 
-    pub gaseous_distr: Vec<f64>, 
+    pub gaseous_distr: Vec<f64>,
     /// распределение массы сыпучих грузов по шпациям 
     pub bulk_distr: Vec<f64>,    
     /// распределение массы жидких грузов по шпациям 
-    pub liquid_distr: Vec<f64>,   
+    pub liquid_distr: Vec<f64>,  
+
+
     /// Площадь ватерлинии, м^2
     pub area_wl: f64,
     /// Смещение центра тяжести ватеринии, м

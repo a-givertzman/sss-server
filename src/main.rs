@@ -281,7 +281,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
     ];
     let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
-    let ship_model = ShipModel::new(
+    let mut ship_model = ShipModel::new(
         &dbg,
         ship_id,
         project_id.to_owned(),
@@ -294,6 +294,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         thread_pool.scheduler(),
     );
+    ship_model.init().unwrap();
+    ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
     let ctx = CriterionStabilityEval::new(
