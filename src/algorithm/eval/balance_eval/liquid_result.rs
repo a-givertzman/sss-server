@@ -1,15 +1,13 @@
 use bincode::{Decode, Encode};
 use crate::algorithm::entities::{data::loads::{AssignmentType, LiquidCargoType}, Position};
-
 ///
-/// To be moved to it's right place if it is a part of a `Context`
-/// Type doc here
+/// TODO: Type doc here
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct LiquidResult {
     /// ID груза
-    pub cargo_id: usize,
+    pub cargo_id: usize, 
     /// ID помещения
-    pub space_id: usize,
+    pub space_id: String, 
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип жидкого груза

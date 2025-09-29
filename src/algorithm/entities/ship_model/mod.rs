@@ -91,17 +91,13 @@ pub struct BalanceResult {
     /// Смещение центра объемного водоизмещения, м
     pub displacement_center: Position,
     /// распределение водоизмещения по шпациям
-    pub displacement_distr: Vec<f64>,  
-
-
-    /// распределение массы газообразных грузов по шпациям 
-    pub gaseous_distr: Vec<f64>,
-    /// распределение массы сыпучих грузов по шпациям 
-    pub bulk_distr: Vec<f64>,    
-    /// распределение массы жидких грузов по шпациям 
-    pub liquid_distr: Vec<f64>,  
-
-
+    pub displacement_distr: Vec<f64>,
+    /// Данные газообразных грузов
+    pub gaseous: Vec<GaseousResult>,
+    /// Данные сыпучих грузов
+    pub bulk: Vec<BulkResult>,    
+    /// Данные жидких грузов
+    pub liquid: Vec<LiquidResult>,
     /// Площадь ватерлинии, м^2
     pub area_wl: f64,
     /// Смещение центра тяжести ватеринии, м
@@ -128,6 +124,49 @@ pub struct BalanceResult {
   //  /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы 
   //  pub pantocaren: Vec<(f64, f64)>,    
 }
+///
+/// TODO: Type doc here
+#[derive(Debug, Clone)]
+pub struct LiquidResult {
+    /// ID груза
+    pub cargo_id: usize, 
+    /// ID помещения
+    pub space_id: String, 
+    /// смещение центра массы
+    pub mass_shift: Position,
+    /// продольный момент свободной поверхности жидкости
+    pub long_moment_of_inertia: f64,
+    /// поперечный момент свободной поверхности жидкости
+    pub trans_moment_of_inertia: f64,
+    /// Распределение массы по шпациям, (index, value)
+    pub mass_values: Vec<(usize, f64)>,
+}
+/// TODO: Type doc here
+#[derive(Debug, Clone)]
+pub struct BulkResult {
+    /// ID груза
+    pub cargo_id: usize, 
+    /// ID помещения
+    pub space_id: String, 
+    /// смещение центра массы
+    pub mass_shift: Position,
+    /// Распределение массы по шпациям, (index, value)
+    pub mass_values: Vec<(usize, f64)>,
+}
+///
+/// TODO: Type doc here
+#[derive(Debug, Clone)]
+pub struct GaseousResult {
+    /// ID груза
+    pub cargo_id: usize, 
+    /// ID помещения
+    pub space_id: String, 
+    /// Распределение массы по шпациям, (index, value)
+    pub mass_values: Vec<(usize, f64)>,
+}
+
+
+
 
 
 

@@ -612,6 +612,7 @@ impl ModelCached {
             .ok_or(error.err("no compartments_bounded"))?;
         for cargo in query.liquid {
             assert!(cargo.mass > 0.);
+            let cargo_id = cargo.cargo_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} liquid work"));
             let density = cargo.mass / cargo.volume;
@@ -646,7 +647,7 @@ impl ModelCached {
                                 err,
                             )
                         })?;
-                    results_.push((space_id, density, volume_bounded));
+                    results_.push((cargo_id, space_id, density, volume_bounded));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -657,6 +658,7 @@ impl ModelCached {
         }
         for cargo in query.bulk {
             assert!(cargo.mass > 0.);
+            let cargo_id = cargo.cargo_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} bulk work"));
             let density = cargo.mass / cargo.volume;
@@ -691,7 +693,7 @@ impl ModelCached {
                                 err,
                             )
                         })?;
-                    results_.push((space_id, density, volume_bounded));
+                    results_.push((cargo_id, space_id, density, volume_bounded));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -702,6 +704,7 @@ impl ModelCached {
         }
         for cargo in query.gaseous {
             assert!(cargo.mass > 0.);
+            let cargo_id = cargo.cargo_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
@@ -721,7 +724,7 @@ impl ModelCached {
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
-                    results.push((space_id, density, volume_bounded));
+                    results.push((cargo_id, space_id, density, volume_bounded));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -750,7 +753,35 @@ impl ModelCached {
             .ok_or(error.err("no hull_result"))?
             .map_err(|err| error.pass_with("hull_result", err))?;
         dbg!(&displacement_distr);
-        let liquid_distr = {
+        let liquid = {
+            let mut result = Vec::new();
+            while !liquid_results.is_empty() {
+                if let Some((cargo_id, space_id, density, volume_bounded)) = liquid_results.pop() {
+                    result.push((cargo_id, space_id, density, volume_bounded.into_iter().map(|v| v*density).collect()));
+                }
+            }
+            result
+        };
+        let bulk = {
+            let mut result = Vec::new();
+            while !bulk_results.is_empty() {
+                if let Some((cargo_id, space_id, density, volume_bounded)) = bulk_results.pop() {
+                    result.push((cargo_id, space_id, density, volume_bounded.into_iter().map(|v| v*density).collect()));
+                }
+            }
+            result
+        };
+        let gaseous = {
+            let mut result = Vec::new();
+            while !gaseous_results.is_empty() {
+                if let Some((cargo_id, space_id, density, volume_bounded)) = bulk_results.pop() {
+                    result.push((cargo_id, space_id, density, volume_bounded.into_iter().map(|v| v*density).collect()));
+                }
+            }
+            result
+        };
+
+ /*       let liquid_distr = {
             let mut result = vec![0.; query.bounds.len_qnt()];
             while !liquid_results.is_empty() {
                 if let Some((_, density, volume_bounded)) = liquid_results.pop() {
@@ -788,7 +819,7 @@ impl ModelCached {
                 }
             }
             result
-        };
+        };*/
         Ok(BalanceResult {
             heel,
             trim,
@@ -799,9 +830,9 @@ impl ModelCached {
             displacement,
             displacement_center,
             displacement_distr,
-            gaseous_distr,
-            bulk_distr,
-            liquid_distr,
+            gaseous,
+            bulk,
+            liquid,
             area_wl,
             area_wl_center,
             length_wl,
