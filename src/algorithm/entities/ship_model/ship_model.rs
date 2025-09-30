@@ -10,6 +10,7 @@ use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::model_cached;
 use crate::algorithm::entities::ship_model::BalanceQuery;
+use crate::algorithm::entities::ship_model::BalanceResult;
 use crate::algorithm::entities::ship_model::BoundArea;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
@@ -45,7 +46,7 @@ pub struct ShipModel {
     project_id: String,
     horisontal_area: Option<Vec<HStrArea>>,
     grain_moment: Option<HashMap<String, Curve<f64>>>, 
-    model_cached:ModelCached,
+    model_cached: ModelCached,
     scheduler: Scheduler,
 //    timeout: Duration,
     api_client: Arc<RwLock<ApiClient>>,
@@ -174,48 +175,11 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceCtx, Error> {
+    pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
         let result = self.model_cached.balance(query)
             .map_err(|err| error.pass_with("model_cached.balance", err))?;     
-
-        let bulk = result.bulk.iter().map()
-
-
-        pub struct BulkResult {
-    /// ID груза
-    pub cargo_id: usize,
-    /// ID помещения
-    pub space_id: usize,
-    /// смещение центра массы
-    pub mass_shift: Position,
-    /// Распределение массы по шпациям, (index, value)
-    pub mass_values: Vec<(usize, f64)>,
-    /// Объемный кренящий момент
-    pub moment: f64,
-}
-
-        Ok(BalanceCtx {
-            trim: result.trim,
-            draught_mid: result.draught_mid,
-            roll: result.heel,
-            bulk: result.bulk,
-            liquid: todo!(),
-            bounds_volume: todo!(),
-            volume: todo!(),
-            area_wl: todo!(),
-            length_wl: todo!(),
-            breadth_wl: todo!(),
-            volume_shift_z: todo!(),
-            entry_angle: todo!(),
-            flooding_angle: todo!(),
-            bow_area: todo!(),
-            const_area_v: todo!(),
-            const_area_h: todo!(),
-            rad_long: todo!(),
-            rad_trans: todo!(),
-            pantocaren: todo!(),
-        })
+        Ok(result)
     }
     ///
     /// Sends "exit" signal to the service's task

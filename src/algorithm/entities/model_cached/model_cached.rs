@@ -576,6 +576,8 @@ impl ModelCached {
             trim,
         )
         .calculate();
+        let trim_degree = trim;
+        let trim_meter = trim.to_radians().tan()*self.ship_length_lbp;
         let displacement_bounded = self
             .displacement_bounded
             .get(&query.bounds.len_qnt())
@@ -647,7 +649,14 @@ impl ModelCached {
                                 err,
                             )
                         })?;
-                    results_.push((cargo_id, space_id, density, volume_bounded));
+                    results_.push(LiquidResult::new(
+                        cargo_id, 
+                        space_id, 
+                        compartment_result.volume_center,
+                        compartment_result.inertia_long_y,                             
+                        compartment_result.inertia_trans_x,    
+                        volume_bounded.into_iter().map(|v| v*density).collect())
+                    );
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -693,7 +702,7 @@ impl ModelCached {
                                 err,
                             )
                         })?;
-                    results_.push((cargo_id, space_id, density, volume_bounded));
+                    results_.push(BulkResult::new(cargo_id, space_id, compartment_result.volume_center, volume_bounded.into_iter().map(|v| v*density).collect()));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -708,7 +717,7 @@ impl ModelCached {
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
-            let results = gaseous_results.clone();
+            let results_ = gaseous_results.clone();
             let handle = self
                 .scheduler
                 .spawn(move || {
@@ -724,7 +733,7 @@ impl ModelCached {
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
-                    results.push((cargo_id, space_id, density, volume_bounded));
+                    results_.push(GaseousResult::new(cargo_id, space_id, volume_bounded.into_iter().map(|v| v*density).collect()));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -756,8 +765,8 @@ impl ModelCached {
         let liquid = {
             let mut result = Vec::new();
             while !liquid_results.is_empty() {
-                if let Some((cargo_id, space_id, density, volume_bounded)) = liquid_results.pop() {
-                    result.push((cargo_id, space_id, density, volume_bounded.into_iter().map(|v| v*density).collect()));
+                if let Some(data) = liquid_results.pop() {
+                    result.push(data);
                 }
             }
             result
@@ -765,8 +774,8 @@ impl ModelCached {
         let bulk = {
             let mut result = Vec::new();
             while !bulk_results.is_empty() {
-                if let Some((cargo_id, space_id, density, volume_bounded)) = bulk_results.pop() {
-                    result.push((cargo_id, space_id, density, volume_bounded.into_iter().map(|v| v*density).collect()));
+                if let Some(data) = bulk_results.pop() {
+                    result.push(data);
                 }
             }
             result
@@ -774,55 +783,16 @@ impl ModelCached {
         let gaseous = {
             let mut result = Vec::new();
             while !gaseous_results.is_empty() {
-                if let Some((cargo_id, space_id, density, volume_bounded)) = bulk_results.pop() {
-                    result.push((cargo_id, space_id, density, volume_bounded.into_iter().map(|v| v*density).collect()));
+                if let Some(data) = gaseous_results.pop() {
+                    result.push(data);
                 }
             }
             result
         };
-
- /*       let liquid_distr = {
-            let mut result = vec![0.; query.bounds.len_qnt()];
-            while !liquid_results.is_empty() {
-                if let Some((_, density, volume_bounded)) = liquid_results.pop() {
-                    result = result
-                        .iter()
-                        .zip(volume_bounded.iter())
-                        .map(|(a, b)| a + b * density)
-                        .collect::<Vec<_>>();
-                }
-            }
-            result
-        };
-        let bulk_distr = {
-            let mut result = vec![0.; query.bounds.len_qnt()];
-            while !bulk_results.is_empty() {
-                if let Some((_, density, volume_bounded)) = bulk_results.pop() {
-                    result = result
-                        .iter()
-                        .zip(volume_bounded.iter())
-                        .map(|(a, b)| a + b * density)
-                        .collect::<Vec<_>>();
-                }
-            }
-            result
-        };
-        let gaseous_distr = {
-            let mut result = vec![0.; query.bounds.len_qnt()];
-            while !gaseous_results.is_empty() {
-                if let Some((_, density, volume_bounded)) = gaseous_results.pop() {
-                    result = result
-                        .iter()
-                        .zip(volume_bounded.iter())
-                        .map(|(a, b)| a + b * density)
-                        .collect::<Vec<_>>();
-                }
-            }
-            result
-        };*/
         Ok(BalanceResult {
-            heel,
-            trim,
+            roll: heel,
+            trim_degree,
+            trim_meter,
             draught_mid,
             draught_bow,
             draught_stern,

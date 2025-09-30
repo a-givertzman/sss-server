@@ -6,11 +6,11 @@ use super::balance_ctx::BalanceCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{Moment, ship_model::{BalanceQuery, ship_model::ShipModel}},
-        eval::{IcingCtx, LoadsCtx, WettingCtx},
+        entities::{Moment, ship_model::{BalanceQuery, BalanceResult, ship_model::ShipModel}},
+        eval::{IcingCtx, LoadsCtx, WettingCtx, parameters::ParameterID},
     },
     kernel::{eval::Eval, types::{RwLock, eval_result::EvalResult}},
-    prelude::{ContextWrite, InitialCtx},
+    prelude::{ContextParamsWrite, ContextWrite, InitialCtx},
 };
 
 ///
@@ -55,9 +55,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                 // Суммарная масса корпуса, всех грузов и обледенения с намоканием
                 let mass_const = loads.mass_const
                     + loads.mass_unit
-                //    + loads.mass_bulk
                     + loads.mass_gaseous
-                //    + loads.mass_liquid
                     + icing.mass
                     + wetting.mass;
                 // Сумарный момент за вычетом смещяемых и насыпных груов
@@ -80,59 +78,40 @@ impl Eval<(), EvalResult> for BalanceEval {
                     epsilon: 0.001,
                 };
                 // Расчет баланса в модели
-                let result_data: BalanceCtx = self
+                let result: BalanceResult = self
                     .model
                     .read()
                     .compute_balance(balance_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
-
-                /*      let center_waterline_shift = self.center_waterline_shift;
-                    let bow_x = self.ship_length - self.midship;
-                    let stern_x = -self.midship;
-                    let draught_bow = self.mean_draught + (bow_x - center_waterline_shift)*self.trim/self.ship_length;
-                    let draught_stern = self.mean_draught + (stern_x - center_waterline_shift)*self.trim/self.ship_length;
-
-                    // Осадка на миделе в ДП, м (8)
-                    let draught_mid = (draught_bow + draught_stern) / 2.;
-                    //let draught_mid = self.mean_draught + (0. - self.center_waterline_shift)*self.trim/self.ship_length;
-                    // dbg!(self.mean_draught, self.center_waterline_shift, self.midship, self.ship_length, bow_x, stern_x, self.trim, draught_bow, draught_stern, draught_mid);
-                    // Изменение осадки
-                    let delta_draught = (draught_bow - draught_stern) / self.ship_length;
-
-                    let trim_meter = result_data.trim.to_radian().tan()*self.ship_length_lbp;
-
-                    ctx.write_params(ParameterID::DraughtMid, draught_mid);
-                    ctx.write_params(ParameterID::DraughtBow, draught_bow);
-                    ctx.write_params(ParameterID::DraughtStern, draught_stern);
-                    ctx.write_params(ParameterID::TrimDeg, result_data.trim);
-                    ctx.write_params(ParameterID::TrimMeter, trim_meter);
-                    ctx.write_params(ParameterID::Roll, result_data.roll);
-                    ctx.write_params(ParameterID::DraughtMean, mean_draught);
-
+                    ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
+                    ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
+                    ctx.write_params(ParameterID::DraughtStern, result.draught_stern);
+                    ctx.write_params(ParameterID::DraughtMean, result.draught_mean);
+                    ctx.write_params(ParameterID::TrimDeg, result.trim_degree);
+                    ctx.write_params(ParameterID::TrimMeter, result.trim_meter);
+                    ctx.write_params(ParameterID::Roll, result.roll);
                     let result = BalanceCtx {
-                        bulk: result_data.bulk,
-                        liquid: result_data.liquid,
-                        area_wl: result_data.area_wl,
-                        mean_draught: result_data.mean_draught,
-                        length_wl: result_data.length_wl,
-                        breadth_wl: result_data.breadth_wl,
-                        volume_shift_z: result_data.volume_shift_z,
-                        entry_angle: result_data.entry_angle,
-                        flooding_angle: result_data.flooding_angle,
-                        volume: result_data.volume,
-                        ..result_data
+                        bulk: result.bulk,
+                        liquid: result.liquid,
+                        area_wl: result.area_wl,
+                        mean_draught: result.mean_draught,
+                        length_wl: result.length_wl,
+                        breadth_wl: result.breadth_wl,
+                        volume_shift_z: result.volume_shift_z,
+                        entry_angle: result.entry_angle,
+                        flooding_angle: result.flooding_angle,
+                        volume: result.volume,
+                        ..result
                     };
-                */
-                //
-                // TODO Propably additional BalanceResult is not required, sorry if not
-                //
-                // let result = BalanceCtx {
-                //     parameters: result.parameters,
-                //     bulk: result.bulk,
-                //     liquid: result.liquid,
-                // };
-                // TODO ctx.write(result_data.parameters);
-                ctx.write(result_data)
+                
+                
+                let result = BalanceCtx {
+                    parameters: result.parameters,
+                    bulk: result.bulk,
+                    liquid: result.liquid,
+                };
+                TODO ctx.write(result_data.parameters);
+                ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
         }

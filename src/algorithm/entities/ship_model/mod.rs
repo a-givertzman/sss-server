@@ -1,7 +1,7 @@
 //pub mod query;
 //pub mod reply;
-pub mod ship_model;
 mod grain_moment;
+pub mod ship_model;
 
 use crate::algorithm::entities::{Bounds, Moment, Position};
 
@@ -12,8 +12,8 @@ use crate::algorithm::entities::{Bounds, Moment, Position};
 pub struct BalanceQuery {
     /// Плотность забортной воды
     pub water_density: f64,
-    /// масса судна порожнем и грузов размещенных на судне: 
-    /// генерального груза (unitCargoAssignment), контейнеров (containerCargoAssignment), 
+    /// масса судна порожнем и грузов размещенных на судне:
+    /// генерального груза (unitCargoAssignment), контейнеров (containerCargoAssignment),
     /// газообразного груза (gaseousCargoAssignment), массы обледенения и намокания;
     pub mass_const: f64,
     /// Сумарный момент за вычетом смещяемых и насыпных грузов
@@ -26,20 +26,20 @@ pub struct BalanceQuery {
     pub gaseous: Vec<GaseousData>,
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>,
-//    /// номера поврежденных помещений, TODO - только для аварийного расчета
-//    pub damaged_compartment: Vec<String>,
+    //    /// номера поврежденных помещений, TODO - только для аварийного расчета
+    //    pub damaged_compartment: Vec<String>,
     /// точность расчета
     pub epsilon: f64,
     /// шпации разбиения
     pub bounds: Bounds,
 }
 ///
-/// Груз, для которого центр массы и распределение зависит от 
+/// Груз, для которого центр массы и распределение зависит от
 /// объема и/или положения корпуса, считается в модели
 /// Сыпучий груз
 #[derive(Debug, Clone)]
 pub struct BulkData {
-    pub cargo_id: usize, // ID груза
+    pub cargo_id: usize,  // ID груза
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
@@ -48,7 +48,7 @@ pub struct BulkData {
 /// Жидкий груз
 #[derive(Debug, Clone)]
 pub struct LiquidData {
-    pub cargo_id: usize, // ID груза
+    pub cargo_id: usize,  // ID груза
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
@@ -59,7 +59,7 @@ pub struct LiquidData {
 /// считаем распределение по отсеку при максимальном объеме отсека
 #[derive(Debug, Clone)]
 pub struct GaseousData {
-    pub cargo_id: usize, // ID груза
+    pub cargo_id: usize,  // ID груза
     pub space_id: String, // ID помещения
     pub mass: f64,
 }
@@ -75,17 +75,19 @@ pub struct BoundArea {
 #[derive(Debug, Clone)]
 pub struct BalanceResult {
     /// Крен, градусы
-    pub heel: f64,
+    pub roll: f64,
     /// Дифферент, градусы
-    pub trim: f64,
+    pub trim_degree: f64,
+    /// Дифферент, метры
+    pub trim_meter: f64,
     /// осадка на миделе
-    pub draught_mid: f64, 
+    pub draught_mid: f64,
     /// осадка на носовом перпендикуляре
-    pub draught_bow: f64, 
+    pub draught_bow: f64,
     /// осадка на кормовом перпендикуляре
     pub draught_stern: f64,
     /// средняя осадка (в центре тяжести ватерлинии)
-    pub draught_mean: f64, 
+    pub draught_mean: f64,
     /// Объемное водоизмещение, м^3
     pub displacement: f64,
     /// Смещение центра объемного водоизмещения, м
@@ -95,7 +97,7 @@ pub struct BalanceResult {
     /// Данные газообразных грузов
     pub gaseous: Vec<GaseousResult>,
     /// Данные сыпучих грузов
-    pub bulk: Vec<BulkResult>,    
+    pub bulk: Vec<BulkResult>,
     /// Данные жидких грузов
     pub liquid: Vec<LiquidResult>,
     /// Площадь ватерлинии, м^2
@@ -103,73 +105,113 @@ pub struct BalanceResult {
     /// Смещение центра тяжести ватеринии, м
     pub area_wl_center: Position,
     /// Длинна по ватерлинии при текущей осадке, м
-    pub length_wl: f64, 
+    pub length_wl: f64,
     ///  Ширина по ватерлинии при текущей осадке, м
-    pub breadth_wl: f64, 
+    pub breadth_wl: f64,
     /// Продольный метацентрический радиус, м
     pub rad_long: f64,
     /// Поперечный метацентрические радиус, м
     pub rad_trans: f64,
-   // ///  Угол входа в воду кромки палубы, градусы
-  //  pub entry_angle: f64, 
-  //  ///  Угол заливания отверстий, градусы
-  //  pub flooding_angle: f64, 
-  //  /// Суммарная площадь проекции на диаметральную плоскость, в пределах  
-  //  /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна  
-  //  /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2
-  //  pub bow_area: f64,
-  //  /// Площади боковой и горизонтальной поверхностей для расчета остойчивости, м^2
-  //  pub const_area_v: Vec<(f64, Position)>,
-  //  pub const_area_h: Vec<(f64, Position)>,
-  //  /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы 
-  //  pub pantocaren: Vec<(f64, f64)>,    
+    // ///  Угол входа в воду кромки палубы, градусы
+    //  pub entry_angle: f64,
+    //  ///  Угол заливания отверстий, градусы
+    //  pub flooding_angle: f64,
+    //  /// Суммарная площадь проекции на диаметральную плоскость, в пределах
+    //  /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна
+    //  /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2
+    //  pub bow_area: f64,
+    //  /// Площади боковой и горизонтальной поверхностей для расчета остойчивости, м^2
+    //  pub const_area_v: Vec<(f64, Position)>,
+    //  pub const_area_h: Vec<(f64, Position)>,
+    //  /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы
+    //  pub pantocaren: Vec<(f64, f64)>,
 }
 ///
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
 pub struct LiquidResult {
     /// ID груза
-    pub cargo_id: usize, 
+    pub cargo_id: usize,
     /// ID помещения
-    pub space_id: String, 
+    pub space_id: String,
     /// смещение центра массы
     pub mass_shift: Position,
     /// продольный момент свободной поверхности жидкости
     pub long_moment_of_inertia: f64,
     /// поперечный момент свободной поверхности жидкости
     pub trans_moment_of_inertia: f64,
-    /// Распределение массы по шпациям, (index, value)
-    pub mass_values: Vec<(usize, f64)>,
+    /// Распределение массы по шпациям
+    pub mass_values: Vec<f64>,
+}
+///
+impl LiquidResult {
+    ///
+    pub fn new(
+        cargo_id: usize,
+        space_id: String,
+        mass_shift: Position,
+        long_moment_of_inertia: f64,
+        trans_moment_of_inertia: f64,
+        mass_values: Vec<f64>,
+    ) -> Self {
+        Self {
+            cargo_id,
+            space_id,
+            mass_shift,
+            long_moment_of_inertia,
+            trans_moment_of_inertia,
+            mass_values,
+        }
+    }
 }
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
 pub struct BulkResult {
     /// ID груза
-    pub cargo_id: usize, 
+    pub cargo_id: usize,
     /// ID помещения
-    pub space_id: String, 
+    pub space_id: String,
     /// смещение центра массы
     pub mass_shift: Position,
-    /// Распределение массы по шпациям, (index, value)
-    pub mass_values: Vec<(usize, f64)>,
+    /// Распределение массы по шпациям
+    pub mass_values: Vec<f64>,
+}
+///
+impl BulkResult {
+    ///
+    pub fn new(
+        cargo_id: usize,
+        space_id: String,
+        mass_shift: Position,
+        mass_values: Vec<f64>,
+    ) -> Self {
+        Self {
+            cargo_id,
+            space_id,
+            mass_shift,
+            mass_values,
+        }
+    }
 }
 ///
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
 pub struct GaseousResult {
     /// ID груза
-    pub cargo_id: usize, 
+    pub cargo_id: usize,
     /// ID помещения
-    pub space_id: String, 
-    /// Распределение массы по шпациям, (index, value)
-    pub mass_values: Vec<(usize, f64)>,
+    pub space_id: String,
+    /// Распределение массы по шпациям
+    pub mass_values: Vec<f64>,
 }
-
-
-
-
-
-
-
-
-
+///
+impl GaseousResult {
+    ///
+    pub fn new(cargo_id: usize, space_id: String, mass_values: Vec<f64>) -> Self {
+        Self {
+            cargo_id,
+            space_id,
+            mass_values,
+        }
+    }
+}

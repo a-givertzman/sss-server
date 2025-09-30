@@ -3,7 +3,6 @@ use crate::algorithm::entities::parameters::ParameterID;
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
 ///
-/// To be moved to it's right place if it is a part of a `Context`
 /// Структура результатов расчета баланса судна
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BalanceResult {
