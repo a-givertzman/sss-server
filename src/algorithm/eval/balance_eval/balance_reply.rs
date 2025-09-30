@@ -2,6 +2,7 @@ use bincode::{Decode, Encode};
 use crate::algorithm::entities::parameters::ParameterID;
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
+/*
 ///
 /// Структура результатов расчета баланса судна
 #[derive(Debug, Clone, Decode, Encode)]
@@ -14,3 +15,4 @@ pub struct BalanceResult {
     pub bulk: Vec<BulkResult>,
     pub liquid: Vec<LiquidResult>,
 }
+*/

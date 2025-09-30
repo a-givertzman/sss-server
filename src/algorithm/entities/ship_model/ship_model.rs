@@ -1,4 +1,5 @@
 use crate::algorithm::entities::Curve;
+use crate::algorithm::entities::ICurve;
 use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Position;
@@ -177,8 +178,18 @@ impl ShipModel {
     /// TODO: Doc
     pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
-        let result = self.model_cached.balance(query)
-            .map_err(|err| error.pass_with("model_cached.balance", err))?;     
+        let mut result = self.model_cached.balance(query)
+            .map_err(|err| error.pass_with("model_cached.balance", err))?;
+        let grain_moment = self.grain_moment.as_ref().ok_or(error.err("grain_moment"))?;
+        // TODO - переписать получение момента из модели
+        result.bulk.iter_mut().for_each(|v| {
+            v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
+                curve.value(v.level).unwrap_or(0.)
+            } else {
+                0.
+            };
+        }
+        );
         Ok(result)
     }
     ///

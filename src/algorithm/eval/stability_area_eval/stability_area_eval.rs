@@ -56,7 +56,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 };
                 let balance: BalanceCtx = ctx.read();
                 let const_area_v = &balance.const_area_v;
-                let const_area_h = &balance.const_area_h; 
+                let const_area_h = &balance.const_area_h;
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,

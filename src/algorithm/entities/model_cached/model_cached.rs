@@ -3,10 +3,11 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            AreaShape, BoundDisplacementCache, 
-            CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache,
-            DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
-        }, ship_model::*,
+            AreaShape, BoundDisplacementCache, CompartmentCache, CompartmentCacheResult,
+            DamagedCompartmentCache, DisplacementCache, DisplacementCacheResult, DisplacementShape,
+            Draught, Shape, WindageArea,
+        },
+        ship_model::*,
     },
     kernel::types::{Arc, RwLock},
 };
@@ -577,7 +578,7 @@ impl ModelCached {
         )
         .calculate();
         let trim_degree = trim;
-        let trim_meter = trim.to_radians().tan()*self.ship_length_lbp;
+        let trim_meter = trim.to_radians().tan() * self.ship_length_lbp;
         let displacement_bounded = self
             .displacement_bounded
             .get(&query.bounds.len_qnt())
@@ -614,7 +615,7 @@ impl ModelCached {
             .ok_or(error.err("no compartments_bounded"))?;
         for cargo in query.liquid {
             assert!(cargo.mass > 0.);
-            let cargo_id = cargo.cargo_id;
+            let assigned_id = cargo.assigned_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} liquid work"));
             let density = cargo.mass / cargo.volume;
@@ -650,13 +651,13 @@ impl ModelCached {
                             )
                         })?;
                     results_.push(LiquidResult::new(
-                        cargo_id, 
-                        space_id, 
-                        compartment_result.volume_center,
-                        compartment_result.inertia_long_y,                             
-                        compartment_result.inertia_trans_x,    
-                        volume_bounded.into_iter().map(|v| v*density).collect())
-                    );
+                        //     cargo_id,
+                        assigned_id,
+                        //     compartment_result.volume_center,
+                        compartment_result.inertia_long_y,
+                        compartment_result.inertia_trans_x,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -667,7 +668,7 @@ impl ModelCached {
         }
         for cargo in query.bulk {
             assert!(cargo.mass > 0.);
-            let cargo_id = cargo.cargo_id;
+            let assigned_id = cargo.assigned_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} bulk work"));
             let density = cargo.mass / cargo.volume;
@@ -702,7 +703,14 @@ impl ModelCached {
                                 err,
                             )
                         })?;
-                    results_.push(BulkResult::new(cargo_id, space_id, compartment_result.volume_center, volume_bounded.into_iter().map(|v| v*density).collect()));
+                    results_.push(BulkResult::new(
+                 //       cargo_id,
+                        space_id,
+                        assigned_id,                        
+                        compartment_result.level,
+                 //       compartment_result.volume_center,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
@@ -713,7 +721,7 @@ impl ModelCached {
         }
         for cargo in query.gaseous {
             assert!(cargo.mass > 0.);
-            let cargo_id = cargo.cargo_id;
+            let assigned_id = cargo.assigned_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
@@ -733,7 +741,10 @@ impl ModelCached {
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
-                    results_.push(GaseousResult::new(cargo_id, space_id, volume_bounded.into_iter().map(|v| v*density).collect()));
+                    results_.push(GaseousResult::new(
+                        assigned_id,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
                     Ok(())
                 })
                 .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));

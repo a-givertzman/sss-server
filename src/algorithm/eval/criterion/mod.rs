@@ -6,7 +6,6 @@ use std::fmt::Debug;
 
 pub mod criterion_draught_eval;
 pub mod criterion_stability_eval;
-pub mod parameters;
 
 pub use criterion_stability_eval::criterion_stability_eval::CriterionStabilityEval;
 pub use criterion_stability_eval::criterion_stability_ctx::CriterionStabilityCtx;

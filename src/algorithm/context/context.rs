@@ -29,6 +29,8 @@ pub struct Context {
     /// Расчет равновесного положения судна
     /// Параметры + данные по смещаемым грузам
     pub(super) balance: Option<BalanceCtx>,
+
+    /*
     /// Площади горизонтальных поверхностей и
     /// площади парусности судна для расчета остойчивости
     pub(super) stability_area: Option<StabilityAreaCtx>,
@@ -86,6 +88,7 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
+*/
     ///
     /// Uset for testing only
     #[allow(dead_code)]

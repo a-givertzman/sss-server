@@ -46,9 +46,9 @@ impl MetacentricHeightEval {
             .ok_or(error.err("No LBP in ship_parameters"))?;
         let balance: BalanceCtx = ctx.read();
         // Продольный метацентрический радиус
-        let rad_long = balance.rad_long;
+        let rad_long = ctx.read_params(ParameterID::MetacentricLongRad);  
         // Поперечный метацентрические радиус
-        let rad_trans = balance.rad_trans;
+        let rad_trans = ctx.read_params(ParameterID::MetacentricTransRad);  
         // Отстояние центра величины погруженной части судна    
         let center_draught_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);  
         // Все жидкие грузы судна

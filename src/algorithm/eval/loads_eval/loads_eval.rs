@@ -1,10 +1,11 @@
 use super::loads_ctx::LoadsCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
+use crate::algorithm::entities::ship_model::{BulkData, GaseousData, LiquidData};
 use crate::algorithm::entities::{Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::{InitialCtx, ContextWrite}
+    prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -18,7 +19,10 @@ pub struct LoadsEval {
 //
 impl LoadsEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "LoadsEval");
         Self {
             dbg,
@@ -46,58 +50,60 @@ impl Eval<(), EvalResult> for LoadsEval {
                         .ok_or(error.err("Read const_mass_shift_z error: no data!"))?;
                     Position::new(const_mass_shift_x, const_mass_shift_y, const_mass_shift_z)
                 } else {
-                    return Err(
-                        error.err("Read const_mass_shift_z error: no ship_parameters!"),
-                    );
+                    return Err(error.err("Read const_mass_shift_z error: no ship_parameters!"));
                 };
                 let mass_const = match initial.load_constant.clone() {
                     Some(data) => data.data().iter().map(|v| v.mass).sum(),
                     None => return Err(error.err("Read load_constant error: no data!")),
                 };
-                let (bulk, mass_bulk, shift_bulk) = match initial.bulk.clone() {
-                    Some(data) => {
-                        let bulk: Vec<_> = data.iter().map(|v| v.data()).collect();
-                        let (mass, shift) = data
-                            .iter()
-                            .filter_map(|v| match v.mass_shift {
-                                Some(mass_shift) => Some((v.mass, mass_shift)),
-                                None => None,
-                            })
-                            .fold(
-                                (0., Moment::zero()),
-                                |(mass_sum, moment_sum), (mass, mass_shift)| {
-                                    (
-                                        mass_sum + mass,
-                                        moment_sum + Moment::from_pos(mass_shift, mass),
-                                    )
-                                },
-                            );
-                        (bulk, mass, shift)
-                    },
-                    None => return Err(error.err("Read bulk error: no data!")),
-                };
-                let (liquid, mass_liquid, shift_liquid) = match initial.liquid.clone() {
-                    Some(data) => {
-                        let liquid: Vec<_> = data.iter().map(|v| v.data()).collect();
-                        let (mass, shift) = data
-                            .iter()
-                            .filter_map(|v| match v.mass_shift {
-                                Some(mass_shift) => Some((v.mass, mass_shift)),
-                                None => None,
-                            })
-                            .fold(
-                                (0., Moment::zero()),
-                                |(mass_sum, moment_sum), (mass, mass_shift)| {
-                                    (
-                                        mass_sum + mass,
-                                        moment_sum + Moment::from_pos(mass_shift, mass),
-                                    )
-                                },
-                            );
-                        (liquid, mass, shift)
-                    },
-                    None => return Err(error.err("Read liquid error: no data!")),
-                };
+                let bulk: Vec<_> = initial
+                    .bulk
+                    .clone()
+                    .ok_or(error.err("Read bulk error: no data!"))?
+                    .into_values()
+                    .flat_map(|v| {
+                        let volume = match v.volume {
+                            Some(volume) => volume,
+                            None => match v.stowage_factor {
+                                Some(stowage_factor) => v.mass * stowage_factor,
+                                None => return None, // TODO что делать, игнорировать или выдать ошибку?
+                            },
+                        };
+                        Some(BulkData {
+                            assigned_id: v.assigned_id, // ID assigned
+                            space_id: v.space_id,       // ID помещения
+                            mass: v.mass,
+                            volume,
+                        })
+                    })
+                    .collect();
+                let liquid: Vec<_> = initial
+                    .liquid
+                    .clone()
+                    .ok_or(error.err("Read liquid error: no data!"))?
+                    .into_values()
+                    .flat_map(|v| {
+                        let volume = match v.volume {
+                            Some(volume) => volume,
+                            None => match v.density {
+                                Some(density) => {
+                                    if density > 0. {
+                                        v.mass / density
+                                    } else {
+                                        0.
+                                    }
+                                }
+                                None => return None, // TODO что делать, игнорировать или выдать ошибку?
+                            },
+                        };
+                        Some(LiquidData {
+                            assigned_id: v.assigned_id, // ID assigned
+                            space_id: v.space_id,       // ID помещения
+                            mass: v.mass,
+                            volume,
+                        })
+                    })
+                    .collect();
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {
                         let unit = data;
@@ -130,9 +136,8 @@ impl Eval<(), EvalResult> for LoadsEval {
                 };
                 let (gaseous, mass_gaseous, shift_gaseous) = match initial.gaseous.clone() {
                     Some(data) => {
-                        let gaseous: Vec<_> = data.iter().map(|v| v.data()).collect();
                         let (mass, shift) = data
-                            .iter()
+                            .values()
                             .filter_map(|v| match v.mass_shift {
                                 Some(mass_shift) => Some((v.mass, mass_shift)),
                                 None => None,
@@ -146,36 +151,27 @@ impl Eval<(), EvalResult> for LoadsEval {
                                     )
                                 },
                             );
+                        let gaseous: Vec<_> = data
+                            .into_values()
+                            .flat_map(|v| {
+                                Some(GaseousData {
+                                    assigned_id: v.assigned_id, // ID assigned
+                                    space_id: v.space_id,       // ID помещения
+                                    mass: v.mass,
+                                })
+                            })
+                            .collect();
                         (gaseous, mass, shift)
-                    },
-                  /*      data
-                        .iter()
-                        .filter_map(|v| match v.mass_shift {
-                            Some(mass_shift) => Some((v.mass, mass_shift)),
-                            None => None,
-                        })
-                        .fold(
-                            (0., Moment::zero()),
-                            |(mass_sum, moment_sum), (mass, mass_shift)| {
-                                (
-                                    mass_sum + mass,
-                                    moment_sum + Moment::from_pos(mass_shift, mass),
-                                )
-                            },
-                        ),*/
+                    }
                     None => return Err(error.err("Read gaseous error: no data!")),
                 };
                 let result = LoadsCtx {
                     mass_const,
-                    mass_bulk,
-                    mass_liquid,
                     mass_unit,
                     mass_gaseous,
                     shift_const,
                     shift_unit,
                     shift_gaseous,
-                    shift_liquid,
-                    shift_bulk,
                     bulk,
                     liquid,
                     gaseous,
@@ -191,8 +187,6 @@ impl Eval<(), EvalResult> for LoadsEval {
 //
 impl std::fmt::Debug for LoadsEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LoadsEval")
-            .field("dbg", &self.dbg)
-            .finish()
+        f.debug_struct("LoadsEval").field("dbg", &self.dbg).finish()
     }
 }

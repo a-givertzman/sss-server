@@ -298,7 +298,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
-    let ctx = CriterionStabilityEval::new(
+    let ctx = 
+  /*  
+    CriterionStabilityEval::new(
         &dbg,
         MetacentricHeightSubdivisionEval::new(
             &dbg,
@@ -341,6 +343,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                 StabilityAreaEval::new(
                                                                                     &dbg,
                                                                                     ship_model.clone(),
+                                                                                    */
+
+
                                                                                     BalanceEval::new(
                                                                                         &dbg,
                                                                                         ship_model.clone(),
@@ -374,8 +379,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                 ),
                                                                                             ),
                                                                                         ),
-                                                                                    ),
-                                                                                ),
+                                                                                   ).eval(())
+    /*                                                                             ),
                                                                             ),
                                                                         ),
                                                                     ),
@@ -394,7 +399,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    );
+    )
+    */
+    ;
+
+/*    
     let _result = DraftMarkEval::new(
         &tmp_dbg,
         CriterionDraughtEval::new(
@@ -419,7 +428,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     )
-    .eval(());
-    
+    .eval(());*/
+    dbg!(ctx);
     Ok(())
 }

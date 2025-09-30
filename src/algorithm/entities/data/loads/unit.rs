@@ -192,7 +192,7 @@ impl LoadUnitData {
 pub type LoadUnitArray = DataArray<LoadUnitData>;
 //
 impl LoadUnitArray {
-    pub fn data(&self) -> Vec<LoadUnitData> {
-        self.data.clone()
+    pub fn data(self) -> Vec<LoadUnitData> {
+        self.data.into_iter().filter(|v| v.mass > 0.).collect()
     }
 }

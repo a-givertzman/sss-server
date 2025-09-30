@@ -1,5 +1,3 @@
-//pub mod query;
-//pub mod reply;
 mod grain_moment;
 pub mod ship_model;
 
@@ -38,8 +36,8 @@ pub struct BalanceQuery {
 /// объема и/или положения корпуса, считается в модели
 /// Сыпучий груз
 #[derive(Debug, Clone)]
-pub struct BulkData {
-    pub cargo_id: usize,  // ID груза
+pub struct BulkData {    
+    pub assigned_id: usize,// ID assigned
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
@@ -48,7 +46,7 @@ pub struct BulkData {
 /// Жидкий груз
 #[derive(Debug, Clone)]
 pub struct LiquidData {
-    pub cargo_id: usize,  // ID груза
+    pub assigned_id: usize,// ID assigned
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
@@ -59,7 +57,7 @@ pub struct LiquidData {
 /// считаем распределение по отсеку при максимальном объеме отсека
 #[derive(Debug, Clone)]
 pub struct GaseousData {
-    pub cargo_id: usize,  // ID груза
+    pub assigned_id: usize,// ID assigned
     pub space_id: String, // ID помещения
     pub mass: f64,
 }
@@ -130,12 +128,10 @@ pub struct BalanceResult {
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
 pub struct LiquidResult {
-    /// ID груза
-    pub cargo_id: usize,
-    /// ID помещения
-    pub space_id: String,
-    /// смещение центра массы
-    pub mass_shift: Position,
+    /// ID assigned
+    pub assigned_id: usize,
+ //   /// смещение центра массы
+ //   pub mass_shift: Position,
     /// продольный момент свободной поверхности жидкости
     pub long_moment_of_inertia: f64,
     /// поперечный момент свободной поверхности жидкости
@@ -147,17 +143,15 @@ pub struct LiquidResult {
 impl LiquidResult {
     ///
     pub fn new(
-        cargo_id: usize,
-        space_id: String,
-        mass_shift: Position,
+        assigned_id: usize,
+   //     mass_shift: Position,
         long_moment_of_inertia: f64,
         trans_moment_of_inertia: f64,
         mass_values: Vec<f64>,
     ) -> Self {
         Self {
-            cargo_id,
-            space_id,
-            mass_shift,
+            assigned_id,
+    //        mass_shift,
             long_moment_of_inertia,
             trans_moment_of_inertia,
             mass_values,
@@ -167,12 +161,16 @@ impl LiquidResult {
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
 pub struct BulkResult {
-    /// ID груза
-    pub cargo_id: usize,
     /// ID помещения
-    pub space_id: String,
-    /// смещение центра массы
-    pub mass_shift: Position,
+    pub space_id: String,  // TODO - убрать после переноса расчета момента в модель
+    /// ID assigned
+    pub assigned_id: usize,
+ //   /// смещение центра массы
+ //   pub mass_shift: Position,
+    /// Уровень заполнения отсека
+    pub level: f64,  // TODO - убрать после переноса расчета момента в модель
+    /// Объемный кренящий момент
+    pub moment: f64, 
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,
 }
@@ -180,15 +178,19 @@ pub struct BulkResult {
 impl BulkResult {
     ///
     pub fn new(
-        cargo_id: usize,
         space_id: String,
-        mass_shift: Position,
+        assigned_id: usize,
+    //    mass_shift: Position,
+        level: f64,
+    //    moment: f64,
         mass_values: Vec<f64>,
     ) -> Self {
         Self {
-            cargo_id,
             space_id,
-            mass_shift,
+            assigned_id,
+      //      mass_shift,
+            level,
+            moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
             mass_values,
         }
     }
@@ -197,20 +199,17 @@ impl BulkResult {
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
 pub struct GaseousResult {
-    /// ID груза
-    pub cargo_id: usize,
-    /// ID помещения
-    pub space_id: String,
+    /// ID assigned
+    pub assigned_id: usize,
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,
 }
 ///
 impl GaseousResult {
     ///
-    pub fn new(cargo_id: usize, space_id: String, mass_values: Vec<f64>) -> Self {
+    pub fn new(assigned_id: usize, mass_values: Vec<f64>) -> Self {
         Self {
-            cargo_id,
-            space_id,
+            assigned_id,
             mass_values,
         }
     }

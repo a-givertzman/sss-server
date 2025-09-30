@@ -1,4 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
+use std::collections::HashMap;
+
 use super::{AssignmentType, LiquidCargoType};
 use crate::algorithm::entities::{Position, data::DataArray, ship_model::LiquidData};
 use serde::{Deserialize, Serialize};
@@ -50,7 +52,8 @@ impl LoadLiquidData {
             }
         };
         LiquidData {
-            cargo_id: self.cargo_id,
+            assigned_id:  self.assigned_id,
+       //     cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
             mass: self.mass,
             volume,
@@ -91,7 +94,7 @@ impl std::fmt::Display for LoadLiquidData {
 pub type LoadLiquidArray = DataArray<LoadLiquidData>;
 //
 impl LoadLiquidArray {
-    pub fn data(self) -> Vec<LoadLiquidData> {
-        self.data
+    pub fn data(self) -> HashMap<usize, LoadLiquidData> {
+        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assigned_id, v)).collect()
     }
 }

@@ -27,10 +27,10 @@ pub struct InitialCtx {
     /// Постоянная нагрузка на судно
     pub load_constant: Option<LoadConstantArray>,
     /// Переменная нагрузка на судно
-    pub bulk: Option<Vec::<LoadBulkData>>,
-    pub liquid: Option<Vec::<LoadLiquidData>>,
-    pub unit: Option<Vec::<LoadUnitData>>,
-    pub gaseous: Option<Vec::<LoadGaseousData>>,
+    pub bulk: Option<HashMap<usize, LoadBulkData>>,
+    pub liquid: Option<HashMap<usize, LoadLiquidData>>,
+    pub unit: Option<Vec<LoadUnitData>>,
+    pub gaseous: Option<HashMap<usize, LoadGaseousData>>,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
     pub multipler_x1: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
