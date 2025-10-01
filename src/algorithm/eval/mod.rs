@@ -7,7 +7,7 @@ mod loads_eval;
 mod wetting_eval;
 mod icing_timber_eval;
 mod balance_eval;
-
+mod mass_eval;
 /*
 mod stability_area_eval;
 mod metacentric_height_eval;
@@ -45,6 +45,9 @@ pub use balance_eval::balance_ctx::BalanceCtx;
 
 pub use icing_timber_eval::icing_timber_eval::IcingTimberEval;
 pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;
+
+pub use mass_eval::mass_eval::MassEval;
+pub use mass_eval::mass_ctx::MassCtx;
 
 /*
 pub use stability_area_eval::stability_area_eval::StabilityAreaEval;
