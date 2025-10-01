@@ -156,7 +156,7 @@ impl ContextRead<BalanceCtx> for Context {
     }
 }
 //
-impl ContextWrite<MassCtx> for Context {
+impl ContextWrite<MassCtx> for Context { 
     fn write(mut self, value: MassCtx) -> Result<Self, Error> {
         self.mass = Some(value);
         Result::Ok(self)
