@@ -345,7 +345,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                     ship_model.clone(),
                                                                                     */
 
-
+                                                                                MassEval::new(
+                                                                                    &dbg,
                                                                                     BalanceEval::new(
                                                                                         &dbg,
                                                                                         ship_model.clone(),
@@ -379,7 +380,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                 ),
                                                                                             ),
                                                                                         ),
-                                                                                   ).eval(())
+                                                                                    ),
+                                                                                ).eval(())
     /*                                                                             ),
                                                                             ),
                                                                         ),

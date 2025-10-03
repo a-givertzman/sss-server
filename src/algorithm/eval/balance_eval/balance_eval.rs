@@ -121,6 +121,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                             super::bulk_result::BulkResult::new(
                                 data.cargo_id,
                                 data.space_id.clone(),
+                                data.assigment_type,
                                 res.moment,
                                 res.mass_values.clone(),
                             )
@@ -152,6 +153,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                             super::gaseous_result::GaseousResult::new(
                                 data.cargo_id,
                                 data.space_id.clone(),
+                                data.assigment_type,
                                 res.mass_values.clone(),
                             )
                         })

@@ -145,7 +145,7 @@ impl Bounds {
             .expect("Bounds delta error: no length for first element!")
     }*/
     /// Преобразование диапазона значений
-    /// Возвращает вектор значений, пересчитанный к дипазону
+    /// Возвращает вектор значений values в распределении bounds, пересчитанный к распределению self
     pub fn intersect(&self, bounds: &Bounds, values: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new("Bounds", "intersect");
         let bounds = bounds.iter();
