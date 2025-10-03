@@ -31,6 +31,12 @@ pub struct Context {
     pub(super) balance: Option<BalanceCtx>,
     /// Нагрузка на корпус судна: конструкции, груз, экипаж и т.п.
     pub(super) mass: Option<MassCtx>,
+    /// Результирующая нагрузка на шпацию
+    pub(super) total_force: Option<TotalForceCtx>,
+    /// Срезающая сила, действующая на корпус судна
+    pub(super) shear_force: Option<ShearForceCtx>,
+    /// Изгибающий момент
+    pub(super) bending_moment: Option<BendingMomentCtx>,
     /*
     /// Площади горизонтальных поверхностей и
     /// площади парусности судна для расчета остойчивости

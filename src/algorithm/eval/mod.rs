@@ -8,6 +8,9 @@ mod wetting_eval;
 mod icing_timber_eval;
 mod balance_eval;
 mod mass_eval;
+mod total_force_eval;
+mod shear_force_eval;
+mod bending_moment_eval;
 /*
 mod stability_area_eval;
 mod metacentric_height_eval;
@@ -49,6 +52,14 @@ pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;
 pub use mass_eval::mass_eval::MassEval;
 pub use mass_eval::mass_ctx::MassCtx;
 
+pub use total_force_eval::eval::TotalForceEval;
+pub use total_force_eval::ctx::TotalForceCtx;
+
+pub use shear_force_eval::eval::ShearForceEval;
+pub use shear_force_eval::ctx::ShearForceCtx;
+
+pub use bending_moment_eval::eval::BendingMomentEval;
+pub use bending_moment_eval::ctx::BendingMomentCtx;
 /*
 pub use stability_area_eval::stability_area_eval::StabilityAreaEval;
 pub use stability_area_eval::stability_area_ctx::StabilityAreaCtx;

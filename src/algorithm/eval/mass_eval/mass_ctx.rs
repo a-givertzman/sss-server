@@ -5,9 +5,9 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct MassCtx {
     /// Набор результатов расчетов
-    data: HashMap<String, Vec<f64>>,
+    pub data: HashMap<String, Vec<f64>>,
     /// Распределение массы по вектору разбиения
-    mass_values: Vec<f64>,
+    pub mass_values: Vec<f64>,
 }
 //
 impl MassCtx {

@@ -167,6 +167,42 @@ impl ContextRead<MassCtx> for Context {
         self.mass.clone().unwrap()
     }
 }
+//
+impl ContextWrite<TotalForceCtx> for Context { 
+    fn write(mut self, value: TotalForceCtx) -> Result<Self, Error> {
+        self.total_force = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<TotalForceCtx> for Context {
+    fn read(&self) -> TotalForceCtx {
+        self.total_force.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ShearForceCtx> for Context { 
+    fn write(mut self, value: ShearForceCtx) -> Result<Self, Error> {
+        self.shear_force = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ShearForceCtx> for Context {
+    fn read(&self) -> ShearForceCtx {
+        self.shear_force.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<BendingMomentCtx> for Context { 
+    fn write(mut self, value: BendingMomentCtx) -> Result<Self, Error> {
+        self.bending_moment = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<BendingMomentCtx> for Context {
+    fn read(&self) -> BendingMomentCtx {
+        self.bending_moment.clone().unwrap()
+    }
+}
 /*
 //
 impl ContextWrite<StabilityAreaCtx> for Context {

@@ -345,6 +345,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                     ship_model.clone(),
                                                                                     */
 
+                                                                    BendingMomentEval::new(
+                                                                        &dbg,
+                                                                        ShearForceEval::new(
+                                                                            &dbg,
+                                                                            TotalForceEval::new(
+                                                                                &dbg,
                                                                                 MassEval::new(
                                                                                     &dbg,
                                                                                     BalanceEval::new(
@@ -381,7 +387,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                             ),
                                                                                         ),
                                                                                     ),
-                                                                                ).eval(())
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ).eval(())
     /*                                                                             ),
                                                                             ),
                                                                         ),
