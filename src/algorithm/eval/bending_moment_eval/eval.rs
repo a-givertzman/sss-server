@@ -1,15 +1,12 @@
 use super::ctx::BendingMomentCtx;
 use crate::{
     algorithm::{
-        context::context_access::ContextReadRef,
-        entities::{IntegralSum, MultipleSingle, SubVec},
-        eval::{BalanceCtx, MassCtx, ShearForceCtx},
+        context::context_access::ContextReadRef, entities::IntegralSum, eval::ShearForceCtx,
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Изгибающий момент
 pub struct BendingMomentEval {
@@ -45,7 +42,11 @@ impl Eval<(), EvalResult> for BendingMomentEval {
                     .ok_or(error.err("initial error: no bounds!"))?;
                 let shear_force: ShearForceCtx = ctx.read();
                 let mut result: Vec<f64> = shear_force.values.integral_sum();
-                result = result.into_iter().zip(bounds.iter()).map(|(v, b)| v*b.length().unwrap_or(0.)/2.).collect();
+                result = result
+                    .into_iter()
+                    .zip(bounds.iter())
+                    .map(|(v, b)| v * b.length().unwrap_or(0.) / 2.)
+                    .collect();
                 ctx.write(BendingMomentCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
