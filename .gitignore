@@ -31,6 +31,6 @@ Cargo.lock
 desktop.ini
 
 # too heavy
-src/assets/*
+src/assets/model/*
 src/algorithm/entities/model_cached/test/sofia/*
 

@@ -825,7 +825,7 @@ static TARGET_3500_5: [f64; 196] = [
     0.,
 ];
 ///
-#[ignore = "too slow, run only in release mode"]
+//#[ignore = "too slow, run only in release mode"]
 #[test]
 fn bound_displacement_sofia() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -870,7 +870,7 @@ fn bound_displacement_sofia() {
     let shp = |i: usize| -> String {
         format!("{} {}", _shp(i), _shp(i+1))
     };
-    println!("\n6.0 0.0");
+ //   println!("\n6.0 0.0");
     for (i, (r, t)) in bound_displacement
         .get(6., 0.)
         .unwrap()
@@ -890,7 +890,7 @@ fn bound_displacement_sofia() {
             "\n i:{}, result: {r}\ntarget: {t}", i as i32 - 4
         );
     }
-    println!("\n6.0 0.1");
+  //  println!("\n6.0 0.1");
     for (i, (r, t)) in bound_displacement
         .get(6., 0.1)
         .unwrap()
@@ -910,7 +910,7 @@ fn bound_displacement_sofia() {
             "\n i:{}, result: {r}\ntarget: {t}", i as i32 - 4
         );
     }
-    println!("\n4.0 1.0");
+ //   println!("\n4.0 1.0");
     for (i, (r, t)) in bound_displacement
         .get(4., 1.)
         .unwrap()
@@ -930,7 +930,7 @@ fn bound_displacement_sofia() {
             "\n i:{}, result: {r}\ntarget: {t}", i as i32 - 4
         );
     }
-    println!("\n3.5, 5.0");
+  //  println!("\n3.5, 5.0");
     for (i, (r, t)) in bound_displacement
         .get(3.5, 5.)
         .unwrap()
