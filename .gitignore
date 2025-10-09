@@ -32,3 +32,4 @@ desktop.ini
 
 # too heavy
 /src/assets/*
+/src/algorithm/entities/model_cached/test/sofia/*
