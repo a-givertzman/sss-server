@@ -68,7 +68,7 @@ impl BoundDisplacementCache {
                 Some(cache) => {
                     //            let draught = draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.midel_x);
                     let draught = draught_mid + dx * trim.to_radians().sin();
-                    dbg!(draught_mid, dx, draught);
+               //     dbg!(draught_mid, dx, draught);
                     cache.get(&vec![draught])[0]
                 }
                 None => 0.,

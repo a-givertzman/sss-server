@@ -486,7 +486,7 @@ impl ModelCached {
     }
     //
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        let error = Error::new(&self.dbg, "rebuild_bounds");
+        let error: Error = Error::new(&self.dbg, "rebuild_bounds");
         let displacement_shape = self
             .displacement_shapes
             .get("hull")

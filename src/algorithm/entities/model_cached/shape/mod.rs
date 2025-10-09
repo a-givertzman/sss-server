@@ -2,11 +2,11 @@
 //! Defines a shape trait
 mod area_shape;
 mod displacement_shape;
-mod file_io;
+mod utils;
 
 pub(crate) use area_shape::*;
 pub(crate) use displacement_shape::*;
-pub(crate) use file_io::*;
+pub(crate) use utils::*;
 
 use nalgebra::*;
 use parry3d_f64::bounding_volume::Aabb;
