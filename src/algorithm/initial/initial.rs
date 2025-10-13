@@ -156,7 +156,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     bulk_cargo_view
                 WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
                 .map_err(|err| error.pass_with("bulk fetch", err))?,
@@ -167,23 +167,29 @@ impl Eval<(), EvalResult> for Initial {
                 .api_client
                 .fetch(&format!(
                 "SELECT 
-                    space_id, \
-                    space_name, \
                     cargo_id, \
                     cargo_name, \
+                    space_id, \
+                    space_name, \
                     assigned_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
-                    density, \
                     weight AS mass, \
+                    density, \
+                    volume, \
+                    centre_of_compartment as mass_shift
+                FROM 
+                    liquid_cargo_view
+                WHERE 
+                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+
+                    /*
+                                        volume, \
                     centre_of_compartment as mass_shift, \
                     use_moment_of_inertia_max,   
                     long_moment_of_inertia_max,
                     trans_moment_of_inertia_max
-                FROM 
-                    liquid_cargo_view
-                WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    */
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
                 .map_err(|err| error.pass_with("liquid fetch", err))?,
@@ -207,7 +213,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     gaseous_cargo_view
                 WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
                 .map_err(|err| error.pass_with("gaseous fetch", err))?,
@@ -243,7 +249,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     unit_cargo_view
                 WHERE 
-                    language = 'eng' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
                 .map_err(|err| error.pass_with("unit fetch", err))?,

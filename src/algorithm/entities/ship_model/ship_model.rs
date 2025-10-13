@@ -289,7 +289,7 @@ fn horisontal_area(
     let err = Error::new("ShipModel", "horisontal_area");
     let area = HStrAreaArray::parse(
         &api_client.fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} AND project_id={project_id} ORDER BY bound_x1 ASC;",
+            "SELECT name, value, bound_x1, bound_x2 FROM \"ship/ship_structures/area/h_str\" WHERE ship_id={} AND project_id={project_id} ORDER BY bound_x1 ASC;",
             ship_id
         )).map_err(|e| err.pass(e.to_string()))?
     ).map_err(|e| err.pass(e.to_string()))?;

@@ -12,7 +12,7 @@ pub struct LoadLiquidData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: String,
+    pub space_id: usize,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
@@ -27,13 +27,13 @@ pub struct LoadLiquidData {
     pub density: Option<f64>,
     /// Обьем, м^3
     pub volume: Option<f64>,
-    /// Центр отсека, размещающего груз, м
-    pub mass_shift: Option<Position>,
-    /// Признак использования максимального значения момента свободной поверхности жидкости
+   /// Центр отсека, размещающего груз, м
+    pub mass_shift: Option<crate::algorithm::entities::point3>,
+  /*   /// Признак использования максимального значения момента свободной поверхности жидкости
     pub use_moment_of_inertia_max: bool,  
     /// Момент свободной поверхности жидкости
     pub long_moment_of_inertia_max: f64,
-    pub trans_moment_of_inertia_max: f64,
+    pub trans_moment_of_inertia_max: f64,*/
 }
 //
 impl LoadLiquidData {
@@ -54,7 +54,7 @@ impl LoadLiquidData {
         LiquidData {
             assigned_id:  self.assigned_id,
        //     cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            space_id: self.space_name.clone(),
             mass: self.mass,
             volume,
         }

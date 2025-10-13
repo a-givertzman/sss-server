@@ -135,7 +135,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         liquid_data.get(&res.assigned_id).map(|data| {
                             super::liquid_result::LiquidResult::new(
                                 data.cargo_id,
-                                data.space_id.clone(),
+                                data.space_name.clone(),
                                 data.assigment_type,
                                 data.cargo_type,
                                 res.long_moment_of_inertia,
