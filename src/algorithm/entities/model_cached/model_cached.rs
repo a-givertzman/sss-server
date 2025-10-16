@@ -430,6 +430,7 @@ impl ModelCached {
     /// # Errors
     /// Internally it creates worker threads while building.
     /// The result error is a collection of all failed worker errors joined by '\n'.
+    #[allow(dead_code)]
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
@@ -485,6 +486,7 @@ impl ModelCached {
         Ok((x, y, z))
     }
     //
+    #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
         let displacement_shape = self

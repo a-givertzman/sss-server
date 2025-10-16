@@ -5,9 +5,7 @@
 //! be taken to create a more specific cache structure.
 //
 use sal_core::{dbg::Dbg, error::Error};
-use std::{num::ParseFloatError, ops::Index, str::FromStr, sync::OnceLock};
-//
-type SyncVec<T> = std::sync::Arc<[T]>;
+use std::{num::ParseFloatError, str::FromStr, sync::OnceLock};
 ///
 /// Cached dataset lazyly read from the file on the first access.
 ///
@@ -238,6 +236,7 @@ impl Cache<f64> {
         v.unwrap()
     }
     /// Максимальное значение ключа по индексу
+    #[allow(dead_code)]
     pub fn max_key(&self, index: usize) -> f64 {
         let keys = self
             .keys
