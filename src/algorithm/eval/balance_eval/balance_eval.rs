@@ -152,7 +152,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         gaseous_data.get(&res.assigned_id).map(|data| {
                             super::gaseous_result::GaseousResult::new(
                                 data.cargo_id,
-                                data.space_id.clone(),
+                                data.space_name.clone(),
                                 data.assigment_type,
                                 res.mass_values.clone(),
                             )

@@ -28,7 +28,7 @@ pub struct LoadLiquidData {
     /// Обьем, м^3
     pub volume: Option<f64>,
    /// Центр отсека, размещающего груз, м
-    pub mass_shift: Option<crate::algorithm::entities::point3>,
+    pub mass_shift: Option<Position>,
   /*   /// Признак использования максимального значения момента свободной поверхности жидкости
     pub use_moment_of_inertia_max: bool,  
     /// Момент свободной поверхности жидкости

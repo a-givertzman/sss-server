@@ -156,7 +156,7 @@ impl Eval<(), EvalResult> for LoadsEval {
                             .flat_map(|v| {
                                 Some(GaseousData {
                                     assigned_id: v.assigned_id, // ID assigned
-                                    space_id: v.space_id,       // ID помещения
+                                    space_id: v.space_name,       // ID помещения
                                     mass: v.mass,
                                 })
                             })

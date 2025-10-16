@@ -8,12 +8,14 @@ use serde::Deserialize;
 pub struct LoadUnitData {
     /// ID груза
     pub cargo_id: usize,
-    /// ID assigned
-    pub assigned_id: usize,
-    /// ID помещения
-    pub space_id: String,
     /// Имя груза
     pub cargo_name: String,
+    /// ID помещения
+    pub space_id: usize,
+    /// Имя помещения
+    pub space_name: String,
+    /// ID assigned
+    pub assigned_id: usize,    
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип груза судна

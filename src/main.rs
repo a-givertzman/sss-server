@@ -281,17 +281,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
     ];
     let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
+    let api_client = Arc::new(ApiClient::new(
+        &dbg,
+        conf.api.address.database.clone(),
+        conf.api.address.host.clone(),
+        conf.api.address.port.clone(),
+    ));
     let mut ship_model = ShipModel::new(
         &dbg,
         ship_id,
         project_id.to_owned(),
         model_cached,
-        ApiClient::new(
-            &dbg,
-            conf.api.address.database.clone(),
-            conf.api.address.host.clone(),
-            conf.api.address.port.clone(),
-        ),
+        Arc::clone(&api_client),
         thread_pool.scheduler(),
     );
     ship_model.init().unwrap();
@@ -372,12 +373,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                                 Initial::new(
                                                                                                                     &dbg,
                                                                                                                     ship_model.clone(),
-                                                                                                                    ApiClient::new(
-                                                                                                                        &dbg,
-                                                                                                                        conf.api.address.database.clone(),
-                                                                                                                        conf.api.address.host.clone(),
-                                                                                                                        conf.api.address.port.clone(),
-                                                                                                                    ),
+                                                                                                                    Arc::clone(&api_client),
                                                                                                                     Context::new(InitialCtx::new(ship_id, project_id, bounds)),
                                                                                                                 ),
                                                                                                             ),

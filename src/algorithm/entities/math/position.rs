@@ -6,6 +6,7 @@ use std::{
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 //
+/*
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Encode, PartialEq)]
 pub struct Point3 {
     x: f64,
@@ -22,10 +23,10 @@ impl TryFrom<Point3> for Position {
             z: data.z,
         })
     }
-}
+}*/
 //
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
-#[serde(try_from = "Point3")]
+//#[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,
     y: f64,

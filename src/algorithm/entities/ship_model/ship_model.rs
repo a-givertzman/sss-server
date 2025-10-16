@@ -50,7 +50,7 @@ pub struct ShipModel {
     model_cached: ModelCached,
     scheduler: Scheduler,
 //    timeout: Duration,
-    api_client: Arc<RwLock<ApiClient>>,
+    api_client: Arc<ApiClient>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -70,7 +70,7 @@ impl ShipModel {
     //    ship_file_name: String,
         project_id: String,
         model_cached: ModelCached,
-        api_client: ApiClient,
+        api_client: Arc<ApiClient>,
         scheduler: Scheduler,
     ) -> Self {
     //    let name = Name::new(parent, "ShipModel");
@@ -87,7 +87,7 @@ impl ShipModel {
             model_cached: model_cached,
             scheduler,
         //    timeout: Self::DEFAULT_TIMEOUT,
-            api_client: Arc::new(RwLock::new(api_client)),
+            api_client,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -97,13 +97,13 @@ impl ShipModel {
         let horisontal_area = horisontal_area(
             self.ship_id,
             self.project_id.clone(),
-            &self.api_client.write()
+            &self.api_client.clone()
         ).map_err(|err| error.pass_with("horisontal_area", err))?;
         self.horisontal_area = Some(horisontal_area.clone());
         let grain_moment = grain_moment(
             self.ship_id,
             self.project_id.clone(),
-            &self.api_client.write()
+            &self.api_client.clone()
         ).map_err(|err| error.pass_with("grain_moment", err))?;
         self.grain_moment = Some(grain_moment.clone());
         self.model_cached.init().map_err(|err| Error::new(&self.dbg, "init").pass(err))
@@ -289,7 +289,7 @@ fn horisontal_area(
     let err = Error::new("ShipModel", "horisontal_area");
     let area = HStrAreaArray::parse(
         &api_client.fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM \"ship/ship_structures/area/h_str\" WHERE ship_id={} AND project_id={project_id} ORDER BY bound_x1 ASC;",
+            "SELECT name, value, bound_x1, bound_x2 FROM \"ship/ship_structures/area/h_str\" WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY bound_x1 ASC;",
             ship_id
         )).map_err(|e| err.pass(e.to_string()))?
     ).map_err(|e| err.pass(e.to_string()))?;
@@ -337,7 +337,7 @@ fn grain_moment(
     let error = Error::new("ShipModel", "grain_moment");
     let data = GrainMomentDataArray::parse(
         &api_client.fetch(&format!(
-            "SELECT space_id, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id={project_id};"
+            "SELECT space_id, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("api_client.fetch", err))?
     ).map_err(|err| error.pass_with("parse", err))?;    
     let data: Vec<(String, Result<Curve<f64>, Error>)> = data.data()

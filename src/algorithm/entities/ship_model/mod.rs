@@ -1,4 +1,4 @@
-mod grain_moment;
+pub mod grain_moment;
 pub mod ship_model;
 
 use crate::algorithm::entities::{Bounds, Moment, Position};
