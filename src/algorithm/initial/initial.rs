@@ -177,19 +177,14 @@ impl Eval<(), EvalResult> for Initial {
                     weight AS mass, \
                     density, \
                     volume, \
-                    centre_of_compartment as mass_shift
+                    centre_of_compartment as mass_shift, \
+                    use_moment_of_inertia_max, \
+                    long_moment_of_inertia_max, \
+                    trans_moment_of_inertia_max
                 FROM 
                     liquid_cargo_view
                 WHERE 
                     language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-
-                    /*
-                                        volume, \
-                    centre_of_compartment as mass_shift, \
-                    use_moment_of_inertia_max,   
-                    long_moment_of_inertia_max,
-                    trans_moment_of_inertia_max
-                    */
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
                 .map_err(|err| error.pass_with("liquid fetch", err))?,

@@ -29,11 +29,11 @@ pub struct LoadLiquidData {
     pub volume: Option<f64>,
    /// Центр отсека, размещающего груз, м
     pub mass_shift: Option<Position>,
-  /*   /// Признак использования максимального значения момента свободной поверхности жидкости
+   /// Признак использования максимального значения момента свободной поверхности жидкости
     pub use_moment_of_inertia_max: bool,  
     /// Момент свободной поверхности жидкости
     pub long_moment_of_inertia_max: f64,
-    pub trans_moment_of_inertia_max: f64,*/
+    pub trans_moment_of_inertia_max: f64,
 }
 //
 impl LoadLiquidData {
