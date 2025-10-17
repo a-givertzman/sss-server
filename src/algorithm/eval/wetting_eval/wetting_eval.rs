@@ -85,7 +85,7 @@ impl Eval<(), EvalResult> for WettingEval {
                             .sum()
                     })
                     .collect();
-                let mass_shift = mass_moment.scale(1. / mass);
+                let mass_shift = if mass > 0. { mass_moment.scale(1. / mass) } else { Position::zero() };
                 let result = WettingCtx {
                     mass,
                     mass_shift,

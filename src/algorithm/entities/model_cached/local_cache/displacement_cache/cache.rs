@@ -71,7 +71,6 @@ impl DisplacementCache {
         let mut step = (self.draught_max - self.draught_min)/2.;
         let mut draught = self.draught_min + step;
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-    //    println!("displacement_cache cache get {heel} {trim} {volume}");
         for _i in 0..100 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
@@ -79,8 +78,6 @@ impl DisplacementCache {
             let res_volume = result[0];
             let delta = volume - res_volume;
             if delta.abs() <= epsilon {
-            //    dbg!(&query, &result, delta);
-           //     println!("displacement_cache cache get ok: {:?}", result);
                 return Ok(DisplacementCacheResult {
                     heel,
                     trim,
@@ -95,7 +92,6 @@ impl DisplacementCache {
                     breadth_wl: result[11],
                 });
             }
-         //   println!("displacement_cache cache get: {_i} {step} {draught} res_volume:{res_volume} {delta}");
             step = step/2.;
             draught += step*delta.signum();
         }

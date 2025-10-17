@@ -58,6 +58,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     .liquid
                     .clone()
                     .ok_or(error.err("Read liquid error: no data!"))?;
+                dbg!(&liquid_data);
                 let gaseous_data = initial
                     .gaseous
                     .clone()
@@ -85,6 +86,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     + Moment::from_pos(loads.shift_gaseous, loads.mass_gaseous)
                     + Moment::new(icing.mass * icing.mass_shift_x, 0., 0.)
                     + Moment::from_pos(wetting.mass_shift, wetting.mass);
+                dbg!(loads.shift_unit, loads.shift_gaseous, icing.mass_shift_x, wetting.mass_shift);
                 // Структура для передачи в модель
                 let balance_query = BalanceQuery {
                     water_density: voyage.density,

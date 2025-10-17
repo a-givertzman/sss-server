@@ -42,6 +42,7 @@ impl LoadBulkData {
                 0.
             }
         };
+        dbg!(volume, self.mass, self.volume, self.stowage_factor);
         BulkData {
             assigned_id:  self.assigned_id,
         //    cargo_id: self.cargo_id,

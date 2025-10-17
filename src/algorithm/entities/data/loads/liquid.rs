@@ -51,6 +51,7 @@ impl LoadLiquidData {
                 0.
             }
         };
+        dbg!(volume, self.mass, self.volume, self.density);
         LiquidData {
             assigned_id:  self.assigned_id,
        //     cargo_id: self.cargo_id,
