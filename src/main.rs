@@ -37,7 +37,7 @@ use std::{collections::HashMap, path::PathBuf};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
     
-    let physical_frames = [
+ /*   let physical_frames = [
         -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
         6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
         17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
@@ -85,10 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             ship_length_lbp: 130.5,
             draught_min: 0.5,
-            draught_max: 1.5,
-
-      //      draught_min: 2.,
-       //     draught_max: 14.,
+            draught_max: 14.,
             hull_draught_step: 0.5,
             bounds_level_step: 0.1,
             compartment_level_step: 1.,
@@ -97,14 +94,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread_pool.scheduler(),
     )
     .unwrap();
-    let res = model.reload_shapes();   dbg!(&res);
-    let res = model.rebuild_caches();   dbg!(&res);
+  //  let res = model.reload_shapes();   dbg!(&res);
+  //  let res = model.rebuild_caches();   dbg!(&res);
   //  let res = model.rebuild_bounds(&bounds);   dbg!(&res);
     let res = model.init();
     dbg!(&res);
     let res = model.init_bounded(&bounds);
     dbg!(&res);
-
+*/
 
  /*   let mut result = |mass: f64, x: f64, y: f64, z: f64| {
               model.floating_position(model_cached::FloatingPositionQuery {
@@ -190,7 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dbg!(res);
     */
 
- /*   
+    
     let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
     let path = "config.yaml";
@@ -406,6 +403,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .eval(());*/
     dbg!(ctx);
-    */
     Ok(())
 }
