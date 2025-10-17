@@ -58,7 +58,6 @@ impl Eval<(), EvalResult> for BalanceEval {
                     .liquid
                     .clone()
                     .ok_or(error.err("Read liquid error: no data!"))?;
-                dbg!(&liquid_data);
                 let gaseous_data = initial
                     .gaseous
                     .clone()
@@ -122,7 +121,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         bulk_data.get(&res.assigned_id).map(|data| {
                             super::bulk_result::BulkResult::new(
                                 data.cargo_id,
-                                data.space_id.clone(),
+                                data.space_name.clone(),
                                 data.assigment_type,
                                 res.moment,
                                 res.mass_values.clone(),

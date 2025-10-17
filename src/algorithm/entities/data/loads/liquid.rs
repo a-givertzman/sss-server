@@ -37,28 +37,26 @@ pub struct LoadLiquidData {
 }
 //
 impl LoadLiquidData {
-    pub fn data(&self) -> LiquidData {
+    pub fn data(&self) -> Option<LiquidData> {
+        if self.mass <= 0. {
+            return None;
+        }
         let volume = if let Some(volume) = self.volume {
             volume
         } else {
-            if let Some(density) = self.density {
-                if density > 0. {
-                    self.mass / density
-                } else {
-                    0.
-                }
+            if let Some(density) = self.density && density > 0. {
+                self.mass / density
             } else {
-                0.
+                return None;
             }
         };
-        dbg!(volume, self.mass, self.volume, self.density);
-        LiquidData {
+        Some(LiquidData {
             assigned_id:  self.assigned_id,
        //     cargo_id: self.cargo_id,
             space_id: self.space_name.clone(),
             mass: self.mass,
             volume,
-        }
+        })
     }
 }
 /*

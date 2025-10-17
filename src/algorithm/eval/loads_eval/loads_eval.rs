@@ -61,48 +61,14 @@ impl Eval<(), EvalResult> for LoadsEval {
                     .clone()
                     .ok_or(error.err("Read bulk error: no data!"))?
                     .into_values()
-                    .flat_map(|v| {
-                        let volume = match v.volume {
-                            Some(volume) => volume,
-                            None => match v.stowage_factor {
-                                Some(stowage_factor) => v.mass * stowage_factor,
-                                None => return None, // TODO что делать, игнорировать или выдать ошибку?
-                            },
-                        };
-                        Some(BulkData {
-                            assigned_id: v.assigned_id, // ID assigned
-                            space_id: v.space_id,       // ID помещения
-                            mass: v.mass,
-                            volume,
-                        })
-                    })
+                    .flat_map(|v| v.data())
                     .collect();
                 let liquid: Vec<_> = initial
                     .liquid
                     .clone()
                     .ok_or(error.err("Read liquid error: no data!"))?
                     .into_values()
-                    .flat_map(|v| {
-                        let volume = match v.volume {
-                            Some(volume) => volume,
-                            None => match v.density {
-                                Some(density) => {
-                                    if density > 0. {
-                                        v.mass / density
-                                    } else {
-                                        0.
-                                    }
-                                }
-                                None => return None, // TODO что делать, игнорировать или выдать ошибку?
-                            },
-                        };
-                        Some(LiquidData {
-                            assigned_id: v.assigned_id, // ID assigned
-                            space_id: v.space_name,       // ID помещения
-                            mass: v.mass,
-                            volume,
-                        })
-                    })
+                    .flat_map(|v| v.data())
                     .collect();
                 let (mass_unit, shift_unit, grain_bulkhead) = match initial.unit.clone() {
                     Some(data) => {

@@ -12,7 +12,7 @@ pub struct LoadBulkData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: String,
+    pub space_id: usize,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
@@ -32,24 +32,26 @@ pub struct LoadBulkData {
 }
 //
 impl LoadBulkData {
-    pub fn data(&self) -> BulkData {
+    pub fn data(&self) -> Option<BulkData> {
+        if self.mass <= 0. {
+            return None;
+        }
         let volume = if let Some(volume) = self.volume {
             volume
         } else {
             if let Some(stowage_factor) = self.stowage_factor {
                 self.mass * stowage_factor
             } else {
-                0.
+                return None;
             }
         };
-        dbg!(volume, self.mass, self.volume, self.stowage_factor);
-        BulkData {
+        Some(BulkData {
             assigned_id:  self.assigned_id,
         //    cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            space_id: self.space_name.clone(),
             mass: self.mass,
             volume,
-        }
+        })
     }
 }
 /*
