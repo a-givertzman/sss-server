@@ -68,16 +68,17 @@ impl DisplacementCache {
     /// Итерационно подбирает значение водоизмещения по осадке
     pub fn get(&self, heel: f64, trim: f64, volume: f64, epsilon: f64) -> Result<DisplacementCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");     
-        let mut step = (self.draught_max - self.draught_min)/2.;
-        let mut draught = self.draught_min + step;
+     //   println!("displacement_cache get begin, heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon}");        
+        let mut step = self.draught_max/2.;
+        let mut draught = step+0.5;
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        for _i in 0..100 {
+        for i in 0..=50 {
             let query = [heel, trim, draught];
             let result = cache.get(&query);
             assert!(result.len() == 12);
             let res_volume = result[0];
-            let delta = volume - res_volume;
-            if delta.abs() <= epsilon {
+            let delta = res_volume - volume;
+            if delta.abs() <= epsilon || i >= 50 {
                 return Ok(DisplacementCacheResult {
                     heel,
                     trim,
@@ -92,10 +93,11 @@ impl DisplacementCache {
                     breadth_wl: result[11],
                 });
             }
+       //     println!("{}", &format!("i:{i} draught:{draught} step:{step} delta:{delta}"));
             step = step/2.;
-            draught += step*delta.signum();
+            draught -= step*delta.signum();
         }
-        Err(error.pass(format!("no result for epsilon:{epsilon}")))
+        Err(error.pass(format!("no result for epsilon:{epsilon} volume:{volume} step:{step} draught:{draught}")))
     }
 }
 //

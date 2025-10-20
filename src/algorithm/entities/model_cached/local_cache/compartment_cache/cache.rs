@@ -84,15 +84,14 @@ impl CompartmentCache {
         let level_max = cache.max_value(2);
         let mut step = level_max / 2.;
         let mut level = step;
-        for _ in 0..100 {
+        for i in 0..=50 {
             let query = [heel, trim, level];
             let result = cache.get(&query);
             assert!(result.len() == 6);
-            let delta = volume
-                - result
+            let delta = result
                     .first()
-                    .ok_or(error.pass("no result from cache.get(&query)"))?;
-            if delta.abs() <= epsilon {
+                    .ok_or(error.pass("no result from cache.get(&query)"))? - volume;
+            if delta.abs() <= epsilon || i >= 50 {
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,
@@ -104,7 +103,7 @@ impl CompartmentCache {
                 });
             }
             step = step / 2.;
-            level += step * delta.signum();
+            level -= step * delta.signum();
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
