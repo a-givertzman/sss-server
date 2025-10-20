@@ -37,7 +37,7 @@ fn floating_position_sofia() {
     let model_dir = "".into();
     let model_center_coord = Position::new(65.250, 0., 0.);    
     let bounds = Bounds::from_array(&PHYSICAL_FRAMES, model_center_coord.x()).unwrap();
-    let thread_pool = ThreadPool::new(&dbg, Some(30));
+    let thread_pool = ThreadPool::new(&dbg, Some(20));
     let mut model = model_cached::ModelCached::new(
         &dbg,
         crate::model_cached::ModelCachedConf {

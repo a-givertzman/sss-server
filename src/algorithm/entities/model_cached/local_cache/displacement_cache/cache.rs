@@ -105,8 +105,9 @@ impl DisplacementCache {
 impl LocalCache for DisplacementCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
+        dbg!("DisplacementCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
-       let (data, mut errors) = super::build_cache::BuildDisplacementCache::new(
+        let (data, mut errors) = super::build_cache::BuildDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
             self.heel_steps.clone(),
@@ -130,6 +131,7 @@ impl LocalCache for DisplacementCache {
         if let Err(err) = save(&self.dbg, &self.cache_path, data) {
             errors.push(error.pass_with("save data", err));
         }
+        dbg!("DisplacementCache calculate end");
         errors
     }
     //

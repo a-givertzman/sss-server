@@ -1,9 +1,12 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
-    thread_pool::{JoinHandle, Scheduler},
+    thread_pool::{JoinHandle, ThreadPool},
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{
     algorithm::entities::{Bounds, model_cached::DisplacementShape},
@@ -16,7 +19,7 @@ pub struct BuildBoundDisplacementCache {
     shape: Arc<RwLock<DisplacementShape>>,
     level_step: f64,
     bounds: Bounds,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -30,7 +33,7 @@ impl BuildBoundDisplacementCache {
         shape: Arc<RwLock<DisplacementShape>>,
         level_step: f64,
         bounds: Bounds,
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
         debug_assert!(level_step > 0.);
@@ -39,7 +42,7 @@ impl BuildBoundDisplacementCache {
             shape: shape.clone(),
             level_step,
             bounds,
-            scheduler,
+            thread_pool,
             exit,
         }
     }
@@ -47,19 +50,23 @@ impl BuildBoundDisplacementCache {
     /// Creates and starts worker for [BoundDisplacementCache::calculate].
     ///
     /// results: [[draught, volume]]
-    pub fn build(self) -> Result<Vec<(f64, Option<Vec<(f64, f64)>>)>, Error> {
+    pub fn build(self) -> (Vec<(f64, Option<Vec<(f64, f64)>>)>, Vec<Error>) {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
-        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
         let draft_results = Arc::new(Stack::new());
         let mut results = Vec::new();
         let errors = Arc::new(Stack::new());
         let shape = self.shape.clone();
+        let scheduler = self.thread_pool.scheduler();
         for bound in self.bounds.iter() {
             // _true_ if the caller has requisted to exit.
             // Note that in this case the file may be partially filled.
             if self.exit.load(Ordering::SeqCst) {
                 break;
+            }
+            while self.thread_pool.free() < 1 {
+                std::thread::sleep(std::time::Duration::from_millis(100));
             }
             let draft_results = draft_results.clone();
             let _errors = errors.clone();
@@ -71,27 +78,28 @@ impl BuildBoundDisplacementCache {
                 None => {
                     let error = error.err("bound.center()");
                     log::error!("{:?}", &error);
-                    errors.push(Err(error));
+                    errors.push(error);
                     continue;
                 }
             };
             let step = self.level_step;
-            let handle = self
-                .scheduler
+            let handle = scheduler
                 .spawn(move || {
                     let guard = shape.read();
                     match guard.part(&bound) {
                         Ok(shape) => match shape {
                             Some(shape) => draft_results
                                 .push((center, Some(shape.displacement_by_steps(step)))),
-                            None => draft_results
-                                .push((center, None)),
-                        }
-                        Err(err) => {
-                            let error = _error.pass_with(format!("task center:{center} guard.part"), err.to_string());
-                            log::error!("{}", error);
-                            _errors.push(Err(error));
+                            None => draft_results.push((center, None)),
                         },
+                        Err(err) => {
+                            let error = _error.pass_with(
+                                format!("task center:{center} guard.part"),
+                                err.to_string(),
+                            );
+                            log::error!("{}", error);
+                            _errors.push(error);
+                        }
                     }
                     Ok(())
                 })
@@ -99,19 +107,28 @@ impl BuildBoundDisplacementCache {
                     error.pass_with(format!("spawn task bound:{:?}", bound), err.to_string())
                 });
             match handle {
-                Ok(task) => tasks.push(task),
+                Ok(task) => tasks.push_back(task),
                 Err(err) => {
                     let error = error.pass_with("task handle", err.to_string());
                     log::error!("{}", error);
-                    errors.push(Err(error));
+                    errors.push(error);
                 }
             };
+            while tasks.len() > self.thread_pool.capacity() * 10 {
+                let task = tasks.pop_front().unwrap();
+                //    dbg!("while", task.name());
+                if let Err(err) = task.join() {
+                    let error = error.pass_with("task join", err.to_string());
+                    log::error!("{}", error);
+                    errors.push(error);
+                }
+            }
         }
         for task in tasks {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                errors.push(Err(error));
+                errors.push(error);
             }
         }
         while !draft_results.is_empty() {
@@ -123,18 +140,21 @@ impl BuildBoundDisplacementCache {
                             let error =
                                 error.pass_with(format!("result, dx:{dx}"), err.to_string());
                             log::error!("{}", error);
-                            errors.push(Err(error));
+                            errors.push(error);
                         }
                     },
                     None => results.push((dx, None)),
                 };
             }
         }
-        //   dbg!(&results);
-        if let Some(error) = errors.pop() {
-            return error.clone();
+        let mut vec_errors = Vec::new();
+        while !errors.is_empty() {
+            if let Some(error) = errors.pop() {
+                vec_errors.push(error);
+            }
         }
+        //   dbg!(&results, &vec_errors);
         results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        Ok(results)
+        (results, vec_errors)
     }
 }

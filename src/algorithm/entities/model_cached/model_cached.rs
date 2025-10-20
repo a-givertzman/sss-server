@@ -432,26 +432,29 @@ impl ModelCached {
     /// The result error is a collection of all failed worker errors joined by '\n'.
     #[allow(dead_code)]
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
+        log::info!("rebuild_caches begin");
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
+        /*      if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
-        }
+        }*/
         for (name, compartment) in &mut self.compartments {
+            dbg!(format!("rebuild_caches compartment:{name} start"));
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
+            dbg!(format!("rebuild_caches compartment:{name} end"));
         }
-        for (name, compartment) in &mut self.damaged_compartments {
+        /*     for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }
-        for bound_displacement_cache in &mut self.displacement_bounded.values_mut() {
+        }*/
+        /*  for bound_displacement_cache in &mut self.displacement_bounded.values_mut() {
             if let Err(error) = bound_displacement_cache.write().rebuild() {
                 errors.push(("displacement_bounded".to_owned(), error));
             }
@@ -462,7 +465,7 @@ impl ModelCached {
                     errors.push(("compartments_bounded".to_owned(), error));
                 }
             }
-        }
+        }*/
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -471,6 +474,7 @@ impl ModelCached {
                 }),
             ));
         }
+        log::info!("rebuild_caches finish");
         Ok(())
     }
     //
@@ -706,11 +710,11 @@ impl ModelCached {
                             )
                         })?;
                     results_.push(BulkResult::new(
-                 //       cargo_id,
+                        //       cargo_id,
                         space_id,
-                        assigned_id,                        
+                        assigned_id,
                         compartment_result.level,
-                 //       compartment_result.volume_center,
+                        //       compartment_result.volume_center,
                         volume_bounded.into_iter().map(|v| v * density).collect(),
                     ));
                     Ok(())
@@ -987,7 +991,7 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "moment_bulk");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
-        let mut errors: Vec<Result<(), Error>> = Vec::new();
+        let mut errors = Vec::new();
         let mut values = Vec::new();
         for bulk in bulks {
             match self.compartments.get(&bulk.space_id) {
@@ -1010,22 +1014,23 @@ impl ModelCached {
                         })
                         .map_err(|err| {
                             error.pass_with(
-                                format!("spawn task space_id:{}", bulk.space_id.clone()),
+                                format!("spawn for {}", bulk.space_id),
                                 err,
                             )
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
-                        Err(err) => errors.push(Err(err)),
+                        Err(err) => {
+                            let error = error.pass_with(format!("handle for {}", bulk.space_id), err);
+                            log::error!("{}", error);
+                            errors.push(error);
+                        }
                     };
                 }
                 None => {
-                    let error = error.err(format!(
-                        "no compartment:{} in self.compartments",
-                        bulk.space_id
-                    ));
+                    let error = error.err(format!("no compartment: {}", bulk.space_id));
                     log::error!("{}", error);
-                    errors.push(Err(error));
+                    errors.push(error);
                 }
             }
         }
@@ -1033,28 +1038,34 @@ impl ModelCached {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                errors.push(Err(error));
+                errors.push(error);
             }
         }
         while !task_results.is_empty() {
             if let Some((space_id, mass, data)) = task_results.pop() {
                 let CompartmentCacheResult {
-                    heel,
-                    trim,
                     level,
-                    volume,
                     volume_center,
-                    inertia_trans_x,
-                    inertia_long_y,
+                    ..
                 } = match data {
                     Ok(data) => data,
                     Err(err) => {
-                        errors.push(Err(error.pass_with("data", err)));
+                        let error = error.pass_with(format!("task_results data in {space_id}"), err.to_string());
+                        log::error!("{}", error);
+                        errors.push(error);
                         continue;
                     }
                 };
                 values.push((space_id, level, Moment::from_pos(volume_center, mass)));
             }
+        }
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "moment_bulk",
+                errors
+                    .iter()
+                    .fold(String::new(), |acc, err| acc + &format!("\n{}", err)),
+            ));
         }
         let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
         Ok(sum_moment)
@@ -1070,7 +1081,7 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "moment_liquid");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
-        let mut errors: Vec<Result<(), Error>> = Vec::new();
+        let mut errors = Vec::new();
         let mut values = Vec::new();
         for liquid in liquids {
             match self.compartments.get(&liquid.space_id) {
@@ -1093,22 +1104,23 @@ impl ModelCached {
                         })
                         .map_err(|err| {
                             error.pass_with(
-                                format!("spawn task space_id:{}", liquid.space_id.clone()),
+                                format!("spawn for {}", liquid.space_id),
                                 err,
                             )
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
-                        Err(err) => errors.push(Err(err)),
+                        Err(err) => {
+                            let error = error.pass_with(format!("handle for {}", liquid.space_id), err);
+                            log::error!("{}", error);
+                            errors.push(error);
+                        }
                     };
                 }
                 None => {
-                    let error = error.err(format!(
-                        "no compartment:{} in self.compartments",
-                        liquid.space_id
-                    ));
+                    let error = error.err(format!("no compartment: {}", liquid.space_id));
                     log::error!("{}", error);
-                    errors.push(Err(error));
+                    errors.push(error);
                 }
             }
         }
@@ -1116,28 +1128,34 @@ impl ModelCached {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                errors.push(Err(error));
+                errors.push(error);
             }
         }
         while !task_results.is_empty() {
             if let Some((space_id, mass, data)) = task_results.pop() {
                 let CompartmentCacheResult {
-                    heel,
-                    trim,
                     level,
-                    volume,
                     volume_center,
-                    inertia_trans_x,
-                    inertia_long_y,
+                    ..
                 } = match data {
                     Ok(data) => data,
                     Err(err) => {
-                        errors.push(Err(error.pass_with("data", err)));
+                        let error = error.pass_with(format!("task_results data in {space_id}"), err.to_string());
+                        log::error!("{}", error);
+                        errors.push(error);
                         continue;
                     }
                 };
                 values.push((space_id, level, Moment::from_pos(volume_center, mass)));
             }
+        }
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "moment_liquid",
+                errors
+                    .iter()
+                    .fold(String::new(), |acc, err| acc + &format!("\n{}", err)),
+            ));
         }
         let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
         Ok(sum_moment)
@@ -1154,7 +1172,7 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "moment_damaged_compartments");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
-        let mut errors: Vec<Result<(), Error>> = Vec::new();
+        let mut errors = Vec::new();
         let mut values = Vec::new();
         for damaged_compartment in damaged_compartments {
             match self.damaged_compartments.get(damaged_compartment) {
@@ -1162,6 +1180,7 @@ impl ModelCached {
                     let task_results = task_results.clone();
                     let space_id = damaged_compartment.clone();
                     let compartment = compartment.clone();
+                    let _error = error.clone();
                     let handle = self
                         .scheduler
                         .spawn(move || {
@@ -1170,26 +1189,24 @@ impl ModelCached {
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(
-                                format!("spawn task space_id:{}", damaged_compartment.clone()),
+                            _error.pass_with(
+                                format!("spawn for {}", damaged_compartment.clone()),
                                 err,
                             )
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
+                            let error = error.pass_with(format!("handle for {damaged_compartment}"), err);
                             log::error!("{}", error);
-                            errors.push(Err(err));
+                            errors.push(error);
                         }
                     };
                 }
                 None => {
-                    let error = error.err(format!(
-                        "no compartment:{} in self.compartments",
-                        damaged_compartment
-                    ));
+                    let error = error.err(format!("no compartment: {damaged_compartment}"));
                     log::error!("{}", error);
-                    errors.push(Err(error));
+                    errors.push(error);
                 }
             }
         }
@@ -1197,7 +1214,7 @@ impl ModelCached {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
-                errors.push(Err(error));
+                errors.push(error);
             }
         }
         while !task_results.is_empty() {
@@ -1205,12 +1222,22 @@ impl ModelCached {
                 let (mass, position) = match data {
                     Ok((volume, position)) => (volume * water_density, position),
                     Err(err) => {
-                        errors.push(Err(error.pass_with("data", err)));
+                        let error = error.pass_with(format!("task_results data in {space_id}"), err.to_string());
+                        log::error!("{}", error);
+                        errors.push(error);
                         continue;
                     }
                 };
                 values.push((space_id, mass, Moment::from_pos(position, mass)));
             }
+        }
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "calc_damaged_compartments",
+                errors
+                    .iter()
+                    .fold(String::new(), |acc, err| acc + &format!("\n{}", err)),
+            ));
         }
         let result = values.iter().fold(
             (0., Moment::zero()),

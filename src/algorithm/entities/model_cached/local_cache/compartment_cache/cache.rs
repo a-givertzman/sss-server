@@ -7,7 +7,7 @@ use crate::{
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::Scheduler;
+use sal_sync::thread_pool::ThreadPool;
 use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
@@ -32,7 +32,7 @@ pub struct CompartmentCache {
     ///
     /// Cache read from `self.file_path`.
     cache: Option<Cache<f64>>,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -53,7 +53,7 @@ impl CompartmentCache {
         level_step: f64,
         center_max: Option<Position>,
         volume_max: Option<f64>,
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("Compartment_{compartment_id}_Cache"));
         Self {
@@ -67,7 +67,7 @@ impl CompartmentCache {
             cache: None,
             cache_dir: cache_dir.as_ref().join(compartment_id),
             dbg,
-            scheduler,
+            thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -120,7 +120,7 @@ impl CompartmentCache {
             self.cache_dir.clone().join("distr"),
             level_step,
             bounds,
-            self.scheduler.clone(),
+            Arc::clone(&self.thread_pool),
         ))
     }
 }
@@ -129,6 +129,7 @@ impl CompartmentCache {
 impl LocalCache for CompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
+        dbg!("CompartmentCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
         let (data, mut errors) = super::build_cache::BuildCompartmentCache::new(
             &self.dbg,
@@ -138,7 +139,7 @@ impl LocalCache for CompartmentCache {
             self.level_step,
             self.center_max,
             self.volume_max,
-            self.scheduler.clone(),
+            Arc::clone(&self.thread_pool),
             self.exit.clone(),
         )
         .build();
@@ -154,6 +155,7 @@ impl LocalCache for CompartmentCache {
         if let Err(err) = save(&self.dbg, &self.cache_path(), data) {
             errors.push(error.pass_with("save data", err));
         }
+        dbg!("CompartmentCache calculate finish");
         errors
     }
     //

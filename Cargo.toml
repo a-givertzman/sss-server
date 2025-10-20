@@ -18,10 +18,10 @@ api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = 
 nalgebra = "~0.34"
 obj = "0.10.2"
 stl_io = "0.8.5"
-parry3d-f64 = "~0.25"
-parry2d-f64 = "~0.25"
-#parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } #"https://github.com/KnstAnt/parry/
-#parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } #"https://github.com/KnstAnt/parry/
+#parry3d-f64 = "~0.25"
+#parry2d-f64 = "~0.25"
+parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } #"https://github.com/KnstAnt/parry/
+parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } #"https://github.com/KnstAnt/parry/
 
 
 

@@ -46,8 +46,8 @@ fn calculated_windage_area_ark() {
     let center_coord = Some(Position::new(59.195, 0., 0.));
     let mut shape = AreaShape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);
     shape.init().unwrap();
-    let thread_pool = ThreadPool::new(&dbg, None);
-   let mut cache = AreaCache::new(
+    let thread_pool = ThreadPool::new(&dbg, Some(20));
+    let mut cache = AreaCache::new(
         &dbg,
         Arc::new(RwLock::new(shape)),
         cache_dir,

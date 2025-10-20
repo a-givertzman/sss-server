@@ -837,7 +837,7 @@ fn bound_displacement_sofia() {
     let model_dir: PathBuf = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
     let bounds = Bounds::from_array(&PHYSICAL_FRAMES, model_center_coord.x()).unwrap();
-    let thread_pool = ThreadPool::new(&dbg, Some(30));
+    let thread_pool = ThreadPool::new(&dbg, Some(20));
     let delta_pos = Some(model_center_coord.clone());
     let mut displacement_shape = DisplacementShape::new_uninit(
         &dbg,

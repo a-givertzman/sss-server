@@ -437,18 +437,6 @@ impl DisplacementShape {
                 let max_x = vx.last().unwrap_or(&0.);
                 let min_y = vy.first().unwrap_or(&0.);
                 let max_y = vy.last().unwrap_or(&0.);
-                /*          let max_x = vx
-                    .iter()
-                    .max_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let min_y = vy
-                    .iter()
-                    .min_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let max_y = vy
-                    .iter()
-                    .max_by(|&a, &b| a.partial_cmp(b).unwrap())
-                    .unwrap();*/
                 let dx = max_x - min_x;
                 let dy = max_y - min_y;
                 Ok((dx, dy))
