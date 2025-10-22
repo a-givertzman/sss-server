@@ -340,6 +340,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
+            log::info!("{}.reload_shapes | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -438,7 +439,7 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
+  /*      if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
@@ -449,7 +450,7 @@ impl ModelCached {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-        for (name, compartment) in &mut self.damaged_compartments {
+   */     for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
@@ -756,6 +757,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
+            log::info!("{}.balance | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1029,6 +1031,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
+            log::info!("{}.moment_bulk | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1118,6 +1121,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
+            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1206,6 +1210,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
+            log::info!("{}.calc_damaged_compartments | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);

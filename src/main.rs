@@ -94,9 +94,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread_pool.into(),
     )
     .unwrap();
-    let res = model.reload_shapes();            dbg!(&res);
- //   let res = model.rebuild_caches();   dbg!(&res);
-    let res = model.rebuild_bounds(&bounds);    dbg!(&res);
+  //  let res = model.reload_shapes();            dbg!(&res);
+  //  let res = model.rebuild_caches();   dbg!(&res);
+ //   let res = model.rebuild_bounds(&bounds);    dbg!(&res);
     let res = model.init();                     dbg!(&res);
     let res = model.init_bounded(&bounds);      dbg!(&res);
 

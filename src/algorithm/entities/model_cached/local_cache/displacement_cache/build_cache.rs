@@ -89,12 +89,13 @@ impl BuildDisplacementCache {
             if self.exit.load(Ordering::SeqCst) {
                 break 'draught;
             }
-            while self.thread_pool.free() < 1 {
-                std::thread::sleep(std::time::Duration::from_millis(100));
-            }
             {
                 let aabb_results = aabb_results.clone();
                 let shape = shape.clone();
+                let thread_name =
+                    format!("BuildDisplacementCache aabb {draught}");
+                log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                //  println!("Starting thread {thread_name}");
                 let handle = scheduler
                     .spawn(move || {
                         let guard = shape.read();
@@ -111,12 +112,6 @@ impl BuildDisplacementCache {
                     Ok(task) => tasks.push_back(task),
                     Err(err) => pass("task handle", err),
                 };
-                while tasks.len() > self.thread_pool.capacity() * 10 {
-                    let task = tasks.pop_front().unwrap();
-                    if let Err(err) = task.join() {
-                        pass("task join", err);
-                    }
-                }
             }
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -125,14 +120,15 @@ impl BuildDisplacementCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    while self.thread_pool.free() < 1 {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                    }
                     //  let dbg_ = self.dbg.clone();
                     let draft_results = draft_results.clone();
                     let shape = shape.clone();
+                    let thread_name =
+                        format!("BuildDisplacementCache displacement {draught} {heel} {trim}");
+                    log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                    //  println!("Starting thread {thread_name}");
                     let handle = scheduler
-                        .spawn(move || {
+                        .spawn_named(thread_name, move || {
                             let guard = shape.read();
                             draft_results.push((
                                 heel,
@@ -157,16 +153,11 @@ impl BuildDisplacementCache {
                         Ok(task) => tasks.push_back(task),
                         Err(err) => pass("task handle", err),
                     };
-                    while tasks.len() > self.thread_pool.capacity() * 10 {
-                        let task = tasks.pop_front().unwrap();
-                        if let Err(err) = task.join() {
-                            pass("task join", err);
-                        }
-                    }
                 }
             }
         }
         for task in tasks {
+            log::info!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
@@ -223,7 +214,10 @@ impl BuildDisplacementCache {
                         *l_y,
                     ]);
                 } else {
-                    pass("draft_results", error.err(format!("no aabb for draught:{draught}")));
+                    pass(
+                        "draft_results",
+                        error.err(format!("no aabb for draught:{draught}")),
+                    );
                 }
             }
         }

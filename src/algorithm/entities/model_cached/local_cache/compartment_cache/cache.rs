@@ -124,7 +124,6 @@ impl CompartmentCache {
 impl LocalCache for CompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
-        dbg!("CompartmentCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
         let (data, mut errors) = super::build_cache::BuildCompartmentCache::new(
             &self.dbg,
@@ -150,7 +149,6 @@ impl LocalCache for CompartmentCache {
         if let Err(err) = save(&self.dbg, &self.cache_path(), data) {
             errors.push(error.pass_with("save data", err));
         }
-        dbg!("CompartmentCache calculate finish");
         errors
     }
     //

@@ -90,16 +90,15 @@ impl BuildDamagedCompartmentCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    while self.thread_pool.free() < 1 {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                    }
                     let results = results.clone();
                     let shape = shape.clone();
+                    let thread_name =
+                        format!("BuildDamagedCompartmentCache displacement {draught} {heel} {trim}");
+                    log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                    //  println!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(
-                            format!(
-                                "BuildDamagedCompartmentCache displacement {draught} {heel} {trim}"
-                            ),
+                            thread_name,
                             move || {
                                 let guard = shape.read();
                                 results.push((
@@ -124,16 +123,11 @@ impl BuildDamagedCompartmentCache {
                         Ok(task) => tasks.push_back(task),
                         Err(err) => pass("task handle", err),
                     };
-                    while tasks.len() > self.thread_pool.capacity() * 10 {
-                        let task = tasks.pop_front().unwrap();
-                        if let Err(err) = task.join() {
-                            pass("task join", err);
-                        }
-                    }
                 }
             }
         }
         for task in tasks {
+            log::info!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

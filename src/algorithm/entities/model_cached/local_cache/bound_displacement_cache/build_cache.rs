@@ -74,9 +74,6 @@ impl BuildBoundDisplacementCache {
             if self.exit.load(Ordering::SeqCst) {
                 break;
             }
-            while self.thread_pool.free() < 1 {
-                std::thread::sleep(std::time::Duration::from_millis(100));
-            }
             let results = results.clone();
             let _errors = errors.clone();
             let _error = error.clone();
@@ -90,13 +87,20 @@ impl BuildBoundDisplacementCache {
                 }
             };
             let step = self.level_step;
+            let thread_name = format!(
+                "BuildBoundDisplacementCache displacement_by_steps {:.3}",
+                center
+            );
+            log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+            //  println!("Starting thread {thread_name}");
             let handle = scheduler
-                .spawn(move || {
+                .spawn_named(thread_name, move || {
                     let guard = shape.read();
                     match guard.part(&bound) {
                         Ok(shape) => match shape {
-                            Some(shape) => results
-                                .push((center, Some(shape.displacement_by_steps(step)))),
+                            Some(shape) => {
+                                results.push((center, Some(shape.displacement_by_steps(step))))
+                            }
                             None => results.push((center, None)),
                         },
                         Err(err) => {
@@ -117,14 +121,9 @@ impl BuildBoundDisplacementCache {
                 Ok(task) => tasks.push_back(task),
                 Err(err) => pass("task handle", err),
             };
-            while tasks.len() > self.thread_pool.capacity() * 10 {
-                let task = tasks.pop_front().unwrap();
-                if let Err(err) = task.join() {
-                    pass("task join", err);
-                }
-            }
         }
         for task in tasks {
+            log::info!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

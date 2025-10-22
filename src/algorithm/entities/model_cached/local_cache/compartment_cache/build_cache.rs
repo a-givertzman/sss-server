@@ -118,26 +118,24 @@ impl BuildCompartmentCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    while self.thread_pool.free() < 1 {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                    }
                     let results = results.clone();
                     let shape = shape.clone();
+                    let thread_name =
+                        format!("BuildCompartmentCache displacement {draught} {heel} {trim}");
+                    log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                    //  println!("Starting thread {thread_name}");
                     let handle = scheduler
-                        .spawn_named(
-                            format!("BuildCompartmentCache displacement {draught} {heel} {trim}"),
-                            move || {
-                                let guard = shape.read();
-                                results.push((
-                                    heel,
-                                    trim,
-                                    draught,
-                                    guard.displacement(heel, trim, draught),
-                                    guard.inertia(heel, trim, draught),
-                                ));
-                                Ok(())
-                            },
-                        )
+                        .spawn_named(thread_name, move || {
+                            let guard = shape.read();
+                            results.push((
+                                heel,
+                                trim,
+                                draught,
+                                guard.displacement(heel, trim, draught),
+                                guard.inertia(heel, trim, draught),
+                            ));
+                            Ok(())
+                        })
                         .map_err(|err| {
                             error.pass_with(
                                 format!(
@@ -151,16 +149,12 @@ impl BuildCompartmentCache {
                         Ok(task) => tasks.push_back(task),
                         Err(err) => pass("task handle", err),
                     };
-                    while tasks.len() > self.thread_pool.capacity() * 10 {
-                        let task = tasks.pop_front().unwrap();
-                        if let Err(err) = task.join() {
-                            pass("task join", err);
-                        }
-                    }
                 }
             }
         }
         for task in tasks {
+            //    println!("task.join {}", task.name());
+            log::info!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
