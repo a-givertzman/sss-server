@@ -85,8 +85,8 @@ impl Eval<(), EvalResult> for BalanceEval {
                     + Moment::from_pos(loads.shift_gaseous, loads.mass_gaseous)
                     + Moment::new(icing.mass * icing.mass_shift_x, 0., 0.)
                     + Moment::from_pos(wetting.mass_shift, wetting.mass);
-                dbg!(loads.shift_const, loads.shift_unit, loads.shift_gaseous, icing.mass_shift_x, wetting.mass_shift);
-                dbg!(loads.mass_const, loads.mass_unit, loads.mass_gaseous, icing.mass, wetting.mass);
+              //  dbg!(loads.shift_const, loads.shift_unit, loads.shift_gaseous, icing.mass_shift_x, wetting.mass_shift);
+              //  dbg!(loads.mass_const, loads.mass_unit, loads.mass_gaseous, icing.mass, wetting.mass);
                 // Структура для передачи в модель
                 let balance_query = BalanceQuery {
                     water_density: voyage.density,
@@ -122,7 +122,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         bulk_data.get(&res.assigned_id).map(|data| {
                             super::bulk_result::BulkResult::new(
                                 data.cargo_id,
-                                data.space_name.clone(),
+                                data.space_id.clone(),
                                 data.assigment_type,
                                 res.moment,
                                 res.mass_values.clone(),
@@ -137,7 +137,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         liquid_data.get(&res.assigned_id).map(|data| {
                             super::liquid_result::LiquidResult::new(
                                 data.cargo_id,
-                                data.space_name.clone(),
+                                data.space_id.clone(),
                                 data.assigment_type,
                                 data.cargo_type,
                                 res.long_moment_of_inertia,
@@ -154,13 +154,13 @@ impl Eval<(), EvalResult> for BalanceEval {
                         gaseous_data.get(&res.assigned_id).map(|data| {
                             super::gaseous_result::GaseousResult::new(
                                 data.cargo_id,
-                                data.space_name.clone(),
+                                data.space_id.clone(),
                                 data.assigment_type,
                                 res.mass_values.clone(),
                             )
                         })
                     })
-                    .collect();                             
+                    .collect();                           
                 let result = BalanceCtx {
                     bulk,
                     liquid,

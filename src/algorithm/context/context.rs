@@ -13,7 +13,7 @@ pub struct Context {
     pub(super) initial: InitialCtx,
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
-    pub(super) parameters: Option<Parameters>,
+    pub(super) parameters: Parameters,
     /// Распределение площади для расчета прочности
     pub(super) strength_area: Option<StrengthAreaCtx>,
     /// Коэффициенты для расчета обледенения судна

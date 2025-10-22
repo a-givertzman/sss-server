@@ -36,7 +36,7 @@ use std::{collections::HashMap, path::PathBuf};
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
-    
+   /* 
     let physical_frames = [
         -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
         6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
  //   let res = model.rebuild_bounds(&bounds);    dbg!(&res);
     let res = model.init();                     dbg!(&res);
     let res = model.init_bounded(&bounds);      dbg!(&res);
-
+*/
 
  /*   let mut result = |mass: f64, x: f64, y: f64, z: f64| {
               model.floating_position(model_cached::FloatingPositionQuery {
@@ -185,7 +185,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dbg!(res);
     */
 
- /*   
+    
     let dbg = Dbg::own("main");
     let tmp_dbg = dbg.clone();
     let path = "config.yaml";
@@ -200,7 +200,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
-    let thread_pool = ThreadPool::new(&dbg, Some(conf.thread_pool.size));
+    let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
     let model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
@@ -217,14 +217,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
             ],
             ship_length_lbp: 130.5,
-            draught_min: 2.,
+            draught_min: 0.5,
             draught_max: 14.,
-            hull_draught_step: 1.,
+            hull_draught_step: 0.5,
             bounds_level_step: 0.1,
             compartment_level_step: 1.,
             compartment_data: HashMap::new(),
         },
-        thread_pool.scheduler(),
+        Arc::clone(&thread_pool),
     )
     .unwrap();
     let physical_frames = [
@@ -257,7 +257,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         project_id.to_owned(),
         model_cached,
         Arc::clone(&api_client),
-        thread_pool.scheduler(),
     );
     ship_model.init().unwrap();
     ship_model.init_cache_bounded(&bounds).unwrap();
@@ -400,7 +399,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .eval(());*/
-    dbg!(ctx);
-    */
+  //  dbg!(ctx);
+    
     Ok(())
 }

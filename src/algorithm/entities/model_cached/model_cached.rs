@@ -655,6 +655,7 @@ impl ModelCached {
                                 err,
                             )
                         })?;
+                        dbg!(compartment_result.level, trim, &volume_bounded); 
                     results_.push(LiquidResult::new(
                         //     cargo_id,
                         assigned_id,
@@ -776,7 +777,7 @@ impl ModelCached {
             .pop()
             .ok_or(error.err("no hull_result"))?
             .map_err(|err| error.pass_with("hull_result", err))?;
-        dbg!(&displacement_distr);
+      //  dbg!(&displacement_distr);
         let liquid = {
             let mut result = Vec::new();
             while !liquid_results.is_empty() {
@@ -841,7 +842,6 @@ impl ModelCached {
         let moment_const = query.moment_const;
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
-        // dbg!("floating_position bulk start");
         let moment_bulk = self
             .moment_bulk(&query.bulk, query.epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
@@ -898,7 +898,7 @@ impl ModelCached {
             let cg = {
                 let moment_sum =
                     moment_const + moment_bulk + moment_liquid + moment_damaged_compartment;
-                moment_sum.to_pos(mass_sum) + self.model_center_coord
+                moment_sum.to_pos(mass_sum)
             };
             // Определение невязки
             let cg_h = {
@@ -977,6 +977,7 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
+         //   println!("{cg} {cb}");
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;

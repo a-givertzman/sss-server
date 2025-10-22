@@ -20,13 +20,13 @@ obj = "0.10.2"
 stl_io = "0.8.5"
 #parry3d-f64 = "~0.25"
 #parry2d-f64 = "~0.25"
-parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } #"https://github.com/KnstAnt/parry/
-parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } #"https://github.com/KnstAnt/parry/
-
+#parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } 
+#parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } 
+parry3d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
+parry2d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
 
 
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
-#sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.10" }
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
 #
 # Time

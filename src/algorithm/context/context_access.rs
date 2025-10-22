@@ -28,27 +28,14 @@ pub trait ContextParamsRead {
 }
 
 //
-impl ContextWrite<Parameters> for Context {
-    fn write(mut self, value: Parameters) -> Result<Self, Error> {
-        self.parameters = Some(value);
-        Result::Ok(self)
-    }
-}
 impl ContextReadRef<Parameters> for Context {
     fn read_ref(&self) -> &Parameters {
-        self.parameters
-            .as_ref()
-            .unwrap()
+        &self.parameters
     }
 }
 impl ContextParamsWrite for Context {
     fn write_params(&mut self, id: ParameterID, value: f64) {
-        match &mut self.parameters {
-            Some(params) => {
-                params.add(id, value);
-            }
-            None => panic!("Context.write | Parameters - is not initialised yet, id: {:?}", id)
-        };
+        self.parameters.add(id, value);
     }
 }
 impl ContextParamsRead for Context {

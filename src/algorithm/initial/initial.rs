@@ -194,11 +194,11 @@ impl Eval<(), EvalResult> for Initial {
             &self
                 .api_client
                 .fetch(&format!(
-                "SELECT 
-                    space_id, \
-                    space_name, \
+                "SELECT
                     cargo_id, \
                     cargo_name, \
+                    space_id, \
+                    space_name, \
                     assigned_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \

@@ -93,22 +93,24 @@ impl Eval<(), EvalResult> for MassEval {
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
                     let mass = |assigment_type: AssignmentType| {
-                        gaseous
+                        let gaseous = gaseous
                             .iter()
                             .filter(|v| v.assigment_type == assigment_type)
-                            .fold(0., |sum, v| sum + v.mass)
-                            + bulk
-                                .iter()
-                                .filter(|v| v.assigment_type == assigment_type)
-                                .fold(0., |sum, v| sum + v.mass)
-                            + liquid
-                                .iter()
-                                .filter(|v| v.assigment_type == assigment_type)
-                                .fold(0., |sum, v| sum + v.mass)
-                            + unit
-                                .iter()
-                                .filter(|v| v.assigment_type == assigment_type)
-                                .fold(0., |sum, v| sum + v.mass)
+                            .fold(0., |sum, v| sum + v.mass);
+                        let bulk = bulk
+                            .iter()
+                            .filter(|v| v.assigment_type == assigment_type)
+                            .fold(0., |sum, v| sum + v.mass);
+                        let liquid = liquid
+                            .iter()
+                            .filter(|v| v.assigment_type == assigment_type)
+                            .fold(0., |sum, v| sum + v.mass);
+                        let unit = unit
+                            .iter()
+                            .filter(|v| v.assigment_type == assigment_type)
+                            .fold(0., |sum, v| sum + v.mass);
+                //        dbg!(assigment_type, gaseous, bulk, liquid, unit);
+                        gaseous + bulk + liquid + unit
                     };
                     let ballast = mass(AssignmentType::Ballast);
                     let stores = mass(AssignmentType::Stores);
@@ -133,6 +135,11 @@ impl Eval<(), EvalResult> for MassEval {
                         cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
                         icing:{icing}, wetting:{wetting} sum:{mass_sum}"
                     );
+               /*     println!(
+                        "\t Mass ballast:{ballast}, stores:{stores}, bulkhead:{bulkhead}
+                        cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
+                        icing:{icing}, wetting:{wetting} sum:{mass_sum}"
+                    );*/
                 }
                 let result = {
                     // распределения масс по типам
@@ -151,7 +158,7 @@ impl Eval<(), EvalResult> for MassEval {
                     let mut vec_cargo = Vec::new();
                     let mut vec_icing = ContextRead::<IcingCtx>::read(&ctx).mass_values;
                     let mut vec_wetting = ContextRead::<WettingCtx>::read(&ctx).mass_values;
-                    // unit грузы представляются в виде прямоугоьника, заполненного массой равномерно
+                    // unit грузы представляются в виде прямоугольника, заполненного массой равномерно
                     for b in bounds.iter() {
                         vec_bulkhead
                             .push(bulkhead.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)));
@@ -217,6 +224,7 @@ impl Eval<(), EvalResult> for MassEval {
                     let mut vec_sum = mass_values.clone();
                     vec_sum.push(vec_sum.iter().sum());
                     log::info!("\t Mass values:{:?} ", mass_values);
+                  //  dbg!("\t Mass values:{:?} ", mass_values);
                     let mut data = HashMap::new();
                     data.insert("value_mass_hull".to_owned(), vec_hull);
                     data.insert("value_mass_equipment".to_owned(), vec_equipment);

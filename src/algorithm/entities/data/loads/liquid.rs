@@ -12,7 +12,7 @@ pub struct LoadLiquidData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: usize,
+    pub space_id: String,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
@@ -53,7 +53,7 @@ impl LoadLiquidData {
         Some(LiquidData {
             assigned_id:  self.assigned_id,
        //     cargo_id: self.cargo_id,
-            space_id: self.space_name.clone(),
+            space_id: self.space_id.clone(),
             mass: self.mass,
             volume,
         })

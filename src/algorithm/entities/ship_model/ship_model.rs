@@ -48,10 +48,8 @@ pub struct ShipModel {
     horisontal_area: Option<Vec<HStrArea>>,
     grain_moment: Option<HashMap<String, Curve<f64>>>, 
     model_cached: ModelCached,
-    scheduler: Scheduler,
 //    timeout: Duration,
     api_client: Arc<ApiClient>,
-    exit: Arc<AtomicBool>,
 }
 //
 //
@@ -71,7 +69,6 @@ impl ShipModel {
         project_id: String,
         model_cached: ModelCached,
         api_client: Arc<ApiClient>,
-        scheduler: Scheduler,
     ) -> Self {
     //    let name = Name::new(parent, "ShipModel");
         let dbg = Dbg::new(parent, "ShipModel");
@@ -85,10 +82,8 @@ impl ShipModel {
             horisontal_area: None,
             grain_moment: None,
             model_cached: model_cached,
-            scheduler,
         //    timeout: Self::DEFAULT_TIMEOUT,
             api_client,
-            exit: Arc::new(AtomicBool::new(false)),
         }
     }
     /// TODO - Doc
@@ -192,11 +187,6 @@ impl ShipModel {
         );
         Ok(result)
     }
-    ///
-    /// Sends "exit" signal to the service's task
-    pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
-    }
 }
 //
 //
@@ -210,7 +200,7 @@ impl Debug for ShipModel {
             // .field("subscribers", &self.subscribers)
             // .field("receivers", &self.receivers)
          //   .field("timeout", &self.timeout)
-            .field("exit", &self.exit)
+         //   .field("exit", &self.exit)
             .finish()
     }
 }
