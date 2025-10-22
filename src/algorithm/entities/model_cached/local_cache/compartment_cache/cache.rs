@@ -108,20 +108,15 @@ impl CompartmentCache {
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
     //
-    pub fn build_bounded(&self, bounds: Bounds, level_step: f64) -> Result<BoundDisplacementCache, Error> {
-       // let error = Error::new(self.dbg(), "build_bounded");
-      /*  let draught_step = match self.shape.read().size() {
-            Ok((_, _, height, _)) => height / (self.level_qnt_steps as f64),
-            Err(err) => return Err(error.pass_with("shape.size", err)),
-        };*/
-        Ok(BoundDisplacementCache::new(
+    pub fn build_bounded(&self, bounds: Bounds, level_step: f64) -> BoundDisplacementCache {
+        BoundDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
             self.cache_dir.clone().join("distr"),
             level_step,
             bounds,
             Arc::clone(&self.thread_pool),
-        ))
+        )
     }
 }
 //

@@ -3,7 +3,10 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
-use std::{collections::VecDeque, sync::atomic::{AtomicBool, Ordering}};
+use std::{
+    collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{
     algorithm::entities::{
@@ -61,13 +64,17 @@ impl BuildCompartmentCache {
     ///
     /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy]]
     pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
-        dbg!("BuildCompartmentCache calculate begin");
+        //dbg!("BuildCompartmentCache calculate begin");
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
-        let draft_results = Arc::new(Stack::new());
-        let mut results = Vec::new();
+        let results = Arc::new(Stack::new());
         let mut errors = Vec::new();
+        let mut pass = |message: &str, err: Error| {
+            let error = error.pass_with(message, err);
+            log::error!("{:?}", &error);
+            errors.push(error);
+        };
         let shape = self.shape.clone();
         let (volume_max, center_max) = match shape.read().properties() {
             Ok((volume_max, center_max)) => (volume_max, center_max),
@@ -114,16 +121,14 @@ impl BuildCompartmentCache {
                     while self.thread_pool.free() < 1 {
                         std::thread::sleep(std::time::Duration::from_millis(100));
                     }
-                    //  let dbg_ = self.dbg.clone();
-                    let draft_results = draft_results.clone();
+                    let results = results.clone();
                     let shape = shape.clone();
-                    println!("BuildCompartmentCache calculate {draught} {heel} {trim} spawn task");
                     let handle = scheduler
                         .spawn_named(
                             format!("BuildCompartmentCache displacement {draught} {heel} {trim}"),
                             move || {
                                 let guard = shape.read();
-                                draft_results.push((
+                                results.push((
                                     heel,
                                     trim,
                                     draught,
@@ -144,50 +149,42 @@ impl BuildCompartmentCache {
                         });
                     match handle {
                         Ok(task) => tasks.push_back(task),
-                        Err(err) => errors.push(err),
+                        Err(err) => pass("task handle", err),
                     };
-                    while tasks.len() > self.thread_pool.capacity()*10 {
+                    while tasks.len() > self.thread_pool.capacity() * 10 {
                         let task = tasks.pop_front().unwrap();
-                    //    dbg!("while", task.name());
                         if let Err(err) = task.join() {
-                            let error = error.pass_with("task join", err.to_string());
-                            log::error!("{}", error);
-                            errors.push(error);
+                            pass("task join", err);
                         }
                     }
                 }
             }
         }
-    //    println!("BuildCompartmentCache tasks join begin, tasks:{}", tasks.len());
         for task in tasks {
-            dbg!(task.name());
             if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                errors.push(error);
+                pass("task join", err);
             }
         }
-        println!("BuildCompartmentCache tasks join finish");
-        println!("BuildCompartmentCache draft_results begin");
-        while !draft_results.is_empty() {
-            if let Some((heel, trim, draught, volume, inertia)) = draft_results.pop() {
+        let mut vec_results = Vec::new();
+        while !results.is_empty() {
+            if let Some((heel, trim, draught, volume, inertia)) = results.pop() {
                 let (volume, center) = match volume {
                     Ok((volume, center)) => (volume, center),
                     Err(err) => {
-                        errors.push(error.pass_with("draft_results volume", err));
+                        pass("draft_results volume", err);
                         continue;
                     }
                 };
                 let (i_x, i_y) = match inertia {
                     Ok((x, y)) => (x, y),
                     Err(err) => {
-                        errors.push(error.pass_with("draft_results inertia", err));
+                        pass("draft_results inertia", err);
                         continue;
                     }
                 };
                 if volume >= volume_max {
                     // для полного объема значения заполняем руками для нормальной интерполяции
-                    results.push(vec![
+                    vec_results.push(vec![
                         heel,
                         trim,
                         draught,
@@ -199,7 +196,7 @@ impl BuildCompartmentCache {
                         0.,
                     ]);
                 } else {
-                    results.push(vec![
+                    vec_results.push(vec![
                         heel,
                         trim,
                         draught,
@@ -213,12 +210,9 @@ impl BuildCompartmentCache {
                 }
             }
         }
-        println!("BuildCompartmentCache draft_results end");
-        //   dbg!(&results);
-        println!("BuildCompartmentCache process results begin");
         // для пустого объема значения заполняем руками для нормальной интерполяции
         // берем значения с ненулевым объемом
-        let mut tmp: Vec<_> = results.iter().filter(|v| v[3] > 0.).collect();
+        let mut tmp: Vec<_> = vec_results.iter().filter(|v| v[3] > 0.).collect();
         // и сортируем чтобы найти значение с минимальными креном/дифферентом и объемом
         tmp.sort_by(|a, b| {
             (a[0].abs() * a[3] + a[1].abs() * a[3])
@@ -231,16 +225,13 @@ impl BuildCompartmentCache {
             Position::new(center_max.x(), center_max.y(), draught_zero)
         };
         // для пустого объема значения меняем значения
-        results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
+        vec_results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
             v[4] = center_min.x();
             v[5] = center_min.y();
             v[6] = center_min.z();
             v[7] = 0.;
             v[8] = 0.;
         });
-        println!("BuildCompartmentCache process results end");
-        //   dbg!(&results);
-        dbg!("BuildCompartmentCache calculate finish");
-        (results, errors)
+        (vec_results, errors)
     }
 }

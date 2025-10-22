@@ -18,7 +18,7 @@ use parry3d_f64::{query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
-    thread_pool::{JoinHandle, Scheduler},
+    thread_pool::{JoinHandle, ThreadPool},
 };
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
@@ -133,14 +133,18 @@ pub struct ModelCached {
     displacement_bounded: HashMap<usize, Arc<RwLock<BoundDisplacementCache>>>,
     /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
     compartments_bounded: HashMap<usize, IndexMap<String, Arc<RwLock<BoundDisplacementCache>>>>,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
 }
 //
 //
 impl ModelCached {
     ///
     /// Creates a new instance.
-    pub fn new(parent: &Dbg, conf: ModelCachedConf, scheduler: Scheduler) -> Result<Self, Error> {
+    pub fn new(
+        parent: &Dbg,
+        conf: ModelCachedConf,
+        thread_pool: Arc<ThreadPool>,
+    ) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
         let mut displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>> =
@@ -221,7 +225,7 @@ impl ModelCached {
                         conf.compartment_level_step,
                         center_max,
                         volume_max,
-                        scheduler.clone(),
+                        Arc::clone(&thread_pool),
                     ))),
                 ))
             })
@@ -259,7 +263,7 @@ impl ModelCached {
                         conf.draught_min,
                         conf.draught_max,
                         conf.hull_draught_step,
-                        scheduler.clone(),
+                        Arc::clone(&thread_pool),
                     ))),
                 ))
             })
@@ -284,14 +288,14 @@ impl ModelCached {
                 conf.draught_min,
                 conf.draught_max,
                 conf.hull_draught_step,
-                scheduler.clone(),
+                Arc::clone(&thread_pool),
             ),
             compartments,
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
             compartments_bounded: HashMap::new(),
-            scheduler: scheduler.clone(),
+            thread_pool,
         };
         Ok(model_cached)
     }
@@ -301,12 +305,12 @@ impl ModelCached {
         let mut errors = Vec::new();
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
+        let scheduler = self.thread_pool.scheduler();
         // Сначала считаем модели в разных потоках
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
-            let handle = self
-                .scheduler
+            let handle = scheduler
                 .spawn(move || {
                     let mut guard = shape.write();
                     task_results.push(guard.init());
@@ -323,8 +327,7 @@ impl ModelCached {
         {
             let shape = self.windage_shape.clone();
             let task_results = task_results.clone();
-            let handle = self
-                .scheduler
+            let handle = scheduler
                 .spawn(move || {
                     let mut guard = shape.write();
                     task_results.push(guard.init());
@@ -392,7 +395,7 @@ impl ModelCached {
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
             bounds.clone(),
-            self.scheduler.clone(),
+            Arc::clone(&self.thread_pool),
         );
         bound_displacement
             .init()
@@ -403,8 +406,7 @@ impl ModelCached {
         for (compartment_id, compartment) in &self.compartments {
             let compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+                .build_bounded(bounds.clone(), self.bounds_level_step);
             compartment_bounded
                 .init()
                 .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
@@ -436,24 +438,22 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        /*      if let Err(error) = self.displacement.rebuild() {
+        if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
-        }*/
+        }
         for (name, compartment) in &mut self.compartments {
-            dbg!(format!("rebuild_caches compartment:{name} start"));
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
-            dbg!(format!("rebuild_caches compartment:{name} end"));
         }
-        /*     for (name, compartment) in &mut self.damaged_compartments {
+        for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }*/
+        }
         /*  for bound_displacement_cache in &mut self.displacement_bounded.values_mut() {
             if let Err(error) = bound_displacement_cache.write().rebuild() {
                 errors.push(("displacement_bounded".to_owned(), error));
@@ -503,7 +503,7 @@ impl ModelCached {
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
             bounds.clone(),
-            self.scheduler.clone(),
+            Arc::clone(&self.thread_pool),
         );
         bound_displacement
             .rebuild()
@@ -514,8 +514,7 @@ impl ModelCached {
         for (compartment_id, compartment) in &self.compartments {
             let mut compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+                .build_bounded(bounds.clone(), self.bounds_level_step);
             compartment_bounded
                 .rebuild()
                 .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
@@ -598,8 +597,8 @@ impl ModelCached {
         let bulk_results = Arc::new(Stack::new());
         let gaseous_results = Arc::new(Stack::new());
         let results_ = hull_results.clone();
-        let handle = self
-            .scheduler
+        let scheduler = self.thread_pool.scheduler();
+        let handle = scheduler
             .spawn(move || {
                 results_.push(displacement_bounded.read().get(draught_mid, trim));
                 Ok(())
@@ -635,8 +634,7 @@ impl ModelCached {
             let volume = cargo.volume;
             let epsilon = query.epsilon;
             let results_ = liquid_results.clone();
-            let handle = self
-                .scheduler
+            let handle = scheduler
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
@@ -688,8 +686,7 @@ impl ModelCached {
             let volume = cargo.volume;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
-            let handle = self
-                .scheduler
+            let handle = scheduler
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
@@ -732,8 +729,7 @@ impl ModelCached {
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
-            let handle = self
-                .scheduler
+            let handle = scheduler
                 .spawn(move || {
                     let compartment_bounded = compartments_bounded
                         .get(&space_id)
@@ -993,6 +989,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
+        let scheduler = self.thread_pool.scheduler();
         for bulk in bulks {
             match self.compartments.get(&bulk.space_id) {
                 Some(compartment) => {
@@ -1002,8 +999,7 @@ impl ModelCached {
                     let mass = bulk.mass;
                     let volume = bulk.volume;
                     let compartment = compartment.clone();
-                    let handle = self
-                        .scheduler
+                    let handle = scheduler
                         .spawn(move || {
                             task_results.push((
                                 space_id,
@@ -1013,15 +1009,13 @@ impl ModelCached {
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(
-                                format!("spawn for {}", bulk.space_id),
-                                err,
-                            )
+                            error.pass_with(format!("spawn for {}", bulk.space_id), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
-                            let error = error.pass_with(format!("handle for {}", bulk.space_id), err);
+                            let error =
+                                error.pass_with(format!("handle for {}", bulk.space_id), err);
                             log::error!("{}", error);
                             errors.push(error);
                         }
@@ -1050,7 +1044,8 @@ impl ModelCached {
                 } = match data {
                     Ok(data) => data,
                     Err(err) => {
-                        let error = error.pass_with(format!("task_results data in {space_id}"), err.to_string());
+                        let error = error
+                            .pass_with(format!("task_results data in {space_id}"), err.to_string());
                         log::error!("{}", error);
                         errors.push(error);
                         continue;
@@ -1083,6 +1078,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
+        let scheduler = self.thread_pool.scheduler();
         for liquid in liquids {
             match self.compartments.get(&liquid.space_id) {
                 Some(compartment) => {
@@ -1092,8 +1088,7 @@ impl ModelCached {
                     let mass = liquid.mass;
                     let volume = liquid.volume;
                     let compartment = compartment.clone();
-                    let handle = self
-                        .scheduler
+                    let handle = scheduler
                         .spawn(move || {
                             task_results.push((
                                 space_id,
@@ -1103,15 +1098,13 @@ impl ModelCached {
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(
-                                format!("spawn for {}", liquid.space_id),
-                                err,
-                            )
+                            error.pass_with(format!("spawn for {}", liquid.space_id), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
-                            let error = error.pass_with(format!("handle for {}", liquid.space_id), err);
+                            let error =
+                                error.pass_with(format!("handle for {}", liquid.space_id), err);
                             log::error!("{}", error);
                             errors.push(error);
                         }
@@ -1140,7 +1133,8 @@ impl ModelCached {
                 } = match data {
                     Ok(data) => data,
                     Err(err) => {
-                        let error = error.pass_with(format!("task_results data in {space_id}"), err.to_string());
+                        let error = error
+                            .pass_with(format!("task_results data in {space_id}"), err.to_string());
                         log::error!("{}", error);
                         errors.push(error);
                         continue;
@@ -1174,6 +1168,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
+        let scheduler = self.thread_pool.scheduler();
         for damaged_compartment in damaged_compartments {
             match self.damaged_compartments.get(damaged_compartment) {
                 Some(compartment) => {
@@ -1181,8 +1176,7 @@ impl ModelCached {
                     let space_id = damaged_compartment.clone();
                     let compartment = compartment.clone();
                     let _error = error.clone();
-                    let handle = self
-                        .scheduler
+                    let handle = scheduler
                         .spawn(move || {
                             task_results
                                 .push((space_id, compartment.read().get(heel, trim, draught)));
@@ -1197,7 +1191,8 @@ impl ModelCached {
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
-                            let error = error.pass_with(format!("handle for {damaged_compartment}"), err);
+                            let error =
+                                error.pass_with(format!("handle for {damaged_compartment}"), err);
                             log::error!("{}", error);
                             errors.push(error);
                         }
@@ -1222,7 +1217,8 @@ impl ModelCached {
                 let (mass, position) = match data {
                     Ok((volume, position)) => (volume * water_density, position),
                     Err(err) => {
-                        let error = error.pass_with(format!("task_results data in {space_id}"), err.to_string());
+                        let error = error
+                            .pass_with(format!("task_results data in {space_id}"), err.to_string());
                         log::error!("{}", error);
                         errors.push(error);
                         continue;

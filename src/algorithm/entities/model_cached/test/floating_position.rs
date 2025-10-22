@@ -61,7 +61,7 @@ fn floating_position_sofia() {
             compartment_level_step: 1.,
             compartment_data: HashMap::new(),
         },
-        thread_pool.scheduler(),
+        thread_pool.into(),
     )
     .unwrap();
     model.init().unwrap();

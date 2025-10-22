@@ -98,18 +98,16 @@ impl BoundDisplacementCache {
     /// - stores calculated table
     /// - loads recalculated table
     pub fn rebuild(&mut self) -> Result<(), Error> {
-        //    let error = Error::new(self.dbg.clone(), "rebuild");
-        dbg!("rebuild");
         self.clear_exit();
-        let
-        match self.calculate() {
-            Ok(_) => Ok(()),
-            Err(err) => Err(Error::new(self.dbg.clone(), "rebuild").pass(err.to_owned())),
+        let errors = self.calculate();
+        if errors.is_empty() {
+            return Ok(());
         }
+        let full_error = errors.into_iter().fold("".to_owned(), |acc, err| acc + ", " + &err.to_string());
+        Err(Error::new(self.dbg.clone(), format!("rebuild: {full_error}")))
     }
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(&self) -> Result<(), Error> {
-        //    dbg!(self.dbg.clone(), "init", &self.cache_path.clone());
         let error = Error::new(self.dbg.clone(), "init");
         let mut caches = Vec::new();
         for (i, bound) in self.bounds.iter().enumerate() {

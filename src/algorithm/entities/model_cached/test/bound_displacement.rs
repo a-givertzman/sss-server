@@ -852,14 +852,14 @@ fn bound_displacement_sofia() {
         cache_dir.clone().join("disp_bounded"),
         0.01,
         bounds.clone(),
-        thread_pool.scheduler().clone(),
+        thread_pool.into(),
     );
   //  bound_displacement.init().unwrap();
     bound_displacement.rebuild().unwrap();
 
     let (epsilon_p, epsilon_abs) = (1., 0.2);
 
-    let _shp = |i: usize| -> String {
+ /*   let _shp = |i: usize| -> String {
         let i = i as i32 - 6;
         match i {
             i@(..=114) => format!("{}", i),
@@ -869,7 +869,7 @@ fn bound_displacement_sofia() {
     };
     let shp = |i: usize| -> String {
         format!("{} {}", _shp(i), _shp(i+1))
-    };
+    };*/
  //   println!("\n6.0 0.0");
     for (i, (r, t)) in bound_displacement
         .get(6., 0.)

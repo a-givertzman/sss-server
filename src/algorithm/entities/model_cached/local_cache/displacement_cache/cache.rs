@@ -5,7 +5,7 @@ use crate::{
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::Scheduler;
+use sal_sync::thread_pool::{Scheduler, ThreadPool};
 use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
@@ -28,7 +28,7 @@ pub struct DisplacementCache {
     shape: Arc<RwLock<DisplacementShape>>,
     /// Cache read from `self.file_path`.
     cache: Option<Cache<f64>>,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -46,7 +46,7 @@ impl DisplacementCache {
         draught_min: f64,
         draught_max: f64,
         draught_step: f64,
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, "DisplacementCache");
         let path = cache_dir.as_ref().join("displacement_cache");
@@ -60,7 +60,7 @@ impl DisplacementCache {
             cache: None,
             cache_path: path,
             dbg,
-            scheduler,
+            thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -115,7 +115,7 @@ impl LocalCache for DisplacementCache {
             self.draught_min,
             self.draught_max,
             self.draught_step,
-            self.scheduler.clone(),
+            Arc::clone(&self.thread_pool),
             self.exit.clone(),
         )
         .build();

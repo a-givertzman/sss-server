@@ -1,9 +1,12 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
-    thread_pool::{JoinHandle, Scheduler},
+    thread_pool::{JoinHandle, ThreadPool},
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{
     algorithm::entities::model_cached::DisplacementShape,
@@ -19,7 +22,7 @@ pub struct BuildDamagedCompartmentCache {
     draught_min: f64,
     draught_max: f64,
     draught_step: f64,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -36,7 +39,7 @@ impl BuildDamagedCompartmentCache {
         draught_min: f64,
         draught_max: f64,
         draught_step: f64,
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
         debug_assert!(draught_min < draught_max);
@@ -49,25 +52,26 @@ impl BuildDamagedCompartmentCache {
             draught_min,
             draught_max,
             draught_step,
-            scheduler,
+            thread_pool,
             exit,
         }
     }
     ///
     /// Creates and starts worker for [DamagedCompartmentCache::calculate].
-    /// 
+    ///
     /// results: [[heel, trim, draught, volume, vx, vy, vz]]
-    pub fn build(self) -> Vec<Result<Vec<f64>, Error>> {
+    pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
-        let mut tasks: Vec<JoinHandle<_>> = vec![];
-        let draft_results = Arc::new(Stack::new());
-        let mut results = Vec::new();
+        let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
+        let results = Arc::new(Stack::new());
+        let mut errors = Vec::new();
+        let mut pass = |message: &str, err: Error| {
+            let error = error.pass_with(message, err);
+            log::error!("{:?}", &error);
+            errors.push(error);
+        };
         let shape = self.shape.clone();
-   /*     let draught_steps = match shape.read().draught_steps(0., self.draught_step) {
-            Ok(draught_steps) => draught_steps,
-            Err(err) => return vec![Err(error.pass_with("shape.read().height()", err))],
-        };*/
         let mut draught_steps = Vec::new();
         let mut draught = self.draught_min;
         loop {
@@ -76,7 +80,8 @@ impl BuildDamagedCompartmentCache {
                 break;
             }
             draught += self.draught_step;
-        } 
+        }
+        let scheduler = self.thread_pool.scheduler();
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -85,21 +90,27 @@ impl BuildDamagedCompartmentCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    //  let dbg_ = self.dbg.clone();
-                    let draft_results = draft_results.clone();
+                    while self.thread_pool.free() < 1 {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
+                    let results = results.clone();
                     let shape = shape.clone();
-                    let handle = self
-                        .scheduler
-                        .spawn(move || {
-                            let guard = shape.read();
-                            draft_results.push((
-                                heel,
-                                trim,
-                                draught,
-                                guard.displacement(heel, trim, draught),
-                            ));
-                            Ok(())
-                        })
+                    let handle = scheduler
+                        .spawn_named(
+                            format!(
+                                "BuildDamagedCompartmentCache displacement {draught} {heel} {trim}"
+                            ),
+                            move || {
+                                let guard = shape.read();
+                                results.push((
+                                    heel,
+                                    trim,
+                                    draught,
+                                    guard.displacement(heel, trim, draught),
+                                ));
+                                Ok(())
+                            },
+                        )
                         .map_err(|err| {
                             error.pass_with(
                                 format!(
@@ -110,32 +121,45 @@ impl BuildDamagedCompartmentCache {
                             )
                         });
                     match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => results.push(Err(err)),
+                        Ok(task) => tasks.push_back(task),
+                        Err(err) => pass("task handle", err),
                     };
+                    while tasks.len() > self.thread_pool.capacity() * 10 {
+                        let task = tasks.pop_front().unwrap();
+                        if let Err(err) = task.join() {
+                            pass("task join", err);
+                        }
+                    }
                 }
             }
         }
         for task in tasks {
             if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                results.push(Err(error));
+                pass("task join", err);
             }
         }
-        while !draft_results.is_empty() {
-            if let Some((heel, trim, draught, volume)) = draft_results.pop() {
+        let mut vec_results = Vec::new();
+        while !results.is_empty() {
+            if let Some((heel, trim, draught, volume)) = results.pop() {
                 let (volume, center) = match volume {
                     Ok((volume, center)) => (volume, center),
                     Err(err) => {
-                        results.push(Err(error.pass_with("draft_results volume", err)));
+                        pass("results volume", err);
                         continue;
                     }
                 };
-                results.push(Ok(vec![heel, trim, draught, volume, center.x(), center.y(), center.z()]));
+                vec_results.push(vec![
+                    heel,
+                    trim,
+                    draught,
+                    volume,
+                    center.x(),
+                    center.y(),
+                    center.z(),
+                ]);
             }
         }
         //   dbg!(&results);
-        results
+        (vec_results, errors)
     }
 }

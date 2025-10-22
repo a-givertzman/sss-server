@@ -91,16 +91,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             compartment_level_step: 1.,
             compartment_data: HashMap::new(),
         },
-        thread_pool.scheduler(),
+        thread_pool.into(),
     )
     .unwrap();
-    let res = model.reload_shapes();   dbg!(&res);
-    let res = model.rebuild_caches();   dbg!(&res);
-  //  let res = model.rebuild_bounds(&bounds);   dbg!(&res);
-    let res = model.init();
-    dbg!(&res);
-    let res = model.init_bounded(&bounds);
-    dbg!(&res);
+    let res = model.reload_shapes();            dbg!(&res);
+ //   let res = model.rebuild_caches();   dbg!(&res);
+    let res = model.rebuild_bounds(&bounds);    dbg!(&res);
+    let res = model.init();                     dbg!(&res);
+    let res = model.init_bounded(&bounds);      dbg!(&res);
 
 
  /*   let mut result = |mass: f64, x: f64, y: f64, z: f64| {

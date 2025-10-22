@@ -1,9 +1,12 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
-    thread_pool::{JoinHandle, Scheduler},
+    thread_pool::{JoinHandle, ThreadPool},
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{
     algorithm::entities::model_cached::DisplacementShape,
@@ -22,7 +25,7 @@ pub struct BuildDisplacementCache {
     draught_max: f64,
     /// qnt draught steps for hull
     draught_step: f64,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -39,7 +42,7 @@ impl BuildDisplacementCache {
         draught_min: f64,
         draught_max: f64,
         draught_step: f64,
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
         debug_assert!(draught_min < draught_max);
@@ -52,7 +55,7 @@ impl BuildDisplacementCache {
             draught_min,
             draught_max,
             draught_step,
-            scheduler,
+            thread_pool,
             exit,
         }
     }
@@ -62,11 +65,15 @@ impl BuildDisplacementCache {
     pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
-        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
         let aabb_results = Arc::new(Stack::new());
         let draft_results = Arc::new(Stack::new());
-        let mut results = Vec::new();
         let mut errors = Vec::new();
+        let mut pass = |message: &str, err: Error| {
+            let error = error.pass_with(message, err);
+            log::error!("{:?}", &error);
+            errors.push(error);
+        };
         let shape = self.shape.clone();
         let mut draught_steps = Vec::new();
         let mut draught = self.draught_min;
@@ -77,15 +84,18 @@ impl BuildDisplacementCache {
             }
             draught += self.draught_step;
         }
+        let scheduler = self.thread_pool.scheduler();
         'draught: for draught in draught_steps {
             if self.exit.load(Ordering::SeqCst) {
                 break 'draught;
             }
+            while self.thread_pool.free() < 1 {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
             {
                 let aabb_results = aabb_results.clone();
                 let shape = shape.clone();
-                let handle = self
-                    .scheduler
+                let handle = scheduler
                     .spawn(move || {
                         let guard = shape.read();
                         aabb_results.push((draught, guard.aabb(draught)));
@@ -98,9 +108,15 @@ impl BuildDisplacementCache {
                         )
                     });
                 match handle {
-                    Ok(task) => tasks.push(task),
-                    Err(err) => errors.push(err),
+                    Ok(task) => tasks.push_back(task),
+                    Err(err) => pass("task handle", err),
                 };
+                while tasks.len() > self.thread_pool.capacity() * 10 {
+                    let task = tasks.pop_front().unwrap();
+                    if let Err(err) = task.join() {
+                        pass("task join", err);
+                    }
+                }
             }
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -109,11 +125,13 @@ impl BuildDisplacementCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
+                    while self.thread_pool.free() < 1 {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
                     //  let dbg_ = self.dbg.clone();
                     let draft_results = draft_results.clone();
                     let shape = shape.clone();
-                    let handle = self
-                        .scheduler
+                    let handle = scheduler
                         .spawn(move || {
                             let guard = shape.read();
                             draft_results.push((
@@ -136,53 +154,58 @@ impl BuildDisplacementCache {
                             )
                         });
                     match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => errors.push(err),
+                        Ok(task) => tasks.push_back(task),
+                        Err(err) => pass("task handle", err),
                     };
+                    while tasks.len() > self.thread_pool.capacity() * 10 {
+                        let task = tasks.pop_front().unwrap();
+                        if let Err(err) = task.join() {
+                            pass("task join", err);
+                        }
+                    }
                 }
             }
         }
         for task in tasks {
             if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                errors.push(error);
+                pass("task join", err);
             }
         }
-        let mut aabb = Vec::new();
+        let mut vec_aabb = Vec::new();
         while !aabb_results.is_empty() {
             if let Some((draught, data)) = aabb_results.pop() {
                 match data {
-                    Ok(data) => aabb.push((draught, data)),
-                    Err(err) => errors.push(error.pass_with("aabb_results", err)),
+                    Ok(data) => vec_aabb.push((draught, data)),
+                    Err(err) => pass("aabb_results", err),
                 }
             }
         }
+        let mut vec_results = Vec::new();
         while !draft_results.is_empty() {
             if let Some((heel, trim, draught, volume, area, inertia)) = draft_results.pop() {
-                if let Some((_, (l_x, l_y))) = aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
+                if let Some((_, (l_x, l_y))) = vec_aabb.iter().find(|(wl_d, _)| *wl_d == draught) {
                     let (volume, v_center) = match volume {
                         Ok((volume, center)) => (volume, center),
                         Err(err) => {
-                            errors.push(error.pass_with("draft_results volume", err));
+                            pass("draft_results volume", err);
                             continue;
                         }
                     };
                     let (area, a_center) = match area {
                         Ok((area, center)) => (area, center),
                         Err(err) => {
-                            errors.push(error.pass_with("draft_results area", err));
+                            pass("draft_results area", err);
                             continue;
                         }
                     };
                     let (i_x, i_y) = match inertia {
                         Ok((x, y)) => (x, y),
                         Err(err) => {
-                            errors.push(error.pass_with("draft_results inertia", err));
+                            pass("draft_results inertia", err);
                             continue;
                         }
                     };
-                    results.push(vec![
+                    vec_results.push(vec![
                         heel,
                         trim,
                         draught,
@@ -200,11 +223,10 @@ impl BuildDisplacementCache {
                         *l_y,
                     ]);
                 } else {
-                    errors.push(error.err(format!("no aabb for draught:{draught}")));
+                    pass("draft_results", error.err(format!("no aabb for draught:{draught}")));
                 }
             }
         }
-        //   dbg!(&results);
-        (results, errors)
+        (vec_results, errors)
     }
 }

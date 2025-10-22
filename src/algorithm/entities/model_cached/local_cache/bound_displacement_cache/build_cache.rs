@@ -54,9 +54,18 @@ impl BuildBoundDisplacementCache {
         log::info!("{}.build | Starting build", &self.dbg);
         let error = Error::new(&self.dbg, "build");
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
-        let draft_results = Arc::new(Stack::new());
-        let mut results = Vec::new();
+        let results = Arc::new(Stack::new());
         let errors = Arc::new(Stack::new());
+        let err = |message: &str| {
+            let error = error.err(message);
+            log::error!("{:?}", &error);
+            errors.push(error);
+        };
+        let pass = |message: &str, err: Error| {
+            let error = error.pass_with(message, err);
+            log::error!("{:?}", &error);
+            errors.push(error);
+        };
         let shape = self.shape.clone();
         let scheduler = self.thread_pool.scheduler();
         for bound in self.bounds.iter() {
@@ -68,7 +77,7 @@ impl BuildBoundDisplacementCache {
             while self.thread_pool.free() < 1 {
                 std::thread::sleep(std::time::Duration::from_millis(100));
             }
-            let draft_results = draft_results.clone();
+            let results = results.clone();
             let _errors = errors.clone();
             let _error = error.clone();
             let shape = shape.clone();
@@ -76,9 +85,7 @@ impl BuildBoundDisplacementCache {
             let center = match bound.center() {
                 Some(center) => center,
                 None => {
-                    let error = error.err("bound.center()");
-                    log::error!("{:?}", &error);
-                    errors.push(error);
+                    err("bound.center()");
                     continue;
                 }
             };
@@ -88,9 +95,9 @@ impl BuildBoundDisplacementCache {
                     let guard = shape.read();
                     match guard.part(&bound) {
                         Ok(shape) => match shape {
-                            Some(shape) => draft_results
+                            Some(shape) => results
                                 .push((center, Some(shape.displacement_by_steps(step)))),
-                            None => draft_results.push((center, None)),
+                            None => results.push((center, None)),
                         },
                         Err(err) => {
                             let error = _error.pass_with(
@@ -108,42 +115,29 @@ impl BuildBoundDisplacementCache {
                 });
             match handle {
                 Ok(task) => tasks.push_back(task),
-                Err(err) => {
-                    let error = error.pass_with("task handle", err.to_string());
-                    log::error!("{}", error);
-                    errors.push(error);
-                }
+                Err(err) => pass("task handle", err),
             };
             while tasks.len() > self.thread_pool.capacity() * 10 {
                 let task = tasks.pop_front().unwrap();
-                //    dbg!("while", task.name());
                 if let Err(err) = task.join() {
-                    let error = error.pass_with("task join", err.to_string());
-                    log::error!("{}", error);
-                    errors.push(error);
+                    pass("task join", err);
                 }
             }
         }
         for task in tasks {
             if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                errors.push(error);
+                pass("task join", err);
             }
         }
-        while !draft_results.is_empty() {
-            if let Some((dx, result)) = draft_results.pop() {
+        let mut vec_results = Vec::new();
+        while !results.is_empty() {
+            if let Some((dx, result)) = results.pop() {
                 match result {
                     Some(result) => match result {
-                        Ok(result) => results.push((dx, Some(result))),
-                        Err(err) => {
-                            let error =
-                                error.pass_with(format!("result, dx:{dx}"), err.to_string());
-                            log::error!("{}", error);
-                            errors.push(error);
-                        }
+                        Ok(result) => vec_results.push((dx, Some(result))),
+                        Err(err) => pass(&format!("result, dx:{dx}"), err),
                     },
-                    None => results.push((dx, None)),
+                    None => vec_results.push((dx, None)),
                 };
             }
         }
@@ -153,8 +147,8 @@ impl BuildBoundDisplacementCache {
                 vec_errors.push(error);
             }
         }
-        //   dbg!(&results, &vec_errors);
-        results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        (results, vec_errors)
+        //   dbg!(&res_vec, &vec_errors);
+        vec_results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        (vec_results, vec_errors)
     }
 }

@@ -1,13 +1,21 @@
-use std::collections::HashMap;
+use super::{Zg, zg_ctx::ZgCtx};
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         eval::*,
-    }, kernel::{eval::Eval, types::{eval_result::EvalResult, Arc, RwLock}}, prelude::{Context, ContextWrite, InitialCtx}
+    },
+    kernel::{
+        eval::Eval,
+        types::{Arc, RwLock, eval_result::EvalResult},
+    },
+    prelude::{Context, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{sync::Stack, thread_pool::{JoinHandle, Scheduler}};
-use super::{zg_ctx::ZgCtx, Zg};
+use sal_sync::{
+    sync::Stack,
+    thread_pool::{JoinHandle, Scheduler},
+};
+use std::collections::HashMap;
 
 // unsafe impl Send for StabilityAreaEval {}
 // unsafe impl Sync for StabilityAreaEval {}
@@ -16,8 +24,8 @@ use super::{zg_ctx::ZgCtx, Zg};
 /// Расчет равновесного положения судна
 pub struct ZgEval {
     dbg: Dbg,
-    scheduler: Scheduler,
- //   ship_model: &'a ShipModel,
+    thread_pool: Arc<ThreadPool>,
+    //   ship_model: &'a ShipModel,
     ctx: Arc<Box<dyn Eval<Zg, EvalResult> + Send + Sync>>,
 }
 //
@@ -25,16 +33,16 @@ pub struct ZgEval {
 impl ZgEval {
     ///
     pub fn new(
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
         parent: impl Into<String>,
-      //  ship_model: &'a ShipModel,
+        //  ship_model: &'a ShipModel,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "ZgEval");
         Self {
             dbg,
-            scheduler,
-         //   ship_model,
+            thread_pool,
+            //   ship_model,
             ctx: Arc::new(Box::new(ctx)),
         }
     }
@@ -55,39 +63,57 @@ impl Eval<(), EvalResult> for ZgEval {
                     .ok_or(error.err("No LBP in ship_parameters"))?;
                 // базовый контекст
                 // перебор значений z_g_fix, вычисление контекста для zg
-                let mut tasks: Vec<JoinHandle<()>> = vec![];
-                let zg_results: Arc<Stack<(f64, _)>> = Arc::new(Stack::new());
+                let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
+                let mut errors = Vec::new();
+                let mut pass = |message: &str, err: Error| {
+                    let error = error.pass_with(message, err);
+                    log::error!("{:?}", &error);
+                    errors.push(error);
+                };
+                let results = Arc::new(Stack::new());
                 let delta = 0.1;
                 let max_index = (overall_height / delta).floor() as i32;
+                let scheduler = self.thread_pool.scheduler();
                 for index in 0..max_index {
+                    while self.thread_pool.free() < 1 {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
                     let z_g_fix = index as f64 * delta;
-                    let zg_results_ = zg_results.clone();
+                    let results_ = results.clone();
                     let self_ctx = self.ctx.clone();
-                    let task = self
-                        .scheduler
-                        .spawn(move || {
+                    let handle = scheduler
+                        .spawn_named(format!("ZgEval z_g_fix:{z_g_fix}"), move || {
                             let ctx = self_ctx.eval(Zg(z_g_fix))?;
                             // let criterion = Arc::new(Mutex::new(Option::<CriterionStabilityCtx>::None));
                             let criterion: CriterionStabilityCtx = ctx.read();
-                            zg_results_.push((z_g_fix, criterion));
+                            results_.push((z_g_fix, criterion));
                             Ok(())
                         })
-                        .map_err(|err| error.pass_with(format!("task {}", z_g_fix), err))?;
-                    tasks.push(task);
+                        .map_err(|err| error.pass_with(format!("ZgEval z_g_fix:{}", z_g_fix), err));
+                    match handle {
+                        Ok(task) => tasks.push_back(task),
+                        Err(err) => pass("task handle", err),
+                    };
+                    while tasks.len() > self.thread_pool.capacity() * 10 {
+                        let task = tasks.pop_front().unwrap();
+                        if let Err(err) = task.join() {
+                            pass("task join", err);
+                        }
+                    }
                 }
                 // получаем массив рассчитанных критериев для разных zg
                 for task in tasks {
-                    // TODO try to handle errors
-                    task.join().unwrap();
+                    if let Err(err) = task.join() {
+                        pass("task join", err);
+                    }
                 }
-                let mut results = Vec::new(); //<(f64, Vec<(usize, Option<f64>)>)>'
-                
                 let mut zg_criterion: Vec<(f64, _)> = vec![];
-                while !zg_results.is_empty() {
-                    if let Some(r) = zg_results.pop() {
+                while !results.is_empty() {
+                    if let Some(r) = results.pop() {
                         zg_criterion.push(r);
                     }
                 }
+                let mut vec_results = Vec::new();
                 for (z_g_fix, criterion) in zg_criterion {
                     // отбрасываем ошибки, оставляем только значения, считаем дельту с целевым значением
                     //    let criterion = unsafe { &*criterion.assume_init() };
@@ -103,12 +129,12 @@ impl Eval<(), EvalResult> for ZgEval {
                             (v.criterion_id, delta)
                         })
                         .collect();
-                    results.push((z_g_fix, tmp));
+                    vec_results.push((z_g_fix, tmp));
                 }
                 // создаем коллекцию векторов, сортируем значения по id
                 #[allow(clippy::type_complexity)]
                 let mut values: HashMap<usize, Vec<(f64, (f64, f64))>> = HashMap::new();
-                for (z_g_fix, tmp) in results.into_iter() {
+                for (z_g_fix, tmp) in vec_results.into_iter() {
                     tmp.into_iter()
                         .filter(|(_, value)| value.is_some())
                         .for_each(|(id, value)| {
