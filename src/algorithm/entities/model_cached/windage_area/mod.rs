@@ -20,7 +20,8 @@ pub struct WindageArea {
     shape: Arc<RwLock<AreaShape>>,
     /// Cache read from `self.file_path`.
     area: Option<(f64, f64)>, //[area, center_x]
-    area_data: Option<Vec<(f64, f64)>>, //распределение [area, center_x]
+    values: Option<Vec<f64>>, //распределение
+    bounds: Option<Bounds>
 }
 //
 //
@@ -43,7 +44,8 @@ impl WindageArea {
             draught_min,
             shape,
             area: None,
-            area_data: None,
+            values: None,
+            bounds: None,
         }
     }
     //
@@ -56,8 +58,7 @@ impl WindageArea {
             .map_err(|err| error.pass_with("shape.windage_area_data", err))?;
         file_io::save(&self.dbg, &self.cache_path, &area_data)
             .map_err(|err| error.pass_with("file_io::save", err))?;
-        self.area_data = Some(area_data);
-        Ok(())
+        self.init()
     }
     /// инициализация заранее посчитанными данными
     pub fn init(&mut self) -> Result<(), Error> {
@@ -71,8 +72,29 @@ impl WindageArea {
             area_sum += area;
         }
         let center_x = moment / area_sum;
+        let bounds = {
+            let x_min = area_data
+                .first()
+                .ok_or(error.err("empty result from _windage_area"))?
+                .0;
+            let x_max = area_data
+                .last()
+                .ok_or(error.err("empty result from _windage_area"))?
+                .0;
+            let dx = (x_max - x_min) / (2. * ((area_data.len() - 1) as f64));
+            let (min, max, n) = (x_min - dx, x_max + dx, area_data.len());
+            dbg!(dx, min, max, n);
+            Bounds::from_min_max(min, max, n).map_err(|err| {
+                error.pass_with(
+                    format!("Bounds::from_min_max min:{min}, max:{max}, n:{n}"),
+                    err,
+                )
+            })?
+        };
+        let values = area_data.into_iter().map(|(_, v)| v).collect();
         self.area = Some((area_sum, center_x));
-        self.area_data = Some(area_data);
+        self.values = Some(values);
+        self.bounds = Some(bounds);
         Ok(())
     }
     /// Расчет площади и центра площади парусности
@@ -87,28 +109,11 @@ impl WindageArea {
     pub fn bounded_windage_area(&self, bounds: &Bounds) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "bounded_windage_area");
         // набор значений площади в разбиении по площади части модели над водой
-        let area_data = self.area_data.as_ref().ok_or(error.pass("no area_data"))?;
-        let src_bounds = {
-            let x_min = area_data
-                .first()
-                .ok_or(error.err("empty result from _windage_area"))?
-                .0;
-            let x_max = area_data
-                .last()
-                .ok_or(error.err("empty result from _windage_area"))?
-                .0;
-            let dx = (x_max - x_min) / 2. * ((area_data.len() - 1) as f64);
-            let (min, max, n) = (x_min - dx, x_max + dx, area_data.len());
-            Bounds::from_min_max(min, max, n).map_err(|err| {
-                error.pass_with(
-                    format!("Bounds::from_min_max min:{min}, max:{max}, n:{n}"),
-                    err,
-                )
-            })?
-        };
-        let values: Vec<_> = area_data.iter().map(|(a, _)| *a).collect();
+        let src_values = self.values.as_ref().ok_or(error.pass("no values"))?;  
+        let src_bounds = self.bounds.as_ref().ok_or(error.pass("no bounds"))?;  
+      //  area_data.iter().for_each(|v| print!(" ({:.3} {:.3})", v.0, v.1));
         bounds
-            .intersect(&src_bounds, &values)
+            .intersect(&src_bounds, &src_values)
             .map_err(|err| error.pass_with("bounds.intersect", err))
     }
 }
