@@ -166,6 +166,7 @@ impl ShipModel {
                 .into_iter()
                 .unzip();
         let area_bounds = Bounds::new(area_bounds).map_err(|err| error.pass_with("Bounds::new", err))?;
+        dbg!("bound_areas TODO: Bounds");
         let horisontal_area: Vec<f64> = bounds.intersect(&area_bounds, &area_values).map_err(|err| error.pass_with("bounds.intersect", err))?;
         Ok(BoundArea{ v: windage_area, h: horisontal_area })
     }

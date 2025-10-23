@@ -26,6 +26,7 @@ Cargo.lock
 
 # log files
 *.log
+log*.*
 
 # win trash
 desktop.ini

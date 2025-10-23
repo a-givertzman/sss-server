@@ -7,6 +7,7 @@ edition = "2024"
 #
 # Logging
 log = "~0.4"
+log2 = "0.2.2"
 env_logger = "~0.11"
 #
 # Internal deps

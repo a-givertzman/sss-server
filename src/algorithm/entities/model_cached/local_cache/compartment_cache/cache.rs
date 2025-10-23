@@ -20,6 +20,7 @@ pub struct CompartmentCache {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_step: f64,
+    midel_x: f64,
     /// центр полного объема из бд
     center_max: Option<Position>,
     /// полный объем из бд
@@ -51,6 +52,7 @@ impl CompartmentCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         level_step: f64,
+        midel_x: f64,
         center_max: Option<Position>,
         volume_max: Option<f64>,
         thread_pool: Arc<ThreadPool>,
@@ -61,6 +63,7 @@ impl CompartmentCache {
             heel_steps,
             trim_steps,
             level_step,
+            midel_x,
             center_max,
             volume_max,
             level_max: None,
@@ -114,6 +117,7 @@ impl CompartmentCache {
             self.shape.clone(),
             self.cache_dir.clone().join("distr"),
             level_step,
+            self.midel_x,
             bounds,
             Arc::clone(&self.thread_pool),
         )

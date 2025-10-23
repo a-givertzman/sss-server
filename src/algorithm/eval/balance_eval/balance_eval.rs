@@ -160,7 +160,8 @@ impl Eval<(), EvalResult> for BalanceEval {
                             )
                         })
                     })
-                    .collect();                           
+                    .collect(); 
+             //   println!("\n\n Balance displacement mass_sum: {} result\n", result.displacement_distr.iter().sum::<f64>()*1.025);  result.displacement_distr.iter().for_each(|b| print!("{:.3} ", b));                   
                 let result = BalanceCtx {
                     bulk,
                     liquid,

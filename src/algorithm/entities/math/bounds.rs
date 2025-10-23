@@ -152,39 +152,37 @@ impl Bounds {
         if bounds.len() != values.len() {
             return Err(error.err("bounds.len() != values.len()"));
         }
-        let q_v: Vec<_> = bounds.zip(values.iter()).collect();
-        let s_v = &self.values;
-        let (mut q_i, mut s_i) = (0, 0);
+        let query_data: Vec<_> = bounds.zip(values.iter()).collect();
+        let self_bounds = &self.values;
+        let (mut query_index, mut self_index) = (0, 0);
         let mut current_q_i = None;
         let mut result = Vec::new();
-        while s_i < s_v.len() {
+        while self_index < self_bounds.len() {
             result.push(0.);
-            while q_i < q_v.len() {
-                let q_b = q_v[q_i].0;
-                let v = q_v[q_i].1;
-                let s_b = &s_v[s_i];
-                let part_ratio = q_b.part_ratio(s_b).map_err(|err| {
+            while query_index < query_data.len() {
+                let (query_bound, query_value) = query_data[query_index];
+                let self_bound = &self_bounds[self_index];
+                let part_ratio = query_bound.part_ratio(self_bound).map_err(|err| {
                     error.pass_with(
-                        format!("q_b.part_ratio(s_b), query_b:{q_b}, self_b:{s_b}, current_i:{s_i}"),
+                        format!("q_b.part_ratio(s_b), query_bound:{query_bound}, self_bound:{self_bound}, current_i:{self_index}"),
                         err,
                     )
                 })?;
-                if current_q_i.is_some() && part_ratio == 0. {
+                if part_ratio > 0. {
+                    current_q_i = Some(query_index);
+                    result[self_index] += query_value * part_ratio;
+                } else if current_q_i.is_some() {
                     break;
                 } 
-                result[s_i] += v * part_ratio; 
-                if current_q_i.is_none() {
-                    if part_ratio < 1. {
-                        current_q_i = Some(q_i);
-                    }
-                }
-                q_i += 1;
+                /*println!("self: i:{self_index} b:({:.3} {:.3}) query: i:{query_index} b:({:.3} {:.3}) v:{:.3}  pr:{:.3} res:{:.3} cqi:{:?}", 
+                self_bound.start().unwrap_or(-10000.), self_bound.end().unwrap_or(-10000.), 
+                query_bound.start().unwrap_or(-10000.), query_bound.end().unwrap_or(-10000.), query_value,
+                part_ratio, result[self_index], current_q_i);*/
+                query_index += 1;
             }
-            if current_q_i.is_some() {
-                q_i = current_q_i.unwrap();
-            }
+            query_index = current_q_i.unwrap_or(0);
             current_q_i = None;
-            s_i += 1;
+            self_index += 1;
         }
         Ok(result)
     }

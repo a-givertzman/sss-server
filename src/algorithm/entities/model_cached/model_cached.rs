@@ -223,6 +223,7 @@ impl ModelCached {
                         conf.heel_steps.clone(),
                         conf.trim_steps.clone(),
                         conf.compartment_level_step,
+                        conf.model_center_coord.x(),
                         center_max,
                         volume_max,
                         Arc::clone(&thread_pool),
@@ -395,6 +396,7 @@ impl ModelCached {
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
+            self.model_center_coord.x(),
             bounds.clone(),
             Arc::clone(&self.thread_pool),
         );
@@ -439,7 +441,7 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-  /*      if let Err(error) = self.displacement.rebuild() {
+        if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
@@ -450,7 +452,7 @@ impl ModelCached {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-   */     for (name, compartment) in &mut self.damaged_compartments {
+        for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
@@ -503,6 +505,7 @@ impl ModelCached {
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
+            self.model_center_coord.x(),
             bounds.clone(),
             Arc::clone(&self.thread_pool),
         );
@@ -655,7 +658,6 @@ impl ModelCached {
                                 err,
                             )
                         })?;
-                        dbg!(compartment_result.level, trim, &volume_bounded); 
                     results_.push(LiquidResult::new(
                         //     cargo_id,
                         assigned_id,
@@ -777,7 +779,6 @@ impl ModelCached {
             .pop()
             .ok_or(error.err("no hull_result"))?
             .map_err(|err| error.pass_with("hull_result", err))?;
-      //  dbg!(&displacement_distr);
         let liquid = {
             let mut result = Vec::new();
             while !liquid_results.is_empty() {
@@ -977,7 +978,6 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
-         //   println!("{cg} {cb}");
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;

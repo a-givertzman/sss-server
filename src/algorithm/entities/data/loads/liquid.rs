@@ -32,8 +32,8 @@ pub struct LoadLiquidData {
    /// Признак использования максимального значения момента свободной поверхности жидкости
     pub use_moment_of_inertia_max: bool,  
     /// Момент свободной поверхности жидкости
-    pub long_moment_of_inertia_max: f64,
-    pub trans_moment_of_inertia_max: f64,
+    pub long_moment_of_inertia_max: Option<f64>,
+    pub trans_moment_of_inertia_max: Option<f64>,
 }
 //
 impl LoadLiquidData {

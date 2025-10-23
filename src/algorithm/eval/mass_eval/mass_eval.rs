@@ -109,7 +109,6 @@ impl Eval<(), EvalResult> for MassEval {
                             .iter()
                             .filter(|v| v.assigment_type == assigment_type)
                             .fold(0., |sum, v| sum + v.mass);
-                //        dbg!(assigment_type, gaseous, bulk, liquid, unit);
                         gaseous + bulk + liquid + unit
                     };
                     let ballast = mass(AssignmentType::Ballast);
@@ -144,20 +143,22 @@ impl Eval<(), EvalResult> for MassEval {
                 let result = {
                     // распределения масс по типам
                     let balance: BalanceCtx = ctx.read();
-                    let mut vec_hull = bounds
+                //    lightship_bounds.iter().for_each(|b| print!("b:({:.3} {:.3})", b.start().unwrap_or(-10000.), b.end().unwrap_or(-10000.)));
+                    let lightship_bounds = Bounds::new(lightship_bounds)
+                                .map_err(|err| error.pass_with("Bounds::new", err))?;
+                    let vec_hull = bounds
                         .intersect(
-                            &Bounds::new(lightship_bounds)
-                                .map_err(|err| error.pass_with("Bounds::new", err))?,
+                            &lightship_bounds,
                             &lightship_values,
                         )
                         .map_err(|err| error.pass_with("bounds.intersect", err))?;
-                    let mut vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
+                    let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
                     let mut vec_bulkhead = Vec::new();
                     let mut vec_ballast = Vec::new();
                     let mut vec_store = Vec::new();
                     let mut vec_cargo = Vec::new();
-                    let mut vec_icing = ContextRead::<IcingCtx>::read(&ctx).mass_values;
-                    let mut vec_wetting = ContextRead::<WettingCtx>::read(&ctx).mass_values;
+                    let vec_icing = ContextRead::<IcingCtx>::read(&ctx).mass_values;
+                    let vec_wetting = ContextRead::<WettingCtx>::read(&ctx).mass_values;
                     // unit грузы представляются в виде прямоугольника, заполненного массой равномерно
                     for b in bounds.iter() {
                         vec_bulkhead
@@ -213,19 +214,8 @@ impl Eval<(), EvalResult> for MassEval {
                         ),
                         &vec_wetting,
                     );
-                    vec_hull.push(vec_hull.iter().sum());
-                    vec_equipment.push(vec_equipment.iter().sum());
-                    vec_bulkhead.push(vec_bulkhead.iter().sum());
-                    vec_ballast.push(vec_ballast.iter().sum());
-                    vec_store.push(vec_store.iter().sum());
-                    vec_cargo.push(vec_cargo.iter().sum());
-                    vec_icing.push(vec_icing.iter().sum());
-                    vec_wetting.push(vec_wetting.iter().sum());
-                    let mut vec_sum = mass_values.clone();
-                    vec_sum.push(vec_sum.iter().sum());
-                    log::info!("\t Mass values:{:?} ", mass_values);
-                  //  dbg!("\t Mass values:{:?} ", mass_values);
                     let mut data = HashMap::new();
+                //    println!("\n\n Mass sum: {} result\n", mass_values.iter().sum::<f64>());  mass_values.iter().for_each(|b| print!("{:.3} ", b));
                     data.insert("value_mass_hull".to_owned(), vec_hull);
                     data.insert("value_mass_equipment".to_owned(), vec_equipment);
                     data.insert("value_mass_bulkhead".to_owned(), vec_bulkhead);
@@ -234,7 +224,7 @@ impl Eval<(), EvalResult> for MassEval {
                     data.insert("value_mass_cargo".to_owned(), vec_cargo);
                     data.insert("value_mass_icing".to_owned(), vec_icing);
                     data.insert("value_mass_wetting".to_owned(), vec_wetting);
-                    data.insert("value_mass_sum".to_owned(), vec_sum);
+                    data.insert("value_mass_sum".to_owned(), mass_values.clone());
                     MassCtx::new(data, mass_values)
                 };
                 ctx.write(result)

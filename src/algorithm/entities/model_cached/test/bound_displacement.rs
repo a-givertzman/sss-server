@@ -851,6 +851,7 @@ fn bound_displacement_sofia() {
         Arc::new(RwLock::new(displacement_shape)),
         cache_dir.clone().join("disp_bounded"),
         0.01,
+        model_center_coord.x(),
         bounds.clone(),
         thread_pool.into(),
     );

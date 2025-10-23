@@ -21,6 +21,7 @@ pub struct BoundDisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
     level_step: f64,
+    midel_x: f64,
     bounds: Bounds,
     ///
     /// Model representation used for cache calculation.
@@ -42,6 +43,7 @@ impl BoundDisplacementCache {
         shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: PathBuf,
         level_step: f64,
+        midel_x: f64,
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
@@ -50,6 +52,7 @@ impl BoundDisplacementCache {
         Self {
             shape,
             level_step,
+            midel_x,
             bounds,
             caches: OnceLock::new(),
             cache_path,
@@ -121,7 +124,7 @@ impl BoundDisplacementCache {
                 } else {
                     None
                 };
-            let center = bound.center().ok_or(error.err("bound.center()"))?;
+            let center = bound.center().ok_or(error.err("bound.center()"))? - self.midel_x;
             caches.push((center, cache));
         }
         self.caches
@@ -173,7 +176,7 @@ impl BoundDisplacementCache {
             } else {
                 None
             };
-            caches.push((dx, cache));
+            caches.push((dx - self.midel_x, cache));
         }
         if let Err(error) = self.caches.set(caches).map_err(|_| error.err("caches.set")) {
             log::error!("{}", error);

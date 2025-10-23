@@ -42,11 +42,19 @@ impl Eval<(), EvalResult> for BendingMomentEval {
                     .ok_or(error.err("initial error: no bounds!"))?;
                 let shear_force: ShearForceCtx = ctx.read();
                 let mut result: Vec<f64> = shear_force.values.integral_sum();
+           //     println!("\n\n BendingMoment integral_sum\n");   
+           //     result.iter().for_each(|b| print!("{:.3} ", b));
+
+            //    println!("\n\n BendingMoment length\n");  
+
                 result = result
                     .into_iter()
                     .zip(bounds.iter())
-                    .map(|(v, b)| v * b.length().unwrap_or(0.) / 2.)
-                    .collect();
+                    .map(|(v, b)| {
+                 //       print!("{:.3} ", b.length().unwrap_or(0.) / 2.);
+                        v * b.length().unwrap_or(0.) / 2.
+                    }).collect();
+              //  println!("\n\n BendingMoment result\n");   result.iter().for_each(|b| print!("{:.3} ", b));
                 ctx.write(BendingMomentCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

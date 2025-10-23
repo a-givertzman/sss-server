@@ -15,6 +15,7 @@ use algorithm::eval::*;
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use env_logger::Logger;
 use infrostructure::api::client::api_client::ApiClient;
 use kernel::{
     eval::Eval,
@@ -35,6 +36,14 @@ use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let _log2 = log2::open("log.txt")
+        .level(Logger::from_default_env().filter().as_str())
+        .size(5 * 1024 * 1024)
+        .rotate(10)
+        .tee(false)
+        .module(true)
+        .start();
+
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
    /* 
     let physical_frames = [
@@ -244,7 +253,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
         128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
     ];
-    let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
+  //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
+    let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
     let api_client = Arc::new(ApiClient::new(
         &dbg,
         conf.api.address.database.clone(),
@@ -399,7 +409,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .eval(());*/
-  //  dbg!(ctx);
+
+   // let initial: &InitialCtx = ctx.as_ref();
+    ctx.unwrap();
     
     Ok(())
 }
