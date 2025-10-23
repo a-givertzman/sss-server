@@ -68,7 +68,7 @@ impl DisplacementShape {
         )
     }
     /// Init shape, load geometry
-    pub fn init(&mut self) -> Result<(), Error> {
+ /*   pub fn init(&mut self) -> Result<(), Error> {
         if self.mesh.is_none() {
             let error = Error::new(&self.dbg, "init");
             let mut mesh = load_stl(&self.path.clone().ok_or(error.err("empty path"))?)
@@ -81,7 +81,7 @@ impl DisplacementShape {
             self.mesh = Some(mesh);
         }
         Ok(())
-    }
+    }*/
     /// часть меша, пападающая в bound
     pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
         let error = Error::new(&self.dbg, "split");

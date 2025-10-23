@@ -2,7 +2,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            BoundDisplacementCache, DisplacementShape, FloatingPositionResult, model_cached,
+            BoundDisplacementCache, DisplacementShape, FloatingPositionResult, Shape, model_cached
         },
     },
     kernel::types::{Arc, RwLock},
