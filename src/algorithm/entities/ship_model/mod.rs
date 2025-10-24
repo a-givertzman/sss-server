@@ -7,7 +7,36 @@ use crate::algorithm::entities::{Bounds, Moment, Position};
 /// Структура для ввода данных расчета баланса судна.
 /// Содержит массу судна, грузов и положение зерновых перегородок
 #[derive(Debug, Clone)]
-pub struct BalanceQuery {
+pub struct BalanceStrengthQuery {
+    ///
+    pub trim: f64,
+    pub draught: f64,
+    /// Плотность забортной воды
+    pub water_density: f64,
+    /// Паспределение массы судна порожнем и грузов размещенных на судне:
+    /// генерального груза (unitCargoAssignment), контейнеров (containerCargoAssignment),
+    /// массы обледенения и намокания;
+    pub mass_const: Vec<f64>,
+    /// навалочный груз
+    pub bulk: Vec<BulkData>,
+    /// жидкий груз
+    pub liquid: Vec<LiquidData>,
+    /// газообразный груз
+    pub gaseous: Vec<GaseousData>,
+    /// Положение зерновых перегородок, координата по х
+    pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
+    //    /// номера поврежденных помещений, TODO - только для аварийного расчета
+    //    pub damaged_compartment: Vec<String>,
+    /// точность расчета
+    pub epsilon: f64,
+    /// шпации разбиения
+    pub bounds: Bounds,
+}
+///
+/// Структура для ввода данных расчета баланса судна.
+/// Содержит массу судна, грузов и положение зерновых перегородок
+#[derive(Debug, Clone)]
+pub struct BalanceStabilityQuery {
     /// Плотность забортной воды
     pub water_density: f64,
     /// масса судна порожнем и грузов размещенных на судне:
@@ -20,16 +49,12 @@ pub struct BalanceQuery {
     pub bulk: Vec<BulkData>,
     /// жидкий груз
     pub liquid: Vec<LiquidData>,
-    /// газообразный груз
-    pub gaseous: Vec<GaseousData>,
     /// Положение зерновых перегородок, координата по х
-    pub grain_bulkhead: Vec<f64>,
+    pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
     //    /// номера поврежденных помещений, TODO - только для аварийного расчета
     //    pub damaged_compartment: Vec<String>,
     /// точность расчета
     pub epsilon: f64,
-    /// шпации разбиения
-    pub bounds: Bounds,
 }
 ///
 /// Груз, для которого центр массы и распределение зависит от
@@ -76,10 +101,6 @@ pub struct BalanceStrengthResult {
     pub displacement_distr: Vec<f64>,
     /// Распределение массы смещаемых грузов по шпациям
     pub loads: Vec<DistrResult>,
-  //  /// Данные сыпучих грузов
- //   pub bulk: Vec<BulkResult>,
- //   /// Данные жидких грузов
- //   pub liquid: Vec<LiquidResult>,
 }
 ///
 /// Структура для данных результата расчета баланса судна для остойчивости.

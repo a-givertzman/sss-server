@@ -2,7 +2,7 @@ use super::loads_ctx::LoadsCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::ship_model::{BulkData, GaseousData, LiquidData};
-use crate::algorithm::entities::{Moment, Position};
+use crate::algorithm::entities::{Bound, Bounds, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
@@ -38,6 +38,10 @@ impl Eval<(), EvalResult> for LoadsEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let bounds = initial
+                    .bounds
+                    .clone()
+                    .ok_or(error.err("initial error: no bounds!"))?;
                 let shift_const = if let Some(ship_parameters) = initial.ship_parameters.as_ref() {
                     let const_mass_shift_x = *ship_parameters
                         .get("LCG from middle")
@@ -52,10 +56,22 @@ impl Eval<(), EvalResult> for LoadsEval {
                 } else {
                     return Err(error.err("Read const_mass_shift_z error: no ship_parameters!"));
                 };
-                let mass_const = match initial.load_constant.clone() {
-                    Some(data) => data.data().iter().map(|v| v.mass).sum(),
-                    None => return Err(error.err("Read load_constant error: no data!")),
-                };
+                let load_constant = initial
+                    .load_constant
+                    .clone()
+                    .ok_or(error.err("Read load_constant error: no data!"))?
+                    .data();
+                let (lightship_values, lightship_bounds): (Vec<_>, Vec<_>) = load_constant
+                    .into_iter()
+                    .map(|v| (v.mass, Bound::Value(v.bound_x1, v.bound_x2)))
+                    .unzip();
+                let mass_const = lightship_values.iter().sum();
+                let lightship_bounds = Bounds::new(lightship_bounds)
+                    .map_err(|err| error.pass_with("Bounds::new", err))?;
+                let vec_hull = bounds
+                    .intersect(&lightship_bounds, &lightship_values)
+                    .map_err(|err| error.pass_with("bounds.intersect", err))?;
+                let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
                 let bulk: Vec<_> = initial
                     .bulk
                     .clone()
@@ -131,6 +147,15 @@ impl Eval<(), EvalResult> for LoadsEval {
                     }
                     None => return Err(error.err("Read gaseous error: no data!")),
                 };
+
+
+                vec_hull.add_vec()
+                let add = |v1: &Vec<f64>, v2: &Vec<f64>| -> Vec<f64> {
+                        v1.iter().zip(v2.iter()).map(|(v1, v2)| v1 + v2).collect()
+                    };
+
+
+
                 let result = LoadsCtx {
                     mass_const,
                     mass_unit,

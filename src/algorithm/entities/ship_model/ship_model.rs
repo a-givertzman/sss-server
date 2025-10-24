@@ -11,9 +11,7 @@ use crate::algorithm::entities::data::strength;
 use crate::algorithm::entities::model_cached;
 use crate::algorithm::entities::model_cached::AreaShape;
 use crate::algorithm::entities::model_cached::ModelCached;
-use crate::algorithm::entities::ship_model::BalanceQuery;
-use crate::algorithm::entities::ship_model::BalanceResult;
-use crate::algorithm::entities::ship_model::BoundArea;
+use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::BalanceCtx;
@@ -200,12 +198,12 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceResult, Error> {
+    pub fn compute_stability(&self, query: BalanceStabilityQuery) -> Result<BalanceStabilityResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
         let mut result = self
             .model_cached
-            .balance(query)
-            .map_err(|err| error.pass_with("model_cached.balance", err))?;
+            .balance_stability(query)
+            .map_err(|err| error.pass(err))?;
         let grain_moment = self
             .grain_moment
             .as_ref()
@@ -219,6 +217,14 @@ impl ShipModel {
             };
         });
         Ok(result)
+    }
+    ///
+    /// TODO: Doc
+    pub fn compute_strength(&self, query: BalanceStrengthQuery) -> Result<BalanceStrengthResult, Error> {
+        self
+            .model_cached
+            .balance_strength(query)
+            .map_err(|err| Error::new(&self.dbg, "compute_strength").pass(err))
     }
 }
 //

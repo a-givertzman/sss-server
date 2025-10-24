@@ -8,7 +8,7 @@ use crate::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{
             Moment,
-            ship_model::{BalanceQuery, BalanceResult, ship_model::ShipModel},
+            ship_model::{BalanceQuery, BalanceStabilityQuery, BalanceStabilityResult, BalanceStrengthQuery, BalanceStrengthResult, ship_model::ShipModel},
         },
         eval::{IcingCtx, LoadsCtx, WettingCtx, parameters::ParameterID},
     },
@@ -88,7 +88,19 @@ impl Eval<(), EvalResult> for BalanceEval {
               //  dbg!(loads.shift_const, loads.shift_unit, loads.shift_gaseous, icing.mass_shift_x, wetting.mass_shift);
               //  dbg!(loads.mass_const, loads.mass_unit, loads.mass_gaseous, icing.mass, wetting.mass);
                 // Структура для передачи в модель
-                let balance_query = BalanceQuery {
+                let strength_query = BalanceStrengthQuery {
+                    water_density: voyage.density,
+                    mass_const,
+                    moment_const,
+                    bulk: loads.bulk.clone(),
+                    liquid: loads.liquid.clone(),
+                    grain_bulkhead: loads.grain_bulkhead,
+                    gaseous: loads.gaseous,
+                    //    damaged_compartment: loads.damaged_compartment, //TODO
+                    bounds: bounds.clone(),
+                    epsilon: 0.001,
+                };
+                let stability_query = BalanceStabilityQuery {
                     water_density: voyage.density,
                     mass_const,
                     moment_const,
@@ -101,22 +113,27 @@ impl Eval<(), EvalResult> for BalanceEval {
                     epsilon: 0.001,
                 };
                 // Расчет баланса в модели
-                let result: BalanceResult = self
+                let strength_result: BalanceStrengthResult = self
                     .model
                     .read()
-                    .compute_balance(balance_query)
+                    .compute_strength(strength_query)
+                    .map_err(|err| error.pass_with("model.compute_balance", err))?;
+                let stability_result: BalanceStabilityResult = self
+                    .model
+                    .read()
+                    .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
             //    dbg!(result.roll, result.trim_degree, result.draught_mean);
-                ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
-                ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
-                ctx.write_params(ParameterID::DraughtStern, result.draught_stern);
-                ctx.write_params(ParameterID::DraughtMean, result.draught_mean);
-                ctx.write_params(ParameterID::TrimDeg, result.trim_degree);
-                ctx.write_params(ParameterID::TrimMeter, result.trim_meter);
-                ctx.write_params(ParameterID::Roll, result.roll);
-                ctx.write_params(ParameterID::MetacentricTransRad, result.rad_trans);
-                ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);
-                let bulk = result
+                ctx.write_params(ParameterID::DraughtMid, stability_result.draught_mid);
+                ctx.write_params(ParameterID::DraughtBow, stability_result.draught_bow);
+                ctx.write_params(ParameterID::DraughtStern, stability_result.draught_stern);
+                ctx.write_params(ParameterID::DraughtMean, stability_result.draught_mean);
+                ctx.write_params(ParameterID::TrimDeg, stability_result.trim_degree);
+                ctx.write_params(ParameterID::TrimMeter, stability_result.trim_meter);
+                ctx.write_params(ParameterID::Roll, stability_result.roll);
+                ctx.write_params(ParameterID::MetacentricTransRad, stability_result.rad_trans);
+                ctx.write_params(ParameterID::MetacentricLongRad, stability_result.rad_long);
+                let bulk = stability_result
                     .bulk
                     .iter()
                     .filter_map(|res| {
@@ -131,7 +148,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         })
                     })
                     .collect();
-                let liquid = result
+                let liquid = stability_result
                     .liquid
                     .iter()
                     .filter_map(|res| {
@@ -148,7 +165,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                         })
                     })
                     .collect();    
-                let gaseous = result
+                let gaseous = stability_result
                     .gaseous
                     .iter()
                     .filter_map(|res| {

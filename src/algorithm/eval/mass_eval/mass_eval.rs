@@ -58,16 +58,20 @@ impl Eval<(), EvalResult> for MassEval {
                 let (unit, bulkhead): (Vec<_>, Vec<_>) = unit
                     .into_iter()
                     .partition(|v| v.cargo_type != UnitCargoType::GrainBulkhead);
-                let (lightship_values, lightship_bounds): (Vec<_>, Vec<_>) = initial
+        /*        let (lightship_values, lightship_bounds): (Vec<_>, Vec<_>) = initial
                     .load_constant
                     .clone()
                     .ok_or(error.err("Read lightship error: no data!"))?
                     .data()
                     .into_iter()
                     .map(|v| (v.mass, Bound::Value(v.bound_x1, v.bound_x2)))
-                    .unzip();
+                    .unzip();*/
                 {
                     // суммарные массы по типам
+                    let lightship = match initial.load_constant.clone() {
+                        Some(data) => data.data().iter().map(|v| v.mass).sum(),
+                        None => return Err(error.err("Read load_constant error: no data!")),
+                    };
                     let gaseous = initial
                         .gaseous
                         .as_ref()
@@ -116,7 +120,6 @@ impl Eval<(), EvalResult> for MassEval {
                     let cargo = mass(AssignmentType::CargoLoad);
                     let bulkhead = bulkhead.iter().fold(0., |sum, v| sum + v.mass);
                     let deadweight = ballast + stores + cargo + bulkhead; // Суммарная масса переменного груза
-                    let lightship = lightship_values.iter().fold(0., |sum, v| sum + v);
                     let icing = ContextRead::<IcingCtx>::read(&ctx).mass;
                     let wetting = ContextRead::<WettingCtx>::read(&ctx).mass;
                     let mass_sum = deadweight + lightship + wetting + icing;
@@ -144,7 +147,7 @@ impl Eval<(), EvalResult> for MassEval {
                     // распределения масс по типам
                     let balance: BalanceCtx = ctx.read();
                 //    lightship_bounds.iter().for_each(|b| print!("b:({:.3} {:.3})", b.start().unwrap_or(-10000.), b.end().unwrap_or(-10000.)));
-                    let lightship_bounds = Bounds::new(lightship_bounds)
+        /*            let lightship_bounds = Bounds::new(lightship_bounds)
                                 .map_err(|err| error.pass_with("Bounds::new", err))?;
                     let vec_hull = bounds
                         .intersect(
@@ -152,7 +155,7 @@ impl Eval<(), EvalResult> for MassEval {
                             &lightship_values,
                         )
                         .map_err(|err| error.pass_with("bounds.intersect", err))?;
-                    let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
+      */     //         let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
                     let mut vec_bulkhead = Vec::new();
                     let mut vec_ballast = Vec::new();
                     let mut vec_store = Vec::new();
@@ -179,9 +182,6 @@ impl Eval<(), EvalResult> for MassEval {
                                 .fold(0., |s, v| s + v.mass(b).unwrap_or(0.)),
                         );
                     }
-                    let add = |v1: &Vec<f64>, v2: &Vec<f64>| -> Vec<f64> {
-                        v1.iter().zip(v2.iter()).map(|(v1, v2)| v1 + v2).collect()
-                    };
                     let mut process_by_type =
                         |values: &Vec<f64>, assigment_type: AssignmentType| match assigment_type {
                             AssignmentType::Ballast => vec_ballast = add(&vec_ballast, &values),
@@ -198,6 +198,10 @@ impl Eval<(), EvalResult> for MassEval {
                     for v in balance.liquid {
                         process_by_type(&v.mass_values, v.assigment_type);
                     }
+
+                    let mass_values = vec_hull.add_vec()
+
+
                     let mass_values = add(
                         &add(
                             &add(
