@@ -56,11 +56,12 @@ impl Eval<(), EvalResult> for TotalForceEval {
                 }
                 let mut result = mass_values.clone();
                 volume_values.mul_single(water_density);
-                let volume_sum: f64 = volume_values.iter().sum();
+           /*     let volume_sum: f64 = volume_values.iter().sum();
                 let mass_sum: f64 = mass_values.iter().sum();
-               // let multipler = if volume_sum > 0. { mass_sum/volume_sum } else { 1. };
-              //  volume_values.mul_single(multipler);
-                result.sub_vec(&volume_values)?;
+                let multipler = if volume_sum > 0. { mass_sum/volume_sum } else { 1. };
+                dbg!(volume_sum, mass_sum, multipler);
+                volume_values.mul_single(multipler);
+            */    result.sub_vec(&volume_values)?;
                 result.mul_single(gravity_g);
                 log::trace!(
                     "\t TotalForce mass:{:?} volume:{:?} result:{:?}, mass_sum:{}, volume_mass_sum:{}",

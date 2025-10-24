@@ -54,7 +54,7 @@ impl Eval<(), EvalResult> for BendingMomentEval {
                  //       print!("{:.3} ", b.length().unwrap_or(0.) / 2.);
                         v * b.length().unwrap_or(0.) / 2.
                     }).collect();
-          //      println!("\n\n BendingMoment result\n");   result.iter().for_each(|b| print!("{:.3} ", b));
+                println!("\n\n BendingMoment result\n");   result.iter().for_each(|b| print!("{:.3} ", b));
                 ctx.write(BendingMomentCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

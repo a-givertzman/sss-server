@@ -106,6 +106,7 @@ impl Eval<(), EvalResult> for BalanceEval {
                     .read()
                     .compute_balance(balance_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
+            //    dbg!(result.roll, result.trim_degree, result.draught_mean);
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
                 ctx.write_params(ParameterID::DraughtStern, result.draught_stern);

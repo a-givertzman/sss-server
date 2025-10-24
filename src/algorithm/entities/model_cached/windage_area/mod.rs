@@ -83,7 +83,6 @@ impl WindageArea {
                 .0;
             let dx = (x_max - x_min) / (2. * ((area_data.len() - 1) as f64));
             let (min, max, n) = (x_min - dx, x_max + dx, area_data.len());
-            dbg!(dx, min, max, n);
             Bounds::from_min_max(min, max, n).map_err(|err| {
                 error.pass_with(
                     format!("Bounds::from_min_max min:{min}, max:{max}, n:{n}"),
