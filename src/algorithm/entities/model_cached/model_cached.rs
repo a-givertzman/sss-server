@@ -547,9 +547,9 @@ impl ModelCached {
         })
     }
     //
-    pub fn balance(&self, query: BalanceQuery) -> Result<BalanceResult, Error> {
-        //   let time = std::time::Instant::now();
-        let error = Error::new(&self.dbg, "balance");
+    pub fn balance_strength(&self, query: BalanceQuery) -> Result<BalanceStrengthResult, Error> {
+    //   let time = std::time::Instant::now();
+        let error = Error::new(&self.dbg, "balance_strength");
         let FloatingPositionResult {
             heel,
             trim,
@@ -806,7 +806,7 @@ impl ModelCached {
             }
             result
         };
-        Ok(BalanceResult {
+        Ok(BalanceStrengthResult {
             roll: heel,
             trim_degree,
             trim_meter,
@@ -828,6 +828,277 @@ impl ModelCached {
             rad_trans,
         })
     }
+ //
+    pub fn balance_stability(&self, query: BalanceQuery) -> Result<BalanceStabilityResult, Error> {
+        //   let time = std::time::Instant::now();
+        let error = Error::new(&self.dbg, "balance_stability");
+        let FloatingPositionResult {
+            heel,
+            trim,
+            draught_mid,
+            precision,
+            displacement,
+            displacement_center,
+            area_wl,
+            area_wl_center,
+            length_wl,
+            breadth_wl,
+            rad_long,
+            rad_trans,
+        } = self
+            .floating_position(FloatingPositionQuery {
+                water_density: query.water_density,
+                mass_const: query.mass_const,
+                moment_const: query.moment_const,
+                bulk: query.bulk.clone(),
+                liquid: query.liquid.clone(),
+                grain_bulkhead: query.grain_bulkhead.clone(),
+                damaged_compartment: Vec::new(),
+                epsilon: query.epsilon,
+            })
+            .map_err(|err| error.pass_with("self.floating_position", err))?;
+        // println!("steps:{_i} time:{:?}", time.elapsed());
+        let (draught_bow, draught_stern, draught_mean) = Draught::new(
+            self.model_center_coord.x(),
+            self.ship_length_lbp,
+            draught_mid,
+            area_wl_center.x(),
+            area_wl_center.y(),
+            heel,
+            trim,
+        )
+        .calculate();
+        let trim_degree = trim;
+        let trim_meter = trim.to_radians().tan() * self.ship_length_lbp;
+        let displacement_bounded = self
+            .displacement_bounded
+            .get(&query.bounds.len_qnt())
+            .ok_or(error.err("no displacement_bounded"))?
+            .clone();
+        let error = Error::new(&self.dbg, "reload_shapes");
+        let mut errors = Vec::new();
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let hull_results = Arc::new(Stack::new());
+        let liquid_results = Arc::new(Stack::new());
+        let bulk_results = Arc::new(Stack::new());
+        let gaseous_results = Arc::new(Stack::new());
+        let results_ = hull_results.clone();
+        let scheduler = self.thread_pool.scheduler();
+        let handle = scheduler
+            .spawn(move || {
+                results_.push(displacement_bounded.read().get(draught_mid, trim));
+                Ok(())
+            })
+            .map_err(|err| {
+                error.pass_with(
+                    format!("scheduler.spawn displacement_bounded"),
+                    err.to_string(),
+                )
+            });
+        match handle {
+            Ok(task) => tasks.push(task),
+            Err(err) => errors.push(err),
+        };
+        //  dbg!(&displacement_distr);
+        let compartments_bounded = self
+            .compartments_bounded
+            .get(&query.bounds.len_qnt())
+            .ok_or(error.err("no compartments_bounded"))?;
+        for cargo in query.liquid {
+            assert!(cargo.mass > 0.);
+            let assigned_id = cargo.assigned_id;
+            let space_id = cargo.space_id.clone();
+            let error_ = error.err(format!("compartment_{space_id} liquid work"));
+            let density = cargo.mass / cargo.volume;
+            let compartment = self
+                .compartments
+                .get(&space_id)
+                .ok_or(error.err(format!("no compartment:{space_id}")))?
+                .clone();
+            let compartments_bounded = compartments_bounded.clone();
+            let trim = trim;
+            let volume = cargo.volume;
+            let epsilon = query.epsilon;
+            let results_ = liquid_results.clone();
+            let handle = scheduler
+                .spawn(move || {
+                    let compartment_result = compartment
+                        .read()
+                        .get(0., trim, volume, epsilon)
+                        .map_err(|err| error_.pass_with("compartment.get", err))?;
+                    let compartment_bounded = compartments_bounded
+                        .get(&space_id)
+                        .ok_or(
+                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                        )?
+                        .read();
+                    let volume_bounded = compartment_bounded
+                        .get(compartment_result.level, trim)
+                        .map_err(|err| {
+                            error_.pass_with(
+                                format!("compartment_bounded.get, space_id:{space_id}"),
+                                err,
+                            )
+                        })?;
+                    results_.push(LiquidResult::new(
+                        //     cargo_id,
+                        assigned_id,
+                        //     compartment_result.volume_center,
+                        compartment_result.inertia_long_y,
+                        compartment_result.inertia_trans_x,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => errors.push(err),
+            };
+        }
+        for cargo in query.bulk {
+            assert!(cargo.mass > 0.);
+            let assigned_id = cargo.assigned_id;
+            let space_id = cargo.space_id.clone();
+            let error_ = error.err(format!("compartment_{space_id} bulk work"));
+            let density = cargo.mass / cargo.volume;
+            let compartment = self
+                .compartments
+                .get(&space_id)
+                .ok_or(error.err(format!("no compartment:{space_id}")))?
+                .clone();
+            let compartments_bounded = compartments_bounded.clone();
+            let trim = trim;
+            let volume = cargo.volume;
+            let epsilon = query.epsilon;
+            let results_ = bulk_results.clone();
+            let handle = scheduler
+                .spawn(move || {
+                    let compartment_result = compartment
+                        .read()
+                        .get(0., trim, volume, epsilon)
+                        .map_err(|err| error_.pass_with("compartment.get", err))?;
+                    let compartment_bounded = compartments_bounded
+                        .get(&space_id)
+                        .ok_or(
+                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                        )?
+                        .read();
+                    let volume_bounded = compartment_bounded
+                        .get(compartment_result.level, trim)
+                        .map_err(|err| {
+                            error_.pass_with(
+                                format!("compartment_bounded.get, space_id:{space_id}"),
+                                err,
+                            )
+                        })?;
+                    results_.push(BulkResult::new(
+                        //       cargo_id,
+                        space_id,
+                        assigned_id,
+                        compartment_result.level,
+                        //       compartment_result.volume_center,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => errors.push(err),
+            };
+        }
+        for cargo in query.gaseous {
+            assert!(cargo.mass > 0.);
+            let assigned_id = cargo.assigned_id;
+            let space_id = cargo.space_id.clone();
+            let error_ = error.err(format!("compartment_{space_id} gaseous work"));
+            let compartments_bounded = compartments_bounded.clone();
+            let results_ = gaseous_results.clone();
+            let handle = scheduler
+                .spawn(move || {
+                    let compartment_bounded = compartments_bounded
+                        .get(&space_id)
+                        .ok_or(
+                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                        )?
+                        .read();
+                    let volume_bounded = compartment_bounded.get_max().map_err(|err| {
+                        error_
+                            .pass_with(format!("volume_bounded get_max, space_id:{space_id}"), err)
+                    })?;
+                    let volume: f64 = volume_bounded.iter().sum();
+                    let density = if volume > 0. { cargo.mass / volume } else { 0. };
+                    results_.push(GaseousResult::new(
+                        assigned_id,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => errors.push(err),
+            };
+        }
+        for task in tasks {
+            log::info!("{}.balance | join thread {}", &self.dbg, task.name());
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                errors.push(error);
+            }
+        }
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_caches",
+                errors
+                    .iter()
+                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
+            ));
+        }
+        let displacement_distr = hull_results
+            .pop()
+            .ok_or(error.err("no hull_result"))?
+            .map_err(|err| error.pass_with("hull_result", err))?;
+        let liquid = {
+            let mut result = Vec::new();
+            while !liquid_results.is_empty() {
+                if let Some(data) = liquid_results.pop() {
+                    result.push(data);
+                }
+            }
+            result
+        };
+        let bulk = {
+            let mut result = Vec::new();
+            while !bulk_results.is_empty() {
+                if let Some(data) = bulk_results.pop() {
+                    result.push(data);
+                }
+            }
+            result
+        };
+        Ok(BalanceStabilityResult {
+            roll: heel,
+            trim_degree,
+            trim_meter,
+            draught_mid,
+            draught_bow,
+            draught_stern,
+            draught_mean,
+            displacement,
+            displacement_center,
+            bulk,
+            liquid,
+            area_wl,
+            area_wl_center,
+            length_wl,
+            breadth_wl,
+            rad_long,
+            rad_trans,
+        })
+    }    
     /// Расчет равновесного положения
     pub(crate) fn floating_position(
         &self,

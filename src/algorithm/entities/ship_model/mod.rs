@@ -68,10 +68,24 @@ pub struct BoundArea {
     pub h: Vec<f64>,
 }
 ///
-/// Структура для данных результата расчета баланса судна.
+/// Структура для данных результата расчета баланса судна для прочности.
 /// Содержит массу судна, грузов и положение зерновых перегородок
 #[derive(Debug, Clone)]
-pub struct BalanceResult {
+pub struct BalanceStrengthResult {
+    /// распределение водоизмещения по шпациям
+    pub displacement_distr: Vec<f64>,
+    /// Распределение массы смещаемых грузов по шпациям
+    pub loads: Vec<DistrResult>,
+  //  /// Данные сыпучих грузов
+ //   pub bulk: Vec<BulkResult>,
+ //   /// Данные жидких грузов
+ //   pub liquid: Vec<LiquidResult>,
+}
+///
+/// Структура для данных результата расчета баланса судна для остойчивости.
+/// Содержит массу судна, грузов и положение зерновых перегородок
+#[derive(Debug, Clone)]
+pub struct BalanceStabilityResult {
     /// Крен, градусы
     pub roll: f64,
     /// Дифферент, градусы
@@ -90,10 +104,6 @@ pub struct BalanceResult {
     pub displacement: f64,
     /// Смещение центра объемного водоизмещения, м
     pub displacement_center: Position,
-    /// распределение водоизмещения по шпациям
-    pub displacement_distr: Vec<f64>,
-    /// Данные газообразных грузов
-    pub gaseous: Vec<GaseousResult>,
     /// Данные сыпучих грузов
     pub bulk: Vec<BulkResult>,
     /// Данные жидких грузов
@@ -136,8 +146,6 @@ pub struct LiquidResult {
     pub long_moment_of_inertia: f64,
     /// поперечный момент свободной поверхности жидкости
     pub trans_moment_of_inertia: f64,
-    /// Распределение массы по шпациям
-    pub mass_values: Vec<f64>,
 }
 ///
 impl LiquidResult {
@@ -147,14 +155,12 @@ impl LiquidResult {
    //     mass_shift: Position,
         long_moment_of_inertia: f64,
         trans_moment_of_inertia: f64,
-        mass_values: Vec<f64>,
     ) -> Self {
         Self {
             assigned_id,
     //        mass_shift,
             long_moment_of_inertia,
             trans_moment_of_inertia,
-            mass_values,
         }
     }
 }
@@ -171,8 +177,6 @@ pub struct BulkResult {
     pub level: f64,  // TODO - убрать после переноса расчета момента в модель
     /// Объемный кренящий момент
     pub moment: f64, 
-    /// Распределение массы по шпациям
-    pub mass_values: Vec<f64>,
 }
 ///
 impl BulkResult {
@@ -182,8 +186,6 @@ impl BulkResult {
         assigned_id: usize,
     //    mass_shift: Position,
         level: f64,
-    //    moment: f64,
-        mass_values: Vec<f64>,
     ) -> Self {
         Self {
             space_id,
@@ -191,21 +193,20 @@ impl BulkResult {
       //      mass_shift,
             level,
             moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
-            mass_values,
         }
     }
 }
 ///
 /// TODO: Type doc here
 #[derive(Debug, Clone)]
-pub struct GaseousResult {
+pub struct DistrResult {
     /// ID assigned
     pub assigned_id: usize,
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,
 }
 ///
-impl GaseousResult {
+impl DistrResult {
     ///
     pub fn new(assigned_id: usize, mass_values: Vec<f64>) -> Self {
         Self {
@@ -214,3 +215,4 @@ impl GaseousResult {
         }
     }
 }
+
