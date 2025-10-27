@@ -1,35 +1,34 @@
-use std::collections::HashMap;
-
-use super::mass_ctx::MassCtx;
+use super::ctx::DynamicMassCtx;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,
         entities::{
-            Bound, Bounds,
+            AddVec, Bound, Bounds,
             data::loads::{AssignmentType, UnitCargoType},
         },
-        eval::{BalanceCtx, IcingCtx, WettingCtx, parameters::ParameterID},
+        eval::{IcingCtx, StaticMassCtx, StrengthBalanceCtx, WettingCtx, parameters::ParameterID},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextParamsWrite, ContextRead, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
+use std::collections::HashMap;
 
 ///
 /// Нагрузка на корпус судна: конструкции, груз, экипаж и т.п.
-pub struct MassEval {
+pub struct DynamicMassEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
-impl MassEval {
+impl DynamicMassEval {
     ///
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
-        let dbg = Dbg::new(parent, "MassEval");
+        let dbg = Dbg::new(parent, "DynamicMassEval");
         Self {
             dbg,
             ctx: Box::new(ctx),
@@ -38,17 +37,16 @@ impl MassEval {
     //
     //
 }
-impl Eval<(), EvalResult> for MassEval {
+impl Eval<(), EvalResult> for DynamicMassEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
-                let initial: &InitialCtx = ctx.read_ref();
-                let bounds = initial
+                let bounds = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                     .bounds
                     .clone()
                     .ok_or(error.err("initial error: no bounds!"))?;
-                let unit = initial
+                let unit = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                     .unit
                     .clone()
                     .ok_or(error.err("Read unit error: no data!"))?
@@ -58,21 +56,16 @@ impl Eval<(), EvalResult> for MassEval {
                 let (unit, bulkhead): (Vec<_>, Vec<_>) = unit
                     .into_iter()
                     .partition(|v| v.cargo_type != UnitCargoType::GrainBulkhead);
-        /*        let (lightship_values, lightship_bounds): (Vec<_>, Vec<_>) = initial
-                    .load_constant
-                    .clone()
-                    .ok_or(error.err("Read lightship error: no data!"))?
-                    .data()
-                    .into_iter()
-                    .map(|v| (v.mass, Bound::Value(v.bound_x1, v.bound_x2)))
-                    .unzip();*/
                 {
                     // суммарные массы по типам
-                    let lightship = match initial.load_constant.clone() {
+                    let lightship = match <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .load_constant
+                        .clone()
+                    {
                         Some(data) => data.data().iter().map(|v| v.mass).sum(),
                         None => return Err(error.err("Read load_constant error: no data!")),
                     };
-                    let gaseous = initial
+                    let gaseous = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .gaseous
                         .as_ref()
                         .ok_or(error.err("Read gaseous error: no data!"))?
@@ -80,7 +73,7 @@ impl Eval<(), EvalResult> for MassEval {
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
-                    let bulk = initial
+                    let bulk = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .bulk
                         .as_ref()
                         .ok_or(error.err("Read bulk error: no data!"))?
@@ -88,7 +81,7 @@ impl Eval<(), EvalResult> for MassEval {
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
-                    let liquid = initial
+                    let liquid = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .liquid
                         .as_ref()
                         .ok_or(error.err("Read liquid error: no data!"))?
@@ -137,7 +130,7 @@ impl Eval<(), EvalResult> for MassEval {
                         cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
                         icing:{icing}, wetting:{wetting} sum:{mass_sum}"
                     );
-               /*     println!(
+                    /*     println!(
                         "\t Mass ballast:{ballast}, stores:{stores}, bulkhead:{bulkhead}
                         cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
                         icing:{icing}, wetting:{wetting} sum:{mass_sum}"
@@ -145,17 +138,21 @@ impl Eval<(), EvalResult> for MassEval {
                 }
                 let result = {
                     // распределения масс по типам
-                    let balance: BalanceCtx = ctx.read();
-                //    lightship_bounds.iter().for_each(|b| print!("b:({:.3} {:.3})", b.start().unwrap_or(-10000.), b.end().unwrap_or(-10000.)));
-        /*            let lightship_bounds = Bounds::new(lightship_bounds)
-                                .map_err(|err| error.pass_with("Bounds::new", err))?;
+                    let (lightship_values, lightship_bounds): (Vec<_>, Vec<_>) =
+                        <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                            .load_constant
+                            .clone()
+                            .ok_or(error.err("Read lightship error: no data!"))?
+                            .data()
+                            .into_iter()
+                            .map(|v| (v.mass, Bound::Value(v.bound_x1, v.bound_x2)))
+                            .unzip();
+                    let lightship_bounds = Bounds::new(lightship_bounds)
+                        .map_err(|err| error.pass_with("Bounds::new", err))?;
                     let vec_hull = bounds
-                        .intersect(
-                            &lightship_bounds,
-                            &lightship_values,
-                        )
+                        .intersect(&lightship_bounds, &lightship_values)
                         .map_err(|err| error.pass_with("bounds.intersect", err))?;
-      */     //         let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
+                    let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
                     let mut vec_bulkhead = Vec::new();
                     let mut vec_ballast = Vec::new();
                     let mut vec_store = Vec::new();
@@ -184,42 +181,51 @@ impl Eval<(), EvalResult> for MassEval {
                     }
                     let mut process_by_type =
                         |values: &Vec<f64>, assigment_type: AssignmentType| match assigment_type {
-                            AssignmentType::Ballast => vec_ballast = add(&vec_ballast, &values),
-                            AssignmentType::Stores => vec_store = add(&vec_store, &values),
-                            AssignmentType::CargoLoad => vec_cargo = add(&vec_cargo, &values),
-                            AssignmentType::Unspecified => (),
+                            AssignmentType::Ballast => vec_ballast
+                                .add_vec(&values)
+                                .map_err(|err| error.pass_with("vec_ballast.add", err)),
+                            AssignmentType::Stores => vec_store
+                                .add_vec(&values)
+                                .map_err(|err| error.pass_with("vec_store.add", err)),
+                            AssignmentType::CargoLoad => vec_cargo
+                                .add_vec(&values)
+                                .map_err(|err| error.pass_with("vec_cargo.add", err)),
+                            AssignmentType::Unspecified => Ok(()),
                         };
-                    for v in balance.gaseous {
-                        process_by_type(&v.mass_values, v.assigment_type);
+                    let strength_balance: StrengthBalanceCtx = ctx.read();
+                    for v in strength_balance.gaseous {
+                        process_by_type(&v.mass_values, v.assigment_type)?;
                     }
-                    for v in balance.bulk {
-                        process_by_type(&v.mass_values, v.assigment_type);
+                    for v in strength_balance.bulk {
+                        process_by_type(&v.mass_values, v.assigment_type)?;
                     }
-                    for v in balance.liquid {
-                        process_by_type(&v.mass_values, v.assigment_type);
+                    for v in strength_balance.liquid {
+                        process_by_type(&v.mass_values, v.assigment_type)?;
                     }
-
-                    let mass_values = vec_hull.add_vec()
-
-
-                    let mass_values = add(
-                        &add(
-                            &add(
-                                &add(
-                                    &add(
-                                        &add(&add(&vec_hull, &vec_equipment), &vec_bulkhead),
-                                        &vec_ballast,
-                                    ),
-                                    &vec_store,
-                                ),
-                                &vec_cargo,
-                            ),
-                            &vec_icing,
-                        ),
-                        &vec_wetting,
-                    );
+                    let mut mass_values = vec_hull.clone();
+                    mass_values
+                        .add_vec(&vec_equipment)
+                        .map_err(|err| error.pass_with("mass_values.add vec_equipment", err))?;
+                    mass_values
+                        .add_vec(&vec_bulkhead)
+                        .map_err(|err| error.pass_with("mass_values.add vec_bulkhead", err))?;
+                    mass_values
+                        .add_vec(&vec_ballast)
+                        .map_err(|err| error.pass_with("mass_values.add vec_ballast", err))?;
+                    mass_values
+                        .add_vec(&vec_store)
+                        .map_err(|err| error.pass_with("mass_values.add vec_store", err))?;
+                    mass_values
+                        .add_vec(&vec_cargo)
+                        .map_err(|err| error.pass_with("mass_values.add vec_cargo", err))?;
+                    mass_values
+                        .add_vec(&vec_icing)
+                        .map_err(|err| error.pass_with("mass_values.add vec_icing", err))?;
+                    mass_values
+                        .add_vec(&vec_wetting)
+                        .map_err(|err| error.pass_with("mass_values.add vec_wetting", err))?;
                     let mut data = HashMap::new();
-                //    println!("\n\n Mass sum: {} result\n", mass_values.iter().sum::<f64>());  mass_values.iter().for_each(|b| print!("{:.3} ", b));
+                    //    println!("\n\n Mass sum: {} result\n", mass_values.iter().sum::<f64>());  mass_values.iter().for_each(|b| print!("{:.3} ", b));
                     data.insert("value_mass_hull".to_owned(), vec_hull);
                     data.insert("value_mass_equipment".to_owned(), vec_equipment);
                     data.insert("value_mass_bulkhead".to_owned(), vec_bulkhead);
@@ -229,7 +235,7 @@ impl Eval<(), EvalResult> for MassEval {
                     data.insert("value_mass_icing".to_owned(), vec_icing);
                     data.insert("value_mass_wetting".to_owned(), vec_wetting);
                     data.insert("value_mass_sum".to_owned(), mass_values.clone());
-                    MassCtx::new(data, mass_values)
+                    DynamicMassCtx::new(mass_values, data)
                 };
                 ctx.write(result)
             }
@@ -239,7 +245,7 @@ impl Eval<(), EvalResult> for MassEval {
 }
 //
 //
-impl std::fmt::Debug for MassEval {
+impl std::fmt::Debug for DynamicMassEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MassEval").field("dbg", &self.dbg).finish()
     }

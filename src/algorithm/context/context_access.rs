@@ -107,15 +107,15 @@ impl ContextRead<WettingCtx> for Context {
     }
 }
 //
-impl ContextWrite<LoadsCtx> for Context {
-    fn write(mut self, value: LoadsCtx) -> Result<Self, Error> {
-        self.loads = Some(value);
+impl ContextWrite<StaticMassCtx> for Context {
+    fn write(mut self, value: StaticMassCtx) -> Result<Self, Error> {
+        self.static_mass = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<LoadsCtx> for Context {
-    fn read(&self) -> LoadsCtx {
-        self.loads.clone().unwrap()
+impl ContextRead<StaticMassCtx> for Context {
+    fn read(&self) -> StaticMassCtx {
+        self.static_mass.clone().unwrap()
     }
 }
 //
@@ -131,27 +131,39 @@ impl ContextRead<IcingTimberCtx> for Context {
     }
 }
 //
-impl ContextWrite<BalanceCtx> for Context {
-    fn write(mut self, value: BalanceCtx) -> Result<Self, Error> {
-        self.balance = Some(value);
+impl ContextWrite<DynamicMassCtx> for Context {
+    fn write(mut self, value: DynamicMassCtx) -> Result<Self, Error> {
+        self.dynamic_mass = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<BalanceCtx> for Context {
-    fn read(&self) -> BalanceCtx {
-        self.balance.clone().unwrap()
+impl ContextRead<DynamicMassCtx> for Context {
+    fn read(&self) -> DynamicMassCtx {
+        self.dynamic_mass.clone().unwrap()
+    }
+} 
+//
+impl ContextWrite<StabilityBalanceCtx> for Context {
+    fn write(mut self, value: StabilityBalanceCtx) -> Result<Self, Error> {
+        self.stability_balance = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<StabilityBalanceCtx> for Context {
+    fn read(&self) -> StabilityBalanceCtx {
+        self.stability_balance.clone().unwrap()
     }
 }
 //
-impl ContextWrite<MassCtx> for Context { 
-    fn write(mut self, value: MassCtx) -> Result<Self, Error> {
-        self.mass = Some(value);
+impl ContextWrite<StrengthBalanceCtx> for Context { 
+    fn write(mut self, value: StrengthBalanceCtx) -> Result<Self, Error> {
+        self.strength_balance = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<MassCtx> for Context {
-    fn read(&self) -> MassCtx {
-        self.mass.clone().unwrap()
+impl ContextRead<StrengthBalanceCtx> for Context {
+    fn read(&self) -> StrengthBalanceCtx {
+        self.strength_balance.clone().unwrap()
     }
 }
 //

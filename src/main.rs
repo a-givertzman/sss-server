@@ -319,18 +319,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                     ship_model.clone(),
                                                                                     */
 
-                                                                    BendingMomentEval::new(
+                                                                BendingMomentEval::new(
+                                                                    &dbg,
+                                                                    ShearForceEval::new(
                                                                         &dbg,
-                                                                        ShearForceEval::new(
-                                                                            &dbg,
-                                                                            TotalForceEval::new(
+                                                                        TotalForceEval::new(
+                                                                            &dbg,                                                                                
+                                                                            DynamicMassEval::new(
                                                                                 &dbg,
-                                                                                MassEval::new(
+                                                                                StrengthBalanceEval::new(
                                                                                     &dbg,
-                                                                                    BalanceEval::new(
+                                                                                    ship_model.clone(),
+                                                                                    StabilityBalanceEval::new(
                                                                                         &dbg,
                                                                                         ship_model.clone(),
-                                                                                        LoadsEval::new(
+                                                                                        StaticMassEval::new(
                                                                                             &dbg,
                                                                                             WettingEval::new(
                                                                                                 &dbg,
@@ -359,7 +362,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                 ),
                                                                             ),
                                                                         ),
-                                                                    ).eval(())
+                                                                    ),
+                                                                ).eval(())
     /*                                                                             ),
                                                                             ),
                                                                         ),

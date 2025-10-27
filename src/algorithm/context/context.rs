@@ -24,13 +24,14 @@ pub struct Context {
     pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
-    /// Все грузы судна
-    pub(super) loads: Option<LoadsCtx>,
-    /// Расчет равновесного положения судна
-    /// Параметры + данные по смещаемым грузам
-    pub(super) balance: Option<BalanceCtx>,
-    /// Нагрузка на корпус судна: конструкции, груз, экипаж и т.п.
-    pub(super) mass: Option<MassCtx>,
+    /// Расчет массы корпуса и статических грузов судна
+    pub(super) static_mass: Option<StaticMassCtx>,
+    /// Расчет распределения смещаемых грузов судна
+    pub(super) dynamic_mass: Option<DynamicMassCtx>,
+    /// Расчет равновесного положения судна для остойчивости
+    pub(super) stability_balance: Option<StabilityBalanceCtx>,
+    /// Расчет равновесного положения судна для прочности
+    pub(super) strength_balance: Option<StrengthBalanceCtx>,
     /// Результирующая нагрузка на шпацию
     pub(super) total_force: Option<TotalForceCtx>,
     /// Срезающая сила, действующая на корпус судна

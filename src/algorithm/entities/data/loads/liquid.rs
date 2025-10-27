@@ -52,6 +52,8 @@ impl LoadLiquidData {
         };
         Some(LiquidData {
             assigned_id:  self.assigned_id,
+            assigment_type: self.assigment_type,
+            cargo_type: self.cargo_type,
        //     cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
             mass: self.mass,

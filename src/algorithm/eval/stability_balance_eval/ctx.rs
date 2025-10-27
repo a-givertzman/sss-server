@@ -1,21 +1,15 @@
 use bincode::{Decode, Encode};
-use crate::algorithm::{entities::{Bounds, Position}, eval::balance_eval::gaseous_result::GaseousResult};
-
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 
 ///
 #[derive(Debug, Clone, Decode, Encode)]
-pub struct BalanceCtx {
+pub struct StabilityBalanceCtx {
     /// Сыпучий груз для которого центр массы и распределение зависит от 
     /// объема
     pub bulk: Vec<BulkResult>,
     /// Жидкий груз, для которого центр массы и распределение зависит от 
     /// объема и положения корпуса
     pub liquid: Vec<LiquidResult>,
-    /// распределение массы газообразных грузов по шпациям 
-    pub gaseous: Vec<GaseousResult>,
-    /// Объемное водоизмещение по шпациям, м^3
-    pub displacement_distr: Vec<f64>,    
   //  /// Полное объемное водоизмещение, м^3
   //  pub volume: f64,
   //  /// Площадь ватерлинии, м^2

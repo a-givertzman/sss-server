@@ -1,38 +1,22 @@
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::ICurve;
-use crate::algorithm::entities::Position;
-use crate::algorithm::entities::Position2d;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
 use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::data::HStrAreaArray;
-use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::data::strength;
-use crate::algorithm::entities::model_cached;
-use crate::algorithm::entities::model_cached::AreaShape;
 use crate::algorithm::entities::model_cached::ModelCached;
+use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
 use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
-use crate::algorithm::eval::BalanceCtx;
+use crate::algorithm::eval::StrengthBalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
-use crate::kernel::types::RwLock;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
-use sal_sync::services::entity::Name;
-use sal_sync::services::entity::PointTxId;
-use sal_sync::services::future::Future;
-use sal_sync::sync::*;
-use sal_sync::thread_pool::JoinHandle;
-use sal_sync::thread_pool::Scheduler;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::{
     fmt::Debug,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::Arc,
     time::Duration,
 };
 ///
@@ -220,7 +204,7 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn compute_strength(&self, query: BalanceStrengthQuery) -> Result<BalanceStrengthResult, Error> {
+    pub fn compute_strength(&self, query: BalanceStrengthQuery) -> Result<StrengthBalanceCtx, Error> {
         self
             .model_cached
             .balance_strength(query)

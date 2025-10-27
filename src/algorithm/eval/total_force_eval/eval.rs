@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextReadRef,
         entities::{MultipleSingle, SubVec},
-        eval::{BalanceCtx, MassCtx},
+        eval::{DynamicMassCtx, StaticMassCtx, StrengthBalanceCtx},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},
@@ -39,9 +39,9 @@ impl Eval<(), EvalResult> for TotalForceEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let mass: MassCtx = ctx.read();
-                let mass_values = mass.mass_values;
-                let balance: BalanceCtx = ctx.read();
+                let mass: DynamicMassCtx = ctx.read();
+                let mass_values = mass.mass_distr;
+                let balance: StrengthBalanceCtx = ctx.read();
                 let mut volume_values = balance.displacement_distr;
                 let voyage = initial
                     .voyage
