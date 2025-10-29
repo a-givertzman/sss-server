@@ -125,7 +125,6 @@ fn convert_to_trimesh() {
                 let result = ContextRead::<ConvertToTrimeshCtx>::read(&ctx).clone();
                 let mut i = 0; 
                 for mesh in result.nasal_block {
-                    println!("{:?}", mesh);
                     let _ = write_stl(
                         &PathBuf::from(format!("D:\\sss-server\\src\\tests\\unit\\algorithm\\dialog_static\\output_files\\nasal_{}.stl", i)), 
                         &mesh
