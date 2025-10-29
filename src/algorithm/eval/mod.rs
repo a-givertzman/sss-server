@@ -16,6 +16,7 @@ mod roll_amplitude_eval;
 mod roll_period_eval;
 mod seakeeping;
 mod criterion;
+mod dialog_static;
 mod zg_eval;
 mod draft_mark_eval;
 
@@ -66,6 +67,8 @@ pub use seakeeping::*;
 pub use criterion::criterion_stability_eval::*;
 pub use criterion::criterion_draught_eval::*;
 pub use criterion::*;
+
+pub use dialog_static::*;
 
 pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;

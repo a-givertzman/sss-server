@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use super::context::Context;
-use crate::algorithm::{eval::{apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::*, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *}, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{eval::{apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, convert_to_trimesh_ctx::ConvertToTrimeshCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, import_3d_model_ctx::Import3DModelCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::*, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *}, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -597,6 +597,30 @@ impl ContextWrite<DraftMarkCtx> for Context {
 impl ContextRead<DraftMarkCtx> for Context {
     fn read(&self) -> DraftMarkCtx {
         self.draft_mark.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<Import3DModelCtx> for Context {
+    fn write(mut self, value: Import3DModelCtx) -> Result<Self, Error> {
+        self.import_3d_model = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<Import3DModelCtx> for Context {
+    fn read(&self) -> Import3DModelCtx {
+        self.import_3d_model.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ConvertToTrimeshCtx> for Context {
+    fn write(mut self, value: ConvertToTrimeshCtx) -> Result<Self, Error> {
+        self.converted_3d_model = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ConvertToTrimeshCtx> for Context {
+    fn read(&self) -> ConvertToTrimeshCtx {
+        self.converted_3d_model.clone().unwrap()
     }
 }
 

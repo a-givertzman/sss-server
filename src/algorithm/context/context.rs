@@ -1,7 +1,7 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{
-        apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::Parameters, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *
+        apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, convert_to_trimesh_ctx::ConvertToTrimeshCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, import_3d_model_ctx::Import3DModelCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::Parameters, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *
     },
     initial::initial_ctx::InitialCtx,
 };
@@ -106,6 +106,10 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
+    /// Координаты 3D модели импортированные из Диалог Статика
+    pub(super) import_3d_model: Option<Import3DModelCtx>,
+    /// Координаты 3D модели импортированные из Диалог Статика
+    pub(super) converted_3d_model: Option<ConvertToTrimeshCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
