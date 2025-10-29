@@ -18,7 +18,6 @@ use crate::{
     }, 
     prelude::ContextWrite
 };
-
 ///
 /// Преобразование координат 3D модели в тип данных TriMesh
 pub struct ConvertToTrimeshEval {
@@ -39,68 +38,94 @@ impl ConvertToTrimeshEval {
     }
     ///
     /// Преобразование баттокса (корма/нос)
-    fn convert_buttocks(&self, buttocks: Vec<(f64, f64)>) -> Vec<TriMesh> {
-        let mut result: Vec<TriMesh> = Vec::new();
-        for i in 0..buttocks.len().saturating_sub(2) {
-            let p1 = buttocks[i];
-            let p2 = buttocks[i + 1];
-            let p3 = buttocks[i + 2];
-            let vertices = vec![
-                Point::new(p1.1, 0.0, p1.0), // y = 0 для баттокса
-                Point::new(p2.1, 0.0, p2.0),
-                Point::new(p3.1, 0.0, p3.0),
-            ];
-            match TriMesh::new(vertices, vec![[0, 1, 2]]) {
-                Ok(trimesh) => result.push(trimesh),
-                Err(err) => panic!("{} | {}", self.dbg, err),
+    fn convert_buttocks(&self, buttocks: Vec<(f64, f64)>) -> Option<TriMesh> {
+        if buttocks.len() < 3 {
+            log::warn!("{} | Not enough points for buttocks: {}", self.dbg, buttocks.len());
+            return None;
+        }
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        for (z, x) in &buttocks {
+            vertices.push(Point::new(*x, 0.0, *z)); // y = 0 для баттокса
+        }
+        for i in 1..vertices.len().saturating_sub(1) {
+            indices.push([0, i as u32, (i + 1) as u32]);
+        }
+        if indices.is_empty() {
+            return None;
+        }
+        match TriMesh::new(vertices, indices) {
+            Ok(trimesh) => {
+                Some(trimesh)
+            },
+            Err(err) => {
+                None
             }
         }
-        result
     }
     ///
-    /// Преобразование поверхности наружной/надстройки
-    fn convert_surface(&self, surface: IndexMap<String, Vec<(f64, f64)>>) -> Vec<TriMesh> {
-        let mut result: Vec<TriMesh> = Vec::new();
+    /// Преобразование поверхности
+    fn convert_surface(&self, surface: IndexMap<String, Vec<(f64, f64)>>) -> Option<TriMesh> {
         let mut frames: Vec<(f64, Vec<(f64, f64)>)> = Vec::new();
         for (frame_name, coords) in surface {
             if let Ok(frame_x) = frame_name.parse::<f64>() {
-                frames.push((frame_x, coords));
+                if !coords.is_empty() {
+                    frames.push((frame_x, coords));
+                }
             } else {
                 log::warn!("{} | Cannot parse frame name: {}", self.dbg, frame_name);
             }
         }
+        
+        if frames.is_empty() {
+            return None;
+        }
         frames.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        for i in 0..frames.len().saturating_sub(1) {
-            let current_frame = &frames[i];
-            let next_frame = &frames[i + 1];
-            for j in 0..current_frame.1.len().saturating_sub(1) {
-                if j < next_frame.1.len().saturating_sub(1) {
-                    let p1 = current_frame.1[j];
-                    let p2 = current_frame.1[j + 1];
-                    let p3 = next_frame.1[j];
-                    let p4 = next_frame.1[j + 1];
-                    let vertices1 = vec![
-                        Point::new(current_frame.0, p1.1, p1.0),
-                        Point::new(current_frame.0, p2.1, p2.0),
-                        Point::new(next_frame.0, p3.1, p3.0),
-                    ];
-                    let vertices2 = vec![
-                        Point::new(current_frame.0, p2.1, p2.0),
-                        Point::new(next_frame.0, p4.1, p4.0),
-                        Point::new(next_frame.0, p3.1, p3.0),
-                    ];
-                    
-                    if let Ok(trimesh1) = TriMesh::new(vertices1, vec![[0, 1, 2]]) {
-                        result.push(trimesh1);
-                    }
-                    
-                    if let Ok(trimesh2) = TriMesh::new(vertices2, vec![[0, 1, 2]]) {
-                        result.push(trimesh2);
-                    }
-                }
+        let min_points_per_frame = frames.iter()
+            .map(|(_, points)| points.len())
+            .min()
+            .unwrap_or(0);
+        if min_points_per_frame < 2 {
+            return None;
+        }
+        if frames.len() < 2 {
+            return None;
+        }
+        let mut all_vertices = Vec::new();
+        let mut all_indices = Vec::new();
+        for (frame_x, points) in &frames {
+            for i in 0..min_points_per_frame {
+                let (z, y) = points[i];
+                all_vertices.push(Point::new(*frame_x, y, z));
             }
         }
-        result
+        for frame_idx in 0..frames.len() - 1 {
+            for point_idx in 0..min_points_per_frame - 1 {
+                let current_base = (frame_idx * min_points_per_frame) as u32;
+                let next_base = ((frame_idx + 1) * min_points_per_frame) as u32;
+                let i00 = current_base + point_idx as u32;
+                let i01 = current_base + (point_idx + 1) as u32;
+                let i10 = next_base + point_idx as u32;
+                let i11 = next_base + (point_idx + 1) as u32;
+                all_indices.push([i00, i01, i10]);
+                all_indices.push([i01, i11, i10]);
+            }
+        }
+        if all_indices.is_empty() {
+            log::warn!("{} | No triangles created for surface", self.dbg);
+            return None;
+        }
+        match TriMesh::new(all_vertices, all_indices) {
+            Ok(trimesh) => {
+                log::info!("{} | Created surface mesh: {} vertices, {} triangles", 
+                    self.dbg, trimesh.vertices().len(), trimesh.triangles().len());
+                Some(trimesh)
+            },
+            Err(err) => {
+                log::error!("{} | Error creating surface mesh: {}", self.dbg, err);
+                None
+            }
+        }
     }
 }
 //
@@ -111,10 +136,14 @@ impl Eval<Zg, EvalResult> for ConvertToTrimeshEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let model_3d = ContextRead::<Import3DModelCtx>::read(&ctx).clone();
-                let stern_block = self.convert_buttocks(model_3d.stern_block.coordinates.clone());
-                let nasal_block = self.convert_buttocks(model_3d.nasal_block.coordinates.clone());
-                let surface_outer_body = self.convert_surface(model_3d.surface_outer_body.coordinates.clone());
-                let surface_superstructure = self.convert_surface(model_3d.surface_superstructure.coordinates.clone());
+                let stern_block = self.convert_buttocks(model_3d.stern_block.coordinates.clone())
+                    .into_iter().collect();
+                let nasal_block = self.convert_buttocks(model_3d.nasal_block.coordinates.clone())
+                    .into_iter().collect();
+                let surface_outer_body = self.convert_surface(model_3d.surface_outer_body.coordinates.clone())
+                    .into_iter().collect();
+                let surface_superstructure = self.convert_surface(model_3d.surface_superstructure.coordinates.clone())
+                    .into_iter().collect();
                 ctx.write(ConvertToTrimeshCtx {
                     stern_block,
                     nasal_block,
