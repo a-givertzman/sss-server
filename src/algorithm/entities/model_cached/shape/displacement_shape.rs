@@ -86,8 +86,9 @@ impl DisplacementShape {
     pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
         let error = Error::new(&self.dbg, "split");
         let half_size_x = bound.length().ok_or(error.err("no bound.length"))? / 2.;
-        let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
-        let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
+      //  let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
+      //  let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
+        let position_x = bound.center().ok_or(error.err("no bound.center"))?;
         let cuboid = Cuboid::new(Vector3::new(half_size_x, 100000., 100000.));
         let result = self
             .mesh
@@ -284,8 +285,8 @@ impl DisplacementShape {
         let draught_max = aabb.maxs.z;
         let mut steps = vec![(-100000., 0.), (draught_min, 0.)];
         if let Some(full_mesh) = self.mesh.as_ref() {
-            let (vertices, indices) = (full_mesh.vertices().to_vec(), full_mesh.indices().to_vec());
-            let full_mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all()).unwrap();
+        //    let (vertices, indices) = (full_mesh.vertices().to_vec(), full_mesh.indices().to_vec());
+        //    let full_mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all()).unwrap();
             let full_volume = utils::volume(&full_mesh);
             let mut current_step = step / 30.; // сначала идем с маленьким шагом
             // на маленьких осадках кривая не линейная
