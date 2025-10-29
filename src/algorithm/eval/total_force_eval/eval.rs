@@ -56,12 +56,16 @@ impl Eval<(), EvalResult> for TotalForceEval {
                 }
                 let mut result = mass_values.clone();
                 volume_values.mul_single(water_density);
-           /*     let volume_sum: f64 = volume_values.iter().sum();
+                println!("\n\n mass qnt:{} sum: {}\n", mass_values.len(), mass_values.iter().sum::<f64>());  mass_values.iter().for_each(|b| print!("{:.3} ", b)); 
+                println!("\n\n volume qnt:{} sum: {}\n", volume_values.len(), volume_values.iter().sum::<f64>());  volume_values.iter().for_each(|b| print!("{:.3} ", b));
+                
+
+            /*    let volume_sum: f64 = volume_values.iter().sum();
                 let mass_sum: f64 = mass_values.iter().sum();
                 let multipler = if volume_sum > 0. { mass_sum/volume_sum } else { 1. };
-                dbg!(volume_sum, mass_sum, multipler);
-                volume_values.mul_single(multipler);
-            */    result.sub_vec(&volume_values)?;
+                dbg!(volume_sum, mass_sum, multipler);*/
+           //     volume_values.mul_single(multipler);
+                result.sub_vec(&volume_values)?;
                 result.mul_single(gravity_g);
                 log::trace!(
                     "\t TotalForce mass:{:?} volume:{:?} result:{:?}, mass_sum:{}, volume_mass_sum:{}",
@@ -71,6 +75,9 @@ impl Eval<(), EvalResult> for TotalForceEval {
                     mass_values.iter().sum::<f64>(),
                     volume_values.iter().sum::<f64>()
                 );
+
+
+                println!("\n\n TotalForce qnt:{} result\n", result.len());   result.iter().for_each(|b| print!("{:.3} ", b)); 
               //  println!("\n\n TotalForce result\n");  result.iter().for_each(|b| print!("{:.3} ", b)); 
                 ctx.write(TotalForceCtx::new(result))
             }

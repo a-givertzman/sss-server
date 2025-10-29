@@ -40,21 +40,28 @@ impl Eval<(), EvalResult> for BendingMomentEval {
                     .bounds
                     .as_ref()
                     .ok_or(error.err("initial error: no bounds!"))?;
+                let mut delta_x = vec![0.];
+                delta_x.append(&mut bounds.iter().map(|b| b.length().unwrap_or(0.)).collect()); 
                 let shear_force: ShearForceCtx = ctx.read();
-                let mut result: Vec<f64> = shear_force.values.integral_sum();
-           //     println!("\n\n BendingMoment integral_sum\n");   
-           //     result.iter().for_each(|b| print!("{:.3} ", b));
-
-            //    println!("\n\n BendingMoment length\n");  
-
+                let values: Vec<_> = shear_force.values.iter().zip(delta_x.iter()).collect();
+                let mut result = vec![0.];
+                for i in 1..(values.len()) {
+                    let (v1, _) = values[i - 1];
+                    let (v2, dx) = values[i];
+                    result.push(result[i - 1] + (v1 + v2)*dx/2.);
+                }
+ /*               let mut result: Vec<f64> = shear_force.values.integral_sum();
+             //   println!("\n\n BendingMoment integral_sum\n");   
+             //   result.iter().for_each(|b| print!("{:.3} ", b));
+            //    println!("\n\n BendingMoment length\n");
                 result = result
                     .into_iter()
-                    .zip(bounds.iter())
-                    .map(|(v, b)| {
+                    .zip(delta_x.iter())
+                    .map(|(v, dx)| {
                  //       print!("{:.3} ", b.length().unwrap_or(0.) / 2.);
-                        v * b.length().unwrap_or(0.) / 2.
-                    }).collect();
-                println!("\n\n BendingMoment result\n");   result.iter().for_each(|b| print!("{:.3} ", b));
+                        v * dx / 2.
+                    }).collect();*/
+                println!("\n\n BendingMoment qnt:{} result\n", result.len());  result.iter().for_each(|b| print!("{:.3} ", b));
                 ctx.write(BendingMomentCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

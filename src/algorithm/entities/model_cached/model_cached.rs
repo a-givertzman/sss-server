@@ -1,7 +1,7 @@
 use super::{LocalCache, ModelCachedConf};
 use crate::{
     algorithm::{entities::{
-        AddVec, Bounds, Moment, MultipleSingle, Position, model_cached::{AreaShape, BoundDisplacementCache, CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, Shape, WindageArea}, ship_model::{stability_result::BalanceStabilityResult, *}
+        AddVec, Bounds, Moment, Position, model_cached::{AreaShape, BoundDisplacementCache, CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, Shape, WindageArea}, ship_model::{stability_result::BalanceStabilityResult, *}
     }, eval::{StrengthBalanceCtx, strength_balance_eval}},
     kernel::types::{Arc, RwLock},
 };
@@ -780,7 +780,6 @@ impl ModelCached {
                     .pop()
                     .ok_or(error.err("no hull_result"))?
                     .map_err(|err| error.pass_with("hull_result", err))?;
-                res_displacement_distr.mul_single(query.water_density);
                 if !errors.is_empty() {
                     return Err(error.pass_with(
                         "balance_strength",
@@ -797,12 +796,13 @@ impl ModelCached {
                     return Err(error);
                 }
                 mass_sum = res_mass_distr.iter().sum();
-                disp_sum = res_displacement_distr.iter().sum();
+                disp_sum = res_displacement_distr.iter().sum::<f64>()*query.water_density;
                 if mass_sum <= 0. || disp_sum <= 0. {
                     return Err(error.err("mass_sum <= 0 || disp_sum <= 0"));
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= query.epsilon {
+                    println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
                     break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
@@ -813,10 +813,10 @@ impl ModelCached {
                 mass_moment += center_x * res_mass_distr[i];
                 disp_moment += center_x * res_displacement_distr[i];
             }
-            let (mass_x, disp_x) = (mass_moment / mass_sum, disp_moment / disp_sum);
+            let (mass_x, disp_x) = (mass_moment / mass_sum, disp_moment*query.water_density / disp_sum);
             let delta_x = mass_x - disp_x;
             if delta_x.abs() <= query.epsilon {
-                //    dbg!(w, w_xg, v_xc, mean_draught, center_waterline_shift, trim);
+                println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
                 break;
             }
             trim += delta_x / 10.;
