@@ -66,63 +66,65 @@ impl ConvertToTrimeshEval {
     ///
     /// Преобразование поверхности
     fn convert_surface(&self, surface: IndexMap<String, Vec<(f64, f64)>>) -> Option<TriMesh> {
-        let mut frames: Vec<(f64, Vec<(f64, f64)>)> = Vec::new();
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        let mut frames: Vec<(f64, Vec<Point<f64>>)> = Vec::new();
         for (frame_name, coords) in surface {
-            if let Ok(frame_x) = frame_name.parse::<f64>() {
-                if !coords.is_empty() {
-                    frames.push((frame_x, coords));
+            if let Ok(x) = frame_name.parse::<f64>() {
+                let frame_vertices: Vec<Point<f64>> = coords
+                    .iter()
+                    .map(|(z, y)| Point::new(x, *y, *z))
+                    .collect();
+                if frame_vertices.len() >= 2 {
+                    frames.push((x, frame_vertices));
                 }
-            } else {
-                log::warn!("{} | Cannot parse frame name: {}", self.dbg, frame_name);
             }
-        }
-        
-        if frames.is_empty() {
-            return None;
         }
         frames.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        let min_points_per_frame = frames.iter()
-            .map(|(_, points)| points.len())
-            .min()
-            .unwrap_or(0);
-        if min_points_per_frame < 2 {
-            return None;
-        }
         if frames.len() < 2 {
+            log::warn!("{} | Need at least 2 frames for 3D surface", self.dbg);
             return None;
         }
-        let mut all_vertices = Vec::new();
-        let mut all_indices = Vec::new();
-        for (frame_x, points) in &frames {
-            for i in 0..min_points_per_frame {
-                let (z, y) = points[i];
-                all_vertices.push(Point::new(*frame_x, y, z));
+        let mut frame_vertex_indices = Vec::new();
+        for (_, frame_verts) in &frames {
+            let start_index = vertices.len();
+            vertices.extend_from_slice(frame_verts);
+            let end_index = vertices.len();
+            frame_vertex_indices.push(start_index..end_index);
+        }
+        for i in 0..frames.len() - 1 {
+            let current_indices = &frame_vertex_indices[i];
+            let next_indices = &frame_vertex_indices[i + 1];
+            let current_len = current_indices.len();
+            let next_len = next_indices.len();
+            let min_len = current_len.min(next_len);
+            for j in 0..min_len - 1 {
+                let current_idx = current_indices.start + j;
+                let next_idx = next_indices.start + j;
+                indices.push([
+                    current_idx as u32,
+                    (current_idx + 1) as u32,
+                    next_idx as u32
+                ]);
+                indices.push([
+                    (current_idx + 1) as u32,
+                    (next_idx + 1) as u32,
+                    next_idx as u32
+                ]);
             }
         }
-        for frame_idx in 0..frames.len() - 1 {
-            for point_idx in 0..min_points_per_frame - 1 {
-                let current_base = (frame_idx * min_points_per_frame) as u32;
-                let next_base = ((frame_idx + 1) * min_points_per_frame) as u32;
-                let i00 = current_base + point_idx as u32;
-                let i01 = current_base + (point_idx + 1) as u32;
-                let i10 = next_base + point_idx as u32;
-                let i11 = next_base + (point_idx + 1) as u32;
-                all_indices.push([i00, i01, i10]);
-                all_indices.push([i01, i11, i10]);
-            }
-        }
-        if all_indices.is_empty() {
-            log::warn!("{} | No triangles created for surface", self.dbg);
+        if vertices.is_empty() || indices.is_empty() {
+            log::warn!("{} | No vertices or indices generated", self.dbg);
             return None;
         }
-        match TriMesh::new(all_vertices, all_indices) {
+        match TriMesh::new(vertices, indices) {
             Ok(trimesh) => {
-                log::info!("{} | Created surface mesh: {} vertices, {} triangles", 
-                    self.dbg, trimesh.vertices().len(), trimesh.triangles().len());
+                log::info!("{} | Created 3D surface: {} vertices, {} triangles", 
+                        self.dbg, trimesh.vertices().len(), trimesh.indices().len());
                 Some(trimesh)
             },
             Err(err) => {
-                log::error!("{} | Error creating surface mesh: {}", self.dbg, err);
+                log::error!("{} | Error creating 3D surface: {}", self.dbg, err);
                 None
             }
         }
@@ -140,10 +142,8 @@ impl Eval<Zg, EvalResult> for ConvertToTrimeshEval {
                     .into_iter().collect();
                 let nasal_block = self.convert_buttocks(model_3d.nasal_block.coordinates.clone())
                     .into_iter().collect();
-                let surface_outer_body = self.convert_surface(model_3d.surface_outer_body.coordinates.clone())
-                    .into_iter().collect();
-                let surface_superstructure = self.convert_surface(model_3d.surface_superstructure.coordinates.clone())
-                    .into_iter().collect();
+                let surface_outer_body = self.convert_surface(model_3d.surface_outer_body.coordinates.clone()).into_iter().collect();
+                let surface_superstructure = self.convert_surface(model_3d.surface_superstructure.coordinates.clone()).into_iter().collect();
                 ctx.write(ConvertToTrimeshCtx {
                     stern_block,
                     nasal_block,

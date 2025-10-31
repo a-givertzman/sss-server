@@ -4,7 +4,7 @@ use std::{
     sync::Once, 
     time::Duration
 };
-use parry3d_f64::shape::TriMesh;
+use parry3d_f64::shape::{TriMesh, TriMeshFlags};
 use sal_core::error::Error;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{
@@ -46,17 +46,18 @@ fn init_once() {
 /// Write data to .stl file
 pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
     let error = Error::new("Shape", "write_stl");
-    let triangles: Vec<stl_io::Triangle> = mesh
+    let (result, empty_normals): (Vec<_>, Vec<_>) = mesh
         .triangles()
-        .map(|t| {
-            let ab = t.b - t.a;
-            let ac = t.c - t.a;
-            let normal_vector = ab.cross(&ac).normalize();
-            let normal = stl_io::Vector([
-                normal_vector[0] as f32,
-                normal_vector[1] as f32, 
-                normal_vector[2] as f32
-            ]);
+        .map(|t| (t.normal(), t))
+        .partition(|(n, _)| n.is_some());
+    if !empty_normals.is_empty() {
+        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
+    }
+    let triangles: Vec<_> = result
+        .into_iter()
+        .map(|(n, t)| {
+            let n = n.unwrap();
+            let normal = stl_io::Vector([n[0] as f32, n[1] as f32, n[2] as f32]);
             let vertices = [
                 stl_io::Vector([t.a[0] as f32, t.a[1] as f32, t.a[2] as f32]),
                 stl_io::Vector([t.b[0] as f32, t.b[1] as f32, t.b[2] as f32]),
@@ -65,16 +66,18 @@ pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
             stl_io::Triangle { normal, vertices }
         })
         .collect();
-    if triangles.is_empty() {
-        return Err(error.err(format!("No triangles in mesh, path:{:?}", path)));
-    }
     let mut binary_stl = Vec::<u8>::new();
     stl_io::write_stl(&mut binary_stl, triangles.iter())
         .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
-    let mut buffer = std::fs::File::create(&path)
-        .map_err(|err| error.pass_with(format!("File::create, path:{:?}", path), err.to_string()))?;
-    buffer.write_all(&binary_stl)
-        .map_err(|err| error.pass_with(format!("buffer.write_all, path:{:?}", path), err.to_string()))
+    let mut buffer = std::fs::File::create(&path).map_err(|err| {
+        error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
+    })?;
+    buffer.write_all(&binary_stl).map_err(|err| {
+        error.pass_with(
+            format!("buffer.write_all, path:{:?}", path),
+            err.to_string(),
+        )
+    })
 }
 ///
 /// returns:
@@ -107,10 +110,11 @@ fn convert_to_trimesh() {
                 let result = ContextRead::<ConvertToTrimeshCtx>::read(&ctx).clone();
                 let mut i = 0;
                 for mesh in &result.nasal_block {
-                    if mesh.vertices().len() > 0 {
+                    let mut mesh_with_flags = mesh.clone();
+                    let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                    if mesh_with_flags.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\nasal_{}.stl", i));
-                        log::debug!("Writing nasal mesh {} to {:?}", i, path);
-                        if let Err(e) = write_stl(&path, mesh) {
+                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
                             log::error!("Failed to write nasal mesh {}: {}", i, e);
                         }
                         i += 1;
@@ -118,10 +122,11 @@ fn convert_to_trimesh() {
                 }
                 let mut i = 0;
                 for mesh in &result.stern_block {
+                    let mut mesh_with_flags = mesh.clone();
+                    let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
                     if mesh.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\stern_{}.stl", i));
-                        log::debug!("Writing nasal mesh {} to {:?}", i, path);
-                        if let Err(e) = write_stl(&path, mesh) {
+                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
                             log::error!("Failed to write nasal mesh {}: {}", i, e);
                         }
                         i += 1;
@@ -129,10 +134,12 @@ fn convert_to_trimesh() {
                 }
                 let mut i = 0;
                 for mesh in &result.surface_outer_body {
-                    if mesh.vertices().len() > 0 {
+                    let mut mesh_with_flags = mesh.clone();
+                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                    println!("{:?}", mesh_with_flags.vertices());
+                    if mesh_with_flags.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer_{}.stl", i));
-                        log::debug!("Writing nasal mesh {} to {:?}", i, path);
-                        if let Err(e) = write_stl(&path, mesh) {
+                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
                             log::error!("Failed to write nasal mesh {}: {}", i, e);
                         }
                         i += 1;
@@ -140,10 +147,11 @@ fn convert_to_trimesh() {
                 }
                 let mut i = 0;
                 for mesh in &result.surface_superstructure {
-                    if mesh.vertices().len() > 0 {
+                    let mut mesh_with_flags = mesh.clone();
+                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                    if mesh_with_flags.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_superstructure_{}.stl", i));
-                        log::debug!("Writing nasal mesh {} to {:?}", i, path);
-                        if let Err(e) = write_stl(&path, mesh) {
+                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
                             log::error!("Failed to write nasal mesh {}: {}", i, e);
                         }
                         i += 1;
