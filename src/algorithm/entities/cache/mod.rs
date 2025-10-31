@@ -147,7 +147,7 @@ impl Cache<f64> {
                 }
                 if keys.first().unwrap() > key || keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
-                    panic!("{}", format!("i:{key_i} key:{key} key is out of range!"));
+                    panic!("{}: {}", self.dbg, format!("i:{key_i} key:{key} key is out of range!"));
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);

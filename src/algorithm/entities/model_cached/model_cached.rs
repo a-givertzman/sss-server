@@ -375,12 +375,12 @@ impl ModelCached {
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
         }
-        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+   /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
             damaged_compartment
                 .write()
                 .init()
                 .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
-        }
+        }*/
         self.windage_area
             .init()
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
@@ -1618,7 +1618,7 @@ impl ModelCached {
                 "moment_liquid",
                 errors
                     .iter()
-                    .fold(String::new(), |acc, err| acc + &format!("\n{}", err)),
+                    .fold("errors:".to_string(), |acc, err| acc + &format!("\n{}", err)),
             ));
         }
         let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
