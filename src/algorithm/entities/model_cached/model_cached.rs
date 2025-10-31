@@ -1,8 +1,17 @@
 use super::{LocalCache, ModelCachedConf};
 use crate::{
-    algorithm::{entities::{
-        AddVec, Bounds, Moment, Position, model_cached::{AreaShape, BoundDisplacementCache, CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementCache, DisplacementShape, Draught, Shape, WindageArea}, ship_model::{stability_result::BalanceStabilityResult, *}
-    }, eval::{StrengthBalanceCtx, strength_balance_eval}},
+    algorithm::{
+        entities::{
+            AddVec, Bounds, Moment, Position,
+            model_cached::{
+                AreaShape, BoundDisplacementCache, CompartmentCache, CompartmentCacheResult,
+                DamagedCompartmentCache, DisplacementCache, DisplacementCacheResult,
+                DisplacementShape, Draught, Shape, WindageArea,
+            },
+            ship_model::{stability_result::BalanceStabilityResult, *},
+        },
+        eval::{StrengthBalanceCtx, strength_balance_eval},
+    },
     kernel::types::{Arc, RwLock},
 };
 use core::f64;
@@ -19,6 +28,7 @@ use std::{collections::HashMap, fmt::Display, path::PathBuf};
 /// Структура для ввода данных расчета равновесного положения корпуса судна.
 #[derive(Debug, Clone)]
 pub(crate) struct FloatingPositionQuery {
+    // TODO - переименовать, тут лежат общие данные по судну - груз и т.п.
     /// Плотность забортной воды
     pub water_density: f64,
     /// масса судна порожнем и грузов размещенных на судне:
@@ -625,7 +635,7 @@ impl ModelCached {
         let (mut mass_sum, mut disp_sum) = (0., 0.);
         for _i in 0..50 {
             // trim
-            for _j in 0..50 {                
+            for _j in 0..50 {
                 // draught
                 let mut tasks: Vec<JoinHandle<_>> = vec![];
                 let liquid_results = Arc::new(Stack::new());
@@ -633,7 +643,7 @@ impl ModelCached {
                     assert!(cargo.mass > 0.);
                     let assigment_type = cargo.assigment_type;
                     let space_id = cargo.space_id.clone();
-                    let cargo_type = cargo.cargo_type;                            
+                    let cargo_type = cargo.cargo_type;
                     let error_ = error.err(format!("compartment_{space_id} liquid work"));
                     let density = cargo.mass / cargo.volume;
                     let compartment = self
@@ -796,7 +806,7 @@ impl ModelCached {
                     return Err(error);
                 }
                 mass_sum = res_mass_distr.iter().sum();
-                disp_sum = res_displacement_distr.iter().sum::<f64>()*query.water_density;
+                disp_sum = res_displacement_distr.iter().sum::<f64>() * query.water_density;
                 if mass_sum <= 0. || disp_sum <= 0. {
                     return Err(error.err("mass_sum <= 0 || disp_sum <= 0"));
                 };
@@ -813,7 +823,10 @@ impl ModelCached {
                 mass_moment += center_x * res_mass_distr[i];
                 disp_moment += center_x * res_displacement_distr[i];
             }
-            let (mass_x, disp_x) = (mass_moment / mass_sum, disp_moment*query.water_density / disp_sum);
+            let (mass_x, disp_x) = (
+                mass_moment / mass_sum,
+                disp_moment * query.water_density / disp_sum,
+            );
             let delta_x = mass_x - disp_x;
             if delta_x.abs() <= query.epsilon {
                 println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
@@ -1026,12 +1039,12 @@ impl ModelCached {
             rad_trans,
         })
     }
-    /// Расчет равновесного положения
+    /*  /// Расчет равновесного положения
     pub(crate) fn floating_position(
         &self,
         query: FloatingPositionQuery,
     ) -> Result<FloatingPositionResult, Error> {
-        let error = Error::new(&self.dbg, "eval");
+        let error = Error::new(&self.dbg, "floating_position");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
         }
@@ -1057,7 +1070,7 @@ impl ModelCached {
             let epsilon = (step_trim + step_heel) / 10.;
             // учет смещения жидкости
             let moment_liquid = self
-                .moment_liquid(&query.liquid, heel, trim, query.epsilon)
+                .moment_liquid(&query.liquid, heel, trim, epsilon)
                 .map_err(|err| error.pass_with("self.moment_liquid", err))?;
             // учет изменения водоизмещения из-за поврежденных отсеков
             // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
@@ -1109,7 +1122,7 @@ impl ModelCached {
                 let cg_h_local = rotation.inverse_transform_point(&cg_h_local.into());
                 let cg_h = cb + cg_h_local.into();
                 let precision = (cg_h - cb).len();
-                if precision < query.epsilon {
+                if precision < query.epsilon && query.epsilon <= epsilon {
                     let result = FloatingPositionResult {
                         heel,
                         trim,
@@ -1181,6 +1194,260 @@ impl ModelCached {
             draught = new_draught;
         }
         Err(error.err(format!("query:{:?} error: no result", query)))
+    }
+    */
+    /// Расчет равновесного положения
+    pub(crate) fn floating_position(
+        &self,
+        query: FloatingPositionQuery,
+    ) -> Result<FloatingPositionResult, Error> {
+        let error = Error::new(&self.dbg, "floating_position");
+        if query.water_density <= 0. {
+            return Err(error.err("water_density <= 0."));
+        }
+        // Считаем сыпучие грузы.
+        // На них крен и дифферент не влияет.
+        let moment_bulk = self
+            .moment_bulk(&query.bulk, query.epsilon)
+            .map_err(|err| error.pass_with("self.bulk_moment", err))?;
+        let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
+        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
+        let mut heel = 0.0;
+        let mut trim = 0.0;
+        let mut draught = self.draught_min;
+        let mut step_trim = 0.5;
+        let mut step_heel = 1.0;
+        let mut d_v: Option<f64> = None;
+        let mut d_m: Option<f64> = None;
+        for _i in 1..=1000 {
+            let epsilon = (step_trim + step_heel) / 10.;
+            let (new_draught, new_d_v, new_d_m, _, displacement, disp_result) = self
+                .position(
+                    heel,
+                    trim,
+                    draught,
+                    query.water_density,
+                    epsilon,
+                    query.mass_const + mass_bulk + mass_liquid, // постоянная масса
+                    query.moment_const + moment_bulk,           // постоянный момент
+                    &query.liquid,
+                    &query.damaged_compartment,
+                )
+                .map_err(|err| error.pass(err))?;
+            if query.epsilon <= epsilon {
+                let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
+                if precision < query.epsilon {
+                    let result = FloatingPositionResult {
+                        heel,
+                        trim,
+                        draught_mid: new_draught,
+                        precision,
+                        displacement,
+                        displacement_center: disp_result.volume_center,
+                        area_wl: disp_result.area_wl,
+                        area_wl_center: disp_result.area_wl_center,
+                        length_wl: disp_result.length_wl,
+                        breadth_wl: disp_result.breadth_wl,
+                        rad_long: disp_result.inertia_long_y / displacement,
+                        rad_trans: disp_result.inertia_trans_x / displacement,
+                    };
+                    return Ok(result);
+                }
+            }
+            if let Some(old_d_v) = d_v {
+                if old_d_v.signum() != new_d_v.signum() {
+                    step_trim *= 0.5;
+                }
+            }
+            d_v = Some(new_d_v);
+            if let Some(old_d_m) = d_m {
+                if old_d_m.signum() != new_d_m.signum() {
+                    step_heel *= 0.5;
+                }
+            }
+            d_m = Some(new_d_m);
+            trim = trim + step_trim * new_d_v.signum();
+            heel = heel + step_heel * new_d_m.signum();
+            draught = new_draught;
+        }
+        Err(error.err(format!("query:{:?} error: no result", query)))
+    }
+    /// Расчет диаграммы статической остойчивости
+    pub(crate) fn dso(
+        &self,
+        query: FloatingPositionQuery,
+        draught: f64,
+        trim: f64,
+        heel_max: f64,
+    ) -> Result<Vec<(f64, f64)>, Error> {
+        let error = Error::new(&self.dbg, "floating_position");
+        if query.water_density <= 0. {
+            return Err(error.err("water_density <= 0."));
+        }
+        // Считаем сыпучие грузы.
+        // На них крен и дифферент не влияет.
+        let moment_bulk = self
+            .moment_bulk(&query.bulk, query.epsilon)
+            .map_err(|err| error.pass_with("self.bulk_moment", err))?;
+        let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
+        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
+        let max = (heel_max * 10.) as i32;
+        let min = -max;
+        let heel = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>();
+        let mut dso = Vec::new();
+        for heel in heel {
+            let mut trim = trim;
+            let mut draught = draught;
+            let mut step_trim = 0.5;
+            let mut d_v: Option<f64> = None;
+            for _i in 1..=100 {
+                let epsilon = step_trim / 10.;
+                let (new_draught, new_d_v, _, cg, _, disp_result) = self
+                    .position(
+                        heel,
+                        trim,
+                        draught,
+                        query.water_density,
+                        epsilon,
+                        query.mass_const + mass_bulk + mass_liquid, // постоянная масса
+                        query.moment_const + moment_bulk,           // постоянный момент
+                        &query.liquid,
+                        &query.damaged_compartment,
+                    )
+                    .map_err(|err| error.pass(err))?;
+                if query.epsilon <= epsilon {
+                    let precision = new_d_v.abs();
+                    if precision < query.epsilon {
+                        let [_, yg, zg] = cg.values();
+                        let [_, yc, zc] = disp_result.volume_center.values();
+                        let l = if heel.abs() > f64::EPSILON {
+                            let ctg_phy = 1.0 / heel.to_radians().tan();
+                            (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt()
+                        } else {
+                            yg - yc
+                        };
+                        dso.push((heel, l));
+                        break;
+                    }
+                }
+                if let Some(old_d_v) = d_v {
+                    if old_d_v.signum() != new_d_v.signum() {
+                        step_trim *= 0.5;
+                    }
+                }
+                d_v = Some(new_d_v);
+                trim = trim + step_trim * new_d_v.signum();
+                draught = new_draught;
+            }
+        }
+        println!("\nmodel_cached dso: ");
+        for &(angle, value) in dso.iter() {
+            println!("{angle} {value}");
+        }
+        Ok(dso)
+    }
+    /// Расчет итерации в расчете равновесного положения и диаграммы
+    fn position(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+        water_density: f64,
+        epsilon: f64,
+        mass_sum: f64,        // постоянная масса mass_const + mass_bulk + mass_liquid
+        moment_sum: Position, // постоянный момент moment_const + moment_bulk
+        liquid: &Vec<LiquidData>,
+        damaged_compartment: &Vec<String>,
+    ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
+        //(draught, d_v, d_m, cg, displacement, disp_result)
+        let error = Error::new(&self.dbg, "_floating_position");
+        // учет смещения жидкости
+        let moment_liquid = self
+            .moment_liquid(&liquid, heel, trim, epsilon)
+            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+        // учет изменения водоизмещения из-за поврежденных отсеков
+        // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
+        let (mass_damaged_compartment, moment_damaged_compartment) = self
+            .calc_damaged_compartments(&damaged_compartment, heel, trim, draught, water_density)
+            .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
+        let mass_sum = mass_sum + mass_damaged_compartment;
+        let displacement = mass_sum / water_density;
+        // считаем корпус с учетом изменения массы
+        let disp_result = self
+            .displacement
+            .get(heel, trim, mass_sum / water_density, epsilon)
+            .map_err(|err| {
+                error.pass_with(
+                    format!(
+                        "self.displacement.get heel:{heel} trim:{trim} displacement:{displacement}"
+                    ),
+                    err,
+                )
+            })?;
+        let (draught, cb) = (disp_result.draught, disp_result.volume_center);
+        // расчет ориентации корпуса
+        let rotation = {
+            let heel_rad = -heel.to_radians();
+            let trim_rad = trim.to_radians();
+            let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+            let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+            let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
+            let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+            heel_rotation * trim_rotation
+        };
+        // центр тяжести корпуса
+        let cg = {
+            let moment_sum = moment_sum + moment_liquid + moment_damaged_compartment;
+            moment_sum.to_pos(mass_sum)
+        };
+        // Определение невязки
+        let cg_h = {
+            // Через центр плавучести CB проводится горизонтальная плоскость
+            let my_plane = HalfSpace::new(Vector3::z_axis());
+            let cg_local = cg - cb;
+            let cg_local = rotation.transform_point(&cg_local.into());
+            let cg_h_local = my_plane.project_local_point(&cg_local.into(), false).point;
+            let cg_h_local = rotation.inverse_transform_point(&cg_h_local.into());
+            let cg_h = cb + cg_h_local.into();
+            cg_h
+        };
+        // Определение посадки судна для следующего шага
+        let cb_v = {
+            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
+            let my_plane = HalfSpace::new(Vector3::y_axis());
+            let cb_local = cb - cg;
+            let cb_local = rotation.transform_point(&cb_local.into());
+            let cg_v_local = my_plane.project_local_point(&cb_local.into(), false).point;
+            let cg_v = rotation.inverse_transform_point(&cg_v_local.into());
+            let cb_v = cg + cg_v.into();
+            cb_v
+        };
+        let cb_m = {
+            // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
+            let my_plane = HalfSpace::new(Vector3::x_axis());
+            let cb_local = cb - cg;
+            let cb_local = rotation.transform_point(&cb_local.into());
+            let cb_m_local = my_plane.project_local_point(&cb_local.into(), false).point;
+            let cb_m = rotation.inverse_transform_point(&cb_m_local.into());
+            let cb_m = cg + cb_m.into();
+            cb_m
+        };
+        // проекция точки cg_m на вертикальную плоскость параллельную основной линии
+        let cg_m_h = {
+            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
+            let my_plane = HalfSpace::new(Vector3::y_axis());
+            let cg_m_local = cb_m - cg;
+            let cg_m_local = rotation.transform_point(&cg_m_local.into());
+            let cg_m_h_local = my_plane
+                .project_local_point(&cg_m_local.into(), false)
+                .point;
+            let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local.into());
+            let cg_m_h = cg + cg_m_h.into();
+            cg_m_h
+        };
+        let d_v = cg_h.x() - cb_v.x();
+        let d_m = cg_m_h.y() - cb_m.y();
+        Ok((draught, d_v, d_m, cg, displacement, disp_result))
     }
     // Считаем сыпучие грузы.
     // На них крен и дифферент не влияет.

@@ -1,7 +1,7 @@
 #
 # Thread-pool params
 thread-pool:
-    size: 250
+    size: 20
 # 
 # API params
 api:
