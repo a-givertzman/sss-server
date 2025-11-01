@@ -94,7 +94,7 @@ fn convert_to_trimesh() {
     let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(31));
     test_duration.run().unwrap();
     let test_data = [
-        (1, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\vessel_surface_APK_2023"),
+        (1, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\nasal_block"),
     ];
     for (step, path_3d_model) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
@@ -135,8 +135,7 @@ fn convert_to_trimesh() {
                 let mut i = 0;
                 for mesh in &result.surface_outer_body {
                     let mut mesh_with_flags = mesh.clone();
-                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                    println!("{:?}", mesh_with_flags.vertices());
+                    let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
                     if mesh_with_flags.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer_{}.stl", i));
                         if let Err(e) = write_stl(&path, &mesh_with_flags) {
