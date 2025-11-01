@@ -91,7 +91,7 @@ impl BuildDamagedCompartmentCache {
                         break 'draught;
                     }
                     let results = results.clone();
-                    let shape = shape.clone();
+                    let shape = Arc::clone(&shape);
                     let thread_name =
                         format!("BuildDamagedCompartmentCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);

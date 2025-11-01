@@ -67,13 +67,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cache_dir,
             model_scale: 1000.,
             model_center_coord,
-            heel_steps: vec![
+            hull_heel_steps: vec![
                 -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
                 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
             ],
-            trim_steps: vec![
+            hull_trim_steps: vec![
                 -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2.,
                 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+            ],
+            compartment_heel_steps: vec![
+                -60., -15., -5., 0., 5., 15., 60.,
+            ],
+            compartment_trim_steps: vec![
+                -40., -10., -5., 0., 5., 10., 40.,
             ],
             ship_length_lbp: 130.5,
             draught_min: 0.5,
@@ -106,14 +112,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
 
- /*       let res = model_cached.reload_shapes();            dbg!(&res);
+  /*      let res = model_cached.reload_shapes();            dbg!(&res);
  //   let res = model_cached.rebuild_caches();   dbg!(&res);
     let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
 */
-
     
     let api_client = Arc::new(ApiClient::new(
         &dbg,

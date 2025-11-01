@@ -45,13 +45,19 @@ fn floating_position_sofia() {
             cache_dir,
             model_scale: 1000.,
             model_center_coord,
-            heel_steps: vec![
+            hull_heel_steps: vec![
                 -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
                 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
             ],
-            trim_steps: vec![
+            hull_trim_steps: vec![
                 -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2.,
                 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+            ],
+            compartment_heel_steps: vec![
+                -60., -30., -10., -5., 0., 5., 10., 30., 60.,
+            ],
+            compartment_trim_steps: vec![
+                -40., -20., -10., -5., 0., 5., 10., 20., 40.,
             ],
             ship_length_lbp: 130.5,
             draught_min: 2.,

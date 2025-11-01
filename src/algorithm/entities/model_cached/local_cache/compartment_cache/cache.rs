@@ -177,6 +177,6 @@ impl LocalCache for CompartmentCache {
     }
     //
     fn set_cache(&mut self, cache: Cache<f64>) {
-        self.cache.insert(cache);
+        let _ = self.cache.insert(cache);
     }
 }

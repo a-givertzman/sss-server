@@ -15,10 +15,12 @@ pub struct ModelCachedConf {
     pub model_center_coord: Position,
     /// Ship length between perpendiculars
     pub ship_length_lbp: f64,
-    /// Angle in degrees.
-    pub heel_steps: Vec<f64>,
-    /// Angle in degrees.
-    pub trim_steps: Vec<f64>,
+    /// Angle in degrees for hull
+    pub hull_heel_steps: Vec<f64>,
+    pub hull_trim_steps: Vec<f64>,
+    /// Angle in degrees for compartment
+    pub compartment_heel_steps: Vec<f64>,
+    pub compartment_trim_steps: Vec<f64>,
     /// Draught in meters
     pub draught_min: f64,
     pub draught_max: f64,

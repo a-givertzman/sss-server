@@ -122,7 +122,7 @@ impl BuildDisplacementCache {
                     }
                     //  let dbg_ = self.dbg.clone();
                     let draft_results = draft_results.clone();
-                    let shape = shape.clone();
+                    let shape = Arc::clone(&shape);
                     let thread_name =
                         format!("BuildDisplacementCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);

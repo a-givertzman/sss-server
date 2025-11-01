@@ -77,7 +77,7 @@ impl BuildBoundDisplacementCache {
             let results = results.clone();
             let _errors = errors.clone();
             let _error = error.clone();
-            let shape = shape.clone();
+            let shape = Arc::clone(&shape);
             let bound = bound.clone();
             let center = match bound.center() {
                 Some(center) => center,
@@ -92,6 +92,7 @@ impl BuildBoundDisplacementCache {
                 center
             );
             log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+            println!("{}.build | Starting thread {thread_name}", &self.dbg);
             //  println!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
@@ -124,6 +125,7 @@ impl BuildBoundDisplacementCache {
         }
         for task in tasks {
             log::info!("{}.build | join thread {}", &self.dbg, task.name());
+            println!("{}.build |join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
