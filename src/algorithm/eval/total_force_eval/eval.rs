@@ -75,10 +75,7 @@ impl Eval<(), EvalResult> for TotalForceEval {
                     mass_values.iter().sum::<f64>(),
                     volume_values.iter().sum::<f64>()
                 );
-
-
                 println!("\n\n TotalForce qnt:{} result\n", result.len());   result.iter().for_each(|b| print!("{:.3} ", b)); 
-              //  println!("\n\n TotalForce result\n");  result.iter().for_each(|b| print!("{:.3} ", b)); 
                 ctx.write(TotalForceCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

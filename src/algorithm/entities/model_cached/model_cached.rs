@@ -760,6 +760,8 @@ impl ModelCached {
                     }
                 }
                 res_mass_distr = src_mass_distr.clone();
+                liquid.clear();
+                bulk.clear();
                 while !liquid_results.is_empty() {
                     if let Some(data) = liquid_results.pop() {
                         res_mass_distr.add_vec(&data.mass_values).map_err(|err| {
@@ -802,7 +804,7 @@ impl ModelCached {
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= query.epsilon {
-                    println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+             //       println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
                     break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
@@ -819,7 +821,7 @@ impl ModelCached {
             );
             let delta_x = mass_x - disp_x;
             if delta_x.abs() <= query.epsilon {
-                println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
+         //       println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
                 break;
             }
             trim += delta_x / 10.;

@@ -4,7 +4,7 @@ use crate::{
         context::context_access::ContextReadRef,
         entities::{
             AddVec, Bound, Bounds,
-            data::loads::{AssignmentType, UnitCargoType},
+            data::loads::{AssignmentType, UnitCargoType, gaseous},
         },
         eval::{IcingCtx, StaticMassCtx, StrengthBalanceCtx, WettingCtx, parameters::ParameterID},
     },
@@ -81,6 +81,8 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
+
+                    bulk.iter().for_each(|v| { dbg!(&v.space_id, v.mass ); }) ;
                     let liquid = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .liquid
                         .as_ref()
@@ -130,11 +132,11 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
                         icing:{icing}, wetting:{wetting} sum:{mass_sum}"
                     );
-                    /*     println!(
+                    println!(
                         "\t Mass ballast:{ballast}, stores:{stores}, bulkhead:{bulkhead}
                         cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
                         icing:{icing}, wetting:{wetting} sum:{mass_sum}"
-                    );*/
+                    );
                 }
                 let result = {
                     // распределения масс по типам
@@ -223,9 +225,16 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         .map_err(|err| error.pass_with("mass_values.add vec_icing", err))?;
                     mass_values
                         .add_vec(&vec_wetting)
-                        .map_err(|err| error.pass_with("mass_values.add vec_wetting", err))?;
+                        .map_err(|err| error.pass_with("mass_values.add vec_wetting", err))?;                    
+                    println!("value_mass_hull sum: {} result", vec_hull.iter().sum::<f64>()); // vec_hull.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_equipment sum: {} result", vec_equipment.iter().sum::<f64>()); // vec_equipment.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_bulkhead sum: {} result", vec_bulkhead.iter().sum::<f64>());  //vec_bulkhead.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_ballast sum: {} result", vec_ballast.iter().sum::<f64>()); // vec_ballast.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_store sum: {} result", vec_store.iter().sum::<f64>()); // vec_store.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_cargo sum: {} result", vec_cargo.iter().sum::<f64>()); // vec_cargo.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_icing sum: {} result", vec_icing.iter().sum::<f64>()); // vec_icing.iter().for_each(|b| print!("{:.3} ", b));
+                    println!("vec_wetting sum: {} result", vec_wetting.iter().sum::<f64>()); // vec_wetting.iter().for_each(|b| print!("{:.3} ", b));
                     let mut data = HashMap::new();
-                    //    println!("\n\n Mass sum: {} result\n", mass_values.iter().sum::<f64>());  mass_values.iter().for_each(|b| print!("{:.3} ", b));
                     data.insert("value_mass_hull".to_owned(), vec_hull);
                     data.insert("value_mass_equipment".to_owned(), vec_equipment);
                     data.insert("value_mass_bulkhead".to_owned(), vec_bulkhead);
