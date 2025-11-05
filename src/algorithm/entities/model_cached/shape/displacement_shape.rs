@@ -400,8 +400,8 @@ impl DisplacementShape {
     */
     ///
     /// Расчет [длинны и ширины по ватерлинии](https://github.com/a-givertzman/sss/blob/6d91fb09de073995c3a165ebaaa76e4f1e202f36/design/algorithm/part04_stability/chapter05_criteria/section02_weatherCriteria.md)
-    pub fn aabb(&self, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new(&self.dbg, "aabb");
+    pub fn waterline_size(&self, draught: f64) -> Result<(f64, f64), Error> {
+        let error = Error::new(&self.dbg, "waterline_size");
         let result = self
             .mesh
             .as_ref()

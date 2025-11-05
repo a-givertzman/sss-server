@@ -99,7 +99,7 @@ impl BuildDisplacementCache {
                 let handle = scheduler
                     .spawn(move || {
                         let guard = shape.read();
-                        aabb_results.push((draught, guard.aabb(draught)));
+                        aabb_results.push((draught, guard.waterline_size(draught)));
                         Ok(())
                     })
                     .map_err(|err| {
