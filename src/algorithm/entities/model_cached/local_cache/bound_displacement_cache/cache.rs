@@ -21,7 +21,7 @@ pub struct BoundDisplacementCache {
     dbg: Dbg,
     cache_path: PathBuf,
     level_step: f64,
-    midel_x: f64,
+    center_x: f64,
     bounds: Bounds,
     ///
     /// Model representation used for cache calculation.
@@ -43,7 +43,7 @@ impl BoundDisplacementCache {
         shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: PathBuf,
         level_step: f64,
-        midel_x: f64,
+        center_x: f64,
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
@@ -52,7 +52,7 @@ impl BoundDisplacementCache {
         Self {
             shape,
             level_step,
-            midel_x,
+            center_x,
             bounds,
             caches: OnceLock::new(),
             cache_path,
@@ -69,11 +69,11 @@ impl BoundDisplacementCache {
         //    let delta_draught = trim.to_radians().sin()*self.length_lbp;
         let result = caches
             .iter()
-            .map(|(dx, cache)| match cache {
+            .map(|(center_x, cache)| match cache {
                 Some(cache) => {
-                    //            let draught = draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.midel_x);
-                    let draught = draught_mid + dx * trim.to_radians().sin();
-                    //     dbg!(draught_mid, dx, draught);
+                    //            let draught = draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.center_x);
+                    let draught = draught_mid + center_x * trim.to_radians().sin();
+                  //       dbg!(draught_mid, dx, draught);
                     cache.get(&vec![draught])[0]
                 }
                 None => 0.,
@@ -124,7 +124,7 @@ impl BoundDisplacementCache {
                 } else {
                     None
                 };
-            let center = bound.center().ok_or(error.err("bound.center()"))? - self.midel_x;
+            let center = bound.center().ok_or(error.err("bound.center()"))? - self.center_x;
             caches.push((center, cache));
         }
         self.caches
@@ -176,7 +176,7 @@ impl BoundDisplacementCache {
             } else {
                 None
             };
-            caches.push((dx - self.midel_x, cache));
+            caches.push((dx - self.center_x, cache));
         }
         if let Err(error) = self.caches.set(caches).map_err(|_| error.err("caches.set")) {
             log::error!("{}", error);

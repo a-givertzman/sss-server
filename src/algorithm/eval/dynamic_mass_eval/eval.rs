@@ -12,6 +12,7 @@ use crate::{
     prelude::{ContextParamsWrite, ContextRead, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
+use core::f64;
 use std::collections::HashMap;
 
 ///
@@ -195,13 +196,34 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                             AssignmentType::Unspecified => Ok(()),
                         };
                     let strength_balance: StrengthBalanceCtx = ctx.read();
+
+
+           /*         let bulk = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .bulk
+                        .as_ref()
+                        .ok_or(error.err("Read bulk error: no data!"))?
+                        .iter()
+                        .filter(|(_, v)| v.mass > 0.)
+                        .map(|(_, v)| (v.space_id.clone(), v.mass))
+                        .collect::<HashMap<_, _>>();
+                    let liquid = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .liquid
+                        .as_ref()
+                        .ok_or(error.err("Read bulk error: no data!"))?
+                        .iter()
+                        .filter(|(_, v)| v.mass > 0.)
+                        .map(|(_, v)| (v.space_id.clone(), v.mass))
+                        .collect::<HashMap<_, _>>();
+*/
                     for v in strength_balance.gaseous {
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     for v in strength_balance.bulk {
+                    //    println!("bulk {} mass:{} vec_sum:{}", v.space_id, bulk.get(&v.space_id).unwrap(), v.mass_values.iter().sum::<f64>());
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     for v in strength_balance.liquid {
+                   //     println!("liquid {} mass:{} vec_sum:{}", v.space_id, liquid.get(&v.space_id).unwrap(), v.mass_values.iter().sum::<f64>());
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     let mut mass_values = vec_hull.clone();

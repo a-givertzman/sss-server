@@ -413,7 +413,8 @@ impl ModelCached {
         for (compartment_id, compartment) in &self.compartments {
             let compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step);
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
             compartment_bounded
                 .init()
                 .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
@@ -501,7 +502,8 @@ impl ModelCached {
             println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step);
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
             compartment_bounded
                 .rebuild()
                 .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
@@ -667,7 +669,7 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
-                            println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                      //      println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,

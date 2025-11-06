@@ -2,7 +2,10 @@ use crate::{
     algorithm::entities::{
         Bounds, Position,
         cache::Cache,
-        model_cached::{BoundDisplacementCache, CompartmentCacheResult, DisplacementShape, local_cache::LocalCache, save},
+        model_cached::{
+            BoundDisplacementCache, CompartmentCacheResult, DisplacementShape, Shape,
+            local_cache::LocalCache, save,
+        },
     },
     kernel::types::{Arc, RwLock},
 };
@@ -20,13 +23,10 @@ pub struct CompartmentCache {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_step: f64,
-    midel_x: f64,
     /// центр полного объема из бд
     center_max: Option<Position>,
     /// полный объем из бд
     volume_max: Option<f64>,
-    /// максимальная высота заполнения отсека
-    level_max: Option<f64>,
     ///
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
@@ -52,7 +52,6 @@ impl CompartmentCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         level_step: f64,
-        midel_x: f64,
         center_max: Option<Position>,
         volume_max: Option<f64>,
         thread_pool: Arc<ThreadPool>,
@@ -63,10 +62,8 @@ impl CompartmentCache {
             heel_steps,
             trim_steps,
             level_step,
-            midel_x,
             center_max,
             volume_max,
-            level_max: None,
             cache: None,
             cache_dir: cache_dir.as_ref().join(compartment_id),
             dbg,
@@ -92,8 +89,9 @@ impl CompartmentCache {
             let result = cache.get(&query);
             assert!(result.len() == 6);
             let delta = result
-                    .first()
-                    .ok_or(error.pass("no result from cache.get(&query)"))? - volume;
+                .first()
+                .ok_or(error.pass("no result from cache.get(&query)"))?
+                - volume;
             if delta.abs() <= epsilon || i >= 50 {
                 return Ok(CompartmentCacheResult {
                     heel,
@@ -111,16 +109,26 @@ impl CompartmentCache {
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
     //
-    pub fn build_bounded(&self, bounds: Bounds, level_step: f64) -> BoundDisplacementCache {
-        BoundDisplacementCache::new(
+    pub fn build_bounded(
+        &self,
+        bounds: Bounds,
+        level_step: f64,
+    ) -> Result<BoundDisplacementCache, Error> {
+        let center_x = self
+            .shape
+            .read()
+            .center()
+            .ok_or(Error::new(self.dbg.clone(), "build_bounded").err("no center point for shape"))?
+            .x;
+        Ok(BoundDisplacementCache::new(
             &self.dbg,
             self.shape.clone(),
             self.cache_dir.clone().join("distr"),
             level_step,
-            self.midel_x,
+            center_x,
             bounds,
             Arc::clone(&self.thread_pool),
-        )
+        ))
     }
 }
 //
