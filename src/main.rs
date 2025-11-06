@@ -28,7 +28,7 @@ use sal_sync::thread_pool::ThreadPool;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{
     Bounds, Moment,
-    model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught},
+    model_cached::{self, DisplacementShape, Draught},
 };
 use crate::prelude::{Context, Initial, InitialCtx};
 use std::rc::Rc;

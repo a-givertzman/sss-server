@@ -17,16 +17,15 @@ use std::{
 };
 ///
 /// Pre-calculated cache for bounds
-pub struct BoundDisplacementCache {
+pub struct CompartmentBoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
     level_step: f64,
-    center_x: f64,
     bounds: Bounds,
-    ///
+    /// Start draught for volume calculation
+    start_draught: OnceLock<f64>,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
-    ///
     /// Cache read from `self.file_path`.
     caches: OnceLock<Vec<(f64, Option<Cache<f64>>)>>,
     thread_pool: Arc<ThreadPool>,
@@ -34,7 +33,7 @@ pub struct BoundDisplacementCache {
 }
 //
 //
-impl BoundDisplacementCache {
+impl CompartmentBoundCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
@@ -43,17 +42,16 @@ impl BoundDisplacementCache {
         shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: PathBuf,
         level_step: f64,
-        center_x: f64,
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("BoundDisplacementCache"));
+        let dbg = Dbg::new(parent, format!("CompartmentBoundCache"));
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
             level_step,
-            center_x,
             bounds,
+            start_draught: OnceLock::new(),
             caches: OnceLock::new(),
             cache_path,
             dbg,
@@ -63,33 +61,56 @@ impl BoundDisplacementCache {
     }
     /// Return volume in bounds
     /// cause panic if caches not initialized
-    pub fn get(&self, draught_mid: f64, trim: f64) -> Result<Vec<f64>, Error> {
+    pub fn get(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "get");
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
+        let mut draugth = *self
+            .start_draught
+            .get()
+            .ok_or(error.pass("no start_draught"))?;
+        let mut delta_draugth = draugth/2.;
+        let mut values: Vec<f64>;
         //    let delta_draught = trim.to_radians().sin()*self.length_lbp;
-        let result = caches
+        for _i in 0..50 {
+            values = caches
             .iter()
             .map(|(center_x, cache)| match cache {
                 Some(cache) => {
-                    //            let draught = draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.center_x);
-                    let draught = draught_mid + center_x * trim.to_radians().sin();
-                  //       dbg!(draught_mid, dx, draught);
+                    let draught = draugth + center_x * trim.to_radians().sin();
                     cache.get(&vec![draught])[0]
                 }
                 None => 0.,
             })
             .collect();
-        Ok(result)
+            let values_sum = values.iter().sum::<f64>();
+            let delta = values_sum - volume;
+            if delta.abs() <= epsilon {
+                return Ok(values);
+            }
+            draugth -= delta_draugth*delta.signum();
+            delta_draugth /= 2.;
+        }
+        Err(error.err("no result!"))
+    }
+    /// Return max draught in bounds
+    /// cause panic if caches not initialized
+    pub fn get_max_draught(&self) -> Result<Vec<f64>, Error> {
+        self.get_max(0)
     }
     /// Return max volume in bounds
     /// cause panic if caches not initialized
-    pub fn get_max(&self) -> Result<Vec<f64>, Error> {
+    pub fn get_max_volume(&self) -> Result<Vec<f64>, Error> {
+        self.get_max(1)
+    }
+    /// Return max value in bounds
+    /// cause panic if caches not initialized
+    fn get_max(&self, index: usize) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "get_max");
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
         let result = caches
             .iter()
             .map(|(_, cache)| match cache {
-                Some(cache) => cache.max_value(1),
+                Some(cache) => cache.max_value(index),
                 None => 0.,
             })
             .collect();
@@ -106,36 +127,39 @@ impl BoundDisplacementCache {
         if errors.is_empty() {
             return Ok(());
         }
-        let full_error = errors.into_iter().fold("".to_owned(), |acc, err| acc + ", " + &err.to_string());
-        Err(Error::new(self.dbg.clone(), format!("rebuild: {full_error}")))
+        let full_error = errors
+            .into_iter()
+            .fold("".to_owned(), |acc, err| acc + ", " + &err.to_string());
+        Err(Error::new(
+            self.dbg.clone(),
+            format!("rebuild: {full_error}"),
+        ))
     }
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(&self) -> Result<(), Error> {
         let error = Error::new(self.dbg.clone(), "init");
         let mut caches = Vec::new();
-        for (i, bound) in self.bounds.iter().enumerate() {
-            let cache =
+        for (i, b) in self.bounds.iter().enumerate() {
+            let center_x = b.center().unwrap_or(0.);
+            caches.push(
                 if let Ok(vals) = read(&self.dbg, &self.cache_path.clone().join(format!("{i}"))) {
                     let cache = Cache::new(&self.dbg);
                     cache
                         .init(vals)
                         .map_err(|err| error.pass_with("cache.init error", err))?;
-                    Some(cache)
+                    (center_x, Some(cache))
                 } else {
-                    None
-                };
-            let center = bound.center().ok_or(error.err("bound.center()"))? - self.center_x;
-            caches.push((center, cache));
+                    (center_x, None)
+                },
+            );
         }
-        self.caches
-            .set(caches)
-            .map_err(|_| error.err("caches.set"))?;
-        Ok(())
+        self.process(caches)
+            .map_err(|err| error.pass_with("process_center", err))
     }
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let (data, mut errors) = super::build_cache::BuildBoundDisplacementCache::new(
+        let (data, mut errors) = super::build_cache::BuildCompartmentBoundCache::new(
             &self.dbg,
             self.shape.clone(),
             self.level_step,
@@ -176,13 +200,41 @@ impl BoundDisplacementCache {
             } else {
                 None
             };
-            caches.push((dx - self.center_x, cache));
+            caches.push((dx, cache));
         }
-        if let Err(error) = self.caches.set(caches).map_err(|_| error.err("caches.set")) {
+        if let Err(err) = self.process(caches) {
+            let error = error.pass_with("process_center", err);
             log::error!("{}", error);
             errors.push(error);
         }
         errors
+    }
+    //
+    fn process(&self, caches: Vec<(f64, Option<Cache<f64>>)>) -> Result<(), Error> {
+        let error = Error::new(self.dbg.clone(), "process_center");
+        let center_x = caches
+            .iter()
+            .filter(|(_, v)| v.is_some())
+            .map(|(x, _)| x)
+            .sum::<f64>();
+        self.caches
+            .set(
+                caches
+                    .into_iter()
+                    .map(|(x, cache)| (x - center_x, cache))
+                    .collect(),
+            )
+            .map_err(|_| error.err("caches.set"))?;
+        self.start_draught.set(
+            self.get_max_draught()
+                .map_err(|err| error.pass_with("get_max_trim", err))?
+                .iter()
+                .copied()
+                .reduce(f64::max)
+                .ok_or(error.err("start_draught"))?
+                / 2.,
+        );
+        Ok(())
     }
     //
     fn exit(&self) {

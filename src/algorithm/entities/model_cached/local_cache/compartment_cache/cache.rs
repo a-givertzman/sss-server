@@ -3,7 +3,7 @@ use crate::{
         Bounds, Position,
         cache::Cache,
         model_cached::{
-            BoundDisplacementCache, CompartmentCacheResult, DisplacementShape, Shape,
+            CompartmentBoundCache, CompartmentCacheResult, DisplacementShape,
             local_cache::LocalCache, save,
         },
     },
@@ -113,22 +113,15 @@ impl CompartmentCache {
         &self,
         bounds: Bounds,
         level_step: f64,
-    ) -> Result<BoundDisplacementCache, Error> {
-        let center_x = self
-            .shape
-            .read()
-            .center()
-            .ok_or(Error::new(self.dbg.clone(), "build_bounded").err("no center point for shape"))?
-            .x;
-        Ok(BoundDisplacementCache::new(
+    ) -> CompartmentBoundCache {
+        CompartmentBoundCache::new(
             &self.dbg,
             self.shape.clone(),
             self.cache_dir.clone().join("distr"),
             level_step,
-            center_x,
             bounds,
             Arc::clone(&self.thread_pool),
-        ))
+        )
     }
 }
 //

@@ -2,7 +2,7 @@ use crate::{
     algorithm::entities::{
         Bounds, Moment, Position,
         model_cached::{
-            BoundDisplacementCache, DisplacementShape, FloatingPositionResult, Shape, model_cached
+            DisplacementBoundCache, DisplacementShape, FloatingPositionResult, Shape, model_cached
         },
     },
     kernel::types::{Arc, RwLock},
@@ -846,7 +846,7 @@ fn bound_displacement_sofia() {
         1000.,
     );
     displacement_shape.init().unwrap();
-    let mut bound_displacement = BoundDisplacementCache::new(
+    let mut bound_displacement = DisplacementBoundCache::new(
         &dbg,
         Arc::new(RwLock::new(displacement_shape)),
         cache_dir.clone().join("disp_bounded"),

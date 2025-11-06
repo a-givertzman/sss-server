@@ -13,8 +13,8 @@ use crate::{
     kernel::types::{Arc, RwLock},
 };
 ///
-/// Provides logic to calculate and store cache used by [super::BoundDisplacementCache].
-pub struct BuildBoundDisplacementCache {
+/// Provides logic to calculate and store cache used by [super::CompartmentBoundCache].
+pub struct BuildCompartmentBoundCache {
     dbg: Dbg,
     shape: Arc<RwLock<DisplacementShape>>,
     level_step: f64,
@@ -24,7 +24,7 @@ pub struct BuildBoundDisplacementCache {
 }
 //
 //
-impl BuildBoundDisplacementCache {
+impl BuildCompartmentBoundCache {
     ///
     /// Crates a new instance.
     #[allow(clippy::too_many_arguments)]
@@ -38,7 +38,7 @@ impl BuildBoundDisplacementCache {
     ) -> Self {
         debug_assert!(level_step > 0.);
         Self {
-            dbg: Dbg::new(parent, "BuildBoundDisplacementCache"),
+            dbg: Dbg::new(parent, "BuildCompartmentBoundCache"),
             shape: shape.clone(),
             level_step,
             bounds,
@@ -49,10 +49,10 @@ impl BuildBoundDisplacementCache {
     /// Построение кэшей со сдвигом основания в 0 по высоте
     pub fn build(self) -> (Vec<(f64, Option<Vec<(f64, f64)>>)>, Vec<Error>) {
         log::info!(
-            "{}.build_compartment | Starting build_compartment",
+            "{}.build | Starting build",
             &self.dbg
         );
-        let error = Error::new(&self.dbg, "build_compartment");
+        let error = Error::new(&self.dbg, "build");
         let min_z = match self.shape.read().size() {
             Ok((_, _, _, min_z)) => min_z,
             Err(err) => {
@@ -136,7 +136,7 @@ impl BuildBoundDisplacementCache {
             };
             let step = self.level_step;
             let thread_name = format!(
-                "BuildBoundDisplacementCache displacement_by_steps {:.3}",
+                "BuildCompartmentBoundCache displacement_by_steps {:.3}",
                 center
             );
             log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
@@ -221,7 +221,7 @@ impl BuildBoundDisplacementCache {
             };
             let step = self.level_step;
             let thread_name = format!(
-                "BuildBoundDisplacementCache displacement_by_steps {:.3}",
+                "BuildCompartmentBoundCache displacement_by_steps {:.3}",
                 center
             );
             log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
