@@ -375,7 +375,7 @@ impl ModelCached {
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
         }
-   /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+        /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
             damaged_compartment
                 .write()
                 .init()
@@ -477,25 +477,26 @@ impl ModelCached {
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-/*        let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-        let mut bound_displacement = BoundDisplacementCache::new(
-            &self.dbg,
-            displacement_shape.clone(),
-            self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
-            self.model_center_coord.x(),
-            bounds.clone(),
-            Arc::clone(&self.thread_pool),
-        );
-        bound_displacement
-            .rebuild()
-            .map_err(|err| error.pass_with("bound_displacement.rebuild", err))?;
-        self.displacement_bounded
-            .insert(bounds.len_qnt(), Arc::new(RwLock::new(bound_displacement)));
- */     let mut cache_map = IndexMap::new();
+        /*        let displacement_shape = self
+                   .displacement_shapes
+                   .get("hull")
+                   .ok_or(error.err("no displacement_shape"))?;
+               let mut bound_displacement = BoundDisplacementCache::new(
+                   &self.dbg,
+                   displacement_shape.clone(),
+                   self.cache_dir.clone().join("disp_bounded"),
+                   self.bounds_level_step,
+                   self.model_center_coord.x(),
+                   bounds.clone(),
+                   Arc::clone(&self.thread_pool),
+               );
+               bound_displacement
+                   .rebuild()
+                   .map_err(|err| error.pass_with("bound_displacement.rebuild", err))?;
+               self.displacement_bounded
+                   .insert(bounds.len_qnt(), Arc::new(RwLock::new(bound_displacement)));
+        */
+        let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
@@ -641,7 +642,12 @@ impl ModelCached {
                         .get(&space_id)
                         .ok_or(error.err(format!("no compartment:{space_id}")))?
                         .clone();
-                    let compartments_bounded = compartments_bounded.clone();
+                    let compartment_bounded = compartments_bounded
+                        .get(&space_id)
+                        .ok_or(
+                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                        )?
+                        .clone();
                     let trim = trim;
                     let volume = cargo.volume;
                     let epsilon = query.epsilon;
@@ -652,13 +658,8 @@ impl ModelCached {
                                 .read()
                                 .get(0., trim, volume, epsilon)
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            let compartment_bounded = compartments_bounded
-                                .get(&space_id)
-                                .ok_or(error_.err(format!(
-                                    "compartments_bounded.get no space_id:{space_id}"
-                                )))?
-                                .read();
                             let volume_bounded = compartment_bounded
+                                .read()
                                 .get(compartment_result.level, trim)
                                 .map_err(|err| {
                                     error_.pass_with(
@@ -666,6 +667,7 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
+                            println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
@@ -804,7 +806,7 @@ impl ModelCached {
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= query.epsilon {
-             //       println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                    //       println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
                     break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
@@ -821,7 +823,7 @@ impl ModelCached {
             );
             let delta_x = mass_x - disp_x;
             if delta_x.abs() <= query.epsilon {
-         //       println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
+                //       println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
                 break;
             }
             trim += delta_x / 10.;
@@ -1427,9 +1429,9 @@ impl ModelCached {
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "moment_liquid",
-                errors
-                    .iter()
-                    .fold("errors:".to_string(), |acc, err| acc + &format!("\n{}", err)),
+                errors.iter().fold("errors:".to_string(), |acc, err| {
+                    acc + &format!("\n{}", err)
+                }),
             ));
         }
         let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
