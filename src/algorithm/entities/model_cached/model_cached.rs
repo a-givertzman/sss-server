@@ -566,6 +566,7 @@ impl ModelCached {
         let gaseous_results = Arc::new(Stack::new());
         for cargo in query.gaseous {
             assert!(cargo.mass > 0.);
+            println!("adaddfs start gaseous {} mass:{} ", cargo.space_id, cargo.mass);  
             let assigment_type = cargo.assigment_type;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
@@ -612,6 +613,7 @@ impl ModelCached {
                     res.add_vec(&data.mass_values).map_err(|err| {
                         error.pass_with(format!("mass_distr.add_vec(gaseous)"), err.to_string())
                     })?;
+                    println!("adaddfs add gaseous {} mass:{} ", data.space_id, data.mass_values.iter().sum::<f64>()); 
                     gaseous.push(data);
                 }
             }
@@ -656,7 +658,7 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
-                      //      println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                          //  println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
@@ -701,6 +703,7 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
+                        //    println!("model_cached balance_strength bulk space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::bulk_result::BulkResult::new(
                                 space_id,
                                 assigment_type,
@@ -786,11 +789,11 @@ impl ModelCached {
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= epsilon_mass {
-                    //       println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                    println!("bfgsdb break draught: {_j}, {epsilon_mass}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                    epsilon_mass = delta_w.max(query.epsilon);
                     break;  
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
-                epsilon_mass = delta_w.max(query.epsilon);
             }
             let (mut mass_moment, mut disp_moment) = (0., 0.);
             for (i, bound) in query.bounds.iter().enumerate() {
@@ -803,11 +806,15 @@ impl ModelCached {
                 disp_moment * query.water_density / disp_sum,
             );
             let delta_x = mass_x - disp_x;
+            println!("bfgsdb trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
             if delta_x.abs() <= query.epsilon && epsilon_mass <= query.epsilon {
-                //       println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
+                println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
                 break;
             }
-            trim += delta_x / 10.;
+            trim += delta_x / 3.;
+        }
+        for data in &gaseous {
+            println!("adaddfs end gaseous {} mass:{} ", data.space_id, data.mass_values.iter().sum::<f64>()); 
         }
         Ok(StrengthBalanceCtx {
             displacement_distr: res_displacement_distr,

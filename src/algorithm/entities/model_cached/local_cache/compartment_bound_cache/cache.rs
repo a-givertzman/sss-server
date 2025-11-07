@@ -22,8 +22,6 @@ pub struct CompartmentBoundCache {
     cache_path: PathBuf,
     level_step: f64,
     bounds: Bounds,
-    /// Start draught for volume calculation
-    start_draught: OnceLock<f64>,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
     /// Cache read from `self.file_path`.
@@ -51,7 +49,6 @@ impl CompartmentBoundCache {
             shape,
             level_step,
             bounds,
-            start_draught: OnceLock::new(),
             caches: OnceLock::new(),
             cache_path,
             dbg,
@@ -62,40 +59,45 @@ impl CompartmentBoundCache {
     /// Return volume in bounds
     /// cause panic if caches not initialized
     pub fn get(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
+    //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
         let error = Error::new(&self.dbg, "get");
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
-        let mut draugth = *self
-            .start_draught
-            .get()
-            .ok_or(error.pass("no start_draught"))?;
-        let mut delta_draugth = draugth/2.;
+        let max_volume = self.get_max_volume().map_err(|err| error.pass(err))?;
+    //    println!("jfhufjd get start {} {volume} {}", &self.dbg, max_volume.iter().sum::<f64>());
+        if volume >= max_volume.iter().sum() {
+            return Ok(max_volume);
+        }
+        let mut draugth = 0.;
+        let mut delta_draugth = 5.;
+        let mut last_delta: Option<f64> = Some(-1.);
         let mut values: Vec<f64>;
-        //    let delta_draught = trim.to_radians().sin()*self.length_lbp;
-        for _i in 0..50 {
+        let trim_sin = trim.to_radians().sin();
+        for _i in 0..100 {
             values = caches
             .iter()
             .map(|(center_x, cache)| match cache {
                 Some(cache) => {
-                    let draught = draugth + center_x * trim.to_radians().sin();
-                    cache.get(&vec![draught])[0]
+                    cache.get(&vec![draugth + center_x * trim_sin])[0]
                 }
                 None => 0.,
             })
             .collect();
             let values_sum = values.iter().sum::<f64>();
             let delta = values_sum - volume;
+        //    println!("jydfhsh {} {_i} {delta} {values_sum} {volume}", &self.dbg);
             if delta.abs() <= epsilon {
+     //           println!("jydfhsh get ok {} {_i} {values_sum} {volume} {epsilon}", &self.dbg);
                 return Ok(values);
             }
-            draugth -= delta_draugth*delta.signum();
-            delta_draugth /= 2.;
+            if let Some(last_delta) = last_delta {
+                if last_delta.signum() != delta.signum() {
+                    delta_draugth = -delta_draugth/3.;
+                }
+            }
+            draugth += delta_draugth;
+            last_delta = Some(delta);
         }
         Err(error.err("no result!"))
-    }
-    /// Return max draught in bounds
-    /// cause panic if caches not initialized
-    pub fn get_max_draught(&self) -> Result<Vec<f64>, Error> {
-        self.get_max(0)
     }
     /// Return max volume in bounds
     /// cause panic if caches not initialized
@@ -212,11 +214,13 @@ impl CompartmentBoundCache {
     //
     fn process(&self, caches: Vec<(f64, Option<Cache<f64>>)>) -> Result<(), Error> {
         let error = Error::new(self.dbg.clone(), "process_center");
-        let center_x = caches
+        let center_x: Vec<_> = caches
             .iter()
             .filter(|(_, v)| v.is_some())
-            .map(|(x, _)| x)
-            .sum::<f64>();
+            .map(|(x, _)| *x)
+            .collect();
+        let qnt = center_x.len();
+        let center_x = center_x.iter().sum::<f64>()/qnt as f64;
         self.caches
             .set(
                 caches
@@ -225,15 +229,7 @@ impl CompartmentBoundCache {
                     .collect(),
             )
             .map_err(|_| error.err("caches.set"))?;
-        self.start_draught.set(
-            self.get_max_draught()
-                .map_err(|err| error.pass_with("get_max_trim", err))?
-                .iter()
-                .copied()
-                .reduce(f64::max)
-                .ok_or(error.err("start_draught"))?
-                / 2.,
-        );
+        //println!("dfsfgukfk {} {center_x} ", &self.dbg);
         Ok(())
     }
     //
