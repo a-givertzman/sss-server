@@ -86,7 +86,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     liquid: static_mass.liquid.clone(),
                     grain_bulkhead: static_mass.grain_bulkhead,
                     //    damaged_compartment: loads.damaged_compartment, //TODO
-                    epsilon: 0.00000001,
+                    epsilon: 0.000001,
                 };
                 let result: BalanceStabilityResult = self
                     .model

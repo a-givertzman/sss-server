@@ -4,7 +4,9 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaShape, CompartmentBoundCache, CompartmentCache, CompartmentCacheResult, DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache, DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea
+                AreaShape, CompartmentBoundCache, CompartmentCache, CompartmentCacheResult,
+                DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
+                DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
             },
             ship_model::{stability_result::BalanceStabilityResult, *},
         },
@@ -566,7 +568,6 @@ impl ModelCached {
         let gaseous_results = Arc::new(Stack::new());
         for cargo in query.gaseous {
             assert!(cargo.mass > 0.);
-            println!("adaddfs start gaseous {} mass:{} ", cargo.space_id, cargo.mass);  
             let assigment_type = cargo.assigment_type;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
@@ -599,6 +600,50 @@ impl ModelCached {
                 Err(err) => errors.push(err),
             };
         }
+        // расчет эпюр масс для сыпучих грузов
+        // они не смещаются, поэтому считаем их один раз
+        let bulk_results = Arc::new(Stack::new());
+        for cargo in &query.bulk {
+            assert!(cargo.mass > 0.);
+            let assigment_type = cargo.assigment_type;
+            let space_id = cargo.space_id.clone();
+            let error_ = error.err(format!("compartment_{space_id} bulk work"));
+            let density = cargo.mass / cargo.volume;
+            let compartments_bounded = compartments_bounded.clone();
+            let volume = cargo.volume;
+            let epsilon = query.epsilon;
+            let results_ = bulk_results.clone();
+            let handle = scheduler
+                .spawn(move || {
+                    let compartment_bounded = compartments_bounded
+                        .get(&space_id)
+                        .ok_or(
+                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                        )?
+                        .read();
+                    let volume_bounded =
+                        compartment_bounded
+                            .get(volume, 0., epsilon)
+                            .map_err(|err| {
+                                error_.pass_with(
+                                    format!("compartment_bounded.get, space_id:{space_id}"),
+                                    err,
+                                )
+                            })?;
+                    //    println!("model_cached balance_strength bulk space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                    results_.push(strength_balance_eval::bulk_result::BulkResult::new(
+                        space_id,
+                        assigment_type,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => errors.push(err),
+            };
+        }
         for task in tasks {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
@@ -613,8 +658,15 @@ impl ModelCached {
                     res.add_vec(&data.mass_values).map_err(|err| {
                         error.pass_with(format!("mass_distr.add_vec(gaseous)"), err.to_string())
                     })?;
-                    println!("adaddfs add gaseous {} mass:{} ", data.space_id, data.mass_values.iter().sum::<f64>()); 
                     gaseous.push(data);
+                }
+            }
+            while !bulk_results.is_empty() {
+                if let Some(data) = bulk_results.pop() {
+                    res.add_vec(&data.mass_values).map_err(|err| {
+                        error.pass_with("mass_distr.add_vec(bulk)", err.to_string())
+                    })?;
+                    bulk.push(data);
                 }
             }
             res
@@ -623,7 +675,7 @@ impl ModelCached {
         let mut res_displacement_distr = Vec::new();
         let (mut trim, mut draught) = (query.trim, query.draught);
         let (mut mass_sum, mut disp_sum) = (100000., 100000.);
-        let mut epsilon_mass = 10.;        
+        let (mut epsilon_mass, mut epsilon_x): (f64, f64) = (10., 1.);
         for _i in 0..50 {
             // trim
             for _j in 0..50 {
@@ -645,7 +697,7 @@ impl ModelCached {
                         .clone();
                     let trim = trim;
                     let volume = cargo.volume;
-                    let epsilon = volume*epsilon_mass/mass_sum;
+                    let epsilon = volume * epsilon_mass / mass_sum;
                     let results_ = liquid_results.clone();
                     let handle = scheduler
                         .spawn(move || {
@@ -658,55 +710,11 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
-                          //  println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                            //  println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
                                 cargo_type,
-                                volume_bounded.into_iter().map(|v| v * density).collect(),
-                            ));
-                            Ok(())
-                        })
-                        .map_err(|err| {
-                            error.pass_with(format!("scheduler.spawn"), err.to_string())
-                        });
-                    match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => errors.push(err),
-                    };
-                }
-                let bulk_results = Arc::new(Stack::new());
-                for cargo in &query.bulk {
-                    assert!(cargo.mass > 0.);
-                    let assigment_type = cargo.assigment_type;
-                    let space_id = cargo.space_id.clone();
-                    let error_ = error.err(format!("compartment_{space_id} bulk work"));
-                    let density = cargo.mass / cargo.volume;
-                    let compartments_bounded = compartments_bounded.clone();
-                    let trim = trim;
-                    let volume = cargo.volume;
-                    let epsilon = volume*epsilon_mass/mass_sum;
-                    let results_ = bulk_results.clone();
-                    let handle = scheduler
-                        .spawn(move || {
-                            let compartment_bounded = compartments_bounded
-                                .get(&space_id)
-                                .ok_or(error_.err(format!(
-                                    "compartments_bounded.get no space_id:{space_id}"
-                                )))?
-                                .read();
-                            let volume_bounded = compartment_bounded
-                                .get(volume, trim, epsilon)
-                                .map_err(|err| {
-                                    error_.pass_with(
-                                        format!("compartment_bounded.get, space_id:{space_id}"),
-                                        err,
-                                    )
-                                })?;
-                        //    println!("model_cached balance_strength bulk space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
-                            results_.push(strength_balance_eval::bulk_result::BulkResult::new(
-                                space_id,
-                                assigment_type,
                                 volume_bounded.into_iter().map(|v| v * density).collect(),
                             ));
                             Ok(())
@@ -746,21 +754,12 @@ impl ModelCached {
                 }
                 res_mass_distr = src_mass_distr.clone();
                 liquid.clear();
-                bulk.clear();
                 while !liquid_results.is_empty() {
                     if let Some(data) = liquid_results.pop() {
                         res_mass_distr.add_vec(&data.mass_values).map_err(|err| {
                             error.pass_with("mass_distr.add_vec(liquid)", err.to_string())
                         })?;
                         liquid.push(data);
-                    }
-                }
-                while !bulk_results.is_empty() {
-                    if let Some(data) = bulk_results.pop() {
-                        res_mass_distr.add_vec(&data.mass_values).map_err(|err| {
-                            error.pass_with("mass_distr.add_vec(bulk)", err.to_string())
-                        })?;
-                        bulk.push(data);
                     }
                 }
                 res_displacement_distr = hull_results
@@ -789,9 +788,8 @@ impl ModelCached {
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= epsilon_mass {
-                    println!("bfgsdb break draught: {_j}, {epsilon_mass}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
-                    epsilon_mass = delta_w.max(query.epsilon);
-                    break;  
+                    //                   println!("bfgsdb break draught: {_j}, {epsilon_mass}");//, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                    break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
             }
@@ -806,15 +804,14 @@ impl ModelCached {
                 disp_moment * query.water_density / disp_sum,
             );
             let delta_x = mass_x - disp_x;
-            println!("bfgsdb trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
+            //         println!("bfgsdb trim: {_i}, {epsilon_mass}, {delta_x}");//, {trim}, {mass_x}, {disp_x}");
             if delta_x.abs() <= query.epsilon && epsilon_mass <= query.epsilon {
-                println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
+                //               println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
                 break;
             }
-            trim += delta_x / 3.;
-        }
-        for data in &gaseous {
-            println!("adaddfs end gaseous {} mass:{} ", data.space_id, data.mass_values.iter().sum::<f64>()); 
+            epsilon_x = delta_x.abs();
+            epsilon_mass = (epsilon_x * 10.).max(query.epsilon);
+            trim += delta_x / 5.;
         }
         Ok(StrengthBalanceCtx {
             displacement_distr: res_displacement_distr,
@@ -918,7 +915,6 @@ impl ModelCached {
                 .get(&space_id)
                 .ok_or(error.err(format!("no compartment:{space_id}")))?
                 .clone();
-            let trim = trim;
             let volume = cargo.volume;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
@@ -926,7 +922,7 @@ impl ModelCached {
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
-                        .get(0., trim, volume, epsilon)
+                        .get(0., 0., volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
