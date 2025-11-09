@@ -112,13 +112,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
 
-  /*      let res = model_cached.reload_shapes();            dbg!(&res);
+    let res = model_cached.reload_shapes();            dbg!(&res);
  //   let res = model_cached.rebuild_caches();   dbg!(&res);
     let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
-*/
+
     
     let api_client = Arc::new(ApiClient::new(
         &dbg,

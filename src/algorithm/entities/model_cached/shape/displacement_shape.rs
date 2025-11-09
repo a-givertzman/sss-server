@@ -63,7 +63,7 @@ impl DisplacementShape {
             Some(path),
             center.map(|p| Point3::new(p.x(), p.y(), p.z())),
             scale,
-            0.00000001,
+            0.0001,
             10000,
         )
     }
@@ -105,7 +105,9 @@ impl DisplacementShape {
             let bound_x_max = position_x + half_size_x;
             if aabb.mins.x + self.epsilon < bound_x_min || aabb.maxs.x - self.epsilon > bound_x_max {
                 src_mesh = &mesh;
-                log::warn!("{} part error: wrong aabb, rebuild! x:{position_x} b_min:{bound_x_min} b_max:{bound_x_max}  aabb.min:{} aabb.max:{}", self.dbg, aabb.mins.x, aabb.maxs.x);
+                let error = format!("{} part error: wrong aabb, rebuild! x:{position_x} b_min:{bound_x_min} b_max:{bound_x_max} aabb.min:{} aabb.max:{} epsilon:{}", self.dbg, aabb.mins.x, aabb.maxs.x, self.epsilon);
+                println!("{error}");
+                log::warn!("{error}");
                 continue;
             }
             break;

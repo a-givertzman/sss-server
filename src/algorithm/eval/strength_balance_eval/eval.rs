@@ -70,7 +70,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     gaseous: static_mass.gaseous,
                     //    damaged_compartment: loads.damaged_compartment, //TODO
                     bounds: bounds.clone(),
-                    epsilon: 0.000001,
+                    epsilon: 0.00001,
                 };
                 //    damaged_compartment: loads.damaged_compartment, //TODO
                 let result = self
