@@ -4,8 +4,8 @@ use parry3d_f64::shape::TriMesh;
 /// в тип данных TriMesh
 #[derive(Debug, Clone)]
 pub struct ConvertToTrimeshCtx {
-    pub stern_block: Vec<TriMesh>,
-    pub nasal_block: Vec<TriMesh>,
-    pub surface_outer_body: Vec<TriMesh>,
-    pub surface_superstructure: Vec<TriMesh>,
+    pub stern_block: Option<TriMesh>,
+    pub nasal_block: Option<TriMesh>,
+    pub surface_outer_body: Option<TriMesh>,
+    pub surface_superstructure: Option<TriMesh>,
 }

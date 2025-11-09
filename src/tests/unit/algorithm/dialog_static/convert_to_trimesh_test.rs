@@ -94,7 +94,12 @@ fn convert_to_trimesh() {
     let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(31));
     test_duration.run().unwrap();
     let test_data = [
-        (1, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\nasal_block"),
+        // (1, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_1"),
+        (2, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\vessel_suraface_unboxes_АРК_2023"),
+        // (3, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\nasal_block"),
+        // (4, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_2"),
+        // (5, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_3"),
+
     ];
     for (step, path_3d_model) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
@@ -111,7 +116,7 @@ fn convert_to_trimesh() {
                 let mut i = 0;
                 for mesh in &result.nasal_block {
                     let mut mesh_with_flags = mesh.clone();
-                    let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
                     if mesh_with_flags.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\nasal_{}.stl", i));
                         if let Err(e) = write_stl(&path, &mesh_with_flags) {
@@ -123,7 +128,7 @@ fn convert_to_trimesh() {
                 let mut i = 0;
                 for mesh in &result.stern_block {
                     let mut mesh_with_flags = mesh.clone();
-                    let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
                     if mesh.vertices().len() > 0 {
                         let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\stern_{}.stl", i));
                         if let Err(e) = write_stl(&path, &mesh_with_flags) {
@@ -132,17 +137,14 @@ fn convert_to_trimesh() {
                         i += 1;
                     }
                 }
-                let mut i = 0;
-                for mesh in &result.surface_outer_body {
-                    let mut mesh_with_flags = mesh.clone();
-                    let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                    if mesh_with_flags.vertices().len() > 0 {
-                        let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer_{}.stl", i));
-                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                            log::error!("Failed to write nasal mesh {}: {}", i, e);
-                        }
-                        i += 1;
+                let mut mesh_with_flags = &result.surface_outer_body.unwrap();
+                //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                if mesh_with_flags.vertices().len() > 0 {
+                    let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer_{}.stl", i));
+                    if let Err(e) = write_stl(&path, &mesh_with_flags) {
+                        log::error!("Failed to write nasal mesh {}: {}", i, e);
                     }
+                    i += 1;
                 }
                 let mut i = 0;
                 for mesh in &result.surface_superstructure {

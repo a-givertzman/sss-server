@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use multimap::MultiMap;
 use sal_core::{dbg::Dbg, error::Error};
 use core::panic;
 use std::fs;
@@ -82,57 +83,70 @@ impl Import3DModelEval {
     ///
     /// Парсинг поверхности наружного корпуса
     fn parsing_surface_outer_body(&self, position: usize, model_3d: Vec<f64>) -> (usize, SurfaceOuterBody) {
-        let mut surface_outer_body_coords= IndexMap::new();
+        let mut surface_outer_body_coords: Vec<Vec<(f64, f64, f64)>> = Vec::new();
         let mut i = position;
         let mut flag = 0;
+        
         while i < model_3d.len() - 3 {
             if flag == 1 { break; }
             if model_3d[i] == -999.0 {
-                let mut current_frame = model_3d[i+1];
-                let mut current_frame_coords: Vec<(f64,f64)> = Vec::new();
+                let mut current_frame = model_3d[i + 1];
+                let mut current_vertices = Vec::new();
                 i += 1;
                 loop {
-                    let z = model_3d[i+1];
+                    if i + 2 >= model_3d.len() {
+                        flag += 1;
+                        break;
+                    }
+                    let z = model_3d[i + 1];
                     if z == 999.0 {
-                        if model_3d[i+2] == -999.0 {
+                        if !current_vertices.is_empty() {
+                            surface_outer_body_coords.push(current_vertices.clone());
+                        }
+                        if i + 2 >= model_3d.len() {
                             flag += 1;
                             break;
                         }
-                        surface_outer_body_coords.insert(
-                            current_frame.to_string(), 
-                            current_frame_coords
-                        );
-                        current_frame = model_3d[i+2];
-                        current_frame_coords = Vec::new();
+                        if model_3d[i + 2] == -999.0 {
+                            flag += 1;
+                            break;
+                        }
+                        current_frame = model_3d[i + 2];
+                        current_vertices = Vec::new();
                         i += 2;
                         continue;
                     }
-                    let y = model_3d[i+2];
+                    let y = model_3d[i + 2];
                     if y == 999.0 {
-                        if model_3d[i+3] == -999.0 {
+                        if !current_vertices.is_empty() {
+                            surface_outer_body_coords.push(current_vertices.clone());
+                        }
+                        if i + 3 >= model_3d.len() {
                             flag += 1;
                             break;
                         }
-                        surface_outer_body_coords.insert(
-                            current_frame.to_string(), 
-                            current_frame_coords
-                        );
-                        current_frame = model_3d[i+3];
-                        current_frame_coords = Vec::new();
+                        if model_3d[i + 3] == -999.0 {
+                            flag += 1;
+                            break;
+                        }
+                        current_frame = model_3d[i + 3];
+                        current_vertices = Vec::new();
                         i += 3;
                         continue;
                     }
-                    current_frame_coords.push(
-                        (
-                            z,
-                            y
-                        )
-                    );
+                    current_vertices.push((current_frame, z, y));
                     i += 2;
+                    
+                    if i >= model_3d.len() {
+                        flag += 1;
+                        break;
+                    }
                 }
+
             }
             i += 1;
         }
+        
         return (i, SurfaceOuterBody { coordinates: surface_outer_body_coords });
     }
     ///
@@ -206,7 +220,7 @@ impl Eval<Zg, EvalResult> for Import3DModelEval {
                 let path_3d_model = ContextReadRef::<InitialCtx>::read_ref(&ctx).path_3d_model.clone();
                 let model_3d = fs::read_to_string(path_3d_model).expect("Error to read file of 3D Model");
                 let filtered_coords: Vec<f64> = model_3d
-                .split([',', '\n', '\r', ' ', 'H', '\'', '�', '�'])
+                .split([',', '\n', '\r', ' ', 'H', '\'', '�', '�', '�', '�'])
                 .map(|s| s.trim())
                 .filter(|s| {
                     !s.is_empty()
@@ -219,14 +233,14 @@ impl Eval<Zg, EvalResult> for Import3DModelEval {
                     };
                 })
                 .collect();
-                let (position, stern_block, nasal_block) = self.parsing_diametrical_buttocks(filtered_coords.clone());
-                let (position, surface_outer_body) = self.parsing_surface_outer_body(position, filtered_coords.clone());
-                let surface_superstructure = self.parsing_surface_superstructure(position, filtered_coords);
+                //let (position, stern_block, nasal_block) = self.parsing_diametrical_buttocks(filtered_coords.clone());
+                let (position, surface_outer_body) = self.parsing_surface_outer_body(0, filtered_coords.clone());
+                //let surface_superstructure = self.parsing_surface_superstructure(position, filtered_coords);
                 ctx.write(Import3DModelCtx {
-                    stern_block,
-                    nasal_block,
-                    surface_outer_body: surface_outer_body,
-                    surface_superstructure: surface_superstructure,
+                    stern_block: DiametricalButtocks::new(),
+                    nasal_block: DiametricalButtocks::new(),
+                    surface_outer_body,
+                    surface_superstructure: SurfaceSuperstructure::new(),
                 })
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
