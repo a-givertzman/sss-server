@@ -234,8 +234,8 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     for v in strength_balance.bulk {
-                        println!("bulk {} vec_sum:{}", v.space_id, v.mass_values.iter().sum::<f64>());
-                        v.mass_values.iter().for_each(|b| print!("{:.3} ", b));
+                 //       println!("bulk {} vec_sum:{}", v.space_id, v.mass_values.iter().sum::<f64>());
+                 //       v.mass_values.iter().for_each(|b| print!("{:.3} ", b));
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     for v in strength_balance.liquid {

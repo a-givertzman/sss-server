@@ -63,9 +63,9 @@ impl CompartmentBoundCache {
         let error = Error::new(&self.dbg, "get");
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
         let max_volume = self.get_max_volume().map_err(|err| error.pass(err))?;
-        if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
+  /*      if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
             println!("jfhufjd get start {} {volume} {}", &self.dbg, max_volume.iter().sum::<f64>());
-        }
+        }*/
         if volume >= max_volume.iter().sum() {
             return Ok(max_volume);
         }

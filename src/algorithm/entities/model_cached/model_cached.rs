@@ -710,7 +710,7 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
-                            //  println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                     //         println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
@@ -788,7 +788,7 @@ impl ModelCached {
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= epsilon_mass {
-                    //                   println!("bfgsdb break draught: {_j}, {epsilon_mass}");//, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                                       println!("bfgsdb break draught: {_j}, {epsilon_mass}");//, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
                     break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
@@ -806,7 +806,7 @@ impl ModelCached {
             let delta_x = mass_x - disp_x;
             //         println!("bfgsdb trim: {_i}, {epsilon_mass}, {delta_x}");//, {trim}, {mass_x}, {disp_x}");
             if delta_x.abs() <= query.epsilon && epsilon_mass <= query.epsilon {
-                //               println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
+                               println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
                 break;
             }
             epsilon_x = delta_x.abs();
