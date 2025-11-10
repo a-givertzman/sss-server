@@ -68,6 +68,7 @@ pub struct BulkData {
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
+    pub shiftable: bool,
 }
 ///
 /// Жидкий груз

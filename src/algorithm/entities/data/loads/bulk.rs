@@ -23,6 +23,8 @@ pub struct LoadBulkData {
     pub cargo_type: BulkCargoType,
     /// масса, т
     pub mass: f64,
+    /// Признак смещаемости груза. При его размещении применяются правила перевозки зерна 
+    pub shiftable: bool,
     /// Средний удельный погрузочный объем, м^3/т
     pub stowage_factor: Option<f64>,
     /// Обьем, м^3
@@ -50,8 +52,9 @@ impl LoadBulkData {
             assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
-            mass: self.mass,
+            mass: self.mass,            
             volume,
+            shiftable: self.shiftable,
         })
     }
 }

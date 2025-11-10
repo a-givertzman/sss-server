@@ -91,6 +91,8 @@ pub struct BulkResult {
     pub assigned_id: usize,
  //   /// смещение центра массы
  //   pub mass_shift: Position,
+    ///  Признак смещаемости груза
+    pub shiftable: bool, 
     /// Уровень заполнения отсека
     pub level: f64,  // TODO - убрать после переноса расчета момента в модель
     /// Объемный кренящий момент
@@ -103,12 +105,14 @@ impl BulkResult {
         space_id: String,
         assigned_id: usize,
     //    mass_shift: Position,
+        shiftable: bool,
         level: f64,
     ) -> Self {
         Self {
             space_id,
             assigned_id,
       //      mass_shift,
+            shiftable,
             level,
             moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
         }

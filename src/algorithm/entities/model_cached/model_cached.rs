@@ -916,6 +916,7 @@ impl ModelCached {
                 .ok_or(error.err(format!("no compartment:{space_id}")))?
                 .clone();
             let volume = cargo.volume;
+            let shiftable = cargo.shiftable;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
             let handle = scheduler
@@ -928,6 +929,7 @@ impl ModelCached {
                         //       cargo_id,
                         space_id,
                         assigned_id,
+                        shiftable,
                         compartment_result.level,
                         //       compartment_result.volume_center,
                     ));

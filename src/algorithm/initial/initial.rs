@@ -152,6 +152,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_type, \
                     stowage_factor, \
                     weight AS mass, \
+                    shiftable AS shiftable, \
                     centre_of_compartment as mass_shift
                 FROM 
                     bulk_cargo_view

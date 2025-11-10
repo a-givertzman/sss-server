@@ -194,9 +194,15 @@ impl ShipModel {
             .ok_or(error.err("grain_moment"))?;
         // TODO - переписать получение момента из модели
         result.bulk.iter_mut().for_each(|v| {
+            if !v.shiftable {
+                v.moment = 0.;
+                return;
+            }
             v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
                 curve.value(v.level).unwrap_or(0.)
             } else {
+                let error = error.err(format!("grain_moment.get(&v.space_id), {}", v.space_id));
+                log::error!("{}", error);
                 0.
             };
         });
