@@ -47,7 +47,7 @@ impl DisplacementBoundCache {
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("DisplacementBoundCache"));
+        let dbg = Dbg::new(parent, format!("DisplacementBoundCache_{:.3}", center_x));
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
@@ -89,7 +89,7 @@ impl DisplacementBoundCache {
         let result = caches
             .iter()
             .map(|(_, cache)| match cache {
-                Some(cache) => cache.max_value(1),
+                Some(cache) => cache.value_disp(1).1,
                 None => 0.,
             })
             .collect();

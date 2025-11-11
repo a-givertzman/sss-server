@@ -49,7 +49,7 @@ impl DamagedCompartmentCache {
         draught_step: f64,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("DamagedCompartment_{compartment_id}_Cache"));
+        let dbg = Dbg::new(parent, format!("DamagedCompartmentCache_{compartment_id}"));
         Self {
             shape,
             heel_steps,

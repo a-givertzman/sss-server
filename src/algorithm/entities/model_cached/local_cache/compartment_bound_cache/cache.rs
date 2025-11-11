@@ -114,7 +114,7 @@ impl CompartmentBoundCache {
         let result = caches
             .iter()
             .map(|(_, cache)| match cache {
-                Some(cache) => cache.max_value(index),
+                Some(cache) => cache.value_disp(index).1,
                 None => 0.,
             })
             .collect();

@@ -89,9 +89,6 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     .into_iter()
                     .filter(|v| v.mass > 0.)
                     .collect::<Vec<_>>();
-                /*     let (unit, bulkhead): (Vec<_>, Vec<_>) = unit
-                .into_iter()
-                .partition(|v| v.cargo_type != UnitCargoType::GrainBulkhead);*/
                 let (mass_unit, shift_unit, grain_bulkhead) = {
                     let grain_bulkhead: Vec<_> = unit
                         .iter()
@@ -101,7 +98,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
                         .map(|v| v.bound_x().unwrap().center())
                         .flatten()
                         .collect();
-                    let (mass_unit, shift_unit) = unit
+                    let (mass_unit, moment_unit) = unit
                         .iter()
                         .filter_map(|v| match v.mass_shift() {
                             Ok(mass_shift) => Some((v.mass, mass_shift)),
@@ -116,7 +113,8 @@ impl Eval<(), EvalResult> for StaticMassEval {
                                 )
                             },
                         );
-                    (mass_unit, shift_unit, grain_bulkhead)
+
+                    (mass_unit, moment_unit.to_pos(mass_unit), grain_bulkhead)
                 };
                 let liquid: Vec<_> = initial
                     .liquid

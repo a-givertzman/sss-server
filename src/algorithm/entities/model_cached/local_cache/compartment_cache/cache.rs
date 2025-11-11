@@ -56,7 +56,7 @@ impl CompartmentCache {
         volume_max: Option<f64>,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("Compartment_{compartment_id}_Cache"));
+        let dbg = Dbg::new(parent, format!("CompartmentCache_{compartment_id}"));
         Self {
             shape,
             heel_steps,
@@ -81,7 +81,7 @@ impl CompartmentCache {
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let level_max = cache.max_value(2);
+        let level_max = cache.value_disp(2).1;
         let mut step = level_max / 2.;
         let mut level = step;
         for i in 0..=50 {

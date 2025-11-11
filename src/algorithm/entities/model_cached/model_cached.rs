@@ -476,25 +476,25 @@ impl ModelCached {
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-                let displacement_shape = self
-                   .displacement_shapes
-                   .get("hull")
-                   .ok_or(error.err("no displacement_shape"))?;
-               let mut displacement_bound = DisplacementBoundCache::new(
-                   &self.dbg,
-                   displacement_shape.clone(),
-                   self.cache_dir.clone().join("disp_bounded"),
-                   self.bounds_level_step,
-                   self.model_center_coord.x(),
-                   bounds.clone(),
-                   Arc::clone(&self.thread_pool),
-               );
-               displacement_bound
-                   .rebuild()
-                   .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
-               self.displacement_bounded
-                   .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-        
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let mut displacement_bound = DisplacementBoundCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir.clone().join("disp_bounded"),
+            self.bounds_level_step,
+            self.model_center_coord.x(),
+            bounds.clone(),
+            Arc::clone(&self.thread_pool),
+        );
+        displacement_bound
+            .rebuild()
+            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             println!("model_cached build_bounded compartment:{compartment_id}");
@@ -711,7 +711,7 @@ impl ModelCached {
                                         err,
                                     )
                                 })?;
-                     //         println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                            //         println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
@@ -789,7 +789,7 @@ impl ModelCached {
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
                 if delta_w.abs() <= epsilon_mass {
-                                       println!("bfgsdb break draught: {_j}, {epsilon_mass}");//, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                    //      println!("bfgsdb break draught: {_j}, {epsilon_mass}");//, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
                     break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
@@ -807,7 +807,7 @@ impl ModelCached {
             let delta_x = mass_x - disp_x;
             //         println!("bfgsdb trim: {_i}, {epsilon_mass}, {delta_x}");//, {trim}, {mass_x}, {disp_x}");
             if delta_x.abs() <= query.epsilon && epsilon_mass <= query.epsilon {
-                               println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
+                //         println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
                 break;
             }
             epsilon_x = delta_x.abs();
@@ -1005,6 +1005,10 @@ impl ModelCached {
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
         }
+        let (min_volume, max_volume) = self
+            .displacement
+            .get_volume_disp()
+            .map_err(|err| error.pass_with("self.get_volume_disp", err))?;
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
@@ -1012,6 +1016,13 @@ impl ModelCached {
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
+        let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
+        let moment_sum = query.moment_const + moment_bulk; // постоянный момент
+        let volume = mass_sum/query.water_density;
+        // допустимый объем корпуса
+        if volume <= min_volume || volume >= max_volume {
+            return Err(error.err(format!("volume <= min_volume || volume >= max_volume, mass:{mass_sum} min_volume:{min_volume} max_volume:{max_volume} water_density:{}", query.water_density)));
+        }
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
@@ -1028,13 +1039,13 @@ impl ModelCached {
                     draught,
                     query.water_density,
                     epsilon,
-                    query.mass_const + mass_bulk + mass_liquid, // постоянная масса
-                    query.moment_const + moment_bulk,           // постоянный момент
+                    mass_sum,
+                    moment_sum,
                     &query.liquid,
                     &query.damaged_compartment,
                 )
                 .map_err(|err| error.pass(err))?;
-            if query.epsilon <= epsilon {
+            if query.epsilon >= epsilon {
                 let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
                 if precision < query.epsilon {
                     let result = FloatingPositionResult {
@@ -1066,6 +1077,7 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
+    //       println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{epsilon} h:{heel}, t:{trim}, draught:{draught}, d_v:{new_d_v}, d_m:{new_d_m}");
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1147,6 +1159,7 @@ impl ModelCached {
         Ok(dso)
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы
+    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result)
     fn position(
         &self,
         heel: f64,
@@ -1159,7 +1172,6 @@ impl ModelCached {
         liquid: &Vec<LiquidData>,
         damaged_compartment: &Vec<String>,
     ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
-        //(draught, d_v, d_m, cg, displacement, disp_result)
         let error = Error::new(&self.dbg, "_floating_position");
         // учет смещения жидкости
         let moment_liquid = self
