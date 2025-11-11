@@ -682,6 +682,7 @@ impl ModelCached {
                 // draught
                 let mut tasks: Vec<JoinHandle<_>> = vec![];
                 let liquid_results = Arc::new(Stack::new());
+                // жидкие грузы смещаются под действием силы тяжести
                 for cargo in &query.liquid {
                     assert!(cargo.mass > 0.);
                     let assigment_type = cargo.assigment_type;
