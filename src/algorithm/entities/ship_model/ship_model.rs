@@ -392,8 +392,17 @@ fn max_compartment_volume(
     let error = Error::new("ShipModel", "max_compartment_volume");
     let data = VolumeDataArray::parse(
         &api_client.fetch(&format!(
-            "SELECT space_id, volume_max FROM \"space/compartment\" WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+            "SELECT
+                s.space_id as space_id, \
+                c.volume_max as volume_max
+            FROM
+                \"space\" AS s 
+            INNER JOIN 
+                \"space/compartment\" AS c ON s.compartment_id = c.id 
+            WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("api_client.fetch", err))?
     ).map_err(|err| error.pass_with("parse", err))?;
     Ok(data.data())
 }
+
+
