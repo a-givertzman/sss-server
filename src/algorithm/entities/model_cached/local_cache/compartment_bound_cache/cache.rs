@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Bounds, DivideSingle, DivideVec, cache::Cache, model_cached::{DisplacementShape, read, save}
+        Bounds, DivideSingle, DivideVec, MultipleSingle, cache::Cache, model_cached::{DisplacementShape, read, save}
     },
     kernel::types::{Arc, RwLock},
 };
@@ -62,16 +62,16 @@ impl CompartmentBoundCache {
     pub fn get(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
     //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
         let error = Error::new(&self.dbg, "get");
-        let volume = volume/self.coeff;
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
-        let mut max_volume = self.get_max_volume().map_err(|err| error.pass(err))?;
-        max_volume.div_single(self.coeff);
+        let mut max_volume= self.get_max_volume().map_err(|err| error.pass(err))?;
+        max_volume.mul_single(self.coeff);
   /*      if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
             println!("jfhufjd get start {} {volume} {}", &self.dbg, max_volume.iter().sum::<f64>());
         }*/
         if volume >= max_volume.iter().sum() {
             return Ok(max_volume);
         }
+        let volume = volume/self.coeff;
         let mut draugth = 0.;
         let mut delta_draugth = 5.;
         let mut last_delta: Option<f64> = Some(-1.);
@@ -92,6 +92,7 @@ impl CompartmentBoundCache {
         //    println!("jydfhsh {} {_i} {delta} {values_sum} {volume}", &self.dbg);
             if delta.abs() <= epsilon {
      //           println!("jydfhsh get ok {} {_i} {values_sum} {volume} {epsilon}", &self.dbg);
+                values.mul_single(self.coeff);
                 return Ok(values);
             }
             if let Some(last_delta) = last_delta {

@@ -68,7 +68,7 @@ impl CompartmentCache {
         let error = Error::new(self.dbg(), "calc_coeff");
         let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.value_disp(3).1;
         self.coeff = Some(if volume_brutto > 0. {volume_max/volume_brutto} else {1.});
-        println!("skjfskf calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
+    //    println!("skjfskf calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
         Ok(())
     }
     /// Return (level, center of volume)
@@ -99,7 +99,7 @@ impl CompartmentCache {
                     heel,
                     trim,
                     level,
-                    volume,
+                    volume: volume*coeff,
                     volume_center: Position::new(result[1], result[2], result[3]),
                     inertia_trans_x: result[4],
                     inertia_long_y: result[5],
