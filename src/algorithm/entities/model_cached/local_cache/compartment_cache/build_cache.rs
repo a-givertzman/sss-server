@@ -23,10 +23,6 @@ pub struct BuildCompartmentCache {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_step: f64,
-    /// центр полного объема из бд
-    center_max: Option<Position>,
-    /// полный объем из бд
-    volume_max: Option<f64>,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
@@ -42,8 +38,6 @@ impl BuildCompartmentCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         level_step: f64,
-        center_max: Option<Position>,
-        volume_max: Option<f64>,
         thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -53,8 +47,6 @@ impl BuildCompartmentCache {
             heel_steps,
             trim_steps,
             level_step,
-            center_max,
-            volume_max,
             thread_pool,
             exit,
         }
@@ -80,8 +72,6 @@ impl BuildCompartmentCache {
             Ok((volume_max, center_max)) => (volume_max, center_max),
             Err(err) => return (vec![], vec![error.pass_with("shape.properties", err)]),
         };
-        let center_max = self.center_max.clone().unwrap_or(center_max);
-        let volume_max = self.volume_max.clone().unwrap_or(volume_max);
         let max_heel = self
             .heel_steps
             .iter()

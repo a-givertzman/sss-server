@@ -172,7 +172,7 @@ impl ModelCached {
             &dbg,
             windage_shape.clone(),
             conf.cache_dir.clone(),
-            conf.draught_min,
+            conf.hull_draught_min,
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
@@ -211,11 +211,12 @@ impl ModelCached {
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone(), shape.clone());
-                let (volume_max, center_max) =
-                    if let Some((volume_max, center_max)) = conf.compartment_data.get(&name) {
-                        (*volume_max, *center_max)
+                let volume_max =
+                    if let Some(volume_max) = conf.compartment_data.get(&name) {
+                        *volume_max
                     } else {
-                        (None, None)
+                        log::error!("{}",  error.err(format!("compartment_data.get(&name) {name}")));
+                        return None;
                     };
                 Some((
                     name.clone(),
@@ -227,7 +228,6 @@ impl ModelCached {
                         conf.compartment_heel_steps.clone(),
                         conf.compartment_trim_steps.clone(),
                         conf.compartment_level_step,
-                        center_max,
                         volume_max,
                         Arc::clone(&thread_pool),
                     ))),
@@ -264,8 +264,8 @@ impl ModelCached {
                         name.clone(),
                         conf.hull_heel_steps.clone(),
                         conf.hull_trim_steps.clone(),
-                        conf.draught_min,
-                        conf.draught_max,
+                        conf.hull_draught_min,
+                        conf.hull_draught_max,
                         conf.hull_draught_step,
                         Arc::clone(&thread_pool),
                     ))),
@@ -277,7 +277,7 @@ impl ModelCached {
             dbg: dbg.clone(),
             ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
-            draught_min: conf.draught_min,
+            draught_min: conf.hull_draught_min,
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
@@ -289,8 +289,8 @@ impl ModelCached {
                 conf.cache_dir.clone(),
                 conf.hull_heel_steps.clone(),
                 conf.hull_trim_steps.clone(),
-                conf.draught_min,
-                conf.draught_max,
+                conf.hull_draught_min,
+                conf.hull_draught_max,
                 conf.hull_draught_step,
                 Arc::clone(&thread_pool),
             ),

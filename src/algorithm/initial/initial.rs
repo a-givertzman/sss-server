@@ -215,6 +215,33 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("gaseous fetch", err))?,
         )
         .map_err(|err| error.pass_with("gaseous parse", err))?;
+        let container = LoadContainerArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                "SELECT 
+                    c.cargo_id, \
+                    c.cargo_name, \
+                    c.space_id, \
+                    c.space_name, \
+                    c.assigned_id, \
+                    c.assigment_context as assigment_type, \
+                    c.gross_weight AS mass, \
+                    c.bound_x1 AS bound_x1, \
+                    c.bound_x2 AS bound_x2, \
+                    c.bound_y1 AS bound_y1, \
+                    c.bound_y2 AS bound_y2, \
+                    c.bound_z1 AS bound_z1, \
+                    c.bound_z2 AS bound_z2
+                FROM 
+                    container_cargo_view AS c
+                WHERE 
+                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("container fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("container parse", err))?;
         let unit = LoadUnitArray::parse(
             &self
                 .api_client
@@ -250,6 +277,8 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("unit fetch", err))?,
         )
         .map_err(|err| error.pass_with("unit parse", err))?;
+        let mut unit_data = unit.data();
+        unit_data.append(&mut container.data());
         let multipler_x1 = MultiplerX1Array::parse(
             &self
                 .api_client
@@ -319,7 +348,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.load_constant = Some(load_constant);
         initial_ctx.bulk = Some(bulk.data());
         initial_ctx.liquid = Some(liquid.data());
-        initial_ctx.unit = Some(unit.data());
+        initial_ctx.unit = Some(unit_data);
         initial_ctx.gaseous = Some(gaseous.data());
         initial_ctx.multipler_x1 = Some(multipler_x1.data());
         initial_ctx.multipler_x2 = Some(multipler_x2.data());

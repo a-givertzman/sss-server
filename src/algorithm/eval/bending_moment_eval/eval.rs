@@ -1,7 +1,7 @@
 use super::ctx::BendingMomentCtx;
 use crate::{
     algorithm::{
-        context::context_access::ContextReadRef, entities::IntegralSum, eval::ShearForceCtx,
+        context::context_access::ContextReadRef, eval::ShearForceCtx,
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},

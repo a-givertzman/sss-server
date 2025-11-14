@@ -1,8 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Bounds,
-        cache::Cache,
-        model_cached::{DisplacementShape, read, save},
+        Bounds, DivideSingle, DivideVec, cache::Cache, model_cached::{DisplacementShape, read, save}
     },
     kernel::types::{Arc, RwLock},
 };
@@ -21,6 +19,7 @@ pub struct CompartmentBoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
     level_step: f64,
+    coeff: f64,
     bounds: Bounds,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
@@ -38,6 +37,7 @@ impl CompartmentBoundCache {
     pub fn new(
         parent: &Dbg,
         shape: Arc<RwLock<DisplacementShape>>,
+        coeff: f64,
         cache_dir: PathBuf,
         level_step: f64,
         bounds: Bounds,
@@ -47,6 +47,7 @@ impl CompartmentBoundCache {
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
+            coeff,
             level_step,
             bounds,
             caches: OnceLock::new(),
@@ -61,8 +62,10 @@ impl CompartmentBoundCache {
     pub fn get(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
     //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
         let error = Error::new(&self.dbg, "get");
+        let volume = volume/self.coeff;
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
-        let max_volume = self.get_max_volume().map_err(|err| error.pass(err))?;
+        let mut max_volume = self.get_max_volume().map_err(|err| error.pass(err))?;
+        max_volume.div_single(self.coeff);
   /*      if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
             println!("jfhufjd get start {} {volume} {}", &self.dbg, max_volume.iter().sum::<f64>());
         }*/

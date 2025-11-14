@@ -23,14 +23,12 @@ pub struct CompartmentCache {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_step: f64,
-    /// центр полного объема из бд
-    center_max: Option<Position>,
-    /// полный объем из бд
-    volume_max: Option<f64>,
-    ///
+    /// полный объем из бд (нетто)
+    volume_max: f64,
+    /// коэффициент проницаемости
+    coeff: Option<f64>,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
-    ///
     /// Cache read from `self.file_path`.
     cache: Option<Cache<f64>>,
     thread_pool: Arc<ThreadPool>,
@@ -42,7 +40,6 @@ impl CompartmentCache {
     ///
     /// Creates a new instance.
     /// * cache_dir - folder contains all cache files
-    /// * center_max - центр полного объема из бд
     /// * volume_max - полный объем из бд
     pub fn new(
         parent: &Dbg,
@@ -52,8 +49,7 @@ impl CompartmentCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         level_step: f64,
-        center_max: Option<Position>,
-        volume_max: Option<f64>,
+        volume_max: f64,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("CompartmentCache_{compartment_id}"));
@@ -62,8 +58,8 @@ impl CompartmentCache {
             heel_steps,
             trim_steps,
             level_step,
-            center_max,
             volume_max,
+            coeff: None,
             cache: None,
             cache_dir: cache_dir.as_ref().join(compartment_id),
             dbg,
@@ -81,6 +77,8 @@ impl CompartmentCache {
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+        let volume = volume/coeff;
         let level_max = cache.value_disp(2).1;
         let mut step = level_max / 2.;
         let mut level = step;
@@ -117,6 +115,7 @@ impl CompartmentCache {
         CompartmentBoundCache::new(
             &self.dbg,
             self.shape.clone(),
+            self.coeff.unwrap_or(1.),
             self.cache_dir.clone().join("distr"),
             level_step,
             bounds,
@@ -136,8 +135,6 @@ impl LocalCache for CompartmentCache {
             self.heel_steps.clone(),
             self.trim_steps.clone(),
             self.level_step,
-            self.center_max,
-            self.volume_max,
             Arc::clone(&self.thread_pool),
             self.exit.clone(),
         )
@@ -150,7 +147,7 @@ impl LocalCache for CompartmentCache {
         if let Err(err) = cache.init(data.clone()) {
             errors.push(error.pass_with("self.cache.get_mut", err));
         }
-        self.cache = Some(cache);
+        self.set_cache(cache);
         if let Err(err) = save(&self.dbg, &self.cache_path(), data) {
             errors.push(error.pass_with("save data", err));
         }
@@ -178,6 +175,8 @@ impl LocalCache for CompartmentCache {
     }
     //
     fn set_cache(&mut self, cache: Cache<f64>) {
+        let volume_brutto = cache.value_disp(0).1;
+        self.coeff = Some(if volume_brutto > 0. {self.volume_max/volume_brutto} else {1.});
         let _ = self.cache.insert(cache);
     }
 }

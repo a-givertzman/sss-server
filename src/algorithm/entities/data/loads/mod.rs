@@ -1,16 +1,18 @@
 use bincode::{Decode, Encode};
 
-pub mod constant;
-pub mod liquid;
-pub mod gaseous;
-pub mod bulk;
-pub mod unit;
+mod constant;
+mod liquid;
+mod gaseous;
+mod bulk;
+mod unit;
+mod container;
 
 pub use constant::*;
 pub use liquid::*;
 pub use gaseous::*;
 pub use bulk::*;
 pub use unit::*;
+pub use container::*;
 
 use serde::{Deserialize, Serialize};
 /// Тип назначения груза
