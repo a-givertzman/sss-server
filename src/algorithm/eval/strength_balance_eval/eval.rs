@@ -81,7 +81,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
          /*       let bulk = bulk
                     .iter()
                     .filter_map(|res| {
-                        bulk_data.get(&res.assigned_id).map(|data| {
+                        bulk_data.get(&res.assignment_id).map(|data| {
                             super::bulk_result::BulkResult::new(
                                 data.space_id.clone(),
                                 data.assigment_type,
@@ -94,7 +94,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .liquid
                     .iter()
                     .filter_map(|res| {
-                        liquid_data.get(&res.assigned_id).map(|data| {
+                        liquid_data.get(&res.assignment_id).map(|data| {
                             super::liquid_result::LiquidResult::new(
                                 data.cargo_id,
                                 data.space_id.clone(),
@@ -111,7 +111,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .gaseous
                     .iter()
                     .filter_map(|res| {
-                        gaseous_data.get(&res.assigned_id).map(|data| {
+                        gaseous_data.get(&res.assignment_id).map(|data| {
                             super::gaseous_result::GaseousResult::new(
                                 data.cargo_id,
                                 data.space_id.clone(),

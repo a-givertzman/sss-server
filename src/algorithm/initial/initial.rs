@@ -147,7 +147,7 @@ impl Eval<(), EvalResult> for Initial {
                     space_name, \
                     cargo_id, \
                     cargo_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     stowage_factor, \
@@ -172,7 +172,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_name, \
                     space_id, \
                     space_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     weight AS mass, \
@@ -200,7 +200,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_name, \
                     space_id, \
                     space_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     density, \
@@ -220,13 +220,13 @@ impl Eval<(), EvalResult> for Initial {
                 .api_client
                 .fetch(&format!(
                 "SELECT 
-                    c.cargo_id, \
-                    c.cargo_name, \
-                    c.space_id, \
-                    c.space_name, \
-                    c.assigned_id, \
-                    c.assigment_context as assigment_type, \
-                    c.gross_weight AS mass, \
+                    c.cargo_id AS cargo_id, \
+                    c.slot_id AS slot_id, \
+                    c.cargo_name AS cargo_name, \
+                    c.space_id AS space_id, \
+                    c.assignment_id AS assignment_id, \
+                    c.assigment_context AS assigment_type, \
+                    c.weight AS mass, \
                     c.bound_x1 AS bound_x1, \
                     c.bound_x2 AS bound_x2, \
                     c.bound_y1 AS bound_y1, \
@@ -251,7 +251,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_name, \
                     space_id, \
                     space_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     weight AS mass, \

@@ -215,7 +215,9 @@ impl ModelCached {
                     if let Some(volume_max) = conf.compartment_data.get(&name) {
                         *volume_max
                     } else {
-                        log::error!("{}",  error.err(format!("compartment_data.get(&name) {name}")));
+                        let error = error.err(format!("compartment_data.get(&name) {name}"));
+                        println!("{error}");
+                        log::error!("{}",error);
                         return None;
                     };
                 Some((
@@ -873,7 +875,7 @@ impl ModelCached {
         let scheduler = self.thread_pool.scheduler();
         for cargo in query.liquid {
             assert!(cargo.mass > 0.);
-            let assigned_id = cargo.assigned_id;
+            let assignment_id = cargo.assignment_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} liquid work"));
             let compartment = self
@@ -893,7 +895,7 @@ impl ModelCached {
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::LiquidResult::new(
                         //     cargo_id,
-                        assigned_id,
+                        assignment_id,
                         //     compartment_result.volume_center,
                         compartment_result.inertia_long_y,
                         compartment_result.inertia_trans_x,
@@ -908,7 +910,7 @@ impl ModelCached {
         }
         for cargo in query.bulk {
             assert!(cargo.mass > 0.);
-            let assigned_id = cargo.assigned_id;
+            let assignment_id = cargo.assignment_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} bulk work"));
             let compartment = self
@@ -929,7 +931,7 @@ impl ModelCached {
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
                         space_id,
-                        assigned_id,
+                        assignment_id,
                         shiftable,
                         compartment_result.level,
                         //       compartment_result.volume_center,

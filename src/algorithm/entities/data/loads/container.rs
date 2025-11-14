@@ -8,14 +8,14 @@ use serde::Deserialize;
 pub struct LoadContainerData {
     /// ID груза
     pub cargo_id: usize,
+    /// ID слота
+    pub slot_id: usize,
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: String,
-    /// Имя помещения
-    pub space_name: String,
+    pub space_id: usize,
     /// ID assigned
-    pub assigned_id: usize,    
+    pub assignment_id: usize,    
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// масса, т
@@ -37,9 +37,9 @@ impl LoadContainerArray {
         LoadUnitData{
             cargo_id: v.cargo_id,
             cargo_name: v.cargo_name,
-            space_id: v.space_id,
-            space_name: v.space_name,
-            assigned_id: v.assigned_id,
+            space_id: v.space_id.to_string(),
+            space_name: format!("slot_{}", v.slot_id),
+            assignment_id: v.assignment_id,
             assigment_type: v.assigment_type,
             cargo_type: UnitCargoType::Container,
             mass: v.mass,

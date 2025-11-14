@@ -175,6 +175,7 @@ impl LocalCache for CompartmentCache {
     }
     //
     fn set_cache(&mut self, cache: Cache<f64>) {
+        dbg!("set_cache");
         let volume_brutto = cache.value_disp(0).1;
         self.coeff = Some(if volume_brutto > 0. {self.volume_max/volume_brutto} else {1.});
         let _ = self.cache.insert(cache);

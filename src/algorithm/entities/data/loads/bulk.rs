@@ -16,7 +16,7 @@ pub struct LoadBulkData {
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип сыпучего груза
@@ -48,7 +48,7 @@ impl LoadBulkData {
             }
         };
         Some(BulkData {
-            assigned_id:  self.assigned_id,
+            assignment_id:  self.assignment_id,
             assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
@@ -63,13 +63,13 @@ impl std::fmt::Display for LoadBulkData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LoadBulkData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assigned_id:{}
+            "LoadBulkData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assignment_id:{}
                 assigment_type:{} cargo_type:{}, mass:{}, stowage_factor:{} volume:{} )",
             self.space_id,
             self.space_name,
             self.cargo_id,
             self.cargo_name,
-            self.assigned_id,
+            self.assignment_id,
             self.assigment_type,
             self.cargo_type,
             self.mass.unwrap_or(0.),
@@ -83,6 +83,6 @@ pub type LoadBulkArray = DataArray<LoadBulkData>;
 //
 impl LoadBulkArray {
     pub fn data(self) -> HashMap<usize, LoadBulkData> {
-        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assigned_id, v)).collect()
+        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assignment_id, v)).collect()
     }
 }
