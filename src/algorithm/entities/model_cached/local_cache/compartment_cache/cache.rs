@@ -23,8 +23,6 @@ pub struct CompartmentCache {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_step: f64,
-    /// полный объем из бд (нетто)
-    volume_max: f64,
     /// коэффициент проницаемости
     coeff: Option<f64>,
     /// Model representation used for cache calculation.
@@ -49,7 +47,6 @@ impl CompartmentCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         level_step: f64,
-        volume_max: f64,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("CompartmentCache_{compartment_id}"));
@@ -58,7 +55,6 @@ impl CompartmentCache {
             heel_steps,
             trim_steps,
             level_step,
-            volume_max,
             coeff: None,
             cache: None,
             cache_dir: cache_dir.as_ref().join(compartment_id),
@@ -66,6 +62,13 @@ impl CompartmentCache {
             thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
         }
+    }
+    /// Расчет коэффициента проницаемости
+    pub fn calc_coeff(&mut self, volume_max: f64) -> Result<(), Error> {
+        let error = Error::new(self.dbg(), "calc_coeff");
+        let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.value_disp(0).1;
+        self.coeff = Some(if volume_brutto > 0. {volume_max/volume_brutto} else {1.});
+        Ok(())
     }
     /// Return (level, center of volume)
     pub fn get(
@@ -175,9 +178,6 @@ impl LocalCache for CompartmentCache {
     }
     //
     fn set_cache(&mut self, cache: Cache<f64>) {
-        dbg!("set_cache");
-        let volume_brutto = cache.value_disp(0).1;
-        self.coeff = Some(if volume_brutto > 0. {self.volume_max/volume_brutto} else {1.});
         let _ = self.cache.insert(cache);
     }
 }

@@ -1,11 +1,13 @@
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::ICurve;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
+use crate::algorithm::entities::data::DataArray;
 use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
+use crate::algorithm::entities::ship_model::volume_max::VolumeDataArray;
 use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
@@ -86,8 +88,16 @@ impl ShipModel {
         )
         .map_err(|err| error.pass_with("grain_moment", err))?;
         self.grain_moment = Some(grain_moment.clone());
+        // TODO переделать, пока не понятно в какой момент должны читаться объемы
+        // возможно их надо пересчитывать каждый расчет
+        let max_compartment_volume = max_compartment_volume(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.clone(),
+        )
+        .map_err(|err| error.pass_with("max_compartment_volume", err))?;
         self.model_cached
-            .init()
+            .init(max_compartment_volume)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))
     }
     /// TODO - Doc
@@ -371,4 +381,19 @@ fn grain_moment(
             .map_err(|err| error.pass_with("Curve::new_linear", err))?;
     }
     Ok(data.into_iter().map(|v| (v.0, v.1.unwrap())).collect())
+}
+/// Чтение максимального объема для отсеков
+/// Возвращает мапу (ид отсека, максимальный объем (нетто))
+fn max_compartment_volume(
+    ship_id: usize,
+    project_id: String,
+    api_client: &ApiClient,
+) -> Result<HashMap<String, f64>, Error> {
+    let error = Error::new("ShipModel", "max_compartment_volume");
+    let data = VolumeDataArray::parse(
+        &api_client.fetch(&format!(
+            "SELECT space_id, volume_max FROM \"space/compartment\" WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+        )).map_err(|err| error.pass_with("api_client.fetch", err))?
+    ).map_err(|err| error.pass_with("parse", err))?;
+    Ok(data.data())
 }

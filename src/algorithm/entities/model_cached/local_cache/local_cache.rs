@@ -84,7 +84,6 @@ pub(crate) trait LocalCache {
         cache
             .init(vals)
             .map_err(|err| error.pass_with("cache.init error", err))?;
-        dbg!("set_cache");
         self.set_cache(cache);
         Ok(())
     }

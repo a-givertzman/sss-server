@@ -1,4 +1,5 @@
-pub mod grain_moment;
+mod grain_moment;
+mod volume_max;
 pub mod ship_model;
 pub mod stability_result;
 

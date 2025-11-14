@@ -32,6 +32,4 @@ pub struct ModelCachedConf {
     pub compartment_level_step: f64,    
     /// Level step for compartments
     pub bounds_level_step: f64,
-    /// volume data for compartments
-    pub compartment_data: HashMap<String, f64>,
 }

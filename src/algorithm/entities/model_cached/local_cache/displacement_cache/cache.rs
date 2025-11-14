@@ -195,7 +195,7 @@ impl LocalCache for DisplacementCache {
         if let Err(err) = cache.init(data.clone()) {
             errors.push(error.pass_with("self.cache.get_mut", err));
         }
-        self.cache = Some(cache);
+        self.set_cache(cache);
         if let Err(err) = save(&self.dbg, &self.cache_path, data) {
             errors.push(error.pass_with("save data", err));
         }

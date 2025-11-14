@@ -211,15 +211,6 @@ impl ModelCached {
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone(), shape.clone());
-                let volume_max =
-                    if let Some(volume_max) = conf.compartment_data.get(&name) {
-                        *volume_max
-                    } else {
-                        let error = error.err(format!("compartment_data.get(&name) {name}"));
-                        println!("{error}");
-                        log::error!("{}",error);
-                        return None;
-                    };
                 Some((
                     name.clone(),
                     Arc::new(RwLock::new(CompartmentCache::new(
@@ -230,7 +221,6 @@ impl ModelCached {
                         conf.compartment_heel_steps.clone(),
                         conf.compartment_trim_steps.clone(),
                         conf.compartment_level_step,
-                        volume_max,
                         Arc::clone(&thread_pool),
                     ))),
                 ))
@@ -364,17 +354,20 @@ impl ModelCached {
         Ok(())
     }
     /// инициализация кэшей заранее посчитанными данными
-    pub fn init(&mut self) -> Result<(), Error> {
+    pub fn init(&mut self, compartments_volume_max: HashMap<String, f64>) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
         let error = Error::new(self.dbg.clone(), "init");
         self.displacement
             .init()
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
         for (name, compartment) in self.compartments.iter_mut() {
-            compartment
-                .write()
+            let mut guard = compartment.write();
+            guard
                 .init()
-                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
+                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
+            let volume_max = compartments_volume_max.get(name).ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            guard.calc_coeff(*volume_max)
+                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
             damaged_compartment

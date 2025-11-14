@@ -86,8 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             hull_draught_max: 14.,
             hull_draught_step: 0.5,
             bounds_level_step: 0.1,
-            compartment_level_step: 1.,
-            compartment_data: HashMap::new(),
+            compartment_level_step: 1.
         },
         Arc::clone(&thread_pool),
     )
