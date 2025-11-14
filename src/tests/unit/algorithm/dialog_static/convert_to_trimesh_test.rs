@@ -80,6 +80,12 @@ pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
     })
 }
 ///
+/// Calculate volume of TriMesh
+pub fn volume(mesh: &TriMesh) -> f64 {
+    let inv_mass = parry3d_f64::shape::Shape::mass_properties(mesh, 1.).inv_mass;
+    if inv_mass > 0. { 1. / inv_mass } else { 0. }
+}
+///
 /// returns:
 ///  - ...
 fn init_each() -> () {}
@@ -99,7 +105,7 @@ fn convert_to_trimesh() {
         // (3, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\nasal_block"),
         // (4, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_2"),
         // (5, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_3"),
-
+        // (6, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_4"),
     ];
     for (step, path_3d_model) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
@@ -137,14 +143,12 @@ fn convert_to_trimesh() {
                         i += 1;
                     }
                 }
-                let mut mesh_with_flags = &result.surface_outer_body.unwrap();
-                //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                let mesh_with_flags = &result.surface_outer_body.unwrap();
                 if mesh_with_flags.vertices().len() > 0 {
-                    let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer_{}.stl", i));
+                    let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer.stl"));
                     if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                        log::error!("Failed to write nasal mesh {}: {}", i, e);
+                        log::error!("Failed to write nasal mesh {}", e);
                     }
-                    i += 1;
                 }
                 let mut i = 0;
                 for mesh in &result.surface_superstructure {

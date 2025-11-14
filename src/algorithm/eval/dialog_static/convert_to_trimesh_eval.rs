@@ -1,11 +1,8 @@
 use std::fs::File;
 use std::io::BufWriter;
 use std::io::Write;
-use indexmap::IndexMap;
-use multimap::MultiMap;
 use nalgebra::Const;
 use nalgebra::OPoint;
-use nalgebra::Vector3;
 use parry3d_f64::math::Point;
 use parry3d_f64::shape::TriMesh;
 use parry3d_f64::shape::Triangle;
@@ -53,6 +50,8 @@ impl ConvertToTrimeshEval {
         }
         TriMesh::new(vertices, indices).ok()
     }
+    ///
+    /// Сохранение точек
     fn save_points_to_txt(points: &[Point<f64>], path: &str) -> std::io::Result<()> {
         let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
@@ -62,27 +61,20 @@ impl ConvertToTrimeshEval {
         Ok(())
     }
     ///
-    /// Проверяет угол между двумя векторами в градусах
-    fn angle_between(&self, point1: OPoint<f64, Const<3>>, point2: OPoint<f64, Const<3>>) -> f64 {
-        let vec1 = Vector3::new(point1.x, point1.y, point1.z);
-        let vec2 = Vector3::new(point2.x, point2.y, point2.z);
-        vec1.angle(&vec2)
-    }
-    ///
     /// Интерполяция фрейма до одинакового количества точек
     fn resample_line(&self, points: &[Point<f64>], n: usize) -> Vec<Point<f64>> {
         if points.len() < 2 || n < 2 {
             return points.to_vec();
         }
         let mut lengths = vec![0.0];
-        for i in 1..points.len() {
-            let prev = points[i - 1];
-            let curr = points[i];
+        for i in 0..points.len() - 1 {
+            let prev = points[i];
+            let curr = points[i + 1];
             let d = ((curr.x - prev.x).powi(2)
                 + (curr.y - prev.y).powi(2)
                 + (curr.z - prev.z).powi(2))
                 .sqrt();
-            lengths.push(lengths[i - 1] + d);
+            lengths.push(lengths.last().unwrap() + d);
         }
         let total_len = *lengths.last().unwrap();
         if total_len == 0.0 {
@@ -105,18 +97,25 @@ impl ConvertToTrimeshEval {
             let t = (target - l1) / (l2 - l1);
             let p1 = points[idx];
             let p2 = points[idx + 1];
-            result.push(Point::new(
+            let interpolated_point = Point::new(
                 p1.x + (p2.x - p1.x) * t,
                 p1.y + (p2.y - p1.y) * t,
                 p1.z + (p2.z - p1.z) * t,
-            ));
+            );
+            result.push(interpolated_point);
         }
         result
+    }
+    ///
+    /// Близость точек
+    fn point_diff(&self, p1: Point<f64>, p2: Point<f64>, epsilon: f64) -> bool {
+        (p1.x - p2.x).abs() <= epsilon && (p1.y - p2.y).abs() <= epsilon && (p1.z - p2.z).abs() <= epsilon
     }
     ///
     /// Преобразование поверхности
     fn convert_surface(&self, surface: Vec<Vec<(f64,f64,f64)>>) -> Option<TriMesh> {
         let mut frames: Vec<(f64, Vec<Point<f64>>)> = Vec::new();
+        let mut same_frames: Vec<(f64, Vec<Point<f64>>)> = Vec::new();
         for vertices in &surface {
             if vertices.is_empty() {
                 continue;
@@ -124,106 +123,146 @@ impl ConvertToTrimeshEval {
             let frame = vertices[0].0;
             let points: Vec<Point<f64>> = vertices
                 .iter()
-                .map(|&(_, z, y)| Point::new(frame, y, z)) // x = frame, y = y, z = z
+                .map(|&(_, z, y)| Point::new(frame, y, z))
                 .collect();
+            if frames.len() > 0 {
+                if frame == frames.last().unwrap().0 {
+                    let last_frame = frames.last().unwrap();
+                    same_frames.push((frame, points.clone()));
+                    same_frames.push((frame, last_frame.1.clone()));
+                }
+            }
             frames.push((frame, points));
         }
         frames.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        let all_points: Vec<Point<f64>> = frames.iter().flat_map(|(_, v)| v.clone()).collect();
-        if let Err(e) = Self::save_points_to_txt(&all_points, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\resampled_points.txt") {
+        let all_points: Vec<OPoint<f64, Const<3>>> = frames.iter()
+        .flat_map(|(_, points)| points.iter())
+        .cloned()
+        .collect();
+        if let Err(e) = Self::save_points_to_txt(&all_points, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\sampled_points.txt") {
             log::error!("Failed to save points: {}", e);
         }
+        let target_points = 300;
         for (_, verts) in frames.iter_mut() {
-            *verts = self.resample_line(verts, 50);
+            *verts = self.resample_line(verts, target_points);
         }
 
         let mut vertices: Vec<Point<f64>> = Vec::new();
         let mut indices: Vec<[u32; 3]> = Vec::new();
         for i in 0..frames.len() - 1 {
-            let previous = &frames[i].1;
-            let current = &frames[i + 1].1;
-            for j in 0..previous.len() - 1 {
-                let p_p1 = previous[j];
-                let p_p2 = previous[j + 1];
-                let c_p1 = current[j];
-                let c_p2 = current[j + 1];
-
-                let base_index = vertices.len() as u32;
-                vertices.push(p_p1);
-                vertices.push(p_p2);
-                vertices.push(c_p1);
-                vertices.push(c_p2);
-                match Triangle::new(p_p1, p_p2, c_p1).normal() {
-                    Some(triangle) => {
-                        indices.push([base_index, base_index + 1, base_index + 2]);
-                        match Triangle::new(p_p2, c_p2, c_p1).normal() {
-                            Some(triangle) => {
-                                indices.push([base_index + 1, base_index + 3, base_index + 2]);
-                            },
-                            None => {
-                            },
+            if frames[i].0 == frames[i + 1].0 {
+                let prev_index = same_frames
+                    .iter()
+                    .position(|f| f.0 == frames[i].0)
+                    .unwrap();
+                let orig_prev_frame = same_frames[prev_index].clone();
+                let orig_cur_frame = same_frames[prev_index + 1].clone();
+                let mut previous = Vec::new();
+                let mut current = Vec::new();
+                for i in 0..orig_cur_frame.1.len() {
+                    if orig_cur_frame.1[i] != orig_prev_frame.1[i] {
+                        let point_start_diff = orig_cur_frame.1[i - 1];
+                        for j in 0..frames[i].1.len() {
+                            if self.point_diff(frames[i].1[j], point_start_diff, 1.0) {
+                                for k in j..frames[i].1.len() {
+                                    previous.push(frames[i].1[k]);
+                                }
+                            }
+                            break;
                         }
-                    },
-                    None => {
-                    },
+                        for j in 0..frames[i + 1].1.len() {
+                            if self.point_diff(frames[i + 1].1[j], point_start_diff, 1.0) {
+                                for k in j..frames[i + 1].1.len() {
+                                    current.push(frames[i + 1].1[k]);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                for i in 0..previous.len() - 1 {
+                    for j in i..previous.len() - 1 {
+                        let p_p1 = previous[j];
+                        let p_p2 = previous[j + 1];
+                        let c_p1 = current[j];
+                        let c_p2 = current[j + 1];
+                        let base_index = vertices.len() as u32;
+                        vertices.push(p_p1);
+                        vertices.push(p_p2);
+                        vertices.push(c_p1);
+                        vertices.push(c_p2);
+                        match Triangle::new(p_p1, p_p2, c_p1).normal() {
+                            Some(_) => {
+                                indices.push([base_index, base_index + 1, base_index + 2]);
+                                match Triangle::new(p_p2, c_p2, c_p1).normal() {
+                                    Some(_) => {
+                                        indices.push([base_index + 1, base_index + 3, base_index + 2]);
+                                    },
+                                    None => {},
+                                }
+                            },
+                            None => {},
+                        }
+                    }  
+                    break;
+                }
+            } else {
+                let previous = &frames[i].1;
+                let current = &frames[i + 1].1;
+                for j in 0..previous.len() - 1 {
+                    let p_p1 = previous[j];
+                    let p_p2 = previous[j + 1];
+                    let c_p1 = current[j];
+                    let c_p2 = current[j + 1];
+                    let base_index = vertices.len() as u32;
+                    vertices.push(p_p1);
+                    vertices.push(p_p2);
+                    vertices.push(c_p1);
+                    vertices.push(c_p2);
+                    match Triangle::new(p_p1, p_p2, c_p1).normal() {
+                        Some(_) => {
+                            indices.push([base_index, base_index + 1, base_index + 2]);
+                            match Triangle::new(p_p2, c_p2, c_p1).normal() {
+                                Some(_) => {
+                                    indices.push([base_index + 1, base_index + 3, base_index + 2]);
+                                    indices.push([base_index, base_index + 3, base_index + 2]);
+                                    indices.push([base_index, base_index + 1, base_index + 3]);
+                                },
+                                None => {},
+                            }
+                        },
+                        None => {},
+                    }
                 }
             }
-            // if previous.len() == current.len() {
-            //     println!("{:?}", previous.len());
-            //     for j in 0..previous.len() - 1 {
-            //         let p_p1 = previous[j];
-            //         let p_p2 = previous[j + 1];
-            //         let c_p1 = current[j];
-            //         let c_p2 = current[j + 1];
-            //         let base_index = vertices.len() as u32;
-            //         vertices.push(p_p1);
-            //         vertices.push(p_p2);
-            //         vertices.push(c_p1);
-            //         vertices.push(c_p2);
-            //         indices.push([base_index, base_index + 1, base_index + 2]);
-            //         indices.push([base_index + 1, base_index + 3, base_index + 2]);
-            //         indices.push([base_index + 3, base_index, base_index + 2]);
-            //     }
-            // } else {
-            //     println!("STOP");
-            //     if previous.len() > current.len() {
-            //         let new_frame_cur = self.resample_line(&current.clone(), previous.len());
-            //         let new_frame_prev = self.resample_line(&previous.clone(), previous.len());
-            //         // for i in 0..previous.len() {
-            //         //     if i < current.len() {
-            //         //         let p_p1 = previous[i];
-            //         //         let c_p1 = current[i];
-            //         //         let angle_between = self.angle_between(p_p1, c_p1).to_degrees();
-            //         //         println!("angle between {} {}:  {}", p_p1, c_p1, angle_between);
-            //         //     }
-            //         // }
-            //         // let tmp = [new_frame_cur.clone(), new_frame_prev.to_vec()].concat();
-            //         // if let Err(e) = Self::save_points_to_txt(&tmp, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\resampled_points.txt") {
-            //         //     log::error!("Failed to save points: {}", e);
-            //         // }
-            //         for j in 0..previous.len() - 1 {
-            //             let p_p1 = new_frame_prev[j];
-            //             let p_p2 = new_frame_prev[j + 1];
-            //             let c_p1 = new_frame_cur[j];
-            //             let c_p2 = new_frame_cur[j + 1];
-            //             let base_index = vertices.len() as u32;
-            //             vertices.push(p_p1);
-            //             vertices.push(p_p2);
-            //             vertices.push(c_p1);
-            //             vertices.push(c_p2);
-            //             indices.push([base_index, base_index + 1, base_index + 2]);
-            //             indices.push([base_index + 1, base_index + 3, base_index + 2]);
-            //             indices.push([base_index + 3, base_index, base_index + 2]);
-            //         }
-            //     }
-            // }
         }
-        match TriMesh::new(vertices, indices) {
-            Ok(trimesh) => Some(trimesh),
+        match TriMesh::new(vertices.clone(), indices.clone()) {
+            Ok(_trimesh) => {
+                let original_vertex_count = vertices.len() as u32;
+                let mirrored_vertices: Vec<Point<f64>> = vertices
+                    .iter()
+                    .map(|p| Point::new(p.x, -p.y, p.z))
+                    .collect();
+                let mirrored_indices: Vec<[u32; 3]> = indices
+                    .iter()
+                    .map(|[a, b, c]| [a + original_vertex_count, c + original_vertex_count, b + original_vertex_count])
+                    .collect();
+                let mut all_vertices = vertices.clone();
+                all_vertices.extend(mirrored_vertices);
+                let mut all_indices = indices.clone();
+                all_indices.extend(mirrored_indices);
+                match TriMesh::new(all_vertices, all_indices) {
+                    Ok(final_mesh) => Some(final_mesh),
+                    Err(err) => {
+                        log::error!("Failed to create mirrored TriMesh: {}", err);
+                        None
+                    }
+                }
+            }
             Err(err) => {
                 log::error!("Failed to create TriMesh: {}", err);
                 None
-            },
+            }
         }
     }
 }
