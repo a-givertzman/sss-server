@@ -1,6 +1,8 @@
 use crate::{
     algorithm::entities::{
-        Bounds, DivideSingle, DivideVec, MultipleSingle, cache::Cache, model_cached::{DisplacementShape, read, save}
+        Bounds, DivideSingle, DivideVec, MultipleSingle,
+        cache::Cache,
+        model_cached::{DisplacementShape, read, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -19,7 +21,7 @@ pub struct CompartmentBoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
     level_step: f64,
-    coeff: f64,
+    volume_max: f64,
     bounds: Bounds,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
@@ -37,7 +39,7 @@ impl CompartmentBoundCache {
     pub fn new(
         parent: &Dbg,
         shape: Arc<RwLock<DisplacementShape>>,
-        coeff: f64,
+        volume_max: f64,
         cache_dir: PathBuf,
         level_step: f64,
         bounds: Bounds,
@@ -47,7 +49,7 @@ impl CompartmentBoundCache {
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
-            coeff,
+            volume_max,
             level_step,
             bounds,
             caches: OnceLock::new(),
@@ -60,18 +62,24 @@ impl CompartmentBoundCache {
     /// Return volume in bounds
     /// cause panic if caches not initialized
     pub fn get(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
-    //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
+        //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
         let error = Error::new(&self.dbg, "get");
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
-        let mut max_volume= self.get_max_volume().map_err(|err| error.pass(err))?;
-        max_volume.mul_single(self.coeff);
-  /*      if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
+        let mut volume_vec = self.get_max_volume().map_err(|err| error.pass(err))?;
+        let volume_brutto: f64 = volume_vec.iter().sum();
+        let coeff = if volume_brutto > 0. {
+            self.volume_max / volume_brutto
+        } else {
+            1.
+        };
+        volume_vec.mul_single(coeff);
+        /*      if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
             println!("jfhufjd get start {} {volume} {}", &self.dbg, max_volume.iter().sum::<f64>());
         }*/
-        if volume >= max_volume.iter().sum() {
-            return Ok(max_volume);
+        if volume >= self.volume_max {
+            return Ok(volume_vec);
         }
-        let volume = volume/self.coeff;
+        let volume = volume / coeff;
         let mut draugth = 0.;
         let mut delta_draugth = 5.;
         let mut last_delta: Option<f64> = Some(-1.);
@@ -79,25 +87,23 @@ impl CompartmentBoundCache {
         let trim_sin = trim.to_radians().sin();
         for _i in 0..100 {
             values = caches
-            .iter()
-            .map(|(center_x, cache)| match cache {
-                Some(cache) => {
-                    cache.get(&vec![draugth + center_x * trim_sin])[0]
-                }
-                None => 0.,
-            })
-            .collect();
+                .iter()
+                .map(|(center_x, cache)| match cache {
+                    Some(cache) => cache.get(&vec![draugth + center_x * trim_sin])[0],
+                    None => 0.,
+                })
+                .collect();
             let values_sum = values.iter().sum::<f64>();
             let delta = values_sum - volume;
-        //    println!("jydfhsh {} {_i} {delta} {values_sum} {volume}", &self.dbg);
+            //    println!("jydfhsh {} {_i} {delta} {values_sum} {volume}", &self.dbg);
             if delta.abs() <= epsilon {
-     //           println!("jydfhsh get ok {} {_i} {values_sum} {volume} {epsilon}", &self.dbg);
-                values.mul_single(self.coeff);
+                //           println!("jydfhsh get ok {} {_i} {values_sum} {volume} {epsilon}", &self.dbg);
+                values.mul_single(coeff);
                 return Ok(values);
             }
             if let Some(last_delta) = last_delta {
                 if last_delta.signum() != delta.signum() {
-                    delta_draugth = -delta_draugth/3.;
+                    delta_draugth = -delta_draugth / 3.;
                 }
             }
             draugth += delta_draugth;
@@ -226,7 +232,7 @@ impl CompartmentBoundCache {
             .map(|(x, _)| *x)
             .collect();
         let qnt = center_x.len();
-        let center_x = center_x.iter().sum::<f64>()/qnt as f64;
+        let center_x = center_x.iter().sum::<f64>() / qnt as f64;
         self.caches
             .set(
                 caches

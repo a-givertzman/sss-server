@@ -407,7 +407,8 @@ impl ModelCached {
         for (compartment_id, compartment) in &self.compartments {
             let compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step);
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
             compartment_bounded
                 .init()
                 .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
@@ -495,7 +496,8 @@ impl ModelCached {
             println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
                 .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step);
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
             compartment_bounded
                 .rebuild()
                 .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
