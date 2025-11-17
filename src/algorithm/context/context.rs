@@ -37,8 +37,7 @@ pub struct Context {
     /// Срезающая сила, действующая на корпус судна
     pub(super) shear_force: Option<ShearForceCtx>,
     /// Изгибающий момент
-    pub(super) bending_moment: Option<BendingMomentCtx>,
-    /*
+    pub(super) bending_moment: Option<BendingMomentCtx>,  
     /// Площади горизонтальных поверхностей и
     /// площади парусности судна для расчета остойчивости
     pub(super) stability_area: Option<StabilityAreaCtx>,
@@ -47,7 +46,7 @@ pub struct Context {
     /// Диаграмма плеч статической и динамической остойчивости
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
     /// Расчет плеча кренящего момента от давления ветра
-    pub(super) wind: Option<WindCtx>,
+  /*    pub(super) wind: Option<WindCtx>,
     /// Парусность судна
     pub(super) windage: Option<WindageCtx>,
     /// Период собственных бортовых колебаний судна 

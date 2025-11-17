@@ -202,7 +202,6 @@ impl ContextRead<BendingMomentCtx> for Context {
         self.bending_moment.clone().unwrap()
     }
 }
-/*
 //
 impl ContextWrite<StabilityAreaCtx> for Context {
     fn write(mut self, value: StabilityAreaCtx) -> Result<Self, Error> {
@@ -240,7 +239,7 @@ impl ContextRead<LeverDiagramCtx> for Context {
     }
 }
 //
-impl ContextWrite<WindCtx> for Context {
+/*impl ContextWrite<WindCtx> for Context {
     fn write(mut self, value: WindCtx) -> Result<Self, Error> {
         self.wind = Some(value);
         Result::Ok(self)

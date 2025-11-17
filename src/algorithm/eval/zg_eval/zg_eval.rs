@@ -13,9 +13,9 @@ use crate::{
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
-    thread_pool::{JoinHandle, Scheduler},
+    thread_pool::{JoinHandle, Scheduler, ThreadPool},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 // unsafe impl Send for StabilityAreaEval {}
 // unsafe impl Sync for StabilityAreaEval {}

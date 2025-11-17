@@ -172,7 +172,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                 WindEval::new(
                                                                     &dbg,
                                                                     WindageEval::new(
-                                                                        &dbg,
+                                                                        &dbg,*/
                                                                         LeverDiagramEval::new(
                                                                             &dbg,
                                                                             //   link,
@@ -182,7 +182,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                                 StabilityAreaEval::new(
                                                                                     &dbg,
                                                                                     ship_model.clone(),
-                                                                                    */
+                                                                                    
 
                                                                 BendingMomentEval::new(
                                                                     &dbg,
@@ -228,11 +228,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                             ),
                                                                         ),
                                                                     ),
-                                                                ).eval(())
-    /*                                                                             ),
+                                                                ),
+                                                                               ),
                                                                             ),
-                                                                        ),
-                                                                    ),
+                                                                        ).eval(())
+    /*                                                                  ),
                                                                 ),
                                                             ),
                                                         ),

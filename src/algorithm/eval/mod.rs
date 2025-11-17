@@ -12,10 +12,11 @@ pub mod strength_balance_eval;
 mod total_force_eval;
 mod shear_force_eval;
 mod bending_moment_eval;
-/*
 mod stability_area_eval;
 mod metacentric_height_eval;
 mod lever_diagram_eval;
+
+/*
 mod wind_eval;
 mod windage_eval;
 mod roll_frequency_eval;
@@ -64,7 +65,7 @@ pub use shear_force_eval::ctx::ShearForceCtx;
 
 pub use bending_moment_eval::eval::BendingMomentEval;
 pub use bending_moment_eval::ctx::BendingMomentCtx;
-/*
+
 pub use stability_area_eval::stability_area_eval::StabilityAreaEval;
 pub use stability_area_eval::stability_area_ctx::StabilityAreaCtx;
 
@@ -73,7 +74,7 @@ pub use metacentric_height_eval::metacentric_height_ctx::MetacentricHeightCtx;
 
 pub use lever_diagram_eval::lever_diagram_eval::LeverDiagramEval;
 pub use lever_diagram_eval::lever_diagram_ctx::LeverDiagramCtx;
-
+/*
 pub use wind_eval::wind_eval::WindEval;
 pub use wind_eval::wind_ctx::WindCtx;
 

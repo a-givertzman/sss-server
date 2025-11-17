@@ -2,8 +2,16 @@ use super::stability_area_ctx::StabilityAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{Bound, Moment, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel}, eval::{BalanceCtx, IcingTimberCtx},
-    }, kernel::{eval::Eval, types::{Arc, eval_result::EvalResult}}, prelude::{ContextWrite, InitialCtx}
+        entities::{
+            Bound, Moment, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel,
+        },
+        eval::{StrengthBalanceCtx, IcingTimberCtx},
+    },
+    kernel::{
+        eval::Eval,
+        types::{Arc, eval_result::EvalResult},
+    },
+    prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::sync::RwLock;
@@ -54,24 +62,20 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return Err(error.err("Read bounds error: no data!")),
                 };
-                let balance: BalanceCtx = ctx.read();
+                let balance: StrengthBalanceCtx = ctx.read();
                 let const_area_v = &balance.const_area_v;
                 let const_area_h = &balance.const_area_h;
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,
                     Err(err) => {
-                        return Err(
-                            error.pass_with("Read icing_timber_bound_x error", err),
-                        );
+                        return Err(error.pass_with("Read icing_timber_bound_x error", err));
                     }
                 };
                 let icing_timber_bound_y = match icing_timber_bound.bound_y() {
                     Ok(data) => data,
                     Err(err) => {
-                        return Err(
-                            error.pass_with("Read icing_timber_bound_y error", err),
-                        );
+                        return Err(error.pass_with("Read icing_timber_bound_y error", err));
                     }
                 };
                 // Ищем площадь парусности палубных грузов.
@@ -166,15 +170,13 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                             .unwrap_or(Bound::None);
                         match u.icing_area(&current_bound_x, &icing_timber_bound_y) {
                             Ok((_, full_moment, delta_moment)) => {
-                               // let x = current_bound_x.center().unwrap_or(0.);
-                               // let z = u.centre_of_icing_area.unwrap_or(Position::zero()).z();
+                                // let x = current_bound_x.center().unwrap_or(0.);
+                                // let z = u.centre_of_icing_area.unwrap_or(Position::zero()).z();
                                 current_moment += full_moment;
                                 current_delta_moment += delta_moment;
                             }
                             Err(err) => {
-                                return Err(
-                                    error.pass_with("Read unit horizontal_area error", err),
-                                );
+                                return Err(error.pass_with("Read unit horizontal_area error", err));
                             }
                         };
                     }
