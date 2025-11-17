@@ -4,9 +4,9 @@ use crate::{
         context::context_access::ContextReadRef,
         entities::{
             AddVec, Bound, Bounds,
-            data::loads::{AssignmentType, UnitCargoType, gaseous},
+            data::loads::{AssignmentType, UnitCargoType},
         },
-        eval::{IcingCtx, StaticMassCtx, StrengthBalanceCtx, WettingCtx, parameters::ParameterID},
+        eval::{IcingCtx, StrengthBalanceCtx, WettingCtx, parameters::ParameterID},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextParamsWrite, ContextRead, ContextWrite, InitialCtx},
@@ -74,6 +74,7 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
+             //       for v in &gaseous {  println!("gaseous {} mass:{} ", v.space_id, v.mass);   }
                     let bulk = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .bulk
                         .as_ref()
@@ -82,8 +83,7 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
-
-                    bulk.iter().for_each(|v| { dbg!(&v.space_id, v.mass ); }) ;
+               //     for v in &bulk {   println!("bulk {} mass:{} ", v.space_id, v.mass);   }
                     let liquid = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .liquid
                         .as_ref()
@@ -92,6 +92,7 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| v)
                         .collect::<Vec<_>>();
+                //    for v in &liquid {   println!("liquid {} mass:{} ", v.space_id, v.mass);  }
                     let mass = |assigment_type: AssignmentType| {
                         let gaseous = gaseous
                             .iter()
@@ -134,9 +135,16 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         icing:{icing}, wetting:{wetting} sum:{mass_sum}"
                     );
                     println!(
-                        "\t Mass ballast:{ballast}, stores:{stores}, bulkhead:{bulkhead}
-                        cargo:{cargo}, deadweight:{deadweight}, lightship:{lightship},
-                        icing:{icing}, wetting:{wetting} sum:{mass_sum}"
+                        "Mass 
+                        ballast:{ballast}, 
+                        stores:{stores}, 
+                        bulkhead:{bulkhead}
+                        cargo:{cargo}, 
+                        deadweight:{deadweight}, 
+                        lightship:{lightship},
+                        icing:{icing}, 
+                        wetting:{wetting} 
+                        sum:{mass_sum}"
                     );
                 }
                 let result = {
@@ -197,8 +205,15 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         };
                     let strength_balance: StrengthBalanceCtx = ctx.read();
 
-
-           /*         let bulk = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+              /*      let gaseous = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .gaseous
+                        .as_ref()
+                        .ok_or(error.err("Read gaseous error: no data!"))?
+                        .iter()
+                        .filter(|(_, v)| v.mass > 0.)
+                        .map(|(_, v)| (v.space_id.clone(), v.mass))
+                        .collect::<HashMap<_, _>>();
+                    let bulk = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .bulk
                         .as_ref()
                         .ok_or(error.err("Read bulk error: no data!"))?
@@ -213,13 +228,14 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                         .iter()
                         .filter(|(_, v)| v.mass > 0.)
                         .map(|(_, v)| (v.space_id.clone(), v.mass))
-                        .collect::<HashMap<_, _>>();
-*/
+                        .collect::<HashMap<_, _>>();*/
                     for v in strength_balance.gaseous {
+                 //       println!("gaseous {} mass:{} vec_sum:{}", v.space_id, gaseous.get(&v.space_id).unwrap(), v.mass_values.iter().sum::<f64>());
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     for v in strength_balance.bulk {
-                    //    println!("bulk {} mass:{} vec_sum:{}", v.space_id, bulk.get(&v.space_id).unwrap(), v.mass_values.iter().sum::<f64>());
+                 //       println!("bulk {} vec_sum:{}", v.space_id, v.mass_values.iter().sum::<f64>());
+                 //       v.mass_values.iter().for_each(|b| print!("{:.3} ", b));
                         process_by_type(&v.mass_values, v.assigment_type)?;
                     }
                     for v in strength_balance.liquid {

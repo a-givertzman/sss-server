@@ -15,7 +15,7 @@ pub struct LoadUnitData {
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
-    pub assigned_id: usize,    
+    pub assignment_id: usize,    
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип груза судна
@@ -56,7 +56,7 @@ impl LoadUnitData {
                 .map_err(|e| Error::new("LoadUnitData", "mass").pass_with("part_ratio", e))?)
     }
     /// Расчет площади обледенения по заданным ограничениям.
-    /// Возвращает площадь, попадающую в ограничение, момент плозади и дельту момента площади относительно палубы (bound_z1)
+    /// Возвращает площадь, попадающую в ограничение, момент площади и дельту момента площади относительно палубы (bound_z1)
     pub fn icing_area(
         &self,
         bound_x: &Bound,

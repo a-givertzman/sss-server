@@ -107,7 +107,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .bulk
                     .iter()
                     .filter_map(|res| {
-                        bulk_data.get(&res.assigned_id).map(|data| {
+                        bulk_data.get(&res.assignment_id).map(|data| {
                             super::bulk_result::BulkResult::new(data.space_id.clone(), res.moment)
                         })
                     })
@@ -116,7 +116,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .liquid
                     .iter()
                     .filter_map(|res| {
-                        liquid_data.get(&res.assigned_id).map(|data| {
+                        liquid_data.get(&res.assignment_id).map(|data| {
                             super::liquid_result::LiquidResult::new(
                                 data.space_id.clone(),
                                 res.long_moment_of_inertia,

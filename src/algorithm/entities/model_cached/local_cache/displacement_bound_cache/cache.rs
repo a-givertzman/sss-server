@@ -17,7 +17,7 @@ use std::{
 };
 ///
 /// Pre-calculated cache for bounds
-pub struct BoundDisplacementCache {
+pub struct DisplacementBoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
     level_step: f64,
@@ -34,7 +34,7 @@ pub struct BoundDisplacementCache {
 }
 //
 //
-impl BoundDisplacementCache {
+impl DisplacementBoundCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
@@ -47,7 +47,7 @@ impl BoundDisplacementCache {
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("BoundDisplacementCache"));
+        let dbg = Dbg::new(parent, format!("DisplacementBoundCache_{:.3}", center_x));
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
@@ -89,7 +89,7 @@ impl BoundDisplacementCache {
         let result = caches
             .iter()
             .map(|(_, cache)| match cache {
-                Some(cache) => cache.max_value(1),
+                Some(cache) => cache.value_disp(1).1,
                 None => 0.,
             })
             .collect();
@@ -135,7 +135,7 @@ impl BoundDisplacementCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let (data, mut errors) = super::build_cache::BuildBoundDisplacementCache::new(
+        let (data, mut errors) = super::build_cache::BuildDisplacementBoundCache::new(
             &self.dbg,
             self.shape.clone(),
             self.level_step,

@@ -28,7 +28,7 @@ use sal_sync::thread_pool::ThreadPool;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{
     Bounds, Moment,
-    model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught},
+    model_cached::{self, DisplacementShape, Draught},
 };
 use crate::prelude::{Context, Initial, InitialCtx};
 use std::rc::Rc;
@@ -82,12 +82,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 -40., -10., -5., 0., 5., 10., 40.,
             ],
             ship_length_lbp: 130.5,
-            draught_min: 0.5,
-            draught_max: 14.,
+            hull_draught_min: 0.5,
+            hull_draught_max: 14.,
             hull_draught_step: 0.5,
             bounds_level_step: 0.1,
-            compartment_level_step: 1.,
-            compartment_data: HashMap::new(),
+            compartment_level_step: 1.
         },
         Arc::clone(&thread_pool),
     )
@@ -111,8 +110,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
   //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-
-  /*      let res = model_cached.reload_shapes();            dbg!(&res);
+/*
+    let res = model_cached.reload_shapes();            dbg!(&res);
  //   let res = model_cached.rebuild_caches();   dbg!(&res);
     let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
   //  let res = model_cached.init();                     dbg!(&res);

@@ -4,9 +4,9 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaShape, BoundDisplacementCache, CompartmentCache, CompartmentCacheResult,
-                DamagedCompartmentCache, DisplacementCache, DisplacementCacheResult,
-                DisplacementShape, Draught, Shape, WindageArea,
+                AreaShape, CompartmentBoundCache, CompartmentCache, CompartmentCacheResult,
+                DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
+                DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
             },
             ship_model::{stability_result::BalanceStabilityResult, *},
         },
@@ -134,9 +134,9 @@ pub struct ModelCached {
     /// - cache for windage area
     windage_area: WindageArea,
     /// - cache for bounds of model, [qnt_bounds, cache]
-    displacement_bounded: HashMap<usize, Arc<RwLock<BoundDisplacementCache>>>,
+    displacement_bounded: HashMap<usize, Arc<RwLock<DisplacementBoundCache>>>,
     /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
-    compartments_bounded: HashMap<usize, IndexMap<String, Arc<RwLock<BoundDisplacementCache>>>>,
+    compartments_bounded: HashMap<usize, IndexMap<String, Arc<RwLock<CompartmentBoundCache>>>>,
     thread_pool: Arc<ThreadPool>,
 }
 //
@@ -172,7 +172,7 @@ impl ModelCached {
             &dbg,
             windage_shape.clone(),
             conf.cache_dir.clone(),
-            conf.draught_min,
+            conf.hull_draught_min,
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
@@ -211,12 +211,6 @@ impl ModelCached {
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone(), shape.clone());
-                let (volume_max, center_max) =
-                    if let Some((volume_max, center_max)) = conf.compartment_data.get(&name) {
-                        (*volume_max, *center_max)
-                    } else {
-                        (None, None)
-                    };
                 Some((
                     name.clone(),
                     Arc::new(RwLock::new(CompartmentCache::new(
@@ -227,9 +221,6 @@ impl ModelCached {
                         conf.compartment_heel_steps.clone(),
                         conf.compartment_trim_steps.clone(),
                         conf.compartment_level_step,
-                        conf.model_center_coord.x(),
-                        center_max,
-                        volume_max,
                         Arc::clone(&thread_pool),
                     ))),
                 ))
@@ -265,8 +256,8 @@ impl ModelCached {
                         name.clone(),
                         conf.hull_heel_steps.clone(),
                         conf.hull_trim_steps.clone(),
-                        conf.draught_min,
-                        conf.draught_max,
+                        conf.hull_draught_min,
+                        conf.hull_draught_max,
                         conf.hull_draught_step,
                         Arc::clone(&thread_pool),
                     ))),
@@ -278,7 +269,7 @@ impl ModelCached {
             dbg: dbg.clone(),
             ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
-            draught_min: conf.draught_min,
+            draught_min: conf.hull_draught_min,
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
@@ -290,8 +281,8 @@ impl ModelCached {
                 conf.cache_dir.clone(),
                 conf.hull_heel_steps.clone(),
                 conf.hull_trim_steps.clone(),
-                conf.draught_min,
-                conf.draught_max,
+                conf.hull_draught_min,
+                conf.hull_draught_max,
                 conf.hull_draught_step,
                 Arc::clone(&thread_pool),
             ),
@@ -363,17 +354,20 @@ impl ModelCached {
         Ok(())
     }
     /// инициализация кэшей заранее посчитанными данными
-    pub fn init(&mut self) -> Result<(), Error> {
+    pub fn init(&mut self, compartments_volume_max: HashMap<String, f64>) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
         let error = Error::new(self.dbg.clone(), "init");
         self.displacement
             .init()
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
         for (name, compartment) in self.compartments.iter_mut() {
-            compartment
-                .write()
+            let mut guard = compartment.write();
+            guard
                 .init()
-                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?
+                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
+            let volume_max = compartments_volume_max.get(name).ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            guard.calc_coeff(*volume_max)
+                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
             damaged_compartment
@@ -395,7 +389,7 @@ impl ModelCached {
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
-        let bound_displacement = BoundDisplacementCache::new(
+        let displacement_bound = DisplacementBoundCache::new(
             &self.dbg,
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
@@ -404,17 +398,17 @@ impl ModelCached {
             bounds.clone(),
             Arc::clone(&self.thread_pool),
         );
-        bound_displacement
+        displacement_bound
             .init()
-            .map_err(|err| error.pass_with(format!("bound_displacement.init"), err))?;
+            .map_err(|err| error.pass_with(format!("displacement_bound.init"), err))?;
         self.displacement_bounded
-            .insert(bounds_qnt, Arc::new(RwLock::new(bound_displacement)));
+            .insert(bounds_qnt, Arc::new(RwLock::new(displacement_bound)));
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             let compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
             compartment_bounded
                 .init()
                 .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
@@ -478,32 +472,32 @@ impl ModelCached {
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-        /*        let displacement_shape = self
-                   .displacement_shapes
-                   .get("hull")
-                   .ok_or(error.err("no displacement_shape"))?;
-               let mut bound_displacement = BoundDisplacementCache::new(
-                   &self.dbg,
-                   displacement_shape.clone(),
-                   self.cache_dir.clone().join("disp_bounded"),
-                   self.bounds_level_step,
-                   self.model_center_coord.x(),
-                   bounds.clone(),
-                   Arc::clone(&self.thread_pool),
-               );
-               bound_displacement
-                   .rebuild()
-                   .map_err(|err| error.pass_with("bound_displacement.rebuild", err))?;
-               self.displacement_bounded
-                   .insert(bounds.len_qnt(), Arc::new(RwLock::new(bound_displacement)));
-        */
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let mut displacement_bound = DisplacementBoundCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir.clone().join("disp_bounded"),
+            self.bounds_level_step,
+            self.model_center_coord.x(),
+            bounds.clone(),
+            Arc::clone(&self.thread_pool),
+        );
+        displacement_bound
+            .rebuild()
+            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment.build_bounded", err))?;
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
             compartment_bounded
                 .rebuild()
                 .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
@@ -584,13 +578,57 @@ impl ModelCached {
                             error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
                         )?
                         .read();
-                    let volume_bounded = compartment_bounded.get_max().map_err(|err| {
+                    let volume_bounded = compartment_bounded.get_max_volume().map_err(|err| {
                         error_
                             .pass_with(format!("volume_bounded get_max, space_id:{space_id}"), err)
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
                     results_.push(strength_balance_eval::gaseous_result::GaseousResult::new(
+                        space_id,
+                        assigment_type,
+                        volume_bounded.into_iter().map(|v| v * density).collect(),
+                    ));
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => errors.push(err),
+            };
+        }
+        // расчет эпюр масс для сыпучих грузов
+        // они не смещаются, поэтому считаем их один раз
+        let bulk_results = Arc::new(Stack::new());
+        for cargo in &query.bulk {
+            assert!(cargo.mass > 0.);
+            let assigment_type = cargo.assigment_type;
+            let space_id = cargo.space_id.clone();
+            let error_ = error.err(format!("compartment_{space_id} bulk work"));
+            let density = cargo.mass / cargo.volume;
+            let compartments_bounded = compartments_bounded.clone();
+            let volume = cargo.volume;
+            let epsilon = query.epsilon;
+            let results_ = bulk_results.clone();
+            let handle = scheduler
+                .spawn(move || {
+                    let compartment_bounded = compartments_bounded
+                        .get(&space_id)
+                        .ok_or(
+                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                        )?
+                        .read();
+                    let volume_bounded =
+                        compartment_bounded
+                            .get(volume, 0., epsilon)
+                            .map_err(|err| {
+                                error_.pass_with(
+                                    format!("compartment_bounded.get, space_id:{space_id}"),
+                                    err,
+                                )
+                            })?;
+                    //    println!("model_cached balance_strength bulk space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                    results_.push(strength_balance_eval::bulk_result::BulkResult::new(
                         space_id,
                         assigment_type,
                         volume_bounded.into_iter().map(|v| v * density).collect(),
@@ -620,18 +658,28 @@ impl ModelCached {
                     gaseous.push(data);
                 }
             }
+            while !bulk_results.is_empty() {
+                if let Some(data) = bulk_results.pop() {
+                    res.add_vec(&data.mass_values).map_err(|err| {
+                        error.pass_with("mass_distr.add_vec(bulk)", err.to_string())
+                    })?;
+                    bulk.push(data);
+                }
+            }
             res
         };
         let mut res_mass_distr = Vec::new();
         let mut res_displacement_distr = Vec::new();
         let (mut trim, mut draught) = (query.trim, query.draught);
-        let (mut mass_sum, mut disp_sum) = (0., 0.);
+        let (mut mass_sum, mut disp_sum) = (100000., 100000.);
+        let (mut epsilon_mass, mut epsilon_x): (f64, f64) = (10., 1.);
         for _i in 0..50 {
             // trim
             for _j in 0..50 {
                 // draught
                 let mut tasks: Vec<JoinHandle<_>> = vec![];
                 let liquid_results = Arc::new(Stack::new());
+                // жидкие грузы смещаются под действием силы тяжести
                 for cargo in &query.liquid {
                     assert!(cargo.mass > 0.);
                     let assigment_type = cargo.assigment_type;
@@ -639,11 +687,6 @@ impl ModelCached {
                     let cargo_type = cargo.cargo_type;
                     let error_ = error.err(format!("compartment_{space_id} liquid work"));
                     let density = cargo.mass / cargo.volume;
-                    let compartment = self
-                        .compartments
-                        .get(&space_id)
-                        .ok_or(error.err(format!("no compartment:{space_id}")))?
-                        .clone();
                     let compartment_bounded = compartments_bounded
                         .get(&space_id)
                         .ok_or(
@@ -652,80 +695,24 @@ impl ModelCached {
                         .clone();
                     let trim = trim;
                     let volume = cargo.volume;
-                    let epsilon = query.epsilon;
+                    let epsilon = volume * epsilon_mass / mass_sum;
                     let results_ = liquid_results.clone();
                     let handle = scheduler
                         .spawn(move || {
-                            let compartment_result = compartment
-                                .read()
-                                .get(0., trim, volume, epsilon)
-                                .map_err(|err| error_.pass_with("compartment.get", err))?;
                             let volume_bounded = compartment_bounded
                                 .read()
-                                .get(compartment_result.level, trim)
+                                .get(volume, trim, epsilon)
                                 .map_err(|err| {
                                     error_.pass_with(
                                         format!("compartment_bounded.get, space_id:{space_id}"),
                                         err,
                                     )
                                 })?;
-                      //      println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                            //         println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
                                 cargo_type,
-                                volume_bounded.into_iter().map(|v| v * density).collect(),
-                            ));
-                            Ok(())
-                        })
-                        .map_err(|err| {
-                            error.pass_with(format!("scheduler.spawn"), err.to_string())
-                        });
-                    match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => errors.push(err),
-                    };
-                }
-                let bulk_results = Arc::new(Stack::new());
-                for cargo in &query.bulk {
-                    assert!(cargo.mass > 0.);
-                    let assigment_type = cargo.assigment_type;
-                    let space_id = cargo.space_id.clone();
-                    let error_ = error.err(format!("compartment_{space_id} bulk work"));
-                    let density = cargo.mass / cargo.volume;
-                    let compartment = self
-                        .compartments
-                        .get(&space_id)
-                        .ok_or(error.err(format!("no compartment:{space_id}")))?
-                        .clone();
-                    let compartments_bounded = compartments_bounded.clone();
-                    let trim = trim;
-                    let volume = cargo.volume;
-                    let epsilon = query.epsilon;
-                    let results_ = bulk_results.clone();
-                    let handle = scheduler
-                        .spawn(move || {
-                            let compartment_result = compartment
-                                .read()
-                                .get(0., trim, volume, epsilon)
-                                .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            let compartment_bounded = compartments_bounded
-                                .get(&space_id)
-                                .ok_or(error_.err(format!(
-                                    "compartments_bounded.get no space_id:{space_id}"
-                                )))?
-                                .read();
-                            let volume_bounded = compartment_bounded
-                                .get(compartment_result.level, trim)
-                                .map_err(|err| {
-                                    error_.pass_with(
-                                        format!("compartment_bounded.get, space_id:{space_id}"),
-                                        err,
-                                    )
-                                })?;
-                            results_.push(strength_balance_eval::bulk_result::BulkResult::new(
-                                space_id,
-                                assigment_type,
                                 volume_bounded.into_iter().map(|v| v * density).collect(),
                             ));
                             Ok(())
@@ -765,21 +752,12 @@ impl ModelCached {
                 }
                 res_mass_distr = src_mass_distr.clone();
                 liquid.clear();
-                bulk.clear();
                 while !liquid_results.is_empty() {
                     if let Some(data) = liquid_results.pop() {
                         res_mass_distr.add_vec(&data.mass_values).map_err(|err| {
                             error.pass_with("mass_distr.add_vec(liquid)", err.to_string())
                         })?;
                         liquid.push(data);
-                    }
-                }
-                while !bulk_results.is_empty() {
-                    if let Some(data) = bulk_results.pop() {
-                        res_mass_distr.add_vec(&data.mass_values).map_err(|err| {
-                            error.pass_with("mass_distr.add_vec(bulk)", err.to_string())
-                        })?;
-                        bulk.push(data);
                     }
                 }
                 res_displacement_distr = hull_results
@@ -807,8 +785,8 @@ impl ModelCached {
                     return Err(error.err("mass_sum <= 0 || disp_sum <= 0"));
                 };
                 let delta_w: f64 = (mass_sum - disp_sum) / mass_sum;
-                if delta_w.abs() <= query.epsilon {
-                    //       println!("bfgsdb draught: {_j}, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
+                if delta_w.abs() <= epsilon_mass {
+                    //      println!("bfgsdb break draught: {_j}, {epsilon_mass}");//, {draught}, {delta_w}, {mass_sum}, {disp_sum}");
                     break;
                 }
                 draught = 0.5_f64.max(draught + draught * delta_w);
@@ -824,11 +802,14 @@ impl ModelCached {
                 disp_moment * query.water_density / disp_sum,
             );
             let delta_x = mass_x - disp_x;
-            if delta_x.abs() <= query.epsilon {
-                //       println!("bfgsdb trim: {_i}, {trim}, {delta_x}, {mass_x}, {disp_x}");
+            //         println!("bfgsdb trim: {_i}, {epsilon_mass}, {delta_x}");//, {trim}, {mass_x}, {disp_x}");
+            if delta_x.abs() <= query.epsilon && epsilon_mass <= query.epsilon {
+                //         println!("bfgsdb break trim: {_i}, {epsilon_mass}, {delta_x}, {trim}, {mass_x}, {disp_x}");
                 break;
             }
-            trim += delta_x / 10.;
+            epsilon_x = delta_x.abs();
+            epsilon_mass = (epsilon_x * 10.).max(query.epsilon);
+            trim += delta_x / 5.;
         }
         Ok(StrengthBalanceCtx {
             displacement_distr: res_displacement_distr,
@@ -889,7 +870,7 @@ impl ModelCached {
         let scheduler = self.thread_pool.scheduler();
         for cargo in query.liquid {
             assert!(cargo.mass > 0.);
-            let assigned_id = cargo.assigned_id;
+            let assignment_id = cargo.assignment_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} liquid work"));
             let compartment = self
@@ -909,7 +890,7 @@ impl ModelCached {
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::LiquidResult::new(
                         //     cargo_id,
-                        assigned_id,
+                        assignment_id,
                         //     compartment_result.volume_center,
                         compartment_result.inertia_long_y,
                         compartment_result.inertia_trans_x,
@@ -924,7 +905,7 @@ impl ModelCached {
         }
         for cargo in query.bulk {
             assert!(cargo.mass > 0.);
-            let assigned_id = cargo.assigned_id;
+            let assignment_id = cargo.assignment_id;
             let space_id = cargo.space_id.clone();
             let error_ = error.err(format!("compartment_{space_id} bulk work"));
             let compartment = self
@@ -932,20 +913,21 @@ impl ModelCached {
                 .get(&space_id)
                 .ok_or(error.err(format!("no compartment:{space_id}")))?
                 .clone();
-            let trim = trim;
             let volume = cargo.volume;
+            let shiftable = cargo.shiftable;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
             let handle = scheduler
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
-                        .get(0., trim, volume, epsilon)
+                        .get(0., 0., volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
                         space_id,
-                        assigned_id,
+                        assignment_id,
+                        shiftable,
                         compartment_result.level,
                         //       compartment_result.volume_center,
                     ));
@@ -1020,6 +1002,10 @@ impl ModelCached {
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
         }
+        let (min_volume, max_volume) = self
+            .displacement
+            .get_volume_disp()
+            .map_err(|err| error.pass_with("self.get_volume_disp", err))?;
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
@@ -1027,6 +1013,13 @@ impl ModelCached {
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
+        let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
+        let moment_sum = query.moment_const + moment_bulk; // постоянный момент
+        let volume = mass_sum/query.water_density;
+        // допустимый объем корпуса
+        if volume <= min_volume || volume >= max_volume {
+            return Err(error.err(format!("volume <= min_volume || volume >= max_volume, mass:{mass_sum} min_volume:{min_volume} max_volume:{max_volume} water_density:{}", query.water_density)));
+        }
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
@@ -1043,13 +1036,13 @@ impl ModelCached {
                     draught,
                     query.water_density,
                     epsilon,
-                    query.mass_const + mass_bulk + mass_liquid, // постоянная масса
-                    query.moment_const + moment_bulk,           // постоянный момент
+                    mass_sum,
+                    moment_sum,
                     &query.liquid,
                     &query.damaged_compartment,
                 )
                 .map_err(|err| error.pass(err))?;
-            if query.epsilon <= epsilon {
+            if query.epsilon >= epsilon {
                 let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
                 if precision < query.epsilon {
                     let result = FloatingPositionResult {
@@ -1081,6 +1074,7 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
+    //       println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{epsilon} h:{heel}, t:{trim}, draught:{draught}, d_v:{new_d_v}, d_m:{new_d_m}");
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1162,6 +1156,7 @@ impl ModelCached {
         Ok(dso)
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы
+    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result)
     fn position(
         &self,
         heel: f64,
@@ -1174,7 +1169,6 @@ impl ModelCached {
         liquid: &Vec<LiquidData>,
         damaged_compartment: &Vec<String>,
     ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
-        //(draught, d_v, d_m, cg, displacement, disp_result)
         let error = Error::new(&self.dbg, "_floating_position");
         // учет смещения жидкости
         let moment_liquid = self

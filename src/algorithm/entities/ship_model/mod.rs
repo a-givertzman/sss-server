@@ -1,4 +1,5 @@
-pub mod grain_moment;
+mod grain_moment;
+mod volume_max;
 pub mod ship_model;
 pub mod stability_result;
 
@@ -63,17 +64,18 @@ pub struct BalanceStabilityQuery {
 /// Сыпучий груз
 #[derive(Debug, Clone)]
 pub struct BulkData {    
-    pub assigned_id: usize,// ID assigned
+    pub assignment_id: usize,// ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
+    pub shiftable: bool,
 }
 ///
 /// Жидкий груз
 #[derive(Debug, Clone)]
 pub struct LiquidData {
-    pub assigned_id: usize,// ID assigned
+    pub assignment_id: usize,// ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения    
     pub cargo_type: LiquidCargoType, // Тип жидкого груза
@@ -86,7 +88,7 @@ pub struct LiquidData {
 /// считаем распределение по отсеку при максимальном объеме отсека
 #[derive(Debug, Clone)]
 pub struct GaseousData {
-    pub assigned_id: usize, // ID assigned
+    pub assignment_id: usize, // ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения
     pub mass: f64,

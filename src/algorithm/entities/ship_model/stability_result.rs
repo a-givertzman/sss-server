@@ -57,7 +57,7 @@ pub struct BalanceStabilityResult {
 #[derive(Debug, Clone)]
 pub struct LiquidResult {
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
  //   /// смещение центра массы
  //   pub mass_shift: Position,
     /// продольный момент свободной поверхности жидкости
@@ -69,13 +69,13 @@ pub struct LiquidResult {
 impl LiquidResult {
     ///
     pub fn new(
-        assigned_id: usize,
+        assignment_id: usize,
    //     mass_shift: Position,
         long_moment_of_inertia: f64,
         trans_moment_of_inertia: f64,
     ) -> Self {
         Self {
-            assigned_id,
+            assignment_id,
     //        mass_shift,
             long_moment_of_inertia,
             trans_moment_of_inertia,
@@ -88,9 +88,11 @@ pub struct BulkResult {
     /// ID помещения
     pub space_id: String,  // TODO - убрать после переноса расчета момента в модель
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
  //   /// смещение центра массы
  //   pub mass_shift: Position,
+    ///  Признак смещаемости груза
+    pub shiftable: bool, 
     /// Уровень заполнения отсека
     pub level: f64,  // TODO - убрать после переноса расчета момента в модель
     /// Объемный кренящий момент
@@ -101,14 +103,16 @@ impl BulkResult {
     ///
     pub fn new(
         space_id: String,
-        assigned_id: usize,
+        assignment_id: usize,
     //    mass_shift: Position,
+        shiftable: bool,
         level: f64,
     ) -> Self {
         Self {
             space_id,
-            assigned_id,
+            assignment_id,
       //      mass_shift,
+            shiftable,
             level,
             moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
         }

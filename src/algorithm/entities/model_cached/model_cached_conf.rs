@@ -11,6 +11,7 @@ pub struct ModelCachedConf {
     pub model_dir: PathBuf,
     /// Scale of model, shape will be scaled by value = 1/model_scale
     pub model_scale: f64,
+    /// Hull
     /// Waterline initial position in 3D space (midel).
     pub model_center_coord: Position,
     /// Ship length between perpendiculars
@@ -18,18 +19,17 @@ pub struct ModelCachedConf {
     /// Angle in degrees for hull
     pub hull_heel_steps: Vec<f64>,
     pub hull_trim_steps: Vec<f64>,
-    /// Angle in degrees for compartment
+    /// Draught in meters
+    pub hull_draught_min: f64,
+    pub hull_draught_max: f64,
+    /// Draught step for hull
+    pub hull_draught_step: f64, 
+    /// Compartments
+    /// Angle in degrees for compartments
     pub compartment_heel_steps: Vec<f64>,
     pub compartment_trim_steps: Vec<f64>,
-    /// Draught in meters
-    pub draught_min: f64,
-    pub draught_max: f64,
-    /// Draught step for hull
-    pub hull_draught_step: f64,
     /// Level for compartments
     pub compartment_level_step: f64,    
     /// Level step for compartments
     pub bounds_level_step: f64,
-    /// volume data for compartments
-    pub compartment_data: HashMap<String, (Option<f64>, Option<Position>)>,
 }

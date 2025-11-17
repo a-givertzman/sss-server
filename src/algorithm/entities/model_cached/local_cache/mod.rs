@@ -10,7 +10,8 @@
 mod cache_conf;
 mod file_io;
 mod local_cache;
-mod bound_displacement_cache;
+mod displacement_bound_cache;
+mod compartment_bound_cache;
 //mod bound_compartment_cache;
 mod displacement_cache;
 mod compartment_cache;
@@ -18,8 +19,8 @@ mod damaged_compartment_cache;
 
 pub(crate) use file_io::*;
 pub(crate) use local_cache::*;
-pub(crate) use bound_displacement_cache::*;
-//pub(crate) use bound_compartment_cache::*;
+pub(crate) use displacement_bound_cache::*;
+pub(crate) use compartment_bound_cache::*;
 pub(crate) use displacement_cache::*;
 pub(crate) use compartment_cache::*;
 pub(crate) use damaged_compartment_cache::*;
