@@ -1,40 +1,24 @@
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::ICurve;
-use crate::algorithm::entities::Position;
-use crate::algorithm::entities::Position2d;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
+use crate::algorithm::entities::data::DataArray;
 use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::data::HStrAreaArray;
-use crate::algorithm::entities::data::PhysicalFrameArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::data::strength;
-use crate::algorithm::entities::model_cached;
-use crate::algorithm::entities::model_cached::AreaShape;
 use crate::algorithm::entities::model_cached::ModelCached;
-use crate::algorithm::entities::ship_model::BalanceQuery;
-use crate::algorithm::entities::ship_model::BalanceResult;
-use crate::algorithm::entities::ship_model::BoundArea;
+use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
+use crate::algorithm::entities::ship_model::volume_max::VolumeDataArray;
+use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
-use crate::algorithm::eval::BalanceCtx;
+use crate::algorithm::eval::StrengthBalanceCtx;
 use crate::infrostructure::api::client::api_client::ApiClient;
-use crate::kernel::types::RwLock;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
-use sal_sync::services::entity::Name;
-use sal_sync::services::entity::PointTxId;
-use sal_sync::services::future::Future;
-use sal_sync::sync::*;
-use sal_sync::thread_pool::JoinHandle;
-use sal_sync::thread_pool::Scheduler;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::{
     fmt::Debug,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::Arc,
     time::Duration,
 };
 ///
@@ -104,8 +88,16 @@ impl ShipModel {
         )
         .map_err(|err| error.pass_with("grain_moment", err))?;
         self.grain_moment = Some(grain_moment.clone());
+        // TODO переделать, пока не понятно в какой момент должны читаться объемы
+        // возможно их надо пересчитывать каждый расчет
+        let max_compartment_volume = max_compartment_volume(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.clone(),
+        )
+        .map_err(|err| error.pass_with("max_compartment_volume", err))?;
         self.model_cached
-            .init()
+            .init(max_compartment_volume)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))
     }
     /// TODO - Doc
@@ -200,25 +192,39 @@ impl ShipModel {
     }
     ///
     /// TODO: Doc
-    pub fn compute_balance(&self, query: BalanceQuery) -> Result<BalanceResult, Error> {
+    pub fn compute_stability(&self, query: BalanceStabilityQuery) -> Result<BalanceStabilityResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
         let mut result = self
             .model_cached
-            .balance(query)
-            .map_err(|err| error.pass_with("model_cached.balance", err))?;
+            .balance_stability(query)
+            .map_err(|err| error.pass(err))?;
         let grain_moment = self
             .grain_moment
             .as_ref()
             .ok_or(error.err("grain_moment"))?;
         // TODO - переписать получение момента из модели
         result.bulk.iter_mut().for_each(|v| {
+            if !v.shiftable {
+                v.moment = 0.;
+                return;
+            }
             v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
                 curve.value(v.level).unwrap_or(0.)
             } else {
+                let error = error.err(format!("grain_moment.get(&v.space_id), {}", v.space_id));
+                log::error!("{}", error);
                 0.
             };
         });
         Ok(result)
+    }
+    ///
+    /// TODO: Doc
+    pub fn compute_strength(&self, query: BalanceStrengthQuery) -> Result<StrengthBalanceCtx, Error> {
+        self
+            .model_cached
+            .balance_strength(query)
+            .map_err(|err| Error::new(&self.dbg, "compute_strength").pass(err))
     }
 }
 //
@@ -376,3 +382,27 @@ fn grain_moment(
     }
     Ok(data.into_iter().map(|v| (v.0, v.1.unwrap())).collect())
 }
+/// Чтение максимального объема для отсеков
+/// Возвращает мапу (ид отсека, максимальный объем (нетто))
+fn max_compartment_volume(
+    ship_id: usize,
+    project_id: String,
+    api_client: &ApiClient,
+) -> Result<HashMap<String, f64>, Error> {
+    let error = Error::new("ShipModel", "max_compartment_volume");
+    let data = VolumeDataArray::parse(
+        &api_client.fetch(&format!(
+            "SELECT
+                s.space_id as space_id, \
+                c.volume_max as volume_max
+            FROM
+                \"space\" AS s 
+            INNER JOIN 
+                \"space/compartment\" AS c ON s.compartment_id = c.id 
+            WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+        )).map_err(|err| error.pass_with("api_client.fetch", err))?
+    ).map_err(|err| error.pass_with("parse", err))?;
+    Ok(data.data())
+}
+
+

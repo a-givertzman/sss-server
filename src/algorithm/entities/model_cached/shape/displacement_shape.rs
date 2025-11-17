@@ -3,7 +3,7 @@ use nalgebra::*;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::algorithm::entities::model_cached::shape::utils;
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
@@ -63,55 +63,55 @@ impl DisplacementShape {
             Some(path),
             center.map(|p| Point3::new(p.x(), p.y(), p.z())),
             scale,
-            0.00000001,
+            0.0001,
             10000,
         )
     }
-    /// Init shape, load geometry
- /*   pub fn init(&mut self) -> Result<(), Error> {
-        if self.mesh.is_none() {
-            let error = Error::new(&self.dbg, "init");
-            let mut mesh = load_stl(&self.path.clone().ok_or(error.err("empty path"))?)
-                .map_err(|err| error.pass_with("load", err.to_string()))?;
-            let scale = 1. / self.scale;
-            mesh = mesh.scaled(&Vector3::new(scale, scale, scale));
-            if self.center.is_none() {
-                self.center = Some(compartment_center(&mesh));
-            }
-            self.mesh = Some(mesh);
-        }
-        Ok(())
-    }*/
     /// часть меша, пападающая в bound
     pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
         let error = Error::new(&self.dbg, "split");
         let half_size_x = bound.length().ok_or(error.err("no bound.length"))? / 2.;
-        let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
-        let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
+        //  let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
+        //  let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
+        let position_x = bound.center().ok_or(error.err("no bound.center"))?;
         let cuboid = Cuboid::new(Vector3::new(half_size_x, 100000., 100000.));
-        let result = self
+        let mut src_mesh = self
             .mesh
             .as_ref()
-            .ok_or(error.err("no mesh"))?
-            .intersection_with_local_cuboid(
-                false,
-                &cuboid,
-                &Isometry::from_parts(
-                    Translation3::new(position_x, 0., 0.),
-                    UnitQuaternion::identity(),
-                ),
-                false,
-                self.epsilon,
-            );
-        let mut mesh = match result {
-            Ok(mesh) => match mesh {
-                Some(mesh) => mesh,
-                None => return Ok(None),
-            },
-            Err(e) => {
-                return Err(error.pass_with("mesh.intersection_with_local_cuboid", e.to_string()));
+            .ok_or(error.err("no mesh"))?;
+        let mut mesh;
+        'intersect_bug_fix: loop {
+            let result = src_mesh.intersection_with_local_cuboid(
+                    false,
+                    &cuboid,
+                    &Isometry::from_parts(
+                        Translation3::new(position_x, 0., 0.),
+                        UnitQuaternion::identity(),
+                    ),
+                    false,
+                    self.epsilon,
+                );
+            mesh = match result {
+                Ok(mesh) => match mesh {
+                    Some(mesh) => mesh,
+                    None => return Ok(None),
+                },
+                Err(e) => {
+                    return Err(error.pass_with("mesh.intersection_with_local_cuboid", e.to_string()));
+                }
+            };
+            let aabb = mesh.aabb(&Isometry::identity());
+            let bound_x_min = position_x - half_size_x;
+            let bound_x_max = position_x + half_size_x;
+            if aabb.mins.x + self.epsilon < bound_x_min || aabb.maxs.x - self.epsilon > bound_x_max {
+                src_mesh = &mesh;
+                let error = format!("{} part error: wrong aabb, rebuild! x:{position_x} b_min:{bound_x_min} b_max:{bound_x_max} aabb.min:{} aabb.max:{} epsilon:{}", self.dbg, aabb.mins.x, aabb.maxs.x, self.epsilon);
+                println!("{error}");
+                log::warn!("{error}");
+                continue;
             }
-        };
+            break;
+        }
         if let Err(error) = mesh
             .set_flags(TriMeshFlags::all())
             .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
@@ -141,26 +141,25 @@ impl DisplacementShape {
         draught: f64,
     ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "displacement");
+        //    println!("{}.displacement | start {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
         let position = self
-            .position(heel, trim, draught)
+            .position(draught, heel, trim)
             .map_err(|err| error.pass_with("self.position", err))?;
         let cuboid_half_size = 1000.;
         let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
-        let result = self
-            .mesh
-            .as_ref()
-            .ok_or(error.err("no mesh"))?
-            .intersection_with_cuboid(
-                &position,
-                false,
-                &cuboid,
-                &Isometry::from_parts(
-                    Translation3::new(0., 0., -cuboid_half_size),
-                    UnitQuaternion::identity(),
-                ),
-                false,
-                self.epsilon,
-            );
+        let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+        //    println!("{}.displacement | intersection_with_cuboid {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
+        let result = mesh.intersection_with_cuboid(
+            &position,
+            false,
+            &cuboid,
+            &Isometry::from_parts(
+                Translation3::new(0., 0., -cuboid_half_size),
+                UnitQuaternion::identity(),
+            ),
+            false,
+            self.epsilon,
+        );
         let mut mesh = match result {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
@@ -171,12 +170,14 @@ impl DisplacementShape {
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
         };
+        //    println!("{}.displacement | set_flags {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
         if let Err(error) = mesh
             .set_flags(TriMeshFlags::all())
             .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
         {
             log::error!("{}", error);
         }
+        //    println!("{}.displacement | mass_properties {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
         let properties = parry3d_f64::shape::Shape::mass_properties(&mesh, 1.);
         Ok((
             1. / properties.inv_mass,
@@ -198,7 +199,7 @@ impl DisplacementShape {
     ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "area");
         let position = self
-            .position(heel, trim, draught)
+            .position(draught, heel, trim)
             .map_err(|err| error.pass_with("self.position", err))?;
         let cuboid_half_size = 1000.;
         let hdz = 0.005;
@@ -284,8 +285,8 @@ impl DisplacementShape {
         let draught_max = aabb.maxs.z;
         let mut steps = vec![(-100000., 0.), (draught_min, 0.)];
         if let Some(full_mesh) = self.mesh.as_ref() {
-            let (vertices, indices) = (full_mesh.vertices().to_vec(), full_mesh.indices().to_vec());
-            let full_mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all()).unwrap();
+            //    let (vertices, indices) = (full_mesh.vertices().to_vec(), full_mesh.indices().to_vec());
+            //    let full_mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all()).unwrap();
             let full_volume = utils::volume(&full_mesh);
             let mut current_step = step / 30.; // сначала идем с маленьким шагом
             // на маленьких осадках кривая не линейная
@@ -410,8 +411,8 @@ impl DisplacementShape {
     */
     ///
     /// Расчет [длинны и ширины по ватерлинии](https://github.com/a-givertzman/sss/blob/6d91fb09de073995c3a165ebaaa76e4f1e202f36/design/algorithm/part04_stability/chapter05_criteria/section02_weatherCriteria.md)
-    pub fn aabb(&self, draught: f64) -> Result<(f64, f64), Error> {
-        let error = Error::new(&self.dbg, "aabb");
+    pub fn waterline_size(&self, draught: f64) -> Result<(f64, f64), Error> {
+        let error = Error::new(&self.dbg, "waterline_size");
         let result = self
             .mesh
             .as_ref()
@@ -450,7 +451,7 @@ impl DisplacementShape {
     pub fn inertia(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
         let error = Error::new(&self.dbg, "inertia");
         let position = self
-            .position(heel, trim, draught)
+            .position(draught, heel, trim)
             .map_err(|err| error.pass_with("self.position", err))?;
         let result = self
             .mesh
@@ -514,6 +515,12 @@ impl DisplacementShape {
             parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
             parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
         }
+    }
+    ///
+    pub fn save(&self, path: &PathBuf) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "save");
+        let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+        super::write_stl(path, &mesh).map_err(|err| error.pass_with("write_stl", err))
     }
 }
 

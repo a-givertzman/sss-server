@@ -23,10 +23,6 @@ pub struct BuildCompartmentCache {
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
     level_step: f64,
-    /// центр полного объема из бд
-    center_max: Option<Position>,
-    /// полный объем из бд
-    volume_max: Option<f64>,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
@@ -42,8 +38,6 @@ impl BuildCompartmentCache {
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
         level_step: f64,
-        center_max: Option<Position>,
-        volume_max: Option<f64>,
         thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -53,8 +47,6 @@ impl BuildCompartmentCache {
             heel_steps,
             trim_steps,
             level_step,
-            center_max,
-            volume_max,
             thread_pool,
             exit,
         }
@@ -66,8 +58,8 @@ impl BuildCompartmentCache {
     pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
         //dbg!("BuildCompartmentCache calculate begin");
         log::info!("{}.build | Starting build", &self.dbg);
-        let error = Error::new(&self.dbg, "build");
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
+        let error = Error::new(&self.dbg, "build");
         let results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut pass = |message: &str, err: Error| {
@@ -80,8 +72,6 @@ impl BuildCompartmentCache {
             Ok((volume_max, center_max)) => (volume_max, center_max),
             Err(err) => return (vec![], vec![error.pass_with("shape.properties", err)]),
         };
-        let center_max = self.center_max.clone().unwrap_or(center_max);
-        let volume_max = self.volume_max.clone().unwrap_or(volume_max);
         let max_heel = self
             .heel_steps
             .iter()
@@ -119,11 +109,11 @@ impl BuildCompartmentCache {
                         break 'draught;
                     }
                     let results = results.clone();
-                    let shape = shape.clone();
+                    let shape = Arc::clone(&shape);
                     let thread_name =
                         format!("BuildCompartmentCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-                    //  println!("Starting thread {thread_name}");
+                    println!("{}.build | Starting thread {thread_name}", &self.dbg);
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let guard = shape.read();
@@ -149,12 +139,13 @@ impl BuildCompartmentCache {
                         Ok(task) => tasks.push_back(task),
                         Err(err) => pass("task handle", err),
                     };
-                }
+              }
             }
         }
         for task in tasks {
             //    println!("task.join {}", task.name());
             log::info!("{}.build | join thread {}", &self.dbg, task.name());
+            println!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

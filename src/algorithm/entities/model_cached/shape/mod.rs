@@ -52,8 +52,8 @@ pub trait Shape {
         let max_dy = (aabb.maxs.y - center.y).max(center.y - aabb.mins.y);
         let max_dz = max_dx*max_trim.sin() + max_dy*max_heel.sin()*max_trim.cos();
         let mut result = vec![];
-        let min_z = aabb.mins.z - max_dz;
-        let max_z = aabb.maxs.z + max_dz;
+        let min_z = -max_dz;
+        let max_z = aabb.maxs.z - aabb.mins.z + max_dz;
         let mut current = min_z;
         let step = level_step;
         while current < max_z {

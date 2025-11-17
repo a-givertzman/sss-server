@@ -99,7 +99,7 @@ impl BuildDisplacementCache {
                 let handle = scheduler
                     .spawn(move || {
                         let guard = shape.read();
-                        aabb_results.push((draught, guard.aabb(draught)));
+                        aabb_results.push((draught, guard.waterline_size(draught)));
                         Ok(())
                     })
                     .map_err(|err| {
@@ -122,7 +122,7 @@ impl BuildDisplacementCache {
                     }
                     //  let dbg_ = self.dbg.clone();
                     let draft_results = draft_results.clone();
-                    let shape = shape.clone();
+                    let shape = Arc::clone(&shape);
                     let thread_name =
                         format!("BuildDisplacementCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);

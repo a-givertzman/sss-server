@@ -209,7 +209,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     area_h_moment += current_area * bound_x.center().unwrap_or(0.);
                     area_h_values.push(current_area);
                 }
-                let area_h = area_v_values.iter().sum();
+                let area_h = area_h_values.iter().sum();
                 let area_h_shift = if area_h > 0. {
                     Position::new(area_h_moment / area_h, 0., 0.)
                 } else {

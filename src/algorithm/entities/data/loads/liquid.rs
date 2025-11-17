@@ -16,7 +16,7 @@ pub struct LoadLiquidData {
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип жидкого груза
@@ -51,7 +51,9 @@ impl LoadLiquidData {
             }
         };
         Some(LiquidData {
-            assigned_id:  self.assigned_id,
+            assignment_id:  self.assignment_id,
+            assigment_type: self.assigment_type,
+            cargo_type: self.cargo_type,
        //     cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
             mass: self.mass,
@@ -64,6 +66,6 @@ pub type LoadLiquidArray = DataArray<LoadLiquidData>;
 //
 impl LoadLiquidArray {
     pub fn data(self) -> HashMap<usize, LoadLiquidData> {
-        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assigned_id, v)).collect()
+        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assignment_id, v)).collect()
     }
 }

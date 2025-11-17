@@ -229,7 +229,7 @@ pub fn liquid() -> Vec<LoadLiquidData> {
             cargo_name: v.0.to_owned(),
             space_id: i.to_string(),
             space_name: v.0.to_owned(),
-            assigned_id: i,
+            assignment_id: i,
             assigment_type: v.3,
             cargo_type: v.2,
             mass: v.1,

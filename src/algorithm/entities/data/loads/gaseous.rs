@@ -16,7 +16,7 @@ pub struct LoadGaseousData {
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,    
     /// масса, т
@@ -30,7 +30,8 @@ pub struct LoadGaseousData {
 impl LoadGaseousData {
     pub fn data(&self) -> GaseousData {
         GaseousData {
-            assigned_id:  self.assigned_id,
+            assignment_id:  self.assignment_id,
+            assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
             mass: self.mass,
@@ -43,6 +44,6 @@ pub type LoadGaseousArray = DataArray<LoadGaseousData>;
 //
 impl LoadGaseousArray {
     pub fn data(self) -> HashMap<usize, LoadGaseousData> {
-        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assigned_id, v)).collect()
+        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assignment_id, v)).collect()
     }
 }

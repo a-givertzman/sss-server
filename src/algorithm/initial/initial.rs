@@ -147,11 +147,12 @@ impl Eval<(), EvalResult> for Initial {
                     space_name, \
                     cargo_id, \
                     cargo_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     stowage_factor, \
                     weight AS mass, \
+                    shiftable AS shiftable, \
                     centre_of_compartment as mass_shift
                 FROM 
                     bulk_cargo_view
@@ -171,7 +172,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_name, \
                     space_id, \
                     space_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     weight AS mass, \
@@ -199,7 +200,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_name, \
                     space_id, \
                     space_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     density, \
@@ -214,6 +215,33 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("gaseous fetch", err))?,
         )
         .map_err(|err| error.pass_with("gaseous parse", err))?;
+        let container = LoadContainerArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                "SELECT 
+                    c.cargo_id AS cargo_id, \
+                    c.slot_id AS slot_id, \
+                    c.cargo_name AS cargo_name, \
+                    c.space_id AS space_id, \
+                    c.assignment_id AS assignment_id, \
+                    c.assigment_context AS assigment_type, \
+                    c.weight AS mass, \
+                    c.bound_x1 AS bound_x1, \
+                    c.bound_x2 AS bound_x2, \
+                    c.bound_y1 AS bound_y1, \
+                    c.bound_y2 AS bound_y2, \
+                    c.bound_z1 AS bound_z1, \
+                    c.bound_z2 AS bound_z2
+                FROM 
+                    container_cargo_view AS c
+                WHERE 
+                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("container fetch", err))?,
+        )
+        .map_err(|err| error.pass_with("container parse", err))?;
         let unit = LoadUnitArray::parse(
             &self
                 .api_client
@@ -223,7 +251,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_name, \
                     space_id, \
                     space_name, \
-                    assigned_id, \
+                    assignment_id, \
                     assigment_context as assigment_type, \
                     cargo_type, \
                     weight AS mass, \
@@ -249,6 +277,8 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("unit fetch", err))?,
         )
         .map_err(|err| error.pass_with("unit parse", err))?;
+        let mut unit_data = unit.data();
+        unit_data.append(&mut container.data());
         let multipler_x1 = MultiplerX1Array::parse(
             &self
                 .api_client
@@ -318,7 +348,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.load_constant = Some(load_constant);
         initial_ctx.bulk = Some(bulk.data());
         initial_ctx.liquid = Some(liquid.data());
-        initial_ctx.unit = Some(unit.data());
+        initial_ctx.unit = Some(unit_data);
         initial_ctx.gaseous = Some(gaseous.data());
         initial_ctx.multipler_x1 = Some(multipler_x1.data());
         initial_ctx.multipler_x2 = Some(multipler_x2.data());

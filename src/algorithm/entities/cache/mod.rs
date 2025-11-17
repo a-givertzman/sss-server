@@ -147,7 +147,7 @@ impl Cache<f64> {
                 }
                 if keys.first().unwrap() > key || keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
-                    panic!("{}", format!("i:{key_i} key:{key} key is out of range!"));
+                    panic!("{}: {}", self.dbg, format!("i:{key_i} key:{key} key is out of range!"));
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);
@@ -224,7 +224,7 @@ impl Cache<f64> {
         result
     }
     /// Максимальное значение по индексу
-    pub fn max_value(&self, index: usize) -> f64 {
+    pub fn value_disp(&self, index: usize) -> (f64, f64) {
         let data = self
             .table
             .get()
@@ -232,18 +232,20 @@ impl Cache<f64> {
         assert!(data[0].len() > index);
         let v: Vec<_> = data.iter().map(|v| v[index]).collect();
         assert!(v.len() > 0);
-        let v = v.into_iter().max_by(|a, b| a.partial_cmp(b).unwrap());
-        v.unwrap()
+        let v_min = v.iter().min_by(|a, b| a.partial_cmp(b).unwrap());
+        let v_max = v.iter().max_by(|a, b| a.partial_cmp(b).unwrap());
+        (v_min.unwrap().clone(), v_max.unwrap().clone())
     }
     /// Максимальное значение ключа по индексу
     #[allow(dead_code)]
-    pub fn max_key(&self, index: usize) -> f64 {
+    pub fn key_disp(&self, index: usize) -> (f64, f64) {
         let keys = self
             .keys
             .get()
             .unwrap_or_else(|| panic!("{}.{} | Cache error: no keys! index:{index}", self.dbg, "max_key"));
         assert!(keys.len() > index);
         assert!(keys[index].len() > 0);
-        keys[index].last().unwrap().clone()
+        let keys = &keys[index];
+        (keys.first().unwrap().clone(), keys.last().unwrap().clone())
     }
 }

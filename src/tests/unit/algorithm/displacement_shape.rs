@@ -181,7 +181,7 @@ mod tests {
         .ok();
         let epsilon = 0.0000001;
         let shape = DisplacementShape::new(&dbg, mesh, None, Some(Point3::new(1., 0., 0.)), 1., 0.0000001, 1000);
-        let result = shape.aabb(0.).unwrap();
+        let result = shape.waterline_size(0.).unwrap();
         let target = (2.0, 1.0);
         assert!(
             (result.0 - target.0).abs() < epsilon,

@@ -85,7 +85,7 @@ impl Eval<(), EvalResult> for IcingEval {
                 let mass_h = area_strength.area_h * icing_stab.mass_desc_h;
                 let mass_timber_h = area_strength.area_timber_h * (icing_stab.mass_timber_h - icing_stab.mass_desc_h);                  
                 let mass_sum = mass_v + mass_h + mass_timber_h;
-                assert!(mass_sum == mass_values.iter().sum::<f64>());
+                assert!((mass_sum - mass_values.iter().sum::<f64>()).abs() < 0.0001);
                 let moment_v = Moment::from_pos(area_strength.area_v_shift, mass_v);
                 let moment_h = Moment::from_pos(area_strength.area_h_shift, mass_h);
                 let moment_timber_h = Moment::from_pos(area_strength.area_timber_h_shift, mass_timber_h);            

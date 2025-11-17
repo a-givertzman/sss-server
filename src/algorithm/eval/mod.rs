@@ -3,11 +3,12 @@
 mod strength_area_eval;
 mod icing_stab_eval;
 mod icing_eval;
-mod loads_eval;
 mod wetting_eval;
 mod icing_timber_eval;
-mod balance_eval;
-mod mass_eval;
+mod static_mass_eval;
+mod dynamic_mass_eval;
+mod stability_balance_eval;
+pub mod strength_balance_eval;
 mod total_force_eval;
 mod shear_force_eval;
 mod bending_moment_eval;
@@ -37,20 +38,23 @@ pub use icing_stab_eval::icing_stab_ctx::IcingStabCtx;
 pub use icing_eval::icing_eval::IcingEval;
 pub use icing_eval::icing_ctx::IcingCtx;
 
-pub use loads_eval::loads_eval::LoadsEval;
-pub use loads_eval::loads_ctx::LoadsCtx;
+pub use static_mass_eval::eval::StaticMassEval;
+pub use static_mass_eval::ctx::StaticMassCtx;
+
+pub use dynamic_mass_eval::eval::DynamicMassEval;
+pub use dynamic_mass_eval::ctx::DynamicMassCtx;
 
 pub use wetting_eval::wetting_eval::WettingEval;
 pub use wetting_eval::wetting_ctx::WettingCtx;
 
-pub use balance_eval::balance_eval::BalanceEval;
-pub use balance_eval::balance_ctx::BalanceCtx;
+pub use strength_balance_eval::eval::StrengthBalanceEval;
+pub use strength_balance_eval::ctx::StrengthBalanceCtx;
+
+pub use stability_balance_eval::eval::StabilityBalanceEval;
+pub use stability_balance_eval::ctx::StabilityBalanceCtx;
 
 pub use icing_timber_eval::icing_timber_eval::IcingTimberEval;
 pub use icing_timber_eval::icing_timber_ctx::IcingTimberCtx;
-
-pub use mass_eval::mass_eval::MassEval;
-pub use mass_eval::mass_ctx::MassCtx;
 
 pub use total_force_eval::eval::TotalForceEval;
 pub use total_force_eval::ctx::TotalForceCtx;
