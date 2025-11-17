@@ -134,7 +134,7 @@ impl AreaShape {
     }
     /// Расчет поверхности парусности
     /// Возвращает повернутое и смещенное разбиение [dx, area]
-    pub fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, f64)>, Error> {
+    pub fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, Vec<(f64, f64)>)>, Error> {
         let error = Error::new(&self.dbg, "windage_area_data");
         let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
         let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
@@ -143,9 +143,9 @@ impl AreaShape {
         let result: Vec<_> = voxels.iter().map(|(x, v)| {
             (   *x + center.x, 
                 v.iter()
-                .map(|z| z + center.z - draught)
-                .filter(|&z| z >= 0.)
-                .count() as f64 * voxel_area
+                .map(|z| (z + center.z - draught, voxel_area) )
+                .filter(|(z, _)| *z >= 0. )
+                .collect()
             )
         })
         .collect();

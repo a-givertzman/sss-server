@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
 use super::initial_ctx::InitialCtx;
+use crate::algorithm::entities::data::stability::ship_type::ShipType;
+use crate::algorithm::entities::data::stability::{BowBoardDataArray, DraftMarkDataArray, IcingArray, LoadLineDataArray, NavigationArea, ScrewDataArray, ship_type};
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::data::{
-    BowBoardDataArray, CoefficientKArray, CoefficientKThetaArray, DraftMarkDataArray,
-    LoadLineDataArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea,
-    ScrewDataArray, loads::*, MetacentricHeightSubdivisionArray,
+    CoefficientKArray, CoefficientKThetaArray, 
+    MultiplerSArray, MultiplerX1Array, MultiplerX2Array, 
+    loads::*, MetacentricHeightSubdivisionArray,
 };
-use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
+use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::kernel::types::RwLock;
 use crate::kernel::types::eval_result::EvalResult;

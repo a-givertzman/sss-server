@@ -62,6 +62,8 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return Err(error.err("Read bounds error: no data!")),
                 };
+                let  model
+
                 let balance: StrengthBalanceCtx = ctx.read();
                 let const_area_v = &balance.const_area_v;
                 let const_area_h = &balance.const_area_h;
@@ -115,7 +117,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     let mut current_moment = Moment::zero();
                     // Пересечение шпации и диапазона грузов
                     let bound_x = match bound_x.intersect(&units_bound) {
-                        Ok(data) => data,
+                        Ok(bound) => bound,
                         Err(err) => {
                             return Err(error.pass_with("bound_x.intersect error", err));
                         }

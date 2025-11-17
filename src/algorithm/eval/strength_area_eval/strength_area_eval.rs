@@ -60,7 +60,7 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 // Но так много действий и так сложно получается,
                 // может получится хотя бы часть из них вынести в метод,
                 // вроде бы действия однообразные все время должны быть
-                let (const_area_v, const_area_h) = match self.model.read().bound_areas(&bounds) {
+                let (const_area_v, const_area_h) = match self.model.read().strength_area(&bounds) {
                          Ok(areas) => (areas.v, areas.h),
                     Err(err) => return Err(error.pass_with("model.bound_areas", err)),
                 };

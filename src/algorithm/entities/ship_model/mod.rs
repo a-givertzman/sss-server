@@ -93,9 +93,17 @@ pub struct GaseousData {
     pub space_id: String, // ID помещения
     pub mass: f64,
 }
-///
+/// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
 #[derive(Debug, Clone)]
-pub struct BoundArea {
+pub struct StrengthArea {
     pub v: Vec<f64>,
     pub h: Vec<f64>,
+}
+/// Площади и моменты поверхности корпуса для расчета остойчивости
+#[derive(Debug, Clone)]
+pub struct StabilityArea {
+    pub area_windage: f64,
+    pub moment_windage: Moment,
+    pub area_horisontal: f64,
+    pub moment_horisontal: Moment,
 }

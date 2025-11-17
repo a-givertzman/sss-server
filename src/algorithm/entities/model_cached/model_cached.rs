@@ -172,7 +172,7 @@ impl ModelCached {
             &dbg,
             windage_shape.clone(),
             conf.cache_dir.clone(),
-            conf.hull_draught_min,
+            conf.draught_min,
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
@@ -269,7 +269,7 @@ impl ModelCached {
             dbg: dbg.clone(),
             ship_length_lbp: conf.ship_length_lbp,
             model_center_coord: conf.model_center_coord.clone(),
-            draught_min: conf.hull_draught_min,
+            draught_min: conf.draught_min,
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
@@ -532,7 +532,7 @@ impl ModelCached {
             })
     }
     //
-    pub fn windage_area(&mut self) -> Result<(f64, f64), Error> {
+    pub fn windage_area(&mut self) -> Result<(f64, Moment), Error> {
         self.windage_area.windage_area().map_err(|err| {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })

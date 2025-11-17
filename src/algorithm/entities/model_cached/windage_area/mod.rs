@@ -2,7 +2,7 @@ mod file_io;
 mod tests;
 
 use crate::{
-    algorithm::entities::{Bounds, model_cached::AreaShape},
+    algorithm::entities::{Bounds, Moment, model_cached::AreaShape},
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -19,7 +19,7 @@ pub struct WindageArea {
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<AreaShape>>,
     /// Cache read from `self.file_path`.
-    area: Option<(f64, f64)>, //[area, center_x]
+    area: Option<(f64, Moment)>, //[area, Moment]
     values: Option<Vec<f64>>, //распределение
     bounds: Option<Bounds>
 }
@@ -66,12 +66,14 @@ impl WindageArea {
         let area_data = file_io::read(&self.dbg, &self.cache_path)
             .map_err(|err| error.pass_with("file_io::read", err))?;
         let mut area_sum = 0.;
-        let mut moment = 0.;
-        for (x, area) in area_data.iter() {
-            moment += x * area;
-            area_sum += area;
-        }
-        let center_x = moment / area_sum;
+        let (mut moment_x, mut moment_z) = (0., 0.);
+        let area_data: Vec<_> = area_data.into_iter().map(|(x, v)| {
+            let a = v.iter().map(|(_, a)| a).sum();
+            area_sum += a;
+            moment_x += x * a;
+            v.into_iter().for_each(|(z, a)| moment_z += a*z );      
+            (x, a)
+        }).collect();
         let bounds = {
             let x_min = area_data
                 .first()
@@ -91,17 +93,17 @@ impl WindageArea {
             })?
         };
         let values = area_data.into_iter().map(|(_, v)| v).collect();
-        self.area = Some((area_sum, center_x));
+        self.area = Some((area_sum, Moment::new(moment_x, 0., moment_z)));
         self.values = Some(values);
         self.bounds = Some(bounds);
         Ok(())
     }
     /// Расчет площади и центра площади парусности
     /// Возвращает [площадь, смещение площади по x]
-    pub fn windage_area(&self) -> Result<(f64, f64), Error> {
+    pub fn windage_area(&self) -> Result<(f64, Moment), Error> {
         let error = Error::new(&self.dbg, "windage_area");
-        let (area_sum, center_x) = self.area.as_ref().ok_or(error.pass("no area"))?;
-        Ok((*area_sum, *center_x))
+        let (area_sum, moment) = self.area.as_ref().ok_or(error.pass("no area"))?;
+        Ok((*area_sum, moment.clone()))
     }
     /// Расчет распределения площади парусности
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)

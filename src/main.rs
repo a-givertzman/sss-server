@@ -36,6 +36,10 @@ use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api-tools", LogLevel::Error)
+        .init();
     let _log2 = log2::open("log.txt")
         .level(Logger::from_default_env().filter().as_str())
         .size(5 * 1024 * 1024)
@@ -82,6 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 -40., -10., -5., 0., 5., 10., 40.,
             ],
             ship_length_lbp: 130.5,
+            draught_min: 2.001,
             hull_draught_min: 0.5,
             hull_draught_max: 14.,
             hull_draught_step: 0.5,
