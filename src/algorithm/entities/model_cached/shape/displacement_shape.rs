@@ -75,38 +75,40 @@ impl DisplacementShape {
         //  let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
         let position_x = bound.center().ok_or(error.err("no bound.center"))?;
         let cuboid = Cuboid::new(Vector3::new(half_size_x, 100000., 100000.));
-        let mut src_mesh = self
-            .mesh
-            .as_ref()
-            .ok_or(error.err("no mesh"))?;
+        let mut src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
         let mut mesh;
         'intersect_bug_fix: loop {
             let result = src_mesh.intersection_with_local_cuboid(
-                    false,
-                    &cuboid,
-                    &Isometry::from_parts(
-                        Translation3::new(position_x, 0., 0.),
-                        UnitQuaternion::identity(),
-                    ),
-                    false,
-                    self.epsilon,
-                );
+                false,
+                &cuboid,
+                &Isometry::from_parts(
+                    Translation3::new(position_x, 0., 0.),
+                    UnitQuaternion::identity(),
+                ),
+                false,
+                self.epsilon,
+            );
             mesh = match result {
                 Ok(mesh) => match mesh {
                     Some(mesh) => mesh,
                     None => return Ok(None),
                 },
                 Err(e) => {
-                    return Err(error.pass_with("mesh.intersection_with_local_cuboid", e.to_string()));
+                    return Err(
+                        error.pass_with("mesh.intersection_with_local_cuboid", e.to_string())
+                    );
                 }
             };
             let aabb = mesh.aabb(&Isometry::identity());
             let bound_x_min = position_x - half_size_x;
             let bound_x_max = position_x + half_size_x;
-            if aabb.mins.x + self.epsilon < bound_x_min || aabb.maxs.x - self.epsilon > bound_x_max {
+            if aabb.mins.x + self.epsilon < bound_x_min || aabb.maxs.x - self.epsilon > bound_x_max
+            {
                 src_mesh = &mesh;
-                let error = format!("{} part error: wrong aabb, rebuild! x:{position_x} b_min:{bound_x_min} b_max:{bound_x_max} aabb.min:{} aabb.max:{} epsilon:{}", self.dbg, aabb.mins.x, aabb.maxs.x, self.epsilon);
-                println!("{error}");
+                let error = format!(
+                    "{} part error: wrong aabb, rebuild! x:{position_x} b_min:{bound_x_min} b_max:{bound_x_max} aabb.min:{} aabb.max:{} epsilon:{}",
+                    self.dbg, aabb.mins.x, aabb.maxs.x, self.epsilon
+                );
                 log::warn!("{error}");
                 continue;
             }

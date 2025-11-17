@@ -447,7 +447,7 @@ impl ModelCached {
             errors.push(("displacement".to_owned(), error));
         }
         for (name, compartment) in &mut self.compartments {
-            println!("model_cached rebuild compartment:{name}");
+    //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
@@ -493,7 +493,7 @@ impl ModelCached {
 
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
-            println!("model_cached build_bounded compartment:{compartment_id}");
+      //      println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -1149,10 +1149,10 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-        println!("\nmodel_cached dso: ");
+   /*     println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value}");
-        }
+        }*/
         Ok(dso)
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы

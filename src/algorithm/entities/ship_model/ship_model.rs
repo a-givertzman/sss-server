@@ -181,7 +181,6 @@ impl ShipModel {
         }
    /*     println!("\nhorisontal_area_values\n");
         horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
-
         println!("\nwindage_area\n");
         windage_area.iter().for_each(|v| print!(" {:.3}", v));
 */

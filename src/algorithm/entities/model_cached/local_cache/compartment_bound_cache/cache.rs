@@ -73,9 +73,6 @@ impl CompartmentBoundCache {
             1.
         };
         volume_vec.mul_single(coeff);
-        /*      if &self.dbg.to_string() == "main/ModelCached/Compartment_1002_Cache/CompartmentBoundCache" {
-            println!("jfhufjd get start {} {volume} {}", &self.dbg, max_volume.iter().sum::<f64>());
-        }*/
         if volume >= self.volume_max {
             return Ok(volume_vec);
         }

@@ -50,18 +50,7 @@ impl Eval<(), EvalResult> for BendingMomentEval {
                     let (v2, dx) = values[i];
                     result.push(result[i - 1] + (v1 + v2)*dx/2.);
                 }
- /*               let mut result: Vec<f64> = shear_force.values.integral_sum();
-             //   println!("\n\n BendingMoment integral_sum\n");   
-             //   result.iter().for_each(|b| print!("{:.3} ", b));
-            //    println!("\n\n BendingMoment length\n");
-                result = result
-                    .into_iter()
-                    .zip(delta_x.iter())
-                    .map(|(v, dx)| {
-                 //       print!("{:.3} ", b.length().unwrap_or(0.) / 2.);
-                        v * dx / 2.
-                    }).collect();*/
-                println!("\n\n BendingMoment qnt:{} result\n", result.len());  result.iter().for_each(|b| print!("{:.3} ", b));
+            //    println!("\n\n BendingMoment qnt:{} result\n", result.len());  result.iter().for_each(|b| print!("{:.3} ", b));
                 ctx.write(BendingMomentCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

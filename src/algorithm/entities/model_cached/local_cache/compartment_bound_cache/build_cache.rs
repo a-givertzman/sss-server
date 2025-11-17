@@ -140,8 +140,7 @@ impl BuildCompartmentBoundCache {
                 center
             );
             log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-            println!("{}.build | Starting thread {thread_name}", &self.dbg);
-            //  println!("Starting thread {thread_name}");
+         //   println!("{}.build | Starting thread {thread_name}", &self.dbg);
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let guard = shape.read();
@@ -173,116 +172,11 @@ impl BuildCompartmentBoundCache {
         }
         for task in tasks {
             log::info!("{}.build | join thread {}", &self.dbg, task.name());
-            println!("{}.build | join thread {}", &self.dbg, task.name());
+       //     println!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
         }
         (results, errors)
     }
-    /*
-       pub fn build(self) -> (Vec<(f64, Option<Vec<(f64, f64)>>)>, Vec<Error>) {
-        log::info!("{}.build | Starting build", &self.dbg);
-        let error = Error::new(&self.dbg, "build");
-        let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
-        let results = Arc::new(Stack::new());
-        let errors = Arc::new(Stack::new());
-        let err = |message: &str| {
-            let error = error.err(message);
-            log::error!("{:?}", &error);
-            errors.push(error);
-        };
-        let pass = |message: &str, err: Error| {
-            let error = error.pass_with(message, err);
-            log::error!("{:?}", &error);
-            errors.push(error);
-        };
-        let shape: std::sync::Arc<
-            parking_lot::lock_api::RwLock<parking_lot::RawRwLock, DisplacementShape>,
-        > = self.shape.clone();
-        let scheduler = self.thread_pool.scheduler();
-        for bound in self.bounds.iter() {
-            // _true_ if the caller has requisted to exit.
-            // Note that in this case the file may be partially filled.
-            if self.exit.load(Ordering::SeqCst) {
-                break;
-            }
-            let results = results.clone();
-            let _errors = errors.clone();
-            let _error = error.clone();
-            let shape = Arc::clone(&shape);
-            let bound = bound.clone();
-            let center = match bound.center() {
-                Some(center) => center,
-                None => {
-                    err("bound.center()");
-                    continue;
-                }
-            };
-            let step = self.level_step;
-            let thread_name = format!(
-                "BuildCompartmentBoundCache displacement_by_steps {:.3}",
-                center
-            );
-            log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-            println!("{}.build | Starting thread {thread_name}", &self.dbg);
-            //  println!("Starting thread {thread_name}");
-            let handle = scheduler
-                .spawn_named(thread_name, move || {
-                    let guard = shape.read();
-                    match guard.part(&bound) {
-                        Ok(shape) => match shape {
-                            Some(shape) => {
-                                results.push((center, Some(shape.displacement_by_steps(step))))
-                            }
-                            None => results.push((center, None)),
-                        },
-                        Err(err) => {
-                            let error = _error.pass_with(
-                                format!("task center:{center} guard.part"),
-                                err.to_string(),
-                            );
-                            log::error!("{}", error);
-                            _errors.push(error);
-                        }
-                    }
-                    Ok(())
-                })
-                .map_err(|err| {
-                    error.pass_with(format!("spawn task bound:{:?}", bound), err.to_string())
-                });
-            match handle {
-                Ok(task) => tasks.push_back(task),
-                Err(err) => pass("task handle", err),
-            };
-        }
-        for task in tasks {
-            log::info!("{}.build | join thread {}", &self.dbg, task.name());
-            println!("{}.build | join thread {}", &self.dbg, task.name());
-            if let Err(err) = task.join() {
-                pass("task join", err);
-            }
-        }
-        let mut vec_results = Vec::new();
-        while !results.is_empty() {
-            if let Some((dx, result)) = results.pop() {
-                match result {
-                    Some(result) => match result {
-                        Ok(result) => vec_results.push((dx, Some(result))),
-                        Err(err) => pass(&format!("result, dx:{dx}"), err),
-                    },
-                    None => vec_results.push((dx, None)),
-                };
-            }
-        }
-        let mut vec_errors = Vec::new();
-        while !errors.is_empty() {
-            if let Some(error) = errors.pop() {
-                vec_errors.push(error);
-            }
-        }
-        //   dbg!(&res_vec, &vec_errors);
-        vec_results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        (vec_results, vec_errors)
-    }*/
 }
