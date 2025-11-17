@@ -4,7 +4,7 @@ use std::{
     sync::Once, 
     time::Duration
 };
-use parry3d_f64::shape::{TriMesh, TriMeshFlags};
+use parry3d_f64::shape::TriMesh;
 use sal_core::error::Error;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{
@@ -120,48 +120,44 @@ fn convert_to_trimesh() {
             Ok(ctx) => {
                 let result = ContextRead::<ConvertToTrimeshCtx>::read(&ctx).clone();
                 let mut i = 0;
-                for mesh in &result.nasal_block {
-                    let mut mesh_with_flags = mesh.clone();
-                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                    if mesh_with_flags.vertices().len() > 0 {
-                        let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\nasal_{}.stl", i));
-                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                            log::error!("Failed to write nasal mesh {}: {}", i, e);
-                        }
-                        i += 1;
-                    }
-                }
+                // let mut mesh_with_flags = result.nasal_block.clone().unwrap();
+                // //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                // if mesh_with_flags.vertices().len() > 0 {
+                //     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\nasal_{}.stl", i));
+                //     if let Err(e) = write_stl(&path, &mesh_with_flags) {
+                //         log::error!("Failed to write nasal mesh {}: {}", i, e);
+                //     }
+                //     i += 1;
+                // }
                 let mut i = 0;
-                for mesh in &result.stern_block {
-                    let mut mesh_with_flags = mesh.clone();
-                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                    if mesh.vertices().len() > 0 {
-                        let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\stern_{}.stl", i));
-                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                            log::error!("Failed to write nasal mesh {}: {}", i, e);
-                        }
-                        i += 1;
-                    }
-                }
-                let mesh_with_flags = &result.surface_outer_body.unwrap();
+                // let mut mesh_with_flags = result.stern_block.clone().unwrap();
+                // //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                // if mesh_with_flags.vertices().len() > 0 {
+                //     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\stern_{}.stl", i));
+                //     if let Err(e) = write_stl(&path, &mesh_with_flags) {
+                //         log::error!("Failed to write nasal mesh {}: {}", i, e);
+                //     }
+                //     i += 1;
+                // }
+                let mut mesh_with_flags = result.surface_outer_body.clone().unwrap();
+                //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
                 if mesh_with_flags.vertices().len() > 0 {
                     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer.stl"));
                     if let Err(e) = write_stl(&path, &mesh_with_flags) {
                         log::error!("Failed to write nasal mesh {}", e);
                     }
                 }
-                let mut i = 0;
-                for mesh in &result.surface_superstructure {
-                    let mut mesh_with_flags = mesh.clone();
-                    //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                    if mesh_with_flags.vertices().len() > 0 {
-                        let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_superstructure_{}.stl", i));
-                        if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                            log::error!("Failed to write nasal mesh {}: {}", i, e);
-                        }
-                        i += 1;
-                    }
-                }
+                log::debug!("Volume of surface outer body: {:?}", volume(&result.surface_outer_body.unwrap()));
+                // let mut i = 0;
+                // let mut mesh_with_flags = result.surface_superstructure.clone().unwrap();
+                // //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                // if mesh_with_flags.vertices().len() > 0 {
+                //     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_superstructure_{}.stl", i));
+                //     if let Err(e) = write_stl(&path, &mesh_with_flags) {
+                //         log::error!("Failed to write nasal mesh {}: {}", i, e);
+                //     }
+                //     i += 1;
+                // }
             },
             Err(err) => {
                 log::error!("Step {} failed with error: {:#?}", step, err);

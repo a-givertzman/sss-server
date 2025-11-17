@@ -3,6 +3,7 @@ use std::io::BufWriter;
 use std::io::Write;
 use nalgebra::Const;
 use nalgebra::OPoint;
+use nalgebra::Vector3;
 use parry3d_f64::math::Point;
 use parry3d_f64::shape::TriMesh;
 use parry3d_f64::shape::Triangle;
@@ -43,7 +44,7 @@ impl ConvertToTrimeshEval {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
         for (z, x) in &buttocks {
-            vertices.push(Point::new(*x, 0.0, *z)); // y = 0
+            vertices.push(Point::new(*x, 0.0, *z));
         }
         for i in 1..vertices.len().saturating_sub(1) {
             indices.push([0, i as u32, (i + 1) as u32]);
@@ -97,6 +98,18 @@ impl ConvertToTrimeshEval {
             let t = (target - l1) / (l2 - l1);
             let p1 = points[idx];
             let p2 = points[idx + 1];
+            if idx + 2 < points.len() {
+                let a = points[idx];
+                let b = points[idx + 1];
+                let c = points[idx + 2];
+                let ba = Vector3::new(a.x - b.x, a.y - b.y, a.z - b.z);
+                let bc = Vector3::new(c.x - b.x, c.y - b.y, c.z - b.z);
+                let dot = ba.dot(&bc);
+                let eps = 1e-6;
+                if dot.abs() < eps {
+                    result.push(b.clone());
+                }
+            }
             let interpolated_point = Point::new(
                 p1.x + (p2.x - p1.x) * t,
                 p1.y + (p2.y - p1.y) * t,
@@ -146,66 +159,66 @@ impl ConvertToTrimeshEval {
         for (_, verts) in frames.iter_mut() {
             *verts = self.resample_line(verts, target_points);
         }
-
+        // let all_points: Vec<OPoint<f64, Const<3>>> = frames.iter()
+        // .flat_map(|(_, points)| points.iter())
+        // .cloned()
+        // .collect();
+        // if let Err(e) = Self::save_points_to_txt(&all_points, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\resampled_points.txt") {
+        //     log::error!("Failed to save points: {}", e);
+        // }
         let mut vertices: Vec<Point<f64>> = Vec::new();
         let mut indices: Vec<[u32; 3]> = Vec::new();
         for i in 0..frames.len() - 1 {
             if frames[i].0 == frames[i + 1].0 {
-                let prev_index = same_frames
-                    .iter()
-                    .position(|f| f.0 == frames[i].0)
-                    .unwrap();
-                let orig_prev_frame = same_frames[prev_index].clone();
-                let orig_cur_frame = same_frames[prev_index + 1].clone();
-                let mut previous = Vec::new();
-                let mut current = Vec::new();
-                for i in 0..orig_cur_frame.1.len() {
-                    if orig_cur_frame.1[i] != orig_prev_frame.1[i] {
-                        let point_start_diff = orig_cur_frame.1[i - 1];
-                        for j in 0..frames[i].1.len() {
-                            if self.point_diff(frames[i].1[j], point_start_diff, 1.0) {
-                                for k in j..frames[i].1.len() {
-                                    previous.push(frames[i].1[k]);
-                                }
-                            }
-                            break;
-                        }
-                        for j in 0..frames[i + 1].1.len() {
-                            if self.point_diff(frames[i + 1].1[j], point_start_diff, 1.0) {
-                                for k in j..frames[i + 1].1.len() {
-                                    current.push(frames[i + 1].1[k]);
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-                for i in 0..previous.len() - 1 {
-                    for j in i..previous.len() - 1 {
-                        let p_p1 = previous[j];
-                        let p_p2 = previous[j + 1];
-                        let c_p1 = current[j];
-                        let c_p2 = current[j + 1];
-                        let base_index = vertices.len() as u32;
-                        vertices.push(p_p1);
-                        vertices.push(p_p2);
-                        vertices.push(c_p1);
-                        vertices.push(c_p2);
-                        match Triangle::new(p_p1, p_p2, c_p1).normal() {
-                            Some(_) => {
-                                indices.push([base_index, base_index + 1, base_index + 2]);
-                                match Triangle::new(p_p2, c_p2, c_p1).normal() {
-                                    Some(_) => {
-                                        indices.push([base_index + 1, base_index + 3, base_index + 2]);
-                                    },
-                                    None => {},
-                                }
-                            },
-                            None => {},
-                        }
-                    }  
-                    break;
-                }
+                // let prev_index = same_frames
+                //     .iter()
+                //     .position(|f| f.0 == frames[i].0)
+                //     .unwrap();
+                // let orig_prev_frame = same_frames[prev_index].clone();
+                // let orig_cur_frame = same_frames[prev_index + 1].clone();
+                // let mut previous = Vec::new();
+                // let mut current = Vec::new();
+                // for i in 0..orig_cur_frame.1.len() {
+                //     if orig_cur_frame.1[i] != orig_prev_frame.1[i] {
+                //         for j in (i-1)..orig_prev_frame.1.len() {
+                //             previous.push(orig_prev_frame.1[j]);
+                //         }
+                //         for j in (i-1)..orig_cur_frame.1.len() {
+                //             current.push(orig_cur_frame.1[j]);
+                //         }
+                //     }
+                // }
+                // previous = self.resample_line(&previous, target_points);
+                // current = self.resample_line(&current, target_points);
+                // let mut all_points: Vec<OPoint<f64, Const<3>>> = Vec::new();
+                // all_points.extend(previous.clone());
+                // all_points.extend(current.clone());
+                // if let Err(e) = Self::save_points_to_txt(&all_points, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\resampled_points.txt") {
+                //     log::error!("Failed to save points: {}", e);
+                // }
+                // for j in 0..previous.len() - 1 {
+                //     let p_p1 = previous[j];
+                //     let p_p2 = previous[j + 1];
+                //     let c_p1 = current[j];
+                //     let c_p2 = current[j + 1];
+                //     let base_index = vertices.len() as u32;
+                //     vertices.push(p_p1);
+                //     vertices.push(p_p2);
+                //     vertices.push(c_p1);
+                //     vertices.push(c_p2);
+                //     match Triangle::new(p_p1, p_p2, c_p1).normal() {
+                //         Some(_) => {
+                //             indices.push([base_index, base_index + 1, base_index + 2]);
+                //             match Triangle::new(p_p2, c_p2, c_p1).normal() {
+                //                 Some(_) => {
+                //                     indices.push([base_index + 1, base_index + 3, base_index + 2]);
+                //                 },
+                //                 None => {},
+                //             }
+                //         },
+                //         None => {},
+                //     }
+                // }
             } else {
                 let previous = &frames[i].1;
                 let current = &frames[i + 1].1;
@@ -225,8 +238,6 @@ impl ConvertToTrimeshEval {
                             match Triangle::new(p_p2, c_p2, c_p1).normal() {
                                 Some(_) => {
                                     indices.push([base_index + 1, base_index + 3, base_index + 2]);
-                                    indices.push([base_index, base_index + 3, base_index + 2]);
-                                    indices.push([base_index, base_index + 1, base_index + 3]);
                                 },
                                 None => {},
                             }
@@ -247,6 +258,7 @@ impl ConvertToTrimeshEval {
                     .iter()
                     .map(|[a, b, c]| [a + original_vertex_count, c + original_vertex_count, b + original_vertex_count])
                     .collect();
+                
                 let mut all_vertices = vertices.clone();
                 all_vertices.extend(mirrored_vertices);
                 let mut all_indices = indices.clone();
