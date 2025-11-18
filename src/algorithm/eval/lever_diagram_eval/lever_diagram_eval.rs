@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextParamsRead, ContextRead},
         entities::math::curve::*,
-        eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx},
+        eval::{parameters::ParameterID, zg_eval::Zg, StabilityBalanceCtx},
     }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -40,8 +40,8 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
         //        let ctx = self.ctx.take().unwrap();
-                let balance: BalanceCtx = ctx.read();
-                let pantocaren = &balance.pantocaren; 
+                let balance: StabilityBalanceCtx = ctx.read();
+        /*        let pantocaren = &balance.pantocaren; 
                 let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
                 let y_g = ctx.read_params(ParameterID::CenterMassY);
                 let y_c = ctx.read_params(ParameterID::CenterVolumeY);
@@ -185,7 +185,8 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     theta_max,
                     max_angles,
                 };
-                ctx.write(result)
+                ctx.write(result)*/
+                Ok(ctx)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
         }

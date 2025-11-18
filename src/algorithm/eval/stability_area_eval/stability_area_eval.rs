@@ -3,9 +3,11 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{
-            Bound, Moment, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel,
+            Bound, Moment, Position,
+            data::loads::UnitCargoType,
+            ship_model::{StabilityArea, ship_model::ShipModel},
         },
-        eval::{StrengthBalanceCtx, IcingTimberCtx},
+        eval::IcingTimberCtx,
     },
     kernel::{
         eval::Eval,
@@ -62,11 +64,17 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return Err(error.err("Read bounds error: no data!")),
                 };
-                let  model
-
-                let balance: StrengthBalanceCtx = ctx.read();
-                let const_area_v = &balance.const_area_v;
-                let const_area_h = &balance.const_area_h;
+                let StabilityArea {
+                    area_windage,
+                    moment_windage,
+                    area_horisontal,
+                    moment_horisontal,
+                } = match self.model.read().stability_area() {
+                    Ok(data) => data,
+                    Err(err) => {
+                        return Err(error.pass_with("model.stability_area", err));
+                    }
+                };
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,
@@ -83,13 +91,8 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 // Ищем площадь парусности палубных грузов.
                 // Перебираем поверхность парусности с шагом, проходим по грузам и
                 // берем площадь как диапазон между максимальными ограничениями всех грузов на этом шаге.
-                let mut area_v = 0.;
-                let mut moment_v = Moment::zero();
-                // Площадь парусности корпуса
-                for (current_area, shift) in const_area_v.iter() {
-                    area_v += current_area;
-                    moment_v += Moment::from_pos(*shift, *current_area);
-                }
+                let mut area_v = area_windage; // Площадь парусности корпуса
+                let mut moment_v = moment_windage;// Момент парусности корпуса
                 // Границы грузов
                 let min_x = unit
                     .iter()
@@ -154,10 +157,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     moment_v += current_moment;
                 }
                 // Горизонтальная площадь поверхностей корпуса
-                let mut moment_h = Moment::zero();
-                for (current_area, shift) in const_area_h.iter() {
-                    moment_h += Moment::from_pos(*shift, *current_area);
-                }
+                let mut moment_h = moment_horisontal;
                 // Момент горизонтальной площади обледенения палубного груза - леса
                 let mut moment_timber_h = Moment::zero();
                 // Изменение момента горизонтальной площади обледенения палубного груза - леса

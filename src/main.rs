@@ -236,7 +236,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                 ),
                                                                                ),
                                                                             ),
-                                                                        ).eval(())
+                                                                        ).eval(Zg(0.))
     /*                                                                  ),
                                                                 ),
                                                             ),

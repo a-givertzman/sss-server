@@ -365,8 +365,11 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let volume_max = compartments_volume_max.get(name).ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
-            guard.calc_coeff(*volume_max)
+            let volume_max = compartments_volume_max
+                .get(name)
+                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            guard
+                .calc_coeff(*volume_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
@@ -447,7 +450,7 @@ impl ModelCached {
             errors.push(("displacement".to_owned(), error));
         }
         for (name, compartment) in &mut self.compartments {
-    //        println!("model_cached rebuild compartment:{name}");
+            //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
@@ -493,7 +496,7 @@ impl ModelCached {
 
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
-      //      println!("model_cached build_bounded compartment:{compartment_id}");
+            //      println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -532,7 +535,7 @@ impl ModelCached {
             })
     }
     //
-    pub fn windage_area(&mut self) -> Result<(f64, Moment), Error> {
+    pub fn windage_area(&self) -> Result<(f64, Moment), Error> {
         self.windage_area.windage_area().map_err(|err| {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
@@ -672,7 +675,8 @@ impl ModelCached {
         let mut res_displacement_distr = Vec::new();
         let (mut trim, mut draught) = (query.trim, query.draught);
         let (mut mass_sum, mut disp_sum) = (100000., 100000.);
-        let (mut epsilon_mass, mut epsilon_x): (f64, f64) = (10., 1.);
+        let mut epsilon_mass = 10.;
+        let mut epsilon_x;        
         for _i in 0..50 {
             // trim
             for _j in 0..50 {
@@ -868,7 +872,7 @@ impl ModelCached {
         let liquid_results = Arc::new(Stack::new());
         let bulk_results = Arc::new(Stack::new());
         let scheduler = self.thread_pool.scheduler();
-        for cargo in query.liquid {
+        for cargo in &query.liquid {
             assert!(cargo.mass > 0.);
             let assignment_id = cargo.assignment_id;
             let space_id = cargo.space_id.clone();
@@ -903,7 +907,7 @@ impl ModelCached {
                 Err(err) => errors.push(err),
             };
         }
-        for cargo in query.bulk {
+        for cargo in &query.bulk {
             assert!(cargo.mass > 0.);
             let assignment_id = cargo.assignment_id;
             let space_id = cargo.space_id.clone();
@@ -973,6 +977,9 @@ impl ModelCached {
             }
             result
         };
+        let dso = self
+            .dso(query, draught_mid, trim_degree, 60.)
+            .map_err(|err| error.pass(err))?;
         Ok(BalanceStabilityResult {
             roll: heel,
             trim_degree,
@@ -991,6 +998,7 @@ impl ModelCached {
             breadth_wl,
             rad_long,
             rad_trans,
+            dso,
         })
     }
     /// Расчет равновесного положения
@@ -1015,7 +1023,7 @@ impl ModelCached {
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
         let moment_sum = query.moment_const + moment_bulk; // постоянный момент
-        let volume = mass_sum/query.water_density;
+        let volume = mass_sum / query.water_density;
         // допустимый объем корпуса
         if volume <= min_volume || volume >= max_volume {
             return Err(error.err(format!("volume <= min_volume || volume >= max_volume, mass:{mass_sum} min_volume:{min_volume} max_volume:{max_volume} water_density:{}", query.water_density)));
@@ -1074,7 +1082,7 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
-    //       println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{epsilon} h:{heel}, t:{trim}, draught:{draught}, d_v:{new_d_v}, d_m:{new_d_m}");
+            //       println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{epsilon} h:{heel}, t:{trim}, draught:{draught}, d_v:{new_d_v}, d_m:{new_d_m}");
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1084,7 +1092,7 @@ impl ModelCached {
     /// Расчет диаграммы статической остойчивости
     pub(crate) fn dso(
         &self,
-        query: FloatingPositionQuery,
+        query: BalanceStabilityQuery,
         draught: f64,
         trim: f64,
         heel_max: f64,
@@ -1149,7 +1157,7 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-   /*     println!("\nmodel_cached dso: ");
+        /*     println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value}");
         }*/

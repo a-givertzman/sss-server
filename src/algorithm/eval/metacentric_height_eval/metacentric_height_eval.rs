@@ -1,8 +1,8 @@
 use super::metacentric_height_ctx::MetacentricHeightCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, entities::data::loads::AssignmentType, eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx}
-    }, kernel::{eval::Eval, types::{eval_result::EvalResult, Arc, RwLock}}, prelude::{Context, ContextWrite, InitialCtx},
+        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, entities::data::loads::AssignmentType, eval::{StabilityBalanceCtx, Zg, parameters::ParameterID}
+    }, kernel::{eval::Eval, types::{Arc, RwLock, eval_result::EvalResult}}, prelude::{Context, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::entities::math::liquid::*;
@@ -44,7 +44,7 @@ impl MetacentricHeightEval {
         let ship_length_lbp = *ship_parameters
             .get("LBP")
             .ok_or(error.err("No LBP in ship_parameters"))?;
-        let balance: BalanceCtx = ctx.read();
+        let balance: StabilityBalanceCtx = ctx.read();
         // Продольный метацентрический радиус
         let rad_long = ctx.read_params(ParameterID::MetacentricLongRad);  
         // Поперечный метацентрические радиус

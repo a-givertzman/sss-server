@@ -208,29 +208,11 @@ impl ShipModel {
             .horisontal_area_stab
             .clone()
             .ok_or(error.err("no horisontal_area"))?;
-        let (area_horisontal, moment_horisontal): (Vec<_>, Vec<_>) = area_horisontal
+        let (area_horisontal, moment_horisontal) = area_horisontal
             .into_iter()
-            .map(|v| {
-                let bound = match Bound::new(v.bound_x1, v.bound_x2) {
-                    Ok(bound) => bound,
-                    Err(err) => {
-                        return Err(error.pass_with(format!("Bound::new, name:{}", v.name), err));
-                    }
-                };
-                Ok((v.value, bound))
-            })
-            .partition(|v| v.is_ok());
-        for current in horisontal_area.into_iter() {
-            match current {
-                Ok((area, src_bound)) => {
-                    bounds.iter().enumerate().for_each(|(i, &trg_bound)| {
-                        horisontal_area_values[i] +=
-                            area * src_bound.part_ratio(&trg_bound).unwrap_or(0.)
-                    });
-                }
-                Err(err) => return Err(error.pass_with("horisontal_area", err)),
-            }
-        }
+            .fold((0., Moment::zero()), |(sum_a, sum_m), v| {
+                (sum_a + v.value, sum_m + Moment::new(v.value*v.shift_x, v.value*v.shift_y, v.value*v.shift_z))
+            });
         /*     println!("\nhorisontal_area_values\n");
                 horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
                 println!("\nwindage_area\n");

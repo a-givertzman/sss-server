@@ -53,8 +53,8 @@ pub struct BalanceStabilityQuery {
     pub liquid: Vec<LiquidData>,
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
-    //    /// номера поврежденных помещений, TODO - только для аварийного расчета
-    //    pub damaged_compartment: Vec<String>,
+    /// номера поврежденных помещений, TODO - только для аварийного расчета
+    pub damaged_compartment: Vec<String>,
     /// точность расчета
     pub epsilon: f64,
 }

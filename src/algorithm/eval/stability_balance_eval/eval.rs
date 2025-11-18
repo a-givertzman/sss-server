@@ -85,7 +85,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
                     grain_bulkhead: static_mass.grain_bulkhead,
-                    //    damaged_compartment: loads.damaged_compartment, //TODO
+                    damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                     epsilon: 0.00000001,
                 };
                 let result: BalanceStabilityResult = self
@@ -119,6 +119,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         liquid_data.get(&res.assignment_id).map(|data| {
                             super::liquid_result::LiquidResult::new(
                                 data.space_id.clone(),
+                                data.assigment_type,
                                 res.long_moment_of_inertia,
                                 res.trans_moment_of_inertia,
                             )

@@ -23,10 +23,10 @@ mod roll_frequency_eval;
 mod roll_period_eval;
 mod roll_amplitude_eval;
 mod criterion;
-mod zg_eval;
+
 mod draft_mark_eval;
 */
-
+mod zg_eval;
 pub mod parameters;
 
 
@@ -95,8 +95,9 @@ pub use criterion::*;
 
 pub use zg_eval::zg_ctx::ZgCtx;
 pub use zg_eval::zg_eval::ZgEval;
-pub use zg_eval::Zg;
 
 pub use draft_mark_eval::draft_mark_ctx::DraftMarkCtx;
 pub use draft_mark_eval::draft_mark_eval::DraftMarkEval;
 */
+
+pub use zg_eval::Zg;
