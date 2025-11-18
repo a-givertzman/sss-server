@@ -369,7 +369,7 @@ fn horisontal_area_stab(
 ) -> Result<Vec<HStabArea>, Error> {
     let err = Error::new("ShipModel", "horisontal_area_stab");
     let area = HStabAreaArray::parse(&api_client.fetch(
-        &format!("SELECT name, value, shift_x, shift_y, shift_z FROM horizontal_area_stability WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};")
+        &format!("SELECT name, value, shift_x, shift_y, shift_z FROM \"ship/ship_structures/area/h_stab\" WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};")
     )?).map_err(|e| err.pass(e.to_string()))?;
     Ok(area.data())
 }

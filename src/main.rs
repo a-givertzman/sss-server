@@ -36,10 +36,10 @@ use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    DebugSession::new()
+  /*  DebugSession::new()
         .filter(LogLevel::Info)
         .module("api-tools", LogLevel::Error)
-        .init();
+        .init();*/
     let _log2 = log2::open("log.txt")
         .level(Logger::from_default_env().filter().as_str())
         .size(5 * 1024 * 1024)
@@ -115,14 +115,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
   //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-/*
+
     let res = model_cached.reload_shapes();            dbg!(&res);
- //   let res = model_cached.rebuild_caches();   dbg!(&res);
-    let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
+    let res = model_cached.rebuild_caches();   dbg!(&res);
+ //   let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
-*/
+
     
     let api_client = Arc::new(ApiClient::new(
         &dbg,
