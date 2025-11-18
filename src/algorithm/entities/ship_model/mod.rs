@@ -55,8 +55,6 @@ pub struct BalanceStabilityQuery {
     pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
     /// номера поврежденных помещений, TODO - только для аварийного расчета
     pub damaged_compartment: Vec<String>,
-    /// точность расчета
-    pub epsilon: f64,
 }
 ///
 /// Груз, для которого центр массы и распределение зависит от

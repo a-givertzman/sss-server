@@ -38,6 +38,8 @@ pub struct BalanceStabilityResult {
     pub rad_long: f64,
     /// Поперечный метацентрические радиус, м
     pub rad_trans: f64,
+    /// Смещение центра массы по оси Z
+    pub mass_z: f64,
     // ///  Угол входа в воду кромки палубы, градусы
     //  pub entry_angle: f64,
     //  ///  Угол заливания отверстий, градусы

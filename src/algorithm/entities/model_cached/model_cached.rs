@@ -17,13 +17,14 @@ use crate::{
 use core::f64;
 use indexmap::IndexMap;
 use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
+use parry2d_f64::query;
 use parry3d_f64::{query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
-use std::{collections::HashMap, fmt::Display, path::PathBuf};
+use std::{cell::OnceCell, collections::HashMap, fmt::Display, path::PathBuf};
 
 /// Структура для ввода данных расчета равновесного положения корпуса судна.
 #[derive(Debug, Clone)]
@@ -75,6 +76,8 @@ pub(crate) struct FloatingPositionResult {
     pub rad_long: f64,
     /// Поперечный метацентрические радиус, м
     pub rad_trans: f64,
+    /// Смещение центра массы по оси Z
+    pub mass_z: f64,
 }
 //
 impl Display for FloatingPositionResult {
@@ -443,13 +446,13 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-   /*     if let Err(error) = self.displacement.rebuild() {
+        if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
-        }*/
+        }
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-    /*    for (name, compartment) in &mut self.compartments {
+        for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
@@ -459,7 +462,7 @@ impl ModelCached {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }*/
+        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -825,7 +828,8 @@ impl ModelCached {
     /// Расчет равновесного положения для остойчивости
     pub fn balance_stability(
         &self,
-        query: BalanceStabilityQuery,
+        mut query: BalanceStabilityQuery,
+        epsilon: f64,
     ) -> Result<BalanceStabilityResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "balance_stability");
@@ -842,6 +846,7 @@ impl ModelCached {
             breadth_wl,
             rad_long,
             rad_trans,
+            mass_z,
         } = self
             .floating_position(FloatingPositionQuery {
                 water_density: query.water_density,
@@ -851,7 +856,7 @@ impl ModelCached {
                 liquid: query.liquid.clone(),
                 grain_bulkhead: query.grain_bulkhead.clone(), // TODO
                 damaged_compartment: Vec::new(),
-                epsilon: query.epsilon,
+                epsilon,
             })
             .map_err(|err| error.pass_with("self.floating_position", err))?;
         // println!("steps:{_i} time:{:?}", time.elapsed());
@@ -884,7 +889,7 @@ impl ModelCached {
                 .clone();
             let trim = trim;
             let volume = cargo.volume;
-            let epsilon = query.epsilon;
+            let epsilon = epsilon;
             let results_ = liquid_results.clone();
             let handle = scheduler
                 .spawn(move || {
@@ -919,7 +924,7 @@ impl ModelCached {
                 .clone();
             let volume = cargo.volume;
             let shiftable = cargo.shiftable;
-            let epsilon = query.epsilon;
+            let epsilon = epsilon;
             let results_ = bulk_results.clone();
             let handle = scheduler
                 .spawn(move || {
@@ -977,8 +982,14 @@ impl ModelCached {
             }
             result
         };
+        let epsilon = epsilon*1000.;
+        let mut angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
+        angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
+        angles.append(&mut ((-8..=8).map(|v| v as f64 ).collect())); 
+        angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        angles.dedup();
         let dso = self
-            .dso(query, draught_mid, trim_degree, 60.)
+            .dso(query, draught_mid, trim_degree, epsilon, angles)
             .map_err(|err| error.pass(err))?;
         Ok(BalanceStabilityResult {
             roll: heel,
@@ -998,6 +1009,7 @@ impl ModelCached {
             breadth_wl,
             rad_long,
             rad_trans,
+            mass_z,
             dso,
         })
     }
@@ -1037,7 +1049,7 @@ impl ModelCached {
         let mut d_m: Option<f64> = None;
         for _i in 1..=1000 {
             let epsilon = (step_trim + step_heel) / 10.;
-            let (new_draught, new_d_v, new_d_m, _, displacement, disp_result) = self
+            let (new_draught, new_d_v, new_d_m, _, displacement, disp_result, mass_z) = self
                 .position(
                     heel,
                     trim,
@@ -1066,6 +1078,7 @@ impl ModelCached {
                         breadth_wl: disp_result.breadth_wl,
                         rad_long: disp_result.inertia_long_y / displacement,
                         rad_trans: disp_result.inertia_trans_x / displacement,
+                        mass_z,
                     };
                     return Ok(result);
                 }
@@ -1095,7 +1108,8 @@ impl ModelCached {
         query: BalanceStabilityQuery,
         draught: f64,
         trim: f64,
-        heel_max: f64,
+        epsilon: f64,
+        angles: Vec<f64>,
     ) -> Result<Vec<(f64, f64)>, Error> {
         let error = Error::new(&self.dbg, "floating_position");
         if query.water_density <= 0. {
@@ -1104,22 +1118,23 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk(&query.bulk, query.epsilon)
+            .moment_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
-        let max = (heel_max * 10.) as i32;
-        let min = -max;
-        let heel = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>();
+        let mut trim = trim;
+        let mut draught = draught;
+        let mut step_trim = 0.1;
         let mut dso = Vec::new();
-        for heel in heel {
-            let mut trim = trim;
-            let mut draught = draught;
-            let mut step_trim = 0.5;
+        let mut last_heel: Option<f64> = None;
+        for heel in angles {
+     //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
+            step_trim = if let Some(last_heel) = last_heel { step_trim*((heel - last_heel)*10.).max(1.)} else { 0.1 };
+            last_heel = Some(heel);
             let mut d_v: Option<f64> = None;
             for _i in 1..=100 {
-                let epsilon = step_trim / 10.;
-                let (new_draught, new_d_v, _, cg, _, disp_result) = self
+                let trim_epsilon = step_trim / 10.;
+                let (new_draught, new_d_v, _, cg, _, disp_result, _) = self
                     .position(
                         heel,
                         trim,
@@ -1131,17 +1146,23 @@ impl ModelCached {
                         &query.liquid,
                         &query.damaged_compartment,
                     )
-                    .map_err(|err| error.pass(err))?;
-                if query.epsilon <= epsilon {
-                    let precision = new_d_v.abs();
-                    if precision < query.epsilon {
+                    .map_err(|err| error.pass(err))?;   
+             //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
+                if epsilon >= trim_epsilon {
+                    if epsilon >= new_d_v.abs() {
                         let [_, yg, zg] = cg.values();
                         let [_, yc, zc] = disp_result.volume_center.values();
                         let l = if heel.abs() > f64::EPSILON {
                             let ctg_phy = 1.0 / heel.to_radians().tan();
-                            (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt()
+                            let sqrt_v = (1. + ctg_phy.powi(2)).sqrt();
+                            let res = (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt();
+                            println!("heel:{:.3} yg:{:.3} yc:{:.3} ctg_phy:{:.3} zg:{:.3} zc:{:.3} sqrt_v:{:.3} res:{:.3} ", 
+                                heel, yg, yc, ctg_phy, zg, zc, sqrt_v, res);
+                            res
                         } else {
-                            yg - yc
+                            let res = yg - yc;
+                            println!("heel:0 yg:{:.3} yc:{:.3} res:{:.3}", yg, yc, res, );
+                            res
                         };
                         dso.push((heel, l));
                         break;
@@ -1149,7 +1170,7 @@ impl ModelCached {
                 }
                 if let Some(old_d_v) = d_v {
                     if old_d_v.signum() != new_d_v.signum() {
-                        step_trim *= 0.5;
+                        step_trim = step_trim*0.5;
                     }
                 }
                 d_v = Some(new_d_v);
@@ -1157,10 +1178,10 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-        /*     println!("\nmodel_cached dso: ");
+        println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value}");
-        }*/
+        }
         Ok(dso)
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы
@@ -1176,7 +1197,7 @@ impl ModelCached {
         moment_sum: Position, // постоянный момент moment_const + moment_bulk
         liquid: &Vec<LiquidData>,
         damaged_compartment: &Vec<String>,
-    ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
+    ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult, f64), Error> {
         let error = Error::new(&self.dbg, "_floating_position");
         // учет смещения жидкости
         let moment_liquid = self
@@ -1264,7 +1285,7 @@ impl ModelCached {
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
-        Ok((draught, d_v, d_m, cg, displacement, disp_result))
+        Ok((draught, d_v, d_m, cg, displacement, disp_result, cg.z()))
     }
     // Считаем сыпучие грузы.
     // На них крен и дифферент не влияет.

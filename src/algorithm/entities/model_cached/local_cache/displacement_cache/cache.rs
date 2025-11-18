@@ -108,15 +108,15 @@ impl DisplacementCache {
     ) -> Result<DisplacementCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
 //     println!("displacement_cache get begin, heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon}");
-        if heel <= self.heel_min || heel >= self.heel_max {
+        if heel < self.heel_min || heel > self.heel_max {
             return Err(error.err(format!(
-                "heel <= min_heel || heel >= max_heel, heel:{heel} min_heel:{} max_heel:{}",
+                "heel < min_heel || heel > max_heel, heel:{heel} min_heel:{} max_heel:{}",
                 self.heel_min, self.heel_max
             )));
         }
-        if trim <= self.trim_min || trim >= self.trim_max {
+        if trim < self.trim_min || trim > self.trim_max {
             return Err(error.err(format!(
-                "trim <= min_trim || trim >= max_trim, trim:{trim} min_trim:{} max_trim:{}",
+                "trim < min_trim || trim > max_trim, trim:{trim} min_trim:{} max_trim:{}",
                 self.trim_min, self.trim_max
             )));
         }        
@@ -124,8 +124,8 @@ impl DisplacementCache {
         let mut draught = step + 0.5;
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         for i in 0..=50 {
-            if draught <= self.draught_min || draught >= self.draught_max {
-                return Err(error.err(format!("draught <= min_draught || draught >= max_draught, draught:{draught} min_draught:{} max_draught:{}", self.draught_min, self.draught_max)));
+            if draught < self.draught_min || draught > self.draught_max {
+                return Err(error.err(format!("draught < min_draught || draught > max_draught, draught:{draught} min_draught:{} max_draught:{}", self.draught_min, self.draught_max)));
             }
             let query = [heel, trim, draught];
             let result = cache.get(&query);

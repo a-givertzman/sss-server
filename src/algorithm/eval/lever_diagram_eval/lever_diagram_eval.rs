@@ -41,8 +41,8 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
             Ok(ctx) => {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: StabilityBalanceCtx = ctx.read();
-        /*        let pantocaren = &balance.pantocaren; 
-                let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
+                let mut dso = balance.dso; 
+             /*   let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
                 let y_g = ctx.read_params(ParameterID::CenterMassY);
                 let y_c = ctx.read_params(ParameterID::CenterVolumeY);
                 let delta_y = y_g - y_c;
@@ -62,21 +62,21 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         //    }
                         Some((angle_deg, value))
                     })
-                    .collect::<Vec<(f64, f64)>>();
+                    .collect::<Vec<(f64, f64)>>();*/
                 // плечо для нулевого угла
                 let lever_zero = dso
                     .iter()
                     .find(|(a, _)| *a == 0.)
                     .ok_or(error.err("calculate lever_zero error!"))?.1;
                 // знак статического угла крена
-                let mut angle_zero_signum = 1.; // если крен на левый борт то переворачиваем диаграмму
+               // let mut angle_zero_signum = 1.; // если крен на левый борт то переворачиваем диаграмму
                 if lever_zero > 0. {
                     dso = dso.into_iter().map(|(a, v)| (-a, -v)).collect();
                     dso.sort_by(|(a1, _), (a2, _)| {
                         a1.partial_cmp(a2)
                             .expect("LeverDiagram calculate error: sort dso!")
                     });
-                    angle_zero_signum = -1.; // сохраняем знак угла
+              //      angle_zero_signum = -1.; // сохраняем знак угла
                 }
                 // нахождение максимума диаграммы
                 let mut tmp_dso: Vec<&(f64, f64)> = dso.iter().filter(|(a, _)| *a >= 0.).collect();
@@ -175,8 +175,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                 log::trace!("LeverDiagram calculate diagram: [angle dso ddo]:");
                 for &(angle, dso, ddo) in diagram.iter() {
                     log::trace!("{angle} {dso} {ddo};");
-                }
-                
+                }           
                 let result = LeverDiagramCtx {
                     dso,
                     dso_curve,
@@ -185,8 +184,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     theta_max,
                     max_angles,
                 };
-                ctx.write(result)*/
-                Ok(ctx)
+                ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
         }

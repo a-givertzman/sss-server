@@ -234,7 +234,7 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "compute_balance");
         let mut result = self
             .model_cached
-            .balance_stability(query)
+            .balance_stability(query, 0.000001)
             .map_err(|err| error.pass(err))?;
         let grain_moment = self
             .grain_moment

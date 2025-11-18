@@ -147,8 +147,9 @@ impl MetacentricHeightEval {
 impl Eval<Zg, EvalResult> for MetacentricHeightEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match &self.context.read().clone() {
-            Some(ctx) => self.calc(ctx.clone(), Some(z_g_fix.0)),
+        let tmp_context = self.context.read().clone();
+        match tmp_context {
+            Some(ctx) => self.calc(ctx, Some(z_g_fix.0)),
             None => match self.ctx.eval(()) {
                 Ok(ctx) => {
                     *self.context.write() = Some(ctx.clone());

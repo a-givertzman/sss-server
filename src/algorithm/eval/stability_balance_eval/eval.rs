@@ -86,7 +86,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     liquid: static_mass.liquid.clone(),
                     grain_bulkhead: static_mass.grain_bulkhead,
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
-                    epsilon: 0.00000001,
                 };
                 let result: BalanceStabilityResult = self
                     .model
@@ -103,6 +102,14 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::Roll, result.roll);
                 ctx.write_params(ParameterID::MetacentricTransRad, result.rad_trans);
                 ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);
+                ctx.write_params(ParameterID::CenterMassZ, result.mass_z);
+                ctx.write_params(
+                    ParameterID::CenterVolumeXFromStern,
+                    result.displacement_center.x()
+                );
+                ctx.write_params(ParameterID::CenterVolumeY, result.displacement_center.y());
+                ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
+
                 let bulk = result
                     .bulk
                     .iter()
@@ -131,6 +138,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     liquid,
                     length_wl: result.length_wl,
                     breadth_wl: result.breadth_wl,
+                    dso: result.dso,
                 };
                 ctx.write(result)
             }
