@@ -982,7 +982,7 @@ impl ModelCached {
             }
             result
         };
-        let epsilon = epsilon*1000.;
+        let epsilon = 0.001f64.max(epsilon);
         let mut angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
         angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
         angles.append(&mut ((-8..=8).map(|v| v as f64 ).collect())); 
@@ -1127,6 +1127,7 @@ impl ModelCached {
         let mut step_trim = 0.1;
         let mut dso = Vec::new();
         let mut last_heel: Option<f64> = None;
+        println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
         for heel in angles {
      //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
             step_trim = if let Some(last_heel) = last_heel { step_trim*((heel - last_heel)*10.).max(1.)} else { 0.1 };
@@ -1147,7 +1148,7 @@ impl ModelCached {
                         &query.damaged_compartment,
                     )
                     .map_err(|err| error.pass(err))?;   
-             //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
+             //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");  
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
                         let [_, yg, zg] = cg.values();
@@ -1156,12 +1157,12 @@ impl ModelCached {
                             let ctg_phy = 1.0 / heel.to_radians().tan();
                             let sqrt_v = (1. + ctg_phy.powi(2)).sqrt();
                             let res = (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt();
-                            println!("heel:{:.3} yg:{:.3} yc:{:.3} ctg_phy:{:.3} zg:{:.3} zc:{:.3} sqrt_v:{:.3} res:{:.3} ", 
+                            println!("{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3};", 
                                 heel, yg, yc, ctg_phy, zg, zc, sqrt_v, res);
                             res
                         } else {
                             let res = yg - yc;
-                            println!("heel:0 yg:{:.3} yc:{:.3} res:{:.3}", yg, yc, res, );
+                            println!("0 {:.3} {:.3} {:.3};", yg, yc, res, );
                             res
                         };
                         dso.push((heel, l));
@@ -1180,7 +1181,7 @@ impl ModelCached {
         }
         println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
-            println!("{angle} {value}");
+            println!("{angle} {value};");
         }
         Ok(dso)
     }

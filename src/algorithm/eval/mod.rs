@@ -8,7 +8,7 @@ mod icing_timber_eval;
 mod static_mass_eval;
 mod dynamic_mass_eval;
 mod stability_balance_eval;
-mod strength_balance_eval;
+pub mod strength_balance_eval;
 mod total_force_eval;
 mod shear_force_eval;
 mod bending_moment_eval;
