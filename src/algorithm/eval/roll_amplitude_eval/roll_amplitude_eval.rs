@@ -5,7 +5,7 @@ use crate::algorithm::eval::zg_eval::Zg;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead, ContextReadRef},
-        eval::{BalanceCtx, MetacentricHeightCtx, RollingPeriodCtx, parameters::ParameterID},
+        eval::{StabilityBalanceCtx, MetacentricHeightCtx, RollingPeriodCtx, parameters::ParameterID},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{InitialCtx, ContextWrite}
@@ -37,10 +37,10 @@ impl Eval<Zg, EvalResult> for RollingAmplitudeEval {
         match self.ctx.eval(z_g_fix) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let balance: BalanceCtx = ctx.read();
+                let balance: StabilityBalanceCtx = ctx.read();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
                 let rolling_period: RollingPeriodCtx = ctx.read();
-                let volume = balance.volume;
+                let volume = balance.displacement;
                 let length_wl = balance.length_wl;
                 let breadth_wl = balance.breadth_wl;
                 let mean_draught = ctx.read_params(ParameterID::DraughtMean);

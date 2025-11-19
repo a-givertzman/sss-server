@@ -46,15 +46,14 @@ pub struct Context {
     /// Диаграмма плеч статической и динамической остойчивости
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
     /// Расчет плеча кренящего момента от давления ветра
-  /*    pub(super) wind: Option<WindCtx>,
+    pub(super) wind: Option<WindCtx>,
     /// Парусность судна
     pub(super) windage: Option<WindageCtx>,
     /// Период собственных бортовых колебаний судна 
     pub(super) roll_period: Option<RollingPeriodCtx>,
-    /// Частота собственных бортовых колебаний судна
-    pub(super) roll_frequency: Option<RollingFrequencyCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
+  /*    
     /// Критерий погоды К
     pub(super) wheather: Option<WheatherCtx>,
     /// Статический угол крена от действия постоянного ветра

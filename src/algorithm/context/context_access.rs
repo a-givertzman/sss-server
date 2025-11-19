@@ -239,7 +239,7 @@ impl ContextRead<LeverDiagramCtx> for Context {
     }
 }
 //
-/*impl ContextWrite<WindCtx> for Context {
+impl ContextWrite<WindCtx> for Context {
     fn write(mut self, value: WindCtx) -> Result<Self, Error> {
         self.wind = Some(value);
         Result::Ok(self)
@@ -275,18 +275,6 @@ impl ContextRead<RollingPeriodCtx> for Context {
     }
 }
 //
-impl ContextWrite<RollingFrequencyCtx> for Context {
-    fn write(mut self, value: RollingFrequencyCtx) -> Result<Self, Error> {
-        self.roll_frequency = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<RollingFrequencyCtx> for Context {
-    fn read(&self) -> RollingFrequencyCtx {
-        self.roll_frequency.clone().unwrap()
-    }
-}
-//
 impl ContextWrite<RollingAmplitudeCtx> for Context {
     fn write(mut self, value: RollingAmplitudeCtx) -> Result<Self, Error> {
         self.roll_amplitude = Some(value);
@@ -298,6 +286,7 @@ impl ContextRead<RollingAmplitudeCtx> for Context {
         self.roll_amplitude.clone().unwrap()
     }
 }
+/*
 //
 impl ContextWrite<CriterionStabilityCtx> for Context {
     fn write(mut self, value: CriterionStabilityCtx) -> Result<Self, Error> {

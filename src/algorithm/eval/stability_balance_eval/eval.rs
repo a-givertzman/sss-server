@@ -134,6 +134,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     })
                     .collect();
                 let result = StabilityBalanceCtx {
+                    displacement: result.displacement,
                     bulk,
                     liquid,
                     length_wl: result.length_wl,

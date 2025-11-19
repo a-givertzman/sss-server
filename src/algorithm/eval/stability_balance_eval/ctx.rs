@@ -4,6 +4,8 @@ use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
 ///
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct StabilityBalanceCtx {
+    /// Объемное водоизмещение, м^3
+    pub displacement: f64,
     /// Сыпучий груз для которого центр массы и распределение зависит от 
     /// объема
     pub bulk: Vec<BulkResult>,

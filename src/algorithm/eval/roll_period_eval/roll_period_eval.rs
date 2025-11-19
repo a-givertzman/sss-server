@@ -4,7 +4,7 @@ use crate::{
         eval::{
             parameters::ParameterID, 
             zg_eval::Zg, 
-            BalanceCtx, 
+            StabilityBalanceCtx, 
             MetacentricHeightCtx
         },
     }, 
@@ -48,7 +48,7 @@ impl Eval<Zg, EvalResult> for RollingPeriodEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
-                let balance_ctx: BalanceCtx = ctx.read();
+                let balance_ctx: StabilityBalanceCtx = ctx.read();
                 let length_wl = balance_ctx.length_wl;
                 let breadth_wl = balance_ctx.breadth_wl;
                 let mean_draught = ctx.read_params(ParameterID::DraughtMean);

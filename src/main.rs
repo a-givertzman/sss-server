@@ -169,7 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 StaticAngleEval::new(
                                                     &dbg,
                                                     WheatherEval::new(
-                                                        &dbg,
+                                                        &dbg,*/
                                                         RollingAmplitudeEval::new(
                                                             &dbg,
                                                             RollingPeriodEval::new(
@@ -177,7 +177,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                 WindEval::new(
                                                                     &dbg,
                                                                     WindageEval::new(
-                                                                        &dbg,*/
+                                                                        &dbg,
                                                                         LeverDiagramEval::new(
                                                                             &dbg,
                                                                             //   link,
@@ -236,13 +236,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                 ),
                                                                                ),
                                                                             ),
-                                                                        ).eval(Zg(0.))
-    /*                                                                  ),
+                                                                        ),
+                                                                    ),
                                                                 ),
                                                             ),
-                                                        ),
-                                                    ),
-                                                ),
+                                                        ).eval(Zg(0.))
+      /*                                              ),
+                                                  ),
                                             ),
                                         ),
                                     ),
