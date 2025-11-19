@@ -142,8 +142,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
-    let ctx = 
-  /*  
+    let ctx =   
     CriterionStabilityEval::new(
         &dbg,
         MetacentricHeightSubdivisionEval::new(
@@ -169,7 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 StaticAngleEval::new(
                                                     &dbg,
                                                     WheatherEval::new(
-                                                        &dbg,*/
+                                                        &dbg,
                                                         RollingAmplitudeEval::new(
                                                             &dbg,
                                                             RollingPeriodEval::new(
@@ -240,8 +239,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                     ),
                                                                 ),
                                                             ),
-                                                        ).eval(Zg(0.))
-      /*                                              ),
+                                                        ),
+                                                    ),
                                                   ),
                                             ),
                                         ),
@@ -253,8 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    )
-    */
+    ).eval(Zg(0.))
     ;
 
 /*    

@@ -1,8 +1,7 @@
 use super::wheather_ctx::WheatherCtx;
 use crate::{
     algorithm::eval::{
-        BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx,
-        parameters::ParameterID, zg_eval::Zg,
+        CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, StabilityBalanceCtx, WindCtx, parameters::ParameterID, zg_eval::Zg
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::*,
@@ -38,7 +37,7 @@ impl Eval<Zg, EvalResult> for WheatherEval {
             Ok(mut ctx) => {
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: BalanceCtx = ctx.read();
+                let balance: StabilityBalanceCtx = ctx.read();
                 let rolling_amplitude: RollingAmplitudeCtx = ctx.read();
                 let l_w1 = wind.arm_wind_static;
                 let l_w2 = wind.arm_wind_dynamic;

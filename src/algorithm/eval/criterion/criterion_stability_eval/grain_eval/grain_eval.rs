@@ -2,7 +2,7 @@ use super::grain_ctx::GrainCtx;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx};
+use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::*,
@@ -37,10 +37,9 @@ impl Eval<Zg, EvalResult> for GrainEval {
         match self.ctx.eval(z_g_fix) {
             Ok(mut ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: BalanceCtx = ctx.read();
+                let balance: StabilityBalanceCtx = ctx.read();
                 let m_grain = balance.bulk.iter().map(|v| v.moment).sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
-                let balance: BalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
                 let mut results = Vec::new();
                 let lambda_0 = m_grain / mass;

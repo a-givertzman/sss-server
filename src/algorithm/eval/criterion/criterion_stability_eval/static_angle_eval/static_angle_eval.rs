@@ -2,7 +2,7 @@ use super::static_angle_ctx::StaticAngleCtx;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::data::stability::ship_type::*;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
+use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID};
 use crate::{
     prelude::*,
     algorithm::eval::{LeverDiagramCtx, WindCtx},
@@ -46,7 +46,7 @@ impl Eval<Zg, EvalResult> for StaticAngleEval {
                     .any(|v| v.cargo_type == UnitCargoType::Container);
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: BalanceCtx = ctx.read();
+                let balance: StabilityBalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
                 // Для всех судов (кроме района плавания R3):
                 // статического угла крена θ𝑤1, вызванного постоянным ветром

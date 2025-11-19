@@ -2,7 +2,7 @@ use super::circulation_ctx::CirculationCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx};
+use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID, LeverDiagramCtx};
 use crate::{
     prelude::*,
     kernel::{eval::Eval, types::eval_result::EvalResult},
@@ -42,11 +42,10 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                     .ok_or(error.err("voyage error: no data!"))?;
                 // Эксплуатационная скорость судна, m/s
                 let v_0 = voyage.operational_speed;
-                let balance: BalanceCtx = ctx.read();
+                let balance: StabilityBalanceCtx = ctx.read();
                 let d = ctx.read_params(ParameterID::DraughtMean);
                 let l_wl = balance.length_wl;
                 let moment_shift_z = ctx.read_params(ParameterID::CenterMassZ);
-                let balance: BalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
                 // суммарная масса судна
                 let mass = ctx.read_params(ParameterID::Displacement);

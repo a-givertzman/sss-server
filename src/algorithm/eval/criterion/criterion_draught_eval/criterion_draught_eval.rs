@@ -1,6 +1,6 @@
 use super::criterion_draught_ctx::CriterionDraughtCtx;
 use crate::{
-    algorithm::{entities::data::ship_type::ShipType, eval::*},
+    algorithm::{eval::*, entities::data::stability::ship_type::ShipType},
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::*,
 };

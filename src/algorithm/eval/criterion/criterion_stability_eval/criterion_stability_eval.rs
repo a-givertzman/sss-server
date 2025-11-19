@@ -2,9 +2,9 @@ use super::criterion_stability_ctx::CriterionStabilityCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::data::{loads::UnitCargoType, ship_type::ShipType, NavigationArea},
+        entities::data::{loads::UnitCargoType, stability::{NavigationArea, ship_type::ShipType}},
         eval::{zg_eval::Zg, *},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{InitialCtx, ContextWrite},
+    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -53,7 +53,7 @@ impl Eval<Zg, EvalResult> for CriterionStabilityEval {
                     .ok_or(error.err("initial.unit no data"))?
                     .into_iter()
                     .any(|v| v.cargo_type == UnitCargoType::Container);
-                let loads: LoadsCtx = ctx.read();
+                let loads: StaticMassCtx = ctx.read();
                 let have_grain = !loads.bulk.is_empty();
                 let mut data = Vec::new();
                 if navigation_area != NavigationArea::R3Rsn {

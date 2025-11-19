@@ -286,7 +286,6 @@ impl ContextRead<RollingAmplitudeCtx> for Context {
         self.roll_amplitude.clone().unwrap()
     }
 }
-/*
 //
 impl ContextWrite<CriterionStabilityCtx> for Context {
     fn write(mut self, value: CriterionStabilityCtx) -> Result<Self, Error> {
@@ -503,6 +502,7 @@ impl ContextRead<CriterionDraughtCtx> for Context {
         self.criterion_draught.clone().unwrap()
     }
 }
+/*
 //
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> Result<Self, Error> {
@@ -526,8 +526,8 @@ impl ContextRead<DraftMarkCtx> for Context {
     fn read(&self) -> DraftMarkCtx {
         self.draft_mark.clone().unwrap()
     }
-}
-*/
+}*/
+
 
 
 

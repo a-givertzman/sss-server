@@ -1,8 +1,7 @@
 use super::dso_area_ctx::DSOAreaCtx;
 use crate::{
     algorithm::{
-        entities::data::ship_type::ShipType,
-        eval::{BalanceCtx, CriterionData, CriterionID, LeverDiagramCtx, zg_eval::Zg},
+        entities::data::stability::ship_type::ShipType, eval::{CriterionData, CriterionID, LeverDiagramCtx, StabilityBalanceCtx, zg_eval::Zg}
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::*,
@@ -39,7 +38,7 @@ impl Eval<Zg, EvalResult> for DSOAreaEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_type = initial.ship_type.unwrap();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: BalanceCtx = ctx.read();
+                let balance: StabilityBalanceCtx = ctx.read();
                 let flooding_angle = balance.flooding_angle;
                 let mut data = Vec::new();
                 let theta = lever_diagram.angle(0.).unwrap_or(vec![0., 0.]);

@@ -1,6 +1,6 @@
 use super::reserve_buoyncy_ctx::ReserveBuoyncyCtx;
 use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
-use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
+use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
     prelude::*,
@@ -33,7 +33,7 @@ impl Eval<(), EvalResult> for ReserveBuoyncyEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let balance: BalanceCtx = ctx.read();               
+                let balance: StabilityBalanceCtx = ctx.read();               
                 let ship_parameters = initial.ship_parameters.as_ref().unwrap();
                 let bow_area_min = *ship_parameters
                     .get("Calculated minimum bow area")

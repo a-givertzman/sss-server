@@ -1,8 +1,8 @@
 use super::min_metacentric_height_ctx::MinMetacentricHeightCtx;
 use crate::{
     algorithm::{
-        entities::data::{loads::UnitCargoType, ship_type::ShipType},
-        eval::{CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx, zg_eval::Zg},
+        entities::data::{loads::UnitCargoType, stability::ship_type::ShipType},
+        eval::{CriterionData, CriterionID, MetacentricHeightCtx, StaticMassCtx, zg_eval::Zg},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::*,
@@ -38,7 +38,7 @@ impl Eval<Zg, EvalResult> for MinMetacentricHeightEval {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
-                let loads: LoadsCtx = ctx.read();
+                let loads: StaticMassCtx = ctx.read();
                 let ship_type = initial.ship_type.unwrap();
                 let have_grain = !loads.bulk.is_empty();
                 let unit: Vec<_> = match initial.unit.as_ref() {
