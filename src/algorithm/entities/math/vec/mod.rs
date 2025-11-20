@@ -206,3 +206,19 @@ impl DivideVec for Vec<f64>  {
         Ok(())
     }    
 }
+/*
+//
+pub trait SortVec {
+    #[allow(unused)]
+    fn sort(&mut self);
+}
+//
+impl SortVec for Vec<f64>  {   
+    fn sort(&mut self) {
+        self.sort_by(|a, b| a.partial_cmp(&b).unwrap())
+    }    
+}
+    */
+
+
+

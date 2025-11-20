@@ -5,8 +5,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{
-            Moment,
-            ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult},
+            Curve, ICurve, Moment, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
         },
         eval::{IcingCtx, StaticMassCtx, WettingCtx, parameters::ParameterID},
     },
@@ -133,6 +132,16 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         })
                     })
                     .collect();
+                let entry_angle = Curve::new_linear(&result.entry_angle)
+                    .map_err(|err| error.pass_with("entry_angle curve", err))?
+                    .value(0.)
+                    .map_err(|err| error.pass_with("entry_angle value", err))?;
+                let flooding_angle = Curve::new_linear(&result.flooding_angle)
+                    .map_err(|err| error.pass_with("flooding_angle curve", err))?
+                    .value(0.)
+                    .map_err(|err| error.pass_with("flooding_angle value", err))?;
+                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, entry_angle);
+                ctx.write_params(ParameterID::AngleOfDownFlooding, flooding_angle);
                 let result = StabilityBalanceCtx {
                     displacement: result.displacement,
                     bulk,
@@ -140,6 +149,8 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     length_wl: result.length_wl,
                     breadth_wl: result.breadth_wl,
                     dso: result.dso,
+                    entry_angle,
+                    flooding_angle,
                 };
                 ctx.write(result)
             }

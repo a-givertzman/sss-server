@@ -81,7 +81,7 @@ pub struct Context {
     pub(super) criterion_stability: Option<CriterionStabilityCtx>,
 //    /// Результаты для ZG
  //   pub(super) zg: Option<ZgCtx>,
-    /// Критерий осадки по грузовой марке
+/*    /// Критерий осадки по грузовой марке
     pub(super) load_line: Option<LoadLineCtx>,
     /// Критерий запаса плавучести в носу
     pub(super) reserve_buoyncy: Option<ReserveBuoyncyCtx>,
@@ -91,8 +91,9 @@ pub struct Context {
     pub(super) screw: Option<ScrewCtx>,
     /// Критерии проверки посадки судна
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
- //   /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
- //   pub(super) draft_mark: Option<DraftMarkCtx>,
+    /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
+    pub(super) draft_mark: Option<DraftMarkCtx>,
+ */
     ///
     /// Uset for testing only
     #[allow(dead_code)]

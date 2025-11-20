@@ -1,6 +1,8 @@
 //! Промежуточные структуры для serde_json для парсинга данных судна
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use crate::algorithm::entities::Position;
+
 use super::serde_parser::IFromJson;
 //
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -107,3 +109,5 @@ impl DataArray<TrimVolumeData> {
         vec
     } 
 }
+
+pub type PointDataArray = DataArray<Position>;

@@ -2,13 +2,11 @@ use super::{LocalCache, ModelCachedConf};
 use crate::{
     algorithm::{
         entities::{
-            AddVec, Bounds, Moment, Position,
-            model_cached::{
+            AddVec, Bounds, Moment, Position, model_cached::{
                 AreaShape, CompartmentBoundCache, CompartmentCache, CompartmentCacheResult,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
                 DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
-            },
-            ship_model::{stability_result::BalanceStabilityResult, *},
+            }, ship_model::{stability_result::BalanceStabilityResult, *}
         },
         eval::{StrengthBalanceCtx, strength_balance_eval},
     },
@@ -829,6 +827,8 @@ impl ModelCached {
     pub fn balance_stability(
         &self,
         mut query: BalanceStabilityQuery,
+        opening: &[Position],
+        deck_angle_point: &[Position],
         epsilon: f64,
     ) -> Result<BalanceStabilityResult, Error> {
         //   let time = std::time::Instant::now();
@@ -988,8 +988,8 @@ impl ModelCached {
         angles.append(&mut ((-8..=8).map(|v| v as f64 ).collect())); 
         angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         angles.dedup();
-        let dso = self
-            .dso(query, draught_mid, trim_degree, epsilon, angles)
+        let (dso, entry_angle, flooding_angle) = self
+            .dso(query, draught_mid, trim_degree, epsilon, &angles, opening, deck_angle_point)
             .map_err(|err| error.pass(err))?;
         Ok(BalanceStabilityResult {
             roll: heel,
@@ -1011,6 +1011,8 @@ impl ModelCached {
             rad_trans,
             mass_z,
             dso,
+            entry_angle,
+            flooding_angle,
         })
     }
     /// Расчет равновесного положения
@@ -1103,14 +1105,18 @@ impl ModelCached {
         Err(error.err(format!("query:{:?} error: no result", query)))
     }
     /// Расчет диаграммы статической остойчивости
+    /// angles - углы крена должны быть отсортированны по возрастанию
+    /// возвращает (dso, entry_angle, flooding_angle) зависимости от угла крена
     pub(crate) fn dso(
         &self,
         query: BalanceStabilityQuery,
         draught: f64,
         trim: f64,
         epsilon: f64,
-        angles: Vec<f64>,
-    ) -> Result<Vec<(f64, f64)>, Error> {
+        angles: &[f64],
+        opening: &[Position],
+        deck_angle_point: &[Position],
+    ) -> Result<(Vec<(f64, f64)>, Vec<(f64, f64)>, Vec<(f64, f64)>), Error> {
         let error = Error::new(&self.dbg, "floating_position");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
@@ -1126,9 +1132,12 @@ impl ModelCached {
         let mut draught = draught;
         let mut step_trim = 0.1;
         let mut dso = Vec::new();
+        let mut entry_angle = Vec::new();
+        let mut flooding_angle = Vec::new();
         let mut last_heel: Option<f64> = None;
+        let max_heel = angles.last().ok_or(error.err("max_heel"))?;
         println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
-        for heel in angles {
+        for &heel in angles {
      //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
             step_trim = if let Some(last_heel) = last_heel { step_trim*((heel - last_heel)*10.).max(1.)} else { 0.1 };
             last_heel = Some(heel);
@@ -1151,21 +1160,37 @@ impl ModelCached {
              //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");  
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
-                        let [_, yg, zg] = cg.values();
-                        let [_, yc, zc] = disp_result.volume_center.values();
-                        let l = if heel.abs() > f64::EPSILON {
-                            let ctg_phy = 1.0 / heel.to_radians().tan();
-                            let sqrt_v = (1. + ctg_phy.powi(2)).sqrt();
-                            let res = (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt();
-                            println!("{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3};", 
-                                heel, yg, yc, ctg_phy, zg, zc, sqrt_v, res);
-                            res
-                        } else {
-                            let res = yg - yc;
-                            println!("0 {:.3} {:.3} {:.3};", yg, yc, res, );
-                            res
+                        let l = {
+                            let [_, yg, zg] = cg.values();
+                            let [_, yc, zc] = disp_result.volume_center.values();
+                            if heel.abs() > f64::EPSILON {
+                                let ctg_phy = 1.0 / heel.to_radians().tan();
+                                let sqrt_v = (1. + ctg_phy.powi(2)).sqrt();
+                                let res = (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt();
+                                println!("{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3};", 
+                                    heel, yg, yc, ctg_phy, zg, zc, sqrt_v, res);
+                                res
+                            } else {
+                                let res = yg - yc;
+                                println!("0 {:.3} {:.3} {:.3};", yg, yc, res, );
+                                res
+                            }
                         };
                         dso.push((heel, l));
+                        let current_draught = |p: &Position| {
+                            let tg_t = trim.to_radians().tan();
+                            let tg_h = heel.to_radians().tan();
+                            let cos_h = heel.to_radians().cos();                            
+                            let draught = draught + p.z()*tg_h + (p.x() - self.model_center_coord.x())*tg_t/cos_h;
+                            draught - p.z()
+                        };
+                        let min_angle = |angles: &[Position]| {
+                            let mut angles: Vec<_> = angles.iter().map(|v| current_draught(v)).collect();
+                            angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                            angles.first().unwrap_or(max_heel).to_owned()
+                        };
+                        entry_angle.push((heel, min_angle(opening)));
+                        flooding_angle.push((heel, min_angle(deck_angle_point)));
                         break;
                     }
                 }
@@ -1183,10 +1208,18 @@ impl ModelCached {
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
-        Ok(dso)
+        println!("\nmodel_cached entry_angle: ");
+        for &(angle, value) in entry_angle.iter() {
+            println!("{angle} {value};");
+        }
+        println!("\nmodel_cached flooding_angle: ");
+        for &(angle, value) in flooding_angle.iter() {
+            println!("{angle} {value};");
+        }
+        Ok((dso, entry_angle, flooding_angle))
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы
-    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result)
+    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
     fn position(
         &self,
         heel: f64,
@@ -1556,3 +1589,6 @@ impl ModelCached {
         Ok(result)
     }
 }
+
+
+

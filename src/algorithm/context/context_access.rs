@@ -442,6 +442,7 @@ impl ContextRead<GrainCtx> for Context {
         self.grain.clone().unwrap()
     }
 }
+/*
 //
 impl ContextWrite<LoadLineCtx> for Context {
     fn write(mut self, value: LoadLineCtx) -> Result<Self, Error> {
@@ -502,7 +503,7 @@ impl ContextRead<CriterionDraughtCtx> for Context {
         self.criterion_draught.clone().unwrap()
     }
 }
-/*
+
 //
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> Result<Self, Error> {
