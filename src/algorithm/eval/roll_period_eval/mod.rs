@@ -1,4 +1,4 @@
 //! Период собственных бортовых колебаний судна 
-pub mod roll_period_ctx;
-pub mod roll_period_eval;
+pub mod ctx;
+pub mod eval;
 

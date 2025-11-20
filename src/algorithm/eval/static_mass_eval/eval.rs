@@ -1,4 +1,4 @@
-use super::ctx::StaticMassCtx;
+use crate::StaticMassCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{AddVec, Bound, Bounds, Moment, Position};

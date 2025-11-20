@@ -252,26 +252,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    ).eval(Zg(0.))
-    ;
+    );//.eval(Zg(0.));
 
-/*    
-    let _result = DraftMarkEval::new(
-        &tmp_dbg,
+    let ctx =
+    DraftMarkEval::new(
+        &dbg,
         CriterionDraughtEval::new(
-            &tmp_dbg,
+            &dbg,
             ReserveBuoyncyEval::new(
-                &tmp_dbg,
+                &dbg,
                 ScrewEval::new(
-                    &tmp_dbg,
+                    &dbg,
                     BowBoardEval::new(
-                        &tmp_dbg,
+                        &dbg,
                         LoadLineEval::new(
-                            &tmp_dbg,
+                            &dbg,
                             ZgEval::new(
-                                    thread_pool.scheduler(),
-                                    &tmp_dbg,
-                              //      &ship_model,
+                                    thread_pool,
+                                    &dbg,
                                     ctx,
                             ),
                         ),
@@ -280,9 +278,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     )
-    .eval(());*/
+    .eval(());
 
-   // let initial: &InitialCtx = ctx.as_ref();
     ctx.unwrap();
     
     Ok(())

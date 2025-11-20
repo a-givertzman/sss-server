@@ -1,7 +1,7 @@
 //! Расчет уровня заглубления для координат отметок заглубления на корпусе судна
 //! Результат пишется в параметры
-pub mod draft_mark_ctx;
-pub mod draft_mark_eval;
+pub mod ctx;
+pub mod eval;
 
 /// Результат расчета уровня заглубления
 #[derive(Clone, Debug, PartialEq)]

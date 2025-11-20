@@ -1,4 +1,4 @@
-use super::ctx::DynamicMassCtx;
+use crate::DynamicMassCtx;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
-use super::ctx::StabilityBalanceCtx;
+use crate::StabilityBalanceCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
