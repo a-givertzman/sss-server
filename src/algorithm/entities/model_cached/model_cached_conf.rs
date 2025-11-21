@@ -1,5 +1,5 @@
-use std::{collections::HashMap, path::PathBuf};
-use crate::algorithm::entities::Position;
+use std::path::PathBuf;
+use crate::algorithm::entities::{Bounds, Position};
 ///
 /// [super::ModelCached] configuration.
 ///
@@ -34,4 +34,6 @@ pub struct ModelCachedConf {
     pub compartment_level_step: f64,    
     /// Level step for compartments
     pub bounds_level_step: f64,
+    /// Bounds
+    pub bounds: Bounds,
 }

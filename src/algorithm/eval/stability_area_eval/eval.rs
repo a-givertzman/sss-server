@@ -66,9 +66,10 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 };
                 let StabilityArea {
                     area_windage,
-                    moment_windage,
+                    area_windage_z,
                     area_horisontal,
-                    moment_horisontal,
+                    area_horisontal_z,                  
+                    area_volume_z,
                 } = match self.model.read().stability_area() {
                     Ok(data) => data,
                     Err(err) => {

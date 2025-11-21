@@ -29,6 +29,7 @@ pub struct ShipModel {
     ship_id: usize,
     //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
+    bounds: Bounds,
     horisontal_area_str: Option<Vec<HStrArea>>,
     horisontal_area_stab: Option<Vec<HStabArea>>,
     grain_moment: Option<HashMap<String, Curve<f64>>>,
@@ -54,6 +55,7 @@ impl ShipModel {
         ship_id: usize,
         //    ship_file_name: String,
         project_id: String,
+        bounds: Bounds,
         model_cached: ModelCached,
         api_client: Arc<ApiClient>,
     ) -> Self {
@@ -66,6 +68,7 @@ impl ShipModel {
             ship_id,
             //      ship_file_name,
             project_id,
+            bounds,
             horisontal_area_str: None,
             horisontal_area_stab: None,
             grain_moment: None,
@@ -118,13 +121,7 @@ impl ShipModel {
         )
         .map_err(|err| error.pass_with("max_compartment_volume", err))?;
         self.model_cached
-            .init(max_compartment_volume)
-            .map_err(|err| Error::new(&self.dbg, "init").pass(err))
-    }
-    /// TODO - Doc
-    pub fn init_cache_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        self.model_cached
-            .init_bounded(bounds)
+            .init(max_compartment_volume, &self.bounds)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))
     }
     ///
@@ -158,11 +155,12 @@ impl ShipModel {
     */
     ///
     /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
-    pub fn strength_area(&self, bounds: &Bounds) -> Result<StrengthArea, Error> {
+    pub fn strength_area(&self) -> Result<StrengthArea, Error> {
         let error = Error::new(&self.dbg, "strength_area");
+        let bounds = self.bounds; 
         let windage_area = self
             .model_cached
-            .bounded_windage_area(bounds)
+            .bounded_windage_area()
             .map_err(|err| error.pass_with("model_cached.bounded_windage_area", err))?;
         let horisontal_area = self
             .horisontal_area_str
@@ -212,20 +210,20 @@ impl ShipModel {
     }
     ///
     /// Площади и моменты поверхности корпуса для расчета остойчивости
-    pub fn stability_area(&self) -> Result<StabilityArea, Error> {
+    pub fn stability_area(&self, draught: f64) -> Result<StabilityArea, Error> {
         let error = Error::new(&self.dbg, "stability_area");
-        let (area_windage, moment_windage) = self
+        let (area_windage, area_windage_z, delta_area_windage, area_volume_z) = self
             .model_cached
-            .windage_area()
+            .windage_area(draught)
             .map_err(|err| error.pass_with("model_cached.windage_area", err))?;
         let area_horisontal = self
             .horisontal_area_stab
             .clone()
             .ok_or(error.err("no horisontal_area"))?;
-        let (area_horisontal, moment_horisontal) = area_horisontal
+        let (area_horisontal, area_horisontal_z) = area_horisontal
             .into_iter()
-            .fold((0., Moment::zero()), |(sum_a, sum_m), v| {
-                (sum_a + v.value, sum_m + Moment::new(v.value*v.shift_x, v.value*v.shift_y, v.value*v.shift_z))
+            .fold((0., 0.), |(sum_a, sum_z), v| {
+                (sum_a + v.value, sum_z + v.value*v.shift_z)
             });
         /*     println!("\nhorisontal_area_values\n");
                 horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
@@ -234,11 +232,15 @@ impl ShipModel {
         */
         Ok(StabilityArea {
             area_windage,
-            moment_windage,
+            area_windage_z,
+            delta_area_windage,
             area_horisontal,
-            moment_horisontal,
+            area_horisontal_z,
+            area_volume_z,
         })
     }
+    /// TODO: Doc
+    pub fn bow_area
     ///
     /// TODO: Doc
     pub fn compute_stability(

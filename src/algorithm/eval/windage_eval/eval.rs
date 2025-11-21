@@ -34,10 +34,11 @@ impl Eval<Zg, EvalResult> for WindageEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
-                let volume_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);
+                let volume_shift_z = 
                 let stability_area: StabilityAreaCtx = ctx.read();
                 let icing_stab: IcingStabCtx = ctx.read();
                 let area_v = stability_area.area_v;
+                let volume_shift_z = stability_area.area_v;
                 let coef = 1. + icing_stab.coef_v_area;
                 let a_v = area_v * coef;              
                 let m_vz = stability_area.moment_v.z();

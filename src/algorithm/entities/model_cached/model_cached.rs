@@ -15,14 +15,13 @@ use crate::{
 use core::f64;
 use indexmap::IndexMap;
 use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
-use parry2d_f64::query;
 use parry3d_f64::{query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
-use std::{cell::OnceCell, collections::HashMap, fmt::Display, path::PathBuf};
+use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 /// Структура для ввода данных расчета равновесного положения корпуса судна.
 #[derive(Debug, Clone)]
@@ -173,7 +172,9 @@ impl ModelCached {
             &dbg,
             windage_shape.clone(),
             conf.cache_dir.clone(),
+            conf.bounds,
             conf.draught_min,
+            Arc::clone(&thread_pool),
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
@@ -355,7 +356,7 @@ impl ModelCached {
         Ok(())
     }
     /// инициализация кэшей заранее посчитанными данными
-    pub fn init(&mut self, compartments_volume_max: HashMap<String, f64>) -> Result<(), Error> {
+    pub fn init(&mut self, compartments_volume_max: HashMap<String, f64>, bounds: &Bounds) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
         let error = Error::new(self.dbg.clone(), "init");
         self.displacement
@@ -382,12 +383,6 @@ impl ModelCached {
         self.windage_area
             .init()
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
-        Ok(())
-    }
-    /// инициализация кэшей заранее посчитанными данными
-    pub fn init_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        //   dbg!(self.dbg.clone(), "init_bounded");
-        let error = Error::new(self.dbg.clone(), "init_bounded");
         let bounds_qnt = bounds.len_qnt();
         let displacement_shape = self
             .displacement_shapes
@@ -527,17 +522,25 @@ impl ModelCached {
         Ok((x, y, z))
     }
     //
-    pub fn bounded_windage_area(&self, bounds: &Bounds) -> Result<Vec<f64>, Error> {
+    pub fn bounded_windage_area(&self) -> Result<Vec<f64>, Error> {
         self.windage_area
-            .bounded_windage_area(&bounds)
+            .bounded_windage_area()
             .map_err(|err| {
                 Error::new(&self.dbg, "bounded_windage_area")
                     .pass_with("self.windage_area.bounded_windage_area", err)
             })
     }
-    //
-    pub fn windage_area(&self) -> Result<(f64, Moment), Error> {
-        self.windage_area.windage_area().map_err(|err| {
+    /// Расчет параметров поверхности 
+    /// draught_min - минимальная осадка без груза
+    /// draught_current - текущая осадка
+    /// Возаращает (area_windage, area_windage_z, delta_area_windage, area_volume_z)
+    /// area_windage - Площадь парусности сплошных поверхностей для осадки d_min без палубного груза
+    /// area_windage_z - Положение центра парусности сплошных поверхностей по оси Z относительно опорной плоскости
+    /// delta_area_windage - Разница в площадях парусности для текущей осадки и осадки d_min без палубного груза
+    /// area_volume_z - Отстояние по вертикали центра площади проекции подводной части корпуса на диаметральную плоскость 
+    /// в прямом положении судна (при нулевом крене) на спокойной воде для текущей осадки [м]
+    pub fn windage_area(&self, draught: f64) -> Result<(f64, f64, f64, f64), Error> {
+        self.windage_area.windage_area(draught).map_err(|err| {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
     }
