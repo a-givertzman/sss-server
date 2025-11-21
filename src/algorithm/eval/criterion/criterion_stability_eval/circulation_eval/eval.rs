@@ -46,7 +46,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 let d = ctx.read_params(ParameterID::DraughtMean);
                 let l_wl = balance.length_wl;
                 let moment_shift_z = ctx.read_params(ParameterID::CenterMassZ);
-                let flooding_angle = balance.flooding_angle;
+                let entry_angle = balance.entry_angle;
                 // суммарная масса судна
                 let mass = ctx.read_params(ParameterID::Displacement);
                 // Плечо кренящего момента на циркуляции при скорости v, m/s
@@ -97,7 +97,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                         return ctx.write(result);
                     }
                 };
-                let target = 16.0f64.min(flooding_angle / 2.);
+                let target = 16.0f64.min(entry_angle / 2.);
                 let result = if let Some(angle) = angle {
                     CriterionData::new_result(CriterionID::HeelTurning, angle, target)
                 } else {
