@@ -28,7 +28,7 @@ static PHYSICAL_FRAMES: [f64; 196] = [
 ///
 #[test]
 fn floating_position_sofia() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     let dbg = Dbg::new("test model_cached", "floating_position_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));

@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tests {
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
@@ -10,7 +10,7 @@ mod tests {
     
     #[test]
     fn icing() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         let dbg = Dbg::own("test icing");
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
         test_duration.run().unwrap();

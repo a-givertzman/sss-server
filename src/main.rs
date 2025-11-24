@@ -14,7 +14,7 @@ use algorithm::eval::*;
 
 use app::app::App;
 use conf::conf::Conf;
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use env_logger::Logger;
 use infrostructure::api::client::api_client::ApiClient;
 use kernel::{
@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .module(true)
         .start();
 
-    //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    //   DebugSession::new().filter(LogLevel::Debug).init();
     
     let dbg = Dbg::own("main");
     let path = "config.yaml";

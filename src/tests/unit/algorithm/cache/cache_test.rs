@@ -1,6 +1,6 @@
 use crate::algorithm::entities::cache::*;
 #[cfg(test)]
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 /// Test successfull initializing of [Cache] instance.
 #[test]
 fn init_cache() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = Dbg::new("cache", "init_cache");
@@ -66,7 +66,7 @@ fn init_cache() {
 /// Test failure initializing of [Cache] instance.
 #[test]
 fn init_cache_table_from_inconsistent_files() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let callee = "init_cache_table_from_inconsistent_files";

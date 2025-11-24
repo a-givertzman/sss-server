@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod app {
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use std::{
         sync::Once,
         time::{Duration, Instant},
@@ -26,7 +26,7 @@ mod app {
     ///
     /// Testing such functionality / behavior
     fn new() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::debug!("");

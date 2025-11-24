@@ -5,7 +5,7 @@ mod hub_listen {
     use bincode::{Decode, Encode};
     use sal_core::error::Error;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::kernel::sync::Hub;
     ///
     ///
@@ -25,7 +25,7 @@ mod hub_listen {
     /// Testing 'Request::fetch'
     #[test]
     fn listen() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         log::debug!("");
