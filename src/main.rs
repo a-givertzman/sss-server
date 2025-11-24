@@ -21,7 +21,11 @@ use kernel::{
 //use prelude::*;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use crate::{algorithm::{Algorithm, entities::ship_model::ship_model::ShipModel}, infrostructure::{DevStream, SelectAlgorithm, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
+use crate::{
+    algorithm::{Algorithm, entities::ship_model::ship_model::ShipModel},
+    infrostructure::{DevStream, SelectAlgorithm, SelectDevDoc, SelectDevInfo},
+    server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server},
+};
 use crate::algorithm::entities::{
     Bounds, model_cached::{self},
 };
@@ -108,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ship_id,
         project_id.to_owned(),
         model_cached,
-        Arc::clone(&api_client),
+        api_client.clone(),
     );
     let bounds = Bounds::from_array(&Algorithm::PHYSICAL_FRAMES, 0.).unwrap();
     ship_model.init().unwrap();
