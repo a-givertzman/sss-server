@@ -1160,6 +1160,10 @@ impl ModelCached {
              //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");  
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
+
+
+//"CompartmentPurpose"="cargo_tank
+
                         let l = {
                             let [_, tcg, vcg] = cg.values();
                             let [_, tcb, vcb] = disp_result.volume_center.values();
