@@ -1,6 +1,12 @@
+mod common;
+/// TODO: To be deleted !
+mod examples;
 mod query_id;
 mod query;
 
+pub(crate) use common::*;
+/// TODO: To be deleted !
+pub(crate) use examples::*;
 pub(crate) use query_id::*;
 pub(crate) use query::*;
 

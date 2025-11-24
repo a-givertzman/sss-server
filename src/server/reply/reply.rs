@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use crate::server::{Bytes, Device, DeviceDoc, DeviceInfo};
+use serde::Serialize;
+use crate::server::{AlgorithmReply, Bytes, Device, DeviceDoc, DeviceInfo};
 
 ///
 /// Wrapper for all variants of API [Reply]'s
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Reply {
     /// Use if nothing to be sent in the data fiekld of the `Message`
@@ -12,6 +12,7 @@ pub enum Reply {
     Error(String),
     /// Use if no information to be sent
     Bytes(Bytes),
+    Algorithm(AlgorithmReply),
     DeviceStream(Device),
     DeviceInfo(DeviceInfo),
     DeviceDoc(DeviceDoc),

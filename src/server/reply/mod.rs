@@ -1,7 +1,9 @@
 mod reply;
+mod common;
 // TODO; To be deleted
-mod reply_examples;
+mod examples;
 
 pub use reply::*;
+pub use common::*;
 // TODO; To be deleted
-pub use reply_examples::*;
+pub use examples::*;

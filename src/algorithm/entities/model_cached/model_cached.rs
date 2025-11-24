@@ -137,7 +137,7 @@ pub struct ModelCached {
     displacement_bounded: HashMap<usize, Arc<RwLock<DisplacementBoundCache>>>,
     /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
     compartments_bounded: HashMap<usize, IndexMap<String, Arc<RwLock<CompartmentBoundCache>>>>,
-    thread_pool: Arc<ThreadPool>,
+    tp: Arc<ThreadPool>,
 }
 //
 //
@@ -147,7 +147,7 @@ impl ModelCached {
     pub fn new(
         parent: &Dbg,
         conf: ModelCachedConf,
-        thread_pool: Arc<ThreadPool>,
+        tp: Arc<ThreadPool>,
     ) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
@@ -221,7 +221,7 @@ impl ModelCached {
                         conf.compartment_heel_steps.clone(),
                         conf.compartment_trim_steps.clone(),
                         conf.compartment_level_step,
-                        Arc::clone(&thread_pool),
+                        Arc::clone(&tp),
                     ))),
                 ))
             })
@@ -259,7 +259,7 @@ impl ModelCached {
                         conf.hull_draught_min,
                         conf.hull_draught_max,
                         conf.hull_draught_step,
-                        Arc::clone(&thread_pool),
+                        Arc::clone(&tp),
                     ))),
                 ))
             })
@@ -284,14 +284,14 @@ impl ModelCached {
                 conf.hull_draught_min,
                 conf.hull_draught_max,
                 conf.hull_draught_step,
-                Arc::clone(&thread_pool),
+                Arc::clone(&tp),
             ),
             compartments,
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
             compartments_bounded: HashMap::new(),
-            thread_pool,
+            tp,
         };
         Ok(model_cached)
     }
@@ -301,7 +301,7 @@ impl ModelCached {
         let mut errors = Vec::new();
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
-        let scheduler = self.thread_pool.scheduler();
+        let scheduler = self.tp.scheduler();
         // Сначала считаем модели в разных потоках
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
@@ -396,7 +396,7 @@ impl ModelCached {
             self.bounds_level_step,
             self.model_center_coord.x(),
             bounds.clone(),
-            Arc::clone(&self.thread_pool),
+            Arc::clone(&self.tp),
         );
         displacement_bound
             .init()
@@ -483,7 +483,7 @@ impl ModelCached {
             self.bounds_level_step,
             self.model_center_coord.x(),
             bounds.clone(),
-            Arc::clone(&self.thread_pool),
+            Arc::clone(&self.tp),
         );
         displacement_bound
             .rebuild()
@@ -558,7 +558,7 @@ impl ModelCached {
             .compartments_bounded
             .get(&query.bounds.len_qnt())
             .ok_or(error.err("no compartments_bounded"))?;
-        let scheduler = self.thread_pool.scheduler();
+        let scheduler = self.tp.scheduler();
         // расчет эпюр масс для газообразных грузов
         // они не смещаются, поэтому считаем их один раз
         let mut tasks: Vec<JoinHandle<_>> = vec![];
@@ -867,7 +867,7 @@ impl ModelCached {
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let liquid_results = Arc::new(Stack::new());
         let bulk_results = Arc::new(Stack::new());
-        let scheduler = self.thread_pool.scheduler();
+        let scheduler = self.tp.scheduler();
         for cargo in query.liquid {
             assert!(cargo.mass > 0.);
             let assignment_id = cargo.assignment_id;
@@ -1266,7 +1266,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
-        let scheduler = self.thread_pool.scheduler();
+        let scheduler = self.tp.scheduler();
         for bulk in bulks {
             match self.compartments.get(&bulk.space_id) {
                 Some(compartment) => {
@@ -1356,7 +1356,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
-        let scheduler = self.thread_pool.scheduler();
+        let scheduler = self.tp.scheduler();
         for liquid in liquids {
             match self.compartments.get(&liquid.space_id) {
                 Some(compartment) => {
@@ -1447,7 +1447,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
-        let scheduler = self.thread_pool.scheduler();
+        let scheduler = self.tp.scheduler();
         for damaged_compartment in damaged_compartments {
             match self.damaged_compartments.get(damaged_compartment) {
                 Some(compartment) => {

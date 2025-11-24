@@ -1,12 +1,14 @@
 use sal_core::error::Error;
 use serde::Deserialize;
-use crate::server::BINCODE_CONFIG;
+use crate::server::{AlgorithmQuery, BINCODE_CONFIG, BytesExampleQuery, DeviceDocQuery, DeviceInfoQuery, DeviceStreamQuery};
 
 ///
 /// Wrapper for all variants of API [Query]'s
 #[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub enum Query {
     Empty,
+    Algorithm(AlgorithmQuery),
+    ///
     /// TODO: To be replaced with real Query
     DeviceStream(DeviceStreamQuery),
     /// TODO: To be replaced with real Query
@@ -50,38 +52,3 @@ macro_rules! extract {
     };
 }
 pub(crate) use extract;
-
-///
-/// Request for `DeviceStream`
-#[derive(Debug, Clone, Deserialize, bincode::Decode)]
-pub struct DeviceStreamQuery {
-    #[serde(rename="devId")]
-    pub dev_id: String,
-}
-///
-/// Request for `DeviceInfo`
-#[derive(Debug, Clone, Deserialize, bincode::Decode)]
-pub struct DeviceInfoQuery {
-    #[serde(rename="devId")]
-    pub dev_id: String,
-}
-///
-/// Request for `DeviceInfo`
-#[derive(Debug, Clone, Deserialize, bincode::Decode)]
-pub struct DeviceDocQuery {
-    #[serde(rename="devId")]
-    pub dev_id: String,
-}
-///
-/// Request example with `Content::Bytes`
-#[derive(Debug, Clone, Deserialize, bincode::Decode)]
-pub struct BytesExampleQuery {
-    val: f64,
-    name: String,
-    data: Vec<Pt>,
-}
-#[derive(Debug, Clone, Deserialize, bincode::Decode)]
-pub struct Pt {
-    x: f64,
-    y: f64,
-}
