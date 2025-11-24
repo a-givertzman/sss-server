@@ -14,3 +14,4 @@ mod area_shape;
 mod bound;
 mod bounds;
 mod draught;
+mod strength;
