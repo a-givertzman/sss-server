@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::{Arc, atomic::AtomicBool}};
+use std::{fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::Handles, thread_pool::Scheduler};
 use crate::{
@@ -87,6 +87,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
     /// Halts hanbler
     fn exit(&self) {
         // Halt continuous operations here
+        self.exit.store(true, Ordering::Release);
     }
 }
 //
