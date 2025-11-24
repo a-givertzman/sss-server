@@ -109,5 +109,17 @@ impl DataArray<TrimVolumeData> {
         vec
     } 
 }
-
-pub type PointDataArray = DataArray<Position>;
+//
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Point {
+    pub point: Option<Position>,
+}
+//
+impl DataArray<Point> {
+    /// Преобразовает и возвращает данные
+    pub fn data(self) -> Vec<Position> {
+        self.data.into_iter().filter_map(|v| v.point ).collect()
+    } 
+}
+//
+pub type PointDataArray = DataArray<Point>;

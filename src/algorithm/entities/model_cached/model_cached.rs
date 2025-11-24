@@ -1136,7 +1136,7 @@ impl ModelCached {
         let mut flooding_angle = Vec::new();
         let mut last_heel: Option<f64> = None;
         let max_heel = angles.last().ok_or(error.err("max_heel"))?;
-        println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
+       // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
         for &heel in angles {
      //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
             step_trim = if let Some(last_heel) = last_heel { step_trim*((heel - last_heel)*10.).max(1.)} else { 0.1 };
@@ -1169,6 +1169,7 @@ impl ModelCached {
                             let ld = tcg*cos_phy + vcg*sin_phy;                         
                             // TODO let delta_l =... поправка от наклона воды
                             let l = lv - ld;// - delta_l;
+                            l
                         };
                         dso.push((heel, l));
                         let current_draught = |p: &Position| {

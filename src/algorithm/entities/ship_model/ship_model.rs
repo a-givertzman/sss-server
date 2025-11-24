@@ -453,7 +453,7 @@ fn deck_angle_point(
         &api_client
             .fetch(&format!(
                 "SELECT 
-                    value 
+                    value as point
                 FROM 
                     \"ship/ship_structures/deck_angle_point\" 
                 WHERE 
@@ -462,7 +462,7 @@ fn deck_angle_point(
             .map_err(|err| error.pass_with("deck_angle_point", err))?,
     )
     .map_err(|err| error.pass_with("parse", err))?;
-    Ok(data.data)
+    Ok(data.data())
 }
 /// Чтение таблицы открытых отверстий
 fn opening(
@@ -475,7 +475,7 @@ fn opening(
         &api_client
             .fetch(&format!(
                 "SELECT 
-                    value 
+                    value as point
                 FROM 
                     \"ship/ship_structures/opening\" 
                 WHERE 
@@ -484,5 +484,5 @@ fn opening(
             .map_err(|err| error.pass_with("opening", err))?,
     )
     .map_err(|err| error.pass_with("parse", err))?;
-    Ok(data.data)
+    Ok(data.data())
 }
