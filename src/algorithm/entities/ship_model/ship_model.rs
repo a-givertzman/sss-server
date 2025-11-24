@@ -1,7 +1,6 @@
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::ICurve;
 use crate::algorithm::entities::data::ComputedFrameDataArray;
-use crate::algorithm::entities::data::DataArray;
 use crate::algorithm::entities::data::HStrArea;
 use crate::algorithm::entities::data::HStrAreaArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
@@ -12,7 +11,7 @@ use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::StrengthBalanceCtx;
-use crate::infrostructure::api::client::api_client::ApiClient;
+use crate::infrostructure::ApiClient;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::collections::HashMap;

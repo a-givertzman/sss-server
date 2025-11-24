@@ -1,7 +1,7 @@
 use super::dso_icing_max_ctx::DSOIcingMaxCtx;
 use crate::{
     algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, zg_eval::Zg},
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};

@@ -10,7 +10,7 @@ use crate::{
         eval::{StaticMassCtx, parameters::ParameterID},
     },
     kernel::{
-        eval::Eval,
+        Eval,
         types::{RwLock, eval_result::EvalResult},
     },
     prelude::{ContextParamsRead, ContextWrite, InitialCtx},

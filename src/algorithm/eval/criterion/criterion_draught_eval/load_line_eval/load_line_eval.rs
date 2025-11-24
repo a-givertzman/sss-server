@@ -4,7 +4,7 @@ use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     prelude::*,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

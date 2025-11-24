@@ -4,7 +4,7 @@ use crate::{
         entities::data::{loads::UnitCargoType, ship_type::ShipType},
         eval::{CriterionData, CriterionID, LoadsCtx, MetacentricHeightCtx, zg_eval::Zg},
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};

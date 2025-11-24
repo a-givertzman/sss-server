@@ -3,7 +3,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextReadRef, eval::ShearForceCtx,
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};

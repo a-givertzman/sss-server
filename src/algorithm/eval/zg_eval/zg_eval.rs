@@ -5,7 +5,7 @@ use crate::{
         eval::*,
     },
     kernel::{
-        eval::Eval,
+        Eval,
         types::{Arc, RwLock, eval_result::EvalResult},
     },
     prelude::{Context, ContextWrite, InitialCtx},

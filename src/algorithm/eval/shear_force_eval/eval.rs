@@ -5,7 +5,7 @@ use crate::{
         entities::{MultipleSingle, SubVec, SumAbove},
         eval::TotalForceCtx,
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};

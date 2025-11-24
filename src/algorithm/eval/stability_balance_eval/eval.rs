@@ -11,7 +11,7 @@ use crate::{
         eval::{IcingCtx, StaticMassCtx, WettingCtx, parameters::ParameterID},
     },
     kernel::{
-        eval::Eval,
+        Eval,
         types::{RwLock, eval_result::EvalResult},
     },
     prelude::{ContextParamsWrite, ContextWrite, InitialCtx},

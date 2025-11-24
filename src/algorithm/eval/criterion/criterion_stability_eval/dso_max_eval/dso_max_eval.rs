@@ -4,7 +4,7 @@ use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     algorithm::eval::LeverDiagramCtx,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};

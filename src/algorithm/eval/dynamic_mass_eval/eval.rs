@@ -8,7 +8,7 @@ use crate::{
         },
         eval::{IcingCtx, StrengthBalanceCtx, WettingCtx, parameters::ParameterID},
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextParamsWrite, ContextRead, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};

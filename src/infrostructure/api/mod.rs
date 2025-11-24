@@ -1,1 +1,3 @@
-pub mod client;
+mod client;
+
+pub(crate) use client::*;

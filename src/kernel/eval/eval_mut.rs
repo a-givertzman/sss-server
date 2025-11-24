@@ -1,6 +1,6 @@
 ///
 /// Trate defines common evaluation function for calculations classes
-pub trait Eval<Inp, Out> {
+pub trait EvalMut<Inp, Out> {
     ///
     /// Performs a calculation
     /// - Returns [Out] contains results inside

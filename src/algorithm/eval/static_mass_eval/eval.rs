@@ -5,7 +5,7 @@ use crate::algorithm::entities::{AddVec, Bound, Bounds, Moment, Position};
 use crate::algorithm::eval::{IcingCtx, WettingCtx};
 use crate::prelude::ContextRead;
 use crate::{
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};

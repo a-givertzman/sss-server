@@ -4,7 +4,7 @@ use crate::{
         context::context_access::{ContextParamsRead, ContextRead},
         entities::math::curve::*,
         eval::{parameters::ParameterID, zg_eval::Zg, BalanceCtx},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::ContextWrite,
+    }, kernel::{Eval, types::eval_result::EvalResult}, prelude::ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 

@@ -2,7 +2,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use super::icing_stab_ctx::IcingStabCtx;
 use crate::{
     algorithm::{context::context_access::ContextReadRef, entities::icing_stab::IcingStabType},
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{InitialCtx, ContextWrite},
 };
 

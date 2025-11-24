@@ -6,7 +6,7 @@ use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx,
     prelude::*,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
 };
 use crate::algorithm::entities::{ Curve, ICurve };
 use sal_core::{dbg::Dbg, error::Error};

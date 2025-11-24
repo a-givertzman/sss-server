@@ -19,7 +19,7 @@ mod roll_frequency {
             }
         }, 
         kernel::{
-            eval::Eval, 
+            Eval, 
             types::eval_result::EvalResult
         }, 
         prelude::{

@@ -7,7 +7,7 @@ use crate::{
         context::context_access::{ContextParamsWrite, ContextRead, ContextReadRef},
         eval::{BalanceCtx, MetacentricHeightCtx, RollingPeriodCtx, parameters::ParameterID},
     },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{InitialCtx, ContextWrite}
 };
 use sal_core::{dbg::Dbg, error::Error};

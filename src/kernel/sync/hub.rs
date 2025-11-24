@@ -1,7 +1,7 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use bincode::{Decode, Encode};
 use sal_core::error::Error;
-use sal_sync::services::entity::{Name, PointTxId};
+use sal_sync::{services::entity::{Name, PointTxId}, thread_pool::{JoinHandle, Scheduler}};
 use super::{link::Link, LinkSend};
 ///
 /// Combines multiple links
@@ -23,14 +23,14 @@ impl Hub {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>) -> Self {
+    pub fn new(parent: impl Into<String>, exit: Option<Arc<AtomicBool>>) -> Self {
         let name = Name::new(parent, "Hub");
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
             links: Arc::new(papaya::HashMap::new()),
             timeout: Duration::from_micros(100),
-            exit: Arc::new(AtomicBool::new(false)),
+            exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }
     }
     ///
@@ -49,14 +49,18 @@ impl Hub {
     ///     - Retur it from closure
     ///         - `Some<Event>` - will be sent as reply
     ///         - `None` - nothing will be sent
-    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&self, op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
+    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(
+        &self,
+        scheduler: Scheduler,
+        op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static,
+    ) -> Result<JoinHandle<()>, Error> {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
         let links = self.links.clone();
         let timeout = self.timeout;
         let exit = self.exit.clone();
         log::debug!("{}.listen | Starting...", dbg);
-        let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
+        let handle = scheduler.spawn(move|| {
             'main: loop {
                 let links_pin = links.pin();
                 let links_iter = links_pin.iter();
@@ -91,6 +95,7 @@ impl Hub {
                 }
             }
             log::debug!("{}.listen | Exit", dbg);
+            Ok(())
         });
         let dbg = self.name.join();
         let error = Error::new(&self.name, "listen");

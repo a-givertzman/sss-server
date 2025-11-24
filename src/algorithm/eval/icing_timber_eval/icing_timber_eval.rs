@@ -1,7 +1,7 @@
 use super::icing_timber_ctx::{IcingTimberCtx, IcingTimberType};
 use crate::{
     algorithm::context::context_access::ContextReadRef,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::{InitialCtx, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};

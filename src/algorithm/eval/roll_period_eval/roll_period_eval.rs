@@ -9,7 +9,7 @@ use crate::{
         },
     }, 
     kernel::{
-        eval::Eval, 
+        Eval, 
         types::eval_result::EvalResult
     }, 
     prelude::*,

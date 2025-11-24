@@ -4,7 +4,7 @@ use crate::algorithm::eval::{BalanceCtx, CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
     prelude::*,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

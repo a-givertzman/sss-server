@@ -5,6 +5,7 @@ mod conf;
 mod infrostructure;
 mod kernel;
 mod prelude;
+mod server;
 #[cfg(test)]
 mod tests;
 
@@ -13,16 +14,15 @@ use algorithm::eval::*;
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use infrostructure::api::client::api_client::ApiClient;
+use infrostructure::ApiClient;
 use kernel::{
-    eval::Eval,
     run::Run,
     types::{Arc, RwLock},
 };
 //use prelude::*;
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
-use crate::algorithm::entities::ship_model::ship_model::ShipModel;
+use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc}, server::{Content, Cot, QueryId, SelectAct, SelectContent, SelectCot, SelectDevInfo, SelectReq, Server}};
 use crate::algorithm::entities::{
     Bounds, model_cached::{self},
 };
@@ -57,8 +57,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
-    let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
-    let mut model_cached = model_cached::ModelCached::new(
+    let tp = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
+    let model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
             model_dir,
@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             bounds_level_step: 0.1,
             compartment_level_step: 1.
         },
-        Arc::clone(&thread_pool),
+        Arc::clone(&tp),
     )
     .unwrap();
     let physical_frames = [
@@ -134,6 +134,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ship_model.init().unwrap();
     ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
+    let server = Server::new(
+        &dbg,
+        conf.clone(),
+        tp.scheduler(),
+        move |dbg, conf| { Box::new(
+            //
+            // Select handler for incomong messages by Content
+            SelectContent::new(vec![
+                // Handler for Content::Bytes
+                (Content::Bytes, Box::new(SelectCot::new(vec![
+                    // Handling incomong messages with `Cot::Act` by field `cmd`
+                    (Cot::Act, Box::new(SelectAct::new(vec![
+                        // Handling incomong commands
+                        // ...
+                    ]))),
+                    // Handling incomong messages with Cot::Req by field `req`
+                    (Cot::Req, Box::new(SelectReq::new(vec![
+                        // Handling incomong requests
+                        // ...
+                    ]))),
+                ]))),
+                // Handler for Content::Empty
+                (Content::Empty, Box::new(SelectCot::new(vec![
+                    // Handling incomong messages with `Cot::Act` by field `cmd`
+                    (Cot::Act, Box::new(SelectAct::new(vec![
+                        // Handling incomong commands
+                        // ...
+                    ]))),
+                    // Handling incomong messages with Cot::Req by field `req`
+                    (Cot::Req, Box::new(SelectReq::new(vec![
+                        // Handling incomong requests
+                        // ...
+                    ]))),
+                ]))),
+                // Handler for Content::Json
+                (Content::Json, Box::new(SelectCot::new(vec![
+                    // Handling incomong messages with `Cot::Act` by field `cmd`
+                    (Cot::Act, Box::new(SelectAct::new(
+                        vec![
+                            // Handling incomong command `DeviceStream`
+                            (QueryId::DeviceStream, Box::new(DevStream::new(
+                                dbg,
+                                conf.server.dev_stream.clone(),
+                                tp.scheduler(),
+                            ))),
+                        ]
+                    ))),
+                    // Handling incomong messages with Cot::Req by field `req`
+                (Cot::Req, Box::new(SelectReq::new(vec![
+                        // Handling incomong request `DeviceInfo`
+                        (QueryId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
+                        // Handling incomong request `DeviceDoc`
+                        (QueryId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
+                    ]))),
+                ]))),
+            ])
+        )}
+    );
     log::debug!("main | Calculations...");
     let ctx = 
   /*  

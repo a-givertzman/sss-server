@@ -5,7 +5,7 @@ use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     ContextWrite,
     algorithm::context::context_access::ContextReadRef,
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
 };
 use sal_core::{dbg::Dbg, error::Error};
