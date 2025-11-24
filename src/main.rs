@@ -12,7 +12,7 @@ mod tests;
 use algorithm::entities::Position;
 use algorithm::eval::*;
 use app::app::App;
-use conf::conf::Conf;
+use conf::Conf;
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use infrostructure::ApiClient;
 use kernel::{
@@ -22,7 +22,7 @@ use kernel::{
 //use prelude::*;
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
-use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc}, server::{Content, Cot, QueryId, SelectAct, SelectContent, SelectCot, SelectDevInfo, SelectReq, Server}};
+use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
 use crate::algorithm::entities::{
     Bounds, model_cached::{self},
 };
@@ -176,7 +176,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // Handling incomong command `DeviceStream`
                             (QueryId::DeviceStream, Box::new(DevStream::new(
                                 dbg,
-                                conf.server.dev_stream.clone(),
+                                DevStreamConf { devices: vec![("Dev1".into(), DevConf {}), ("Dev2".into(), DevConf {})] },
                                 tp.scheduler(),
                             ))),
                         ]

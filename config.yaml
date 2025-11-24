@@ -12,3 +12,9 @@ api:
     params:
         ship_id: 2
         project_id: NULL
+#
+# Server configuration
+server:
+    address: 0.0.0.0:3838
+    connection:
+        timeout: 100 ms  # ms
