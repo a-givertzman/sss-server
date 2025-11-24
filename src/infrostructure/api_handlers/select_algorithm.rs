@@ -1,7 +1,11 @@
 use std::{fmt::Debug, sync::{Arc, atomic::AtomicBool}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::Handles, thread_pool::Scheduler};
-use crate::{conf::AlgorithmConf, kernel::{Eval, EvalEx, sync::Link, types::eval_result::EvalResult}, server::{self, AlgorithmQuery, AlgorithmReply, Event, Query, Reply, Request, extract}};
+use crate::{
+    conf::AlgorithmConf,
+    kernel::{Eval, EvalEx, sync::Link, types::eval_result::EvalResult},
+    server::{self, AlgorithmQuery, AlgorithmReply, Event, Query, Reply, Request, extract},
+};
 
 ///
 /// Evaluates entair ship calculations in the separate thread
