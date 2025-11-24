@@ -1161,20 +1161,14 @@ impl ModelCached {
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
                         let l = {
-                            let [_, yg, zg] = cg.values();
-                            let [_, yc, zc] = disp_result.volume_center.values();
-                            if heel.abs() > f64::EPSILON {
-                                let ctg_phy = 1.0 / heel.to_radians().tan();
-                                let sqrt_v = (1. + ctg_phy.powi(2)).sqrt();
-                                let res = (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt();
-                                println!("{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3} {:.3};", 
-                                    heel, yg, yc, ctg_phy, zg, zc, sqrt_v, res);
-                                res
-                            } else {
-                                let res = yg - yc;
-                                println!("0 {:.3} {:.3} {:.3};", yg, yc, res, );
-                                res
-                            }
+                            let [_, tcg, vcg] = cg.values();
+                            let [_, tcb, vcb] = disp_result.volume_center.values();
+                            let sin_phy = heel.to_radians().sin();
+                            let cos_phy = heel.to_radians().cos();
+                            let lv = tcb*cos_phy + vcb*sin_phy;
+                            let ld = tcg*cos_phy + vcg*sin_phy;                         
+                            // TODO let delta_l =... поправка от наклона воды
+                            let l = lv - ld;// - delta_l;
                         };
                         dso.push((heel, l));
                         let current_draught = |p: &Position| {
