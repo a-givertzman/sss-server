@@ -1,15 +1,17 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::{Arc, atomic::AtomicBool}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::Scheduler;
+use sal_sync::{sync::Handles, thread_pool::Scheduler};
 use crate::{conf::AlgorithmConf, kernel::{Eval, EvalEx, sync::Link, types::eval_result::EvalResult}, server::{self, AlgorithmQuery, AlgorithmReply, Query, Reply, Request, extract}};
 
 ///
 /// Evaluates entair ship calculations in the separate thread
 pub struct SelectAlgorithm {
-    dbg: Dbg,
     conf: AlgorithmConf,
     scheduler: Scheduler,
+    handles: Handles<()>,
     ctx: Box<dyn Eval<AlgorithmQuery, EvalResult> + Send + Sync>,
+    exit: Arc<AtomicBool>,
+    dbg: Dbg,
 }
 //
 //
@@ -22,11 +24,14 @@ impl SelectAlgorithm {
         scheduler: Scheduler,
         ctx: impl Eval<AlgorithmQuery, EvalResult> + Send + Sync + 'static,
     ) -> Self {
+        let dbg = Dbg::new(parent, "SelectAlgorithm");
         Self {
-            dbg: Dbg::new(parent, "SelectAlgorithm"),
             conf,
             scheduler,
+            handles: Handles::new(&dbg),
             ctx: Box::new(ctx),
+            exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
 }
@@ -43,11 +48,23 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         // let param2 = query.param2;
         //
         // Generate and return reply to the request
-        match self.ctx.eval(query.clone()) {
-            Ok(ctx) => {
-                Ok(Some(req.reply(Reply::Algorithm(AlgorithmReply {}))))
+        let h = self.scheduler.spawn(move || {
+            match self.ctx.eval(query.clone()) {
+                Ok(ctx) => {
+                    let response = req.reply(Reply::Algorithm(AlgorithmReply {}));
+                }
+                Err(err) => {
+                    let response = req.reply_err(error.pass_with("Calculations failed", err));
+                }
             }
-            Err(_) => todo!(),
+            Ok(())
+        }).map_err(|err| error.pass_with("Can't spawn thread", err));
+        match h {
+            Ok(handle) => {
+                self.handles.push(handle);
+                Ok(None)
+            }
+            Err(err) => Err(err),
         }
     }
     ///
