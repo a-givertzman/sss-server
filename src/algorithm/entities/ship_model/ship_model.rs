@@ -15,11 +15,7 @@ use crate::infrostructure::ApiClient;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::collections::HashMap;
-use std::{
-    fmt::Debug,
-    sync::Arc,
-    time::Duration,
-};
+use std::{fmt::Debug, sync::Arc};
 ///
 ///
 pub struct ShipModel {
