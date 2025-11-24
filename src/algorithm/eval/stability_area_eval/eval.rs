@@ -1,4 +1,6 @@
 use crate::StabilityAreaCtx;
+use crate::algorithm::eval::parameters::ParameterID;
+use crate::prelude::ContextParamsRead;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
@@ -64,13 +66,15 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                     Some(data) => data,
                     None => return Err(error.err("Read bounds error: no data!")),
                 };
+                let draught = ctx.read_params(ParameterID::DraughtMid);
                 let StabilityArea {
                     area_windage,
                     area_windage_z,
                     area_horisontal,
                     area_horisontal_z,                  
                     area_volume_z,
-                } = match self.model.read().stability_area() {
+                    delta_area_windage,
+                } = match self.model.read().stability_area(draught) {
                     Ok(data) => data,
                     Err(err) => {
                         return Err(error.pass_with("model.stability_area", err));
@@ -93,7 +97,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 // Перебираем поверхность парусности с шагом, проходим по грузам и
                 // берем площадь как диапазон между максимальными ограничениями всех грузов на этом шаге.
                 let mut area_v = area_windage; // Площадь парусности корпуса
-                let mut moment_v = moment_windage;// Момент парусности корпуса
+                let mut moment_v = area_windage*area_windage_z;// Момент парусности корпуса
                 // Границы грузов
                 let min_x = unit
                     .iter()
@@ -118,7 +122,7 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 // Перебираем шпации и ищем площадь попавшую в текущую шпацию
                 for (_i, bound_x) in bounds.iter().enumerate() {
                     let mut current_area = 0.;
-                    let mut current_moment = Moment::zero();
+                    let mut current_moment = 0.;
                     // Пересечение шпации и диапазона грузов
                     let bound_x = match bound_x.intersect(&units_bound) {
                         Ok(bound) => bound,
@@ -142,31 +146,28 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                             .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
                         // Прибавляем к площади прямоугольник площади грузов
                         if let (Some(min_z), Some(max_z)) = (min_z, max_z) {
-                            let x = bound_x.center().unwrap_or(0.);
+                          //  let x = bound_x.center().unwrap_or(0.);
                             let z = min_z;
                             let dx = bound_x.length().unwrap_or(0.);
                             let dz = max_z - min_z;
                             let unit_area = dx * dz;
                             current_area += unit_area;
-                            current_moment += Moment::from_pos(
-                                Position::new(x + dx / 2., 0., z + dz / 2.),
-                                unit_area,
-                            );
+                            current_moment += (z + dz / 2.)*unit_area;
                         }
                     }
                     area_v += current_area;
                     moment_v += current_moment;
                 }
                 // Горизонтальная площадь поверхностей корпуса
-                let mut moment_h = moment_horisontal;
+                let mut moment_h = area_horisontal*area_horisontal_z;
                 // Момент горизонтальной площади обледенения палубного груза - леса
-                let mut moment_timber_h = Moment::zero();
+                let mut moment_timber_h = 0.;
                 // Изменение момента горизонтальной площади обледенения палубного груза - леса
                 // относительно палубы
-                let mut delta_moment_timber_h = Moment::zero();
+                let mut delta_moment_timber_h = 0.;
                 for bound_x in bounds.iter() {
-                    let mut current_moment = Moment::zero();
-                    let mut current_delta_moment = Moment::zero();
+                    let mut current_moment = 0.;
+                    let mut current_delta_moment = 0.;
                     for u in &timber_unit {
                         let current_bound_x = bound_x
                             .intersect(&icing_timber_bound_x)
@@ -175,8 +176,8 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                             Ok((_, full_moment, delta_moment)) => {
                                 // let x = current_bound_x.center().unwrap_or(0.);
                                 // let z = u.centre_of_icing_area.unwrap_or(Position::zero()).z();
-                                current_moment += full_moment;
-                                current_delta_moment += delta_moment;
+                                current_moment += full_moment.z();
+                                current_delta_moment += delta_moment.z();
                             }
                             Err(err) => {
                                 return Err(error.pass_with("Read unit horizontal_area error", err));
