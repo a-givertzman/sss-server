@@ -8,14 +8,11 @@ mod prelude;
 #[cfg(test)]
 mod tests;
 
-use algorithm::entities::{Position, Position2d};
-
+use algorithm::entities::Position;
 use algorithm::eval::*;
-
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use env_logger::Logger;
 use infrostructure::api::client::api_client::ApiClient;
 use kernel::{
     eval::Eval,
@@ -23,28 +20,29 @@ use kernel::{
     types::{Arc, RwLock},
 };
 //use prelude::*;
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{
-    Bounds, Moment,
-    model_cached::{self, DisplacementShape, Draught},
+    Bounds, model_cached::{self},
 };
 use crate::prelude::{Context, Initial, InitialCtx};
-use std::rc::Rc;
-use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _log2 = log2::open("log.txt")
-        .level(Logger::from_default_env().filter().as_str())
-        .size(5 * 1024 * 1024)
-        .rotate(10)
-        .tee(false)
-        .module(true)
-        .start();
+    // let _log2 = log2::open("log.txt")
+    //     .level(Logger::from_default_env().filter().as_str())
+    //     .size(5 * 1024 * 1024)
+    //     .rotate(10)
+    //     .tee(false)
+    //     .module(true)
+    //     .start();
 
-    //   DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new()
+        .filter(LogLevel::Debug)
+        .module("api_tools", LogLevel::Debug)
+        .module("sal_sync::thread_pool", LogLevel::Info)
+        .init();
     
     let dbg = Dbg::own("main");
     let path = "config.yaml";

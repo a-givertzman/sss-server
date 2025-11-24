@@ -7,28 +7,25 @@ edition = "2024"
 #
 # Logging
 log = "~0.4"
-log2 = "0.2.2"
+# log2 = "0.2.2"
 env_logger = "~0.11"
 #
 # Internal deps
 testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.1.0" }
-api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.1" }
-#glam = { version = "0.24", features = ["bytemuck"] }
-#opencascade = { path = "../opencascade-rs/crates/opencascade/" }
-nalgebra = "~0.34"
-obj = "0.10.2"
-stl_io = "0.8.5"
+api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.2" }
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
+#
+# 3D Libs
+obj = "~0.10"
+stl_io = "~0.10"
 #parry3d-f64 = "~0.25"
 #parry2d-f64 = "~0.25"
 #parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } 
 #parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } 
 parry3d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
 parry2d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
-
-
-sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
 #
 # Time
 chrono = "~0.4"
@@ -49,6 +46,8 @@ dashmap = "~6.1"
 #
 # Math
 splines = "~5.0"
+nalgebra = "~0.34"
+# glam = { version = "0.24", features = ["bytemuck"] }
 #
 # Helpful macros for working with enums and strings
 strum = "~0.27"
