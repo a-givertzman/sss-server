@@ -61,12 +61,12 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         let error1 = error.clone();
         if in_progress.load(Ordering::Acquire) {
             ctx.exit();
-            let response = req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Canceled }));
+            let response = req.reply_inf(Reply::Calculus(CalculusReply { status: CalculusStatus::Canceled }));
             if let Err(err) = link.send(Event::from(&dbg, response)) {
                 log::warn!("{dbg}.eval | Can't send reply: {:?}", err);
             }
         }
-        let response = req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Ongoing }));
+        let response = req.reply_inf(Reply::Calculus(CalculusReply { status: CalculusStatus::Ongoing }));
         if let Err(err) = link.send(Event::from(&dbg, response)) {
             log::warn!("{dbg}.eval | Can't send reply: {:?}", err);
         }

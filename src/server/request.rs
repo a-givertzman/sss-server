@@ -37,7 +37,7 @@ impl<QueryId: Debug + Copy> Request<QueryId> {
         }
     }
     ///
-    /// Returns Ok [Reply] to current [Request]
+    /// Returns [Reply] to current [Request] with [Cot]::Con
     pub fn reply(&self, reply: Reply) -> Response<QueryId> {
         Response {
             event_id: self.event_id,
@@ -47,7 +47,17 @@ impl<QueryId: Debug + Copy> Request<QueryId> {
         }
     }
     ///
-    /// Returns Error [Reply] to current [Request]
+    /// Returns [Reply] to current [Request] with [Cot]::Inf
+    pub fn reply_inf(&self, reply: Reply) -> Response<QueryId> {
+        Response {
+            event_id: self.event_id,
+            query_id: self.query_id,
+            cot: Cot::Inf,
+            reply,
+        }
+    }
+    ///
+    /// Returns error [Reply] to current [Request]
     pub fn reply_err(&self, err: impl Into<String>) -> Response<QueryId> {
         Response {
             event_id: self.event_id,

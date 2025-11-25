@@ -60,19 +60,20 @@ impl Hub {
         let links = self.links.clone();
         let timeout = self.timeout;
         let exit = self.exit.clone();
-        log::debug!("{}.listen | Starting...", dbg);
+        log::debug!("{dbg}.listen | Starting...");
         let handle = scheduler.spawn(move|| {
-            'main: loop {
+            while !exit.load(Ordering::Acquire) {
+                log::debug!("{dbg}.listen | exit: {}", exit.load(Ordering::Acquire));
                 for entry in links.iter() {
                     let (id, link) = entry.pair();
                     match link.recv_timeout(timeout) {
                         Ok(event) => {
                             match event {
                                 Some(event) => {
-                                    log::trace!("{}.listen | Link({id}) Received event: {:#?}", dbg, event);
+                                    log::trace!("{dbg}.listen | Link({id}) Received event: {:#?}", event);
                                     match (op)(event, link.sender()) {
                                         Some(reply) => {
-                                            log::debug!("{}.listen | Link({id}) Reply event: {:#?}", dbg, reply);
+                                            log::debug!("{dbg}.listen | Link({id}) Reply event: {:#?}", reply);
                                             if let Err(err) = link.send(reply) {
                                                 let err = error.pass_with(format!("Link({id}) Send reply error"), err.to_string());
                                                 log::error!("{}", err);
@@ -91,16 +92,16 @@ impl Hub {
                         }
                     }
                 }
-                if exit.load(Ordering::SeqCst) {
-                    break 'main;
-                }
             }
-            log::debug!("{}.listen | Exit", dbg);
+            for link in links.iter() {
+                link.exit();
+            }
+            log::debug!("{dbg}.listen | Exit");
             Ok(())
         });
         let dbg = self.name.join();
         let error = Error::new(&self.name, "listen");
-        log::debug!("{}.listen | Starting - Ok", dbg);
+        log::debug!("{dbg}.listen | Starting - Ok");
         handle.map_err(|err| error.pass(err.to_string()))
     }
     ///

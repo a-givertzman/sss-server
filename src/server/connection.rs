@@ -192,7 +192,7 @@ impl Connection {
                     }
                 }
             }
-            log::warn!("{dbg}.run | Exit");
+            log::debug!("{dbg}.run | Exit");
             Ok(())
         })?;
         self.handles.push(handle);

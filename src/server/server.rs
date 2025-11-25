@@ -51,7 +51,7 @@ impl Server {
         let listeners = self.listener.clone();
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
-            'main: loop {
+            'main: while !exit.load(Ordering::Acquire) {
                 match TcpListener::bind(conf.server.address.clone()) {
                     Ok(listener) => {
                         let listener= Arc::new(listener);
@@ -91,12 +91,6 @@ impl Server {
                     Err(err) => log::warn!("{dbg}.run | Bind TcpServer error: {:?}", err),
                 }
                 std::thread::sleep(Duration::from_secs(1));
-                if exit.load(Ordering::Acquire) {
-                    for con in connections.iter() {
-                        con.value().exit();
-                    }
-                    break 'main;
-                }
             }
             Ok(())
         }).map_err(|err| Error::new(&self.dbg, "run").pass(err))?;
@@ -108,8 +102,9 @@ impl Server {
     #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
         for conn in self.connections.iter() {
+            log::debug!("{}.wait | Wait for Connection '{}'...", self.dbg, conn.key());
             if let Err(err) = conn.wait() {
-                log::warn!("{}.wait | Wait for TcpServer '{}' error: {:?}", self.dbg, conn.key(), err);
+                log::warn!("{}.wait | Wait for Connection '{}' error: {:?}", self.dbg, conn.key(), err);
             }
         }
         self.handles.wait()

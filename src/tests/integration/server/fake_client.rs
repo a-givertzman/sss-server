@@ -28,18 +28,18 @@ impl FakeClient {
     }
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
-        log::warn!("{dbg}.run | Start");
+        log::debug!("{dbg}.run | Start");
         let addr = self.addr.clone();
         let test_data = self.test_data.take().unwrap();
         let exit = self.exit.clone();
         let handle = std::thread::spawn(move || {
             let mut message = Connection::tcp_message(&dbg);
-            'main: loop {
-                log::warn!("{dbg}.run | Connecting to {addr}...");
+            'main: while !exit.load(Ordering::Acquire) {
+                log::debug!("{dbg}.run | Connecting to {addr}...");
                 match TcpStream::connect(&addr) {
                     Ok(mut stream) => {
-                        log::warn!("{dbg}.run | Connecting to {addr} - Ok");
-                        log::warn!("{dbg}.run | Handling {} Test events", test_data.len());
+                        log::debug!("{dbg}.run | Connecting to {addr} - Ok");
+                        log::debug!("{dbg}.run | Handling {} Test events", test_data.len());
                         for (step, test_case) in &test_data {
                             match test_case {
                                 TestCase::Request(request) => {
@@ -92,11 +92,8 @@ impl FakeClient {
                     }
                     Err(err) => log::warn!("{dbg}.run | Can't connect to '{addr}', error: {:?}", err),
                 }
-                if exit.load(Ordering::Acquire) {
-                    break 'main;
-                }
             }
-            log::warn!("{dbg}.run | Exit");
+            log::debug!("{dbg}.run | Exit");
         });
         self.handles.push(handle);
         Ok(())
