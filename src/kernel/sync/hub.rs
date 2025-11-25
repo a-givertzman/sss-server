@@ -1,5 +1,6 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use bincode::{Decode, Encode};
+use dashmap::DashMap;
 use sal_core::error::Error;
 use sal_sync::{services::entity::{Name, PointTxId}, thread_pool::{JoinHandle, Scheduler}};
 use super::{link::Link, LinkSend};
@@ -11,7 +12,7 @@ use super::{link::Link, LinkSend};
 pub struct Hub {
     txid: usize,
     name: Name,
-    links: Arc<papaya::HashMap<String, Link>>,
+    links: Arc<DashMap<String, Link>>,
     timeout: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -28,7 +29,7 @@ impl Hub {
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
-            links: Arc::new(papaya::HashMap::new()),
+            links: Arc::new(DashMap::new()),
             timeout: Duration::from_micros(100),
             exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }
@@ -38,7 +39,7 @@ impl Hub {
     pub fn link(&self) -> Link {
         let (local, remote) = Link::split(&format!("{}:{}", self.name, self.links.len()));
         let key = remote.name().join();
-        self.links.pin().insert(key, local);
+        self.links.insert(key, local);
         remote
     }
     ///
@@ -62,9 +63,8 @@ impl Hub {
         log::debug!("{}.listen | Starting...", dbg);
         let handle = scheduler.spawn(move|| {
             'main: loop {
-                let links_pin = links.pin();
-                let links_iter = links_pin.iter();
-                for (id, link) in links_iter {
+                for entry in links.iter() {
+                    let (id, link) = entry.pair();
                     match link.recv_timeout(timeout) {
                         Ok(event) => {
                             match event {
@@ -84,9 +84,10 @@ impl Hub {
                                 None => {}
                             }
                         }
-                        Err(err) => {
-                            let err = error.pass_with(format!("Link({id}) Recv error"), err.to_string());
-                            log::warn!("{}", err);
+                        Err(_err) => {
+                            links.remove(id);
+                            // let err = error.pass_with(format!("Link({id}) Recv error"), err.to_string());
+                            // log::warn!("{}", err);
                         }
                     }
                 }
@@ -106,8 +107,7 @@ impl Hub {
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-        let links = self.links.pin();
-        for (_, link) in links.iter() {
+        for link in self.links.iter() {
             link.exit();
         }
     }

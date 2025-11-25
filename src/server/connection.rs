@@ -176,7 +176,7 @@ impl Connection {
                                 }
                             }
                             Err(err) => {
-                                log::warn!("{dbg}.run | parse error: {:?}", err)
+                                log::trace!("{dbg}.run | parse error: {:?}", err)
                             }
                         }
                     }

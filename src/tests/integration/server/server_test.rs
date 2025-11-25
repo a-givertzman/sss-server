@@ -12,7 +12,7 @@ use crate::{
     infrostructure::{SelectCalculus, SelectDevDoc, SelectDevInfo},
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
-    server::{CalculusQuery, Connection, Content, Cot, Event, Field, FieldId, Query, QueryId, Request, SelectAct, SelectContent, SelectCot, SelectReq, Server},
+    server::{CalculusQuery, Connection, Content, Cot, Event, Field, FieldId, Query, QueryId, Request, SelectAct, SelectContent, SelectCot, SelectReq, Server}, tests::integration::server::fake_client::FakeClient,
 };
 
 ///
@@ -33,13 +33,16 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn query_calculus() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new()
+        .filter(LogLevel::Debug)
+        .module("sal_sync::thread_pool", LogLevel::Info)
+        .init();
     init_once();
     init_each();
     log::debug!("");
     let dbg = Dbg::own("query_calculus");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
     let tp = ThreadPool::new(&dbg, Some(4));
     let conf: Conf = serde_yaml::from_str(r#"
@@ -180,81 +183,3 @@ impl Eval<CalculusQuery, EvalResult> for FakeCalculus {
 //
 //
 unsafe impl Send for FakeCalculus {}
-///
-/// Fake client for testing [Server]
-struct FakeClient {
-    addr: String,
-    exit: Arc<AtomicBool>,
-    dbg: Dbg,
-}
-impl FakeClient {
-    pub fn new(parent: impl Into<String>, addr: impl Into<String>,) -> Self {
-        let dbg = Dbg::new(parent, "FakeClient");
-        Self {
-            addr: addr.into(),
-            exit: Arc::new(AtomicBool::new(false)),
-            dbg,
-        }
-    }
-    pub fn run(&self) -> Result<(), Error> {
-        let dbg = self.dbg.clone();
-        let addr = self.addr.clone();
-        let exit = self.exit.clone();
-        let event_id = 0;
-        std::thread::spawn(move || {
-            let mut message = Connection::tcp_message(&dbg);
-            loop {
-                match TcpStream::connect(&addr) {
-                    Ok(mut stream) => {
-                        let query_id = QueryId::Calculus;
-                        let cot = Cot::Act;
-                        let content = Content::Json;
-                        let query = Query::Calculus(CalculusQuery { ship_id: 111, project_id: "TestProj".into() });
-                        // let request = Request::new(event_id, query_id, cot, content, query);
-                        let bytes = serde_json::to_vec(&query).unwrap();
-                        let event = Event::new(event_id, query_id, cot, content, bytes);
-                        let bytes = message.build(&[
-                            Field::Const,
-                            Field::U32(event.id),
-                            Field::Byte(event.content.into()),
-                            Field::Byte(event.cot as u8),
-                            Field::U32(event.query_id as u32),
-                            Field::U32(event.bytes.len() as u32),
-                            Field::Bytes(event.bytes),
-                        ]);
-                        match stream.write_all(&bytes) {
-                            Ok(_) => {
-                                let mut buf = vec![0; 1024 * 4];
-                                match stream.read(&mut buf) {
-                                    Ok(_) => {
-                                        match message.parse(buf) {
-                                            Ok(((((((_, FieldId(event_id)), content), cot), query_id), _len), bytes)) => {
-                                                let response = Event::new(event_id, query_id, cot, content, bytes);
-                                                log::debug!("{dbg}.run | Response received'{addr}', error: {:#?}", response);
-
-                                            }
-                                            Err(err) => log::trace!("{dbg}.run | Can't parse message, error: {:?}", err),
-                                        }
-                                    }
-                                    Err(err) => log::trace!("{dbg}.run | Can't read socket, error: {:?}", err),
-                                }
-                            }
-                            Err(err) => log::warn!("{dbg}.run | Can't write to socket '{addr}', error: {:?}", err),
-                        }
-                    }
-                    Err(err) => log::warn!("{dbg}.run | Can't connect to '{addr}', error: {:?}", err),
-                }
-                if exit.load(Ordering::Acquire) {
-                    break;
-                }
-            }
-        });
-        Ok(())
-    }
-    ///
-    /// Sends exit signal to main tread
-    #[allow(unused)]
-    pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
-    }
-}
