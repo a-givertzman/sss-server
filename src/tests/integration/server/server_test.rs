@@ -1,4 +1,4 @@
-use std::{io::Write, net::TcpStream, sync::{Arc, atomic::{AtomicBool, Ordering}}};
+use std::{io::{Read, Write}, net::TcpStream, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 #[cfg(test)]
 
 use std::{sync::Once, time::{Duration, Instant}};
@@ -12,7 +12,7 @@ use crate::{
     infrostructure::{SelectCalculus, SelectDevDoc, SelectDevInfo},
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
-    server::{CalculusQuery, Connection, Content, Cot, Event, Field, Query, QueryId, Request, SelectAct, SelectContent, SelectCot, SelectReq, Server},
+    server::{CalculusQuery, Connection, Content, Cot, Event, Field, FieldId, Query, QueryId, Request, SelectAct, SelectContent, SelectCot, SelectReq, Server},
 };
 
 ///
@@ -220,8 +220,24 @@ impl FakeClient {
                             Field::U32(event.bytes.len() as u32),
                             Field::Bytes(event.bytes),
                         ]);
-                        if let Err(err) = stream.write_all(&bytes) {
-                            log::warn!("{dbg}.run | Can't write to socket '{addr}', error: {:?}", err);
+                        match stream.write_all(&bytes) {
+                            Ok(_) => {
+                                let mut buf = vec![0; 1024 * 4];
+                                match stream.read(&mut buf) {
+                                    Ok(_) => {
+                                        match message.parse(buf) {
+                                            Ok(((((((_, FieldId(event_id)), content), cot), query_id), _len), bytes)) => {
+                                                let response = Event::new(event_id, query_id, cot, content, bytes);
+                                                log::debug!("{dbg}.run | Response received'{addr}', error: {:#?}", response);
+
+                                            }
+                                            Err(err) => log::trace!("{dbg}.run | Can't parse message, error: {:?}", err),
+                                        }
+                                    }
+                                    Err(err) => log::trace!("{dbg}.run | Can't read socket, error: {:?}", err),
+                                }
+                            }
+                            Err(err) => log::warn!("{dbg}.run | Can't write to socket '{addr}', error: {:?}", err),
                         }
                     }
                     Err(err) => log::warn!("{dbg}.run | Can't connect to '{addr}', error: {:?}", err),
