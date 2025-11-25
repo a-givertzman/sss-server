@@ -119,6 +119,8 @@ fn query_calculus() {
         )}
     );
     server.run().unwrap();
+    let fake_client = FakeClient::new(&dbg, "0.0.0.0:3838");
+    fake_client.run().unwrap();
     server.wait().unwrap();
     // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     test_duration.exit();
