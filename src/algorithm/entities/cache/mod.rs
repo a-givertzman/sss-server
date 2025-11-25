@@ -129,6 +129,7 @@ impl Cache<f64> {
     /// value is out of range
     /// value index is out of key index range - TODO описать подробнее
     pub fn get(&self, query: &[f64]) -> Vec<f64> {
+        let mut query = Vec::from(query);
         let data = self
             .table
             .get()
@@ -139,21 +140,30 @@ impl Cache<f64> {
             .unwrap_or_else(|| panic!("{}.{} | Error: no keys!", self.dbg, "get"));
         // пары значений для каждого индекса, между которыми попадает ключ
         let pairs: Vec<_> = query
-            .iter()
+            .iter_mut()
             .enumerate()
             .map(|(key_i, key)| {
                 let keys = &keys[key_i];
                 if keys.contains(key) {
                     // ключ совпадает с одним из значений, возвращаем его
                     return vec![*key];
-                }
-                if keys.first().unwrap() > key || keys.last().unwrap() < key {
+                }                
+                if keys.first().unwrap() > key {
                     // ключ вышел за пределы значений
-                    panic!(
+                    log::error!(
                         "{}: {}",
                         self.dbg,
-                        format!("i:{key_i} key:{key} key is out of range!")
+                        format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
                     );
+                    *key = *keys.first().unwrap();
+                } else if keys.last().unwrap() < key {
+                    // ключ вышел за пределы значений
+                    log::error!(
+                        "{}: {}",
+                        self.dbg,
+                        format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
+                    );
+                    *key = *keys.last().unwrap();
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);

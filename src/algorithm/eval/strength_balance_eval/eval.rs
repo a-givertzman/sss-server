@@ -78,49 +78,6 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .read()
                     .compute_strength(strength_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
-         /*       let bulk = bulk
-                    .iter()
-                    .filter_map(|res| {
-                        bulk_data.get(&res.assignment_id).map(|data| {
-                            super::bulk_result::BulkResult::new(
-                                data.space_id.clone(),
-                                data.assigment_type,
-                                res.mass_values.clone(),
-                            )
-                        })
-                    })
-                    .collect();
-                let liquid = result
-                    .liquid
-                    .iter()
-                    .filter_map(|res| {
-                        liquid_data.get(&res.assignment_id).map(|data| {
-                            super::liquid_result::LiquidResult::new(
-                                data.cargo_id,
-                                data.space_id.clone(),
-                                data.assigment_type,
-                                data.cargo_type,
-                                res.long_moment_of_inertia,
-                                res.trans_moment_of_inertia,
-                                res.mass_values.clone(),
-                            )
-                        })
-                    })
-                    .collect();
-                let gaseous = result
-                    .gaseous
-                    .iter()
-                    .filter_map(|res| {
-                        gaseous_data.get(&res.assignment_id).map(|data| {
-                            super::gaseous_result::GaseousResult::new(
-                                data.cargo_id,
-                                data.space_id.clone(),
-                                data.assigment_type,
-                                res.mass_values.clone(),
-                            )
-                        })
-                    })
-                    .collect();*/
                 //   println!("\n\n Balance displacement mass_sum: {} result\n", result.displacement_distr.iter().sum::<f64>()*1.025);  result.displacement_distr.iter().for_each(|b| print!("{:.3} ", b));
                 ctx.write(result)
             }
