@@ -61,9 +61,8 @@ impl Hub {
         let timeout = self.timeout;
         let exit = self.exit.clone();
         log::debug!("{dbg}.listen | Starting...");
-        let handle = scheduler.spawn(move|| {
+        let handle = scheduler.spawn(move || {
             while !exit.load(Ordering::Acquire) {
-                log::debug!("{dbg}.listen | exit: {}", exit.load(Ordering::Acquire));
                 for entry in links.iter() {
                     let (id, link) = entry.pair();
                     match link.recv_timeout(timeout) {

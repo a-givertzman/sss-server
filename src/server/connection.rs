@@ -146,9 +146,9 @@ impl Connection {
         let stream = self.stream.take().ok_or(error.err("Can't take stream"))?;
         self.set_tcp_timeout(&stream, conf.timeout.to_duration());
         let ctx = self.ctx.take().ok_or(error.err("Can't take ctx"))?;
-        let hub = Arc::new(Hub::new(&dbg, Some(self.exit.clone())));
-        self.send(&stream, hub.clone())?;
         let exit = self.exit.clone();
+        let hub = Arc::new(Hub::new(&dbg, Some(exit.clone())));
+        self.send(&stream, hub.clone())?;
         let handle = self.scheduler.spawn(move || {
             let error = Error::new(&dbg, "run");
             let link = hub.link();
@@ -192,6 +192,7 @@ impl Connection {
                     }
                 }
             }
+            hub.exit();
             log::debug!("{dbg}.run | Exit");
             Ok(())
         })?;
