@@ -170,14 +170,10 @@ impl EvalEx<CalculusQuery, EvalResult> for FakeCalculus {
         log::debug!("{dbg}.eval | query: {:?}", query);
         log::debug!("{dbg}.eval | Calculations...");
         let time = Instant::now();
-        let mut r = 0.0;
+        let mut r = 1.0;
         'main: while time.elapsed().cmp(&self.calc_time).is_le() {
-            for i in 0..10000 {
-                let v = ( ((i as f32 * i as f32) * (i as f32 * i as f32) - (i as f32 * i as f32)) / (i as f32)).sqrt();
-                match i % 2 == 0 {
-                    true => r = r * v,
-                    false => r = r / v,
-                }
+            for i in 1..10000 {
+                r += 1.0 / ((i as f32 * i as f32) * 2.0 - i as f32).sqrt();
                 if exit.load(Ordering::Acquire) {
                     break 'main;
                 }

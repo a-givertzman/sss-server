@@ -64,8 +64,8 @@ impl FakeClient {
                                     'read: loop {
                                         let mut buf = vec![0; 1024 * 4];
                                         match stream.read(&mut buf) {
-                                            Ok(_) => {
-                                                match message.parse(buf) {
+                                            Ok(len) => {
+                                                match message.parse(buf[..len].to_vec()) {
                                                     Ok(((((((_, FieldId(event_id)), content), cot), query_id), _len), bytes)) => {
                                                         let response = Event::new(event_id, query_id, cot, content, bytes);
                                                         log::debug!("{dbg}.run | Step {step} Response received from'{addr}': \n\tid {}, Query {:?}, Content {:?}, Cot {:?}", response.id, response.query_id, response.content, response.cot);

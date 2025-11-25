@@ -155,7 +155,7 @@ impl Connection {
             let mut r_stream = BufReader::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             let mut buf = [0u8; 1024 * 4];
-            'main: loop {
+            while !exit.load(Ordering::Acquire) {
                 match r_stream.read(&mut buf) {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
@@ -183,18 +183,13 @@ impl Connection {
                     Err(err) => {
                         log::warn!("{}.run | TcpStream read error: {:?}", dbg, err);
                         if let IsConnected::Closed(_) = Self::parse_err(&dbg, err) {
+                            exit.store(true, Ordering::Release);
                             if let Err(err) = Self::close(&dbg, &stream) {
                                 log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
                             }
-                            exit.store(true, Ordering::Release);
                             ctx.exit();
-                            break 'main;
                         }
                     }
-                }
-                if exit.load(Ordering::Acquire) {
-                    ctx.exit();
-                    break 'main;
                 }
             }
             log::warn!("{dbg}.run | Exit");
