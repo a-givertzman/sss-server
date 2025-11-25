@@ -2,31 +2,31 @@ use std::{fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::Handles, thread_pool::Scheduler};
 use crate::{
-    conf::AlgorithmConf,
+    conf::CalculusConf,
     kernel::{Eval, EvalEx, sync::Link, types::eval_result::EvalResult},
-    server::{self, AlgorithmQuery, AlgorithmReply, Event, Query, Reply, Request, extract},
+    server::{self, CalculusQuery, CalculusReply, CalculusStatus, Event, Query, Reply, Request, extract},
 };
 
 ///
 /// Evaluates entair ship calculations in the separate thread
-pub struct SelectAlgorithm {
-    conf: AlgorithmConf,
+pub struct SelectCalculus {
+    conf: CalculusConf,
     scheduler: Scheduler,
     handles: Handles<()>,
-    ctx: Arc<Box<dyn Eval<AlgorithmQuery, EvalResult> + Send + Sync>>,
+    ctx: Arc<Box<dyn Eval<CalculusQuery, EvalResult> + Send + Sync>>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
 //
 //
-impl SelectAlgorithm {
+impl SelectCalculus {
     ///
     /// Returns [SelectAlgorithm] new instance
     pub fn new(
         parent: impl Into<String>,
-        conf: AlgorithmConf,
+        conf: CalculusConf,
         scheduler: Scheduler,
-        ctx: impl Eval<AlgorithmQuery, EvalResult> + Send + Sync + 'static,
+        ctx: impl Eval<CalculusQuery, EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "SelectAlgorithm");
         Self {
@@ -41,7 +41,7 @@ impl SelectAlgorithm {
 }
 //
 //
-impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), server::EvalResult<K>> for SelectAlgorithm {
+impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), server::EvalResult<K>> for SelectCalculus {
     fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> server::EvalResult<K> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
@@ -55,6 +55,10 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         //
         let ctx = self.ctx.clone();
         let error1 = error.clone();
+        let response = req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Ongoing }));
+        if let Err(err) = link.send(Event::from(&dbg, response)) {
+            log::warn!("{dbg}.eval | Can't send reply: {:?}", err);
+        }
         let h = self.scheduler.spawn(move || {
             //
             // Generate and return reply to the request
@@ -64,7 +68,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
                     // Do required operations with the Context
                     //
                     // Then send reply
-                    req.reply(Reply::Algorithm(AlgorithmReply {}))
+                    req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Done }))
                 }
                 Err(err) => {
                     req.reply_err(error1.pass_with("Calculations failed", err))
@@ -92,4 +96,4 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
 }
 //
 //
-unsafe impl Send for SelectAlgorithm {}
+unsafe impl Send for SelectCalculus {}

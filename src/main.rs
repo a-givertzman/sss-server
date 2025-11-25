@@ -22,8 +22,8 @@ use kernel::{
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
 use crate::{
-    algorithm::{Algorithm, entities::ship_model::ship_model::ShipModel},
-    infrostructure::{DevStream, SelectAlgorithm, SelectDevDoc, SelectDevInfo},
+    algorithm::{Calculus, entities::ship_model::ship_model::ShipModel},
+    infrostructure::{DevStream, SelectCalculus, SelectDevDoc, SelectDevInfo},
     server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server},
 };
 use crate::algorithm::entities::{
@@ -114,7 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         model_cached,
         api_client.clone(),
     );
-    let bounds = Bounds::from_array(&Algorithm::PHYSICAL_FRAMES, 0.).unwrap();
+    let bounds = Bounds::from_array(&Calculus::PHYSICAL_FRAMES, 0.).unwrap();
     ship_model.init().unwrap();
     ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
@@ -157,11 +157,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Handling incomong messages with `Cot::Act` by field `cmd`
                     (Cot::Act, Box::new(SelectAct::new(vec![
                         // Handling incomong command `DeviceStream`
-                        (QueryId::Algorithm, Box::new(SelectAlgorithm::new(
+                        (QueryId::Algorithm, Box::new(SelectCalculus::new(
                             dbg,
                             conf.algorithm.clone(),
                             tp.scheduler(),
-                            Algorithm::new(dbg, conf.clone(), api_client.clone(), ship_model.clone()),
+                            Calculus::new(dbg, conf.clone(), api_client.clone(), ship_model.clone()),
                         ))),
                         // Handling incomong command `DeviceStream`
                         (QueryId::DeviceStream, Box::new(DevStream::new(

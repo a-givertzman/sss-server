@@ -3,6 +3,6 @@ pub mod entities;
 pub mod initial;
 pub mod eval;
 
-mod algorithm;
+mod calculus;
 
-pub(crate) use algorithm::*;
+pub(crate) use calculus::*;

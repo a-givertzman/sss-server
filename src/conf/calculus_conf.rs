@@ -4,7 +4,7 @@ use serde::Deserialize;
 ///
 /// Configuration parameters for the calculations
 #[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct AlgorithmConf {
+pub struct CalculusConf {
     /// Maximum time wait calculation, then return error
     pub max_time: ConfDuration,
 }

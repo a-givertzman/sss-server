@@ -1,5 +1,5 @@
 use serde::Serialize;
-use crate::server::{AlgorithmReply, Bytes, Device, DeviceDoc, DeviceInfo};
+use crate::server::{CalculusReply, Bytes, Device, DeviceDoc, DeviceInfo};
 
 ///
 /// Wrapper for all variants of API [Reply]'s
@@ -12,7 +12,7 @@ pub enum Reply {
     Error(String),
     /// Use if no information to be sent
     Bytes(Bytes),
-    Algorithm(AlgorithmReply),
+    Calculus(CalculusReply),
     DeviceStream(Device),
     DeviceInfo(DeviceInfo),
     DeviceDoc(DeviceDoc),

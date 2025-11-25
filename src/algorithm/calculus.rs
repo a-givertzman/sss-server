@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
-use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, eval::*}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::AlgorithmQuery};
+use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, eval::*}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::CalculusQuery};
 
 ///
 /// Evaluates entair ship calculations
-pub struct Algorithm {
+pub struct Calculus {
     dbg: Dbg,
     conf: Conf,
     api_client: Arc<ApiClient>,
@@ -12,7 +12,7 @@ pub struct Algorithm {
 }
 //
 //
-impl Algorithm {
+impl Calculus {
     ///
     /// Returns [Algorithm] new instance
     pub fn new(
@@ -48,8 +48,8 @@ impl Algorithm {
 }
 //
 //
-impl Eval<AlgorithmQuery, EvalResult> for Algorithm {
-    fn eval(&self, query: AlgorithmQuery) -> EvalResult {
+impl Eval<CalculusQuery, EvalResult> for Calculus {
+    fn eval(&self, query: CalculusQuery) -> EvalResult {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
         //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
@@ -206,4 +206,4 @@ impl Eval<AlgorithmQuery, EvalResult> for Algorithm {
 }
 //
 //
-unsafe impl Send for Algorithm {}
+unsafe impl Send for Calculus {}

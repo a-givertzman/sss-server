@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use super::context::Context;
-use crate::algorithm::{eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{context::testing_ctx::TestingCtx, eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -56,6 +56,18 @@ impl ContextWrite<InitialCtx> for Context {
 impl ContextReadRef<InitialCtx> for Context {
     fn read_ref(&self) -> &InitialCtx {
         &self.initial
+    }
+}
+//
+impl ContextWrite<TestingCtx> for Context {
+    fn write(mut self, value: TestingCtx) -> Result<Self, Error> {
+        self.testing = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextReadRef<Option<TestingCtx>> for Context {
+    fn read_ref(&self) -> &Option<TestingCtx> {
+        &self.testing
     }
 }
 //
