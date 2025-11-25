@@ -10,7 +10,7 @@ pub struct Conf {
     #[serde(alias="thread-pool")]
     pub thread_pool: ThreadPoolConf,
     pub server: ServerConf,
-    pub algorithm: CalculusConf,
+    pub calculus: CalculusConf,
 }
 //
 //

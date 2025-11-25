@@ -5,7 +5,7 @@ use sal_core::error::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash, bincode::Encode, bincode::Decode)]
 #[repr(u32)]
 pub enum QueryId {
-    Algorithm    = 16,
+    Calculus     = 16,
     /// TODO; To be deleted, just for example
     DeviceStream = 20,
     /// TODO; To be deleted, just for example
@@ -24,7 +24,7 @@ impl QueryId {
         match bytes {
             [b0, b1, b2, b3] | [b0, b1, b2, b3, ..] => {
                 match u32::from_be_bytes([*b0, *b1, *b2, *b3]) {
-                    val if val == Self::Algorithm as u32 => Ok(Self::Algorithm),
+                    val if val == Self::Calculus as u32 => Ok(Self::Calculus),
                     val if val == Self::DeviceStream as u32 => Ok(Self::DeviceStream),
                     val if val == Self::DeviceInfo as u32   => Ok(Self::DeviceInfo),
                     val if val == Self::DeviceDoc as u32    => Ok(Self::DeviceDoc),

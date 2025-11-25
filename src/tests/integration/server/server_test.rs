@@ -1,3 +1,4 @@
+use std::{io::Write, net::TcpStream, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 #[cfg(test)]
 
 use std::{sync::Once, time::{Duration, Instant}};
@@ -11,7 +12,7 @@ use crate::{
     infrostructure::{SelectCalculus, SelectDevDoc, SelectDevInfo},
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
-    server::{CalculusQuery, Content, Cot, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server},
+    server::{CalculusQuery, Connection, Content, Cot, Event, Field, Query, QueryId, Request, SelectAct, SelectContent, SelectCot, SelectReq, Server},
 };
 
 ///
@@ -56,6 +57,8 @@ fn query_calculus() {
             address: 0.0.0.0:3838
             connection:
                 timeout: 100 ms  # ms
+        calculus:
+            max-time: 3 s
     "#).unwrap();
     let server = Server::new(
         &dbg,
@@ -96,9 +99,9 @@ fn query_calculus() {
                     // Handling incomong messages with `Cot::Act` by field `cmd`
                     (Cot::Act, Box::new(SelectAct::new(vec![
                         // Handling incomong command `DeviceStream`
-                        (QueryId::Algorithm, Box::new(SelectCalculus::new(
+                        (QueryId::Calculus, Box::new(SelectCalculus::new(
                             dbg,
-                            conf.algorithm.clone(),
+                            conf.calculus.clone(),
                             tp.scheduler(),
                             FakeCalculus::new(dbg, Duration::from_millis(10)),
                         ))),
@@ -116,6 +119,7 @@ fn query_calculus() {
         )}
     );
     server.run().unwrap();
+    server.wait().unwrap();
     // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     test_duration.exit();
 }
@@ -174,3 +178,65 @@ impl Eval<CalculusQuery, EvalResult> for FakeCalculus {
 //
 //
 unsafe impl Send for FakeCalculus {}
+///
+/// Fake client for testing [Server]
+struct FakeClient {
+    addr: String,
+    exit: Arc<AtomicBool>,
+    dbg: Dbg,
+}
+impl FakeClient {
+    pub fn new(parent: impl Into<String>, addr: impl Into<String>,) -> Self {
+        let dbg = Dbg::new(parent, "FakeClient");
+        Self {
+            addr: addr.into(),
+            exit: Arc::new(AtomicBool::new(false)),
+            dbg,
+        }
+    }
+    pub fn run(&self) -> Result<(), Error> {
+        let dbg = self.dbg.clone();
+        let addr = self.addr.clone();
+        let exit = self.exit.clone();
+        let event_id = 0;
+        std::thread::spawn(move || {
+            let mut message = Connection::tcp_message(&dbg);
+            loop {
+                match TcpStream::connect(&addr) {
+                    Ok(mut stream) => {
+                        let query_id = QueryId::Calculus;
+                        let cot = Cot::Act;
+                        let content = Content::Json;
+                        let query = Query::Calculus(CalculusQuery { ship_id: 111, project_id: "TestProj".into() });
+                        // let request = Request::new(event_id, query_id, cot, content, query);
+                        let bytes = serde_json::to_vec(&query).unwrap();
+                        let event = Event::new(event_id, query_id, cot, content, bytes);
+                        let bytes = message.build(&[
+                            Field::Const,
+                            Field::U32(event.id),
+                            Field::Byte(event.content.into()),
+                            Field::Byte(event.cot as u8),
+                            Field::U32(event.query_id as u32),
+                            Field::U32(event.bytes.len() as u32),
+                            Field::Bytes(event.bytes),
+                        ]);
+                        if let Err(err) = stream.write_all(&bytes) {
+                            log::warn!("{dbg}.run | Can't write to socket '{addr}', error: {:?}", err);
+                        }
+                    }
+                    Err(err) => log::warn!("{dbg}.run | Can't connect to '{addr}', error: {:?}", err),
+                }
+                if exit.load(Ordering::Acquire) {
+                    break;
+                }
+            }
+        });
+        Ok(())
+    }
+    ///
+    /// Sends exit signal to main tread
+    #[allow(unused)]
+    pub fn exit(&self) {
+        self.exit.store(true, Ordering::SeqCst);
+    }
+}

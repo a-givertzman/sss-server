@@ -157,9 +157,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Handling incomong messages with `Cot::Act` by field `cmd`
                     (Cot::Act, Box::new(SelectAct::new(vec![
                         // Handling incomong command `DeviceStream`
-                        (QueryId::Algorithm, Box::new(SelectCalculus::new(
+                        (QueryId::Calculus, Box::new(SelectCalculus::new(
                             dbg,
-                            conf.algorithm.clone(),
+                            conf.calculus.clone(),
                             tp.scheduler(),
                             Calculus::new(dbg, conf.clone(), api_client.clone(), ship_model.clone()),
                         ))),

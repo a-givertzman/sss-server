@@ -6,5 +6,6 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct CalculusConf {
     /// Maximum time wait calculation, then return error
+    #[serde(alias="max-time")]
     pub max_time: ConfDuration,
 }

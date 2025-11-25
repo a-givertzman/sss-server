@@ -1,13 +1,14 @@
+use bincode::Decode;
 use sal_core::error::Error;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use crate::server::{CalculusQuery, BINCODE_CONFIG, BytesExampleQuery, DeviceDocQuery, DeviceInfoQuery, DeviceStreamQuery};
 
 ///
 /// Wrapper for all variants of API [Query]'s
-#[derive(Debug, Clone, Deserialize, bincode::Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode)]
 pub enum Query {
     Empty,
-    Algorithm(CalculusQuery),
+    Calculus(CalculusQuery),
     ///
     /// TODO: To be replaced with real Query
     DeviceStream(DeviceStreamQuery),

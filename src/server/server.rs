@@ -83,7 +83,7 @@ impl Server {
                                 }
                                 Err(err) => log::warn!("{dbg}.run | Can't get incoming TcpStream, error: {:?}", err),
                             }
-                            if exit.load(Ordering::SeqCst) {
+                            if exit.load(Ordering::Acquire) {
                                 break 'main;
                             }
                         }
@@ -91,7 +91,7 @@ impl Server {
                     Err(err) => log::warn!("{dbg}.run | Bind TcpServer error: {:?}", err),
                 }
                 std::thread::sleep(Duration::from_secs(1));
-                if exit.load(Ordering::SeqCst) {
+                if exit.load(Ordering::Acquire) {
                     for con in connections.iter() {
                         con.value().exit();
                     }

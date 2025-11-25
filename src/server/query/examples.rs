@@ -4,12 +4,12 @@
 //! TODO: To be deleted !
 //! 
 use bincode::Decode;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 ///
 /// Request for `DeviceStream`
 /// TODO: To be deleted !
-#[derive(Debug, Clone, Deserialize, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode)]
 pub struct DeviceStreamQuery {
     #[serde(rename="devId")]
     pub dev_id: String,
@@ -17,7 +17,7 @@ pub struct DeviceStreamQuery {
 ///
 /// Request for `DeviceInfo`
 /// TODO: To be deleted !
-#[derive(Debug, Clone, Deserialize, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode)]
 pub struct DeviceInfoQuery {
     #[serde(rename="devId")]
     pub dev_id: String,
@@ -25,7 +25,7 @@ pub struct DeviceInfoQuery {
 ///
 /// Request for `DeviceInfo`
 /// TODO: To be deleted !
-#[derive(Debug, Clone, Deserialize, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode)]
 pub struct DeviceDocQuery {
     #[serde(rename="devId")]
     pub dev_id: String,
@@ -33,7 +33,7 @@ pub struct DeviceDocQuery {
 ///
 /// Request example with `Content::Bytes`
 /// TODO: To be deleted !
-#[derive(Debug, Clone, Deserialize, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode)]
 pub struct BytesExampleQuery {
     val: f64,
     name: String,
@@ -41,7 +41,7 @@ pub struct BytesExampleQuery {
 }
 ///
 /// TODO: To be deleted !
-#[derive(Debug, Clone, Deserialize, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode)]
 pub struct Pt {
     x: f64,
     y: f64,

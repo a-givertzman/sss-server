@@ -46,7 +46,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
         let link = link.ok_or(error.err("Can't get Link"))?;
-        let query = extract!(&req.query, Query::Algorithm).cloned()
+        let query = extract!(&req.query, Query::Calculus).cloned()
             .map_err(|_| error.err(format!("Query::DeviceInfo expected, but found {:?}", req.query_id)))?;
         //
         // Do something woth incomong query...

@@ -42,8 +42,8 @@ impl Connection {
         }
     }
     ///
-    /// Setups TCP Message
-    fn tcp_message(dbg: &Dbg) -> Message<((((((((), ()), ()), FieldId), Content), Cot), QueryId), u32), Vec<u8>> {
+    /// Setups TCP [Message]
+    pub(crate) fn tcp_message(dbg: &Dbg) -> Message<((((((((), ()), ()), FieldId), Content), Cot), QueryId), u32), Vec<u8>> {
         const SYN: u8 = 0x22;
         Message::new(
             dbg, // Start |  Id   | Kind | Cot  |  Size  | Data

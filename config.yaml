@@ -17,4 +17,6 @@ api:
 server:
     address: 0.0.0.0:3838
     connection:
-        timeout: 100 ms  # ms
+        timeout: 100 ms
+calculus:
+    max-time: 3 c
