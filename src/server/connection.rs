@@ -186,10 +186,10 @@ impl Connection {
                             if let Err(err) = Self::close(&dbg, &stream) {
                                 log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
                             }
+                            exit.store(true, Ordering::Release);
+                            ctx.exit();
+                            break 'main;
                         }
-                        exit.store(true, Ordering::Release);
-                        ctx.exit();
-                        break 'main;
                     }
                 }
                 if exit.load(Ordering::Acquire) {
@@ -197,6 +197,7 @@ impl Connection {
                     break 'main;
                 }
             }
+            log::warn!("{dbg}.run | Exit");
             Ok(())
         })?;
         self.handles.push(handle);
@@ -261,7 +262,7 @@ impl Connection {
             std::io::ErrorKind::NetworkDown => IsConnected::Closed(err),
             std::io::ErrorKind::BrokenPipe => IsConnected::Closed(err),
             std::io::ErrorKind::AlreadyExists => IsConnected::Closed(err),
-            std::io::ErrorKind::WouldBlock => IsConnected::Closed(err),
+            std::io::ErrorKind::WouldBlock => IsConnected::Active(()),
             // std::io::ErrorKind::NotADirectory => todo!(),
             // std::io::ErrorKind::IsADirectory => todo!(),
             // std::io::ErrorKind::DirectoryNotEmpty => todo!(),
@@ -270,7 +271,7 @@ impl Connection {
             // std::io::ErrorKind::StaleNetworkFileHandle => todo!(),
             // std::io::ErrorKind::InvalidInput => todo!(),
             // std::io::ErrorKind::InvalidData => todo!(),
-            std::io::ErrorKind::TimedOut => IsConnected::Closed(err),
+            std::io::ErrorKind::TimedOut => IsConnected::Active(()),
             // std::io::ErrorKind::WriteZero => todo!(),
             // std::io::ErrorKind::StorageFull => todo!(),
             // std::io::ErrorKind::NotSeekable => todo!(),

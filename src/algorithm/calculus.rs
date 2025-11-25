@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
-use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, eval::*}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::CalculusQuery};
+use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, eval::*}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, EvalEx, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::CalculusQuery};
 
 ///
 /// Evaluates entair ship calculations
@@ -48,7 +48,7 @@ impl Calculus {
 }
 //
 //
-impl Eval<CalculusQuery, EvalResult> for Calculus {
+impl EvalEx<CalculusQuery, EvalResult> for Calculus {
     fn eval(&self, query: CalculusQuery) -> EvalResult {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
@@ -202,6 +202,11 @@ impl Eval<CalculusQuery, EvalResult> for Calculus {
 
         // let initial: &InitialCtx = ctx.as_ref();
         ctx.map_err(|err| error.pass(err))
+    }
+    //
+    //
+    fn exit(&self) {
+        todo!()
     }
 }
 //

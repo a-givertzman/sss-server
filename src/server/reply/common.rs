@@ -14,4 +14,6 @@ pub enum CalculusStatus {
     Done,
     /// Calculations in progress
     Ongoing,
+    /// Calculations were canceled by the Client or internal reasons
+    Canceled,
 }

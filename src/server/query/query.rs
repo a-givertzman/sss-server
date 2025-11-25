@@ -6,6 +6,7 @@ use crate::server::{CalculusQuery, BINCODE_CONFIG, BytesExampleQuery, DeviceDocQ
 ///
 /// Wrapper for all variants of API [Query]'s
 #[derive(Debug, Clone, Serialize, Deserialize, Decode)]
+#[serde(untagged)]
 pub enum Query {
     Empty,
     Calculus(CalculusQuery),

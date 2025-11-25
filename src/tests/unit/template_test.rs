@@ -27,7 +27,7 @@ fn test_task_cycle() {
     init_each();
     log::debug!("");
     let dbg = Dbg::own("query_calculus");
-    log::debug!("\n{}", dbg);
+    log::debug!("{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

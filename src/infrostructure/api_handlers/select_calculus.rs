@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::Handles, thread_pool::Scheduler};
 use crate::{
     conf::CalculusConf,
-    kernel::{Eval, EvalEx, sync::Link, types::eval_result::EvalResult},
+    kernel::{EvalEx, sync::Link, types::eval_result::EvalResult},
     server::{self, CalculusQuery, CalculusReply, CalculusStatus, Event, Query, Reply, Request, extract},
 };
 
@@ -13,7 +13,8 @@ pub struct SelectCalculus {
     conf: CalculusConf,
     scheduler: Scheduler,
     handles: Handles<()>,
-    ctx: Arc<Box<dyn Eval<CalculusQuery, EvalResult> + Send + Sync>>,
+    ctx: Arc<Box<dyn EvalEx<CalculusQuery, EvalResult> + Send + Sync>>,
+    in_progress: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -26,7 +27,7 @@ impl SelectCalculus {
         parent: impl Into<String>,
         conf: CalculusConf,
         scheduler: Scheduler,
-        ctx: impl Eval<CalculusQuery, EvalResult> + Send + Sync + 'static,
+        ctx: impl EvalEx<CalculusQuery, EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "SelectAlgorithm");
         Self {
@@ -34,6 +35,7 @@ impl SelectCalculus {
             scheduler,
             handles: Handles::new(&dbg),
             ctx: Arc::new(Box::new(ctx)),
+            in_progress: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
@@ -46,6 +48,8 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
         let link = link.ok_or(error.err("Can't get Link"))?;
+        let in_progress = self.in_progress.clone();
+        let exit = self.exit.clone();
         let query = extract!(&req.query, Query::Calculus).cloned()
             .map_err(|_| error.err(format!("Query::DeviceInfo expected, but found {:?}", req.query_id)))?;
         //
@@ -55,15 +59,24 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         //
         let ctx = self.ctx.clone();
         let error1 = error.clone();
+        if in_progress.load(Ordering::Acquire) {
+            ctx.exit();
+            let response = req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Canceled }));
+            if let Err(err) = link.send(Event::from(&dbg, response)) {
+                log::warn!("{dbg}.eval | Can't send reply: {:?}", err);
+            }
+        }
         let response = req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Ongoing }));
         if let Err(err) = link.send(Event::from(&dbg, response)) {
             log::warn!("{dbg}.eval | Can't send reply: {:?}", err);
         }
         let h = self.scheduler.spawn(move || {
+            in_progress.store(true, Ordering::Release);
             //
             // Generate and return reply to the request
             let response = match ctx.eval(query.clone()) {
                 Ok(ctx) => {
+                    in_progress.store(false, Ordering::Release);
                     //
                     // Do required operations with the Context
                     //
