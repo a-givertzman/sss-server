@@ -175,6 +175,7 @@ impl Eval<(), EvalResult> for Initial {
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
+                    compartment_purpose as compartment_purpose, \
                     cargo_type, \
                     weight AS mass, \
                     density, \

@@ -84,13 +84,110 @@ impl CompartmentCache {
         //    println!("skjfskf calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
         Ok(())
     }
-    /// Return (level, center of volume)
+    /// Получение значения для заданных условий
+    /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md
+    /// Возвращает (level, center of volume)
     pub fn get(
         &self,
         heel: f64,
         trim: f64,
         volume: f64,
         epsilon: f64,
+        use_max_inertia_trans: bool,
+        is_cargo_tank: bool, 
+    ) -> Result<CompartmentCacheResult, Error> {
+        let error = Error::new(self.dbg(), "get");
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+        let volume = volume / coeff;
+        let mut result = self._get(
+            heel,
+            trim,
+            volume,
+            epsilon,
+        ).map_err(|err| error.pass(err))?;
+        result.volume = volume * coeff;
+        if !is_cargo_tank {// Для всех цистерн кроме грузовых
+            if use_max_inertia_trans { // Признак использования максимальной попрвавки
+                let (volume, inertia_trans_x) = self._get_max_inertia_trans_x().map_err(|err| error.pass(err))?;
+                result.inertia_trans_x = inertia_trans_x;   // максимальная поправка
+                result.volume = volume * coeff;             // соответствующий максимальной поправке объем
+                return Ok(result);
+            }            
+            let volume_max = cache.value_disp(3).1;// максимальный объем
+            if volume >= volume_max*0.98 {
+                result.inertia_trans_x = 0.;
+            }
+            return Ok(result);
+        }
+        // Для грузовых цистерн (перевозимых полезный груз, "CompartmentPurpose"="cargo_tank)
+        // считаем при крене 5 градусов
+        let heel = 5.0*heel.signum();
+        let CompartmentCacheResult{inertia_trans_x, ..} = self._get(
+            heel,
+            trim,
+            volume,
+            epsilon,
+        ).map_err(|err| error.pass(err))?;
+        result.inertia_trans_x = inertia_trans_x;
+        return Ok(result);
+    }
+    /// Получение значения из кэша для заданных условий
+    fn _get(
+        &self,
+        heel: f64,
+        trim: f64,
+        volume: f64,
+        epsilon: f64,
+    ) -> Result<CompartmentCacheResult, Error> {
+        let error = Error::new(self.dbg(), "_get");
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let level_max = cache.value_disp(2).1;
+        let mut step = level_max / 2.;
+        let mut level = step;
+        for i in 0..=50 {
+            let query = [heel, trim, level];
+            let result = cache.get(&query);
+            assert!(result.len() == 6);
+            let delta = result
+                .first()
+                .ok_or(error.pass("no result from cache.get(&query)"))?
+                - volume;
+            if delta.abs() <= epsilon || i >= 50 {
+                return Ok(CompartmentCacheResult {
+                    heel,
+                    trim,
+                    level,
+                    volume,
+                    volume_center: Position::new(result[1], result[2], result[3]),
+                    inertia_trans_x: result[4],
+                    inertia_long_y: result[5],
+                });
+            }
+            step = step / 2.;
+            level -= step * delta.signum();
+        }
+        Err(error.pass(format!("no result for epsilon:{epsilon}")))
+    }
+    /// Получение значения кэша для для максимальной поправки при нулевых крене и дифференте
+    /// Возвращает объем и значение поперечного момента
+    fn _get_max_inertia_trans_x(&self) -> Result<(f64, f64), Error> {
+        let error = Error::new(self.dbg(), "_get_max_inertia_trans_x");
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let result = cache.value_disp_opt(7, &[Some(0.), Some(0.)])
+            .ok_or(error.pass("no result"))?;
+        Ok((result.1[0], result.1[4]))  
+    }
+
+/*
+   pub fn get(
+        &self,
+        heel: f64,
+        trim: f64,
+        volume: f64,
+        epsilon: f64,
+        use_max_inertia_trans: bool,
+        is_cargo_tank: bool, 
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
@@ -123,6 +220,10 @@ impl CompartmentCache {
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
+*/
+
+
+
     //
     pub fn build_bounded(
         &self,

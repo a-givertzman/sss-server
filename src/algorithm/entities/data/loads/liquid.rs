@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use super::{AssignmentType, LiquidCargoType};
-use crate::algorithm::entities::{Position, data::DataArray, ship_model::LiquidData};
+use crate::algorithm::entities::{Position, data::{DataArray, loads::CompartmentPurpose}, ship_model::LiquidData};
 use serde::{Deserialize, Serialize};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -21,6 +21,8 @@ pub struct LoadLiquidData {
     pub assigment_type: AssignmentType,
     /// Тип жидкого груза
     pub cargo_type: LiquidCargoType,
+    /// Тип груза для отсека
+    pub compartment_purpose: CompartmentPurpose,
     /// масса, т
     pub mass: f64,
     /// Плотность
@@ -50,14 +52,26 @@ impl LoadLiquidData {
                 return None;
             }
         };
+        let density = if let Some(density) = self.density {
+            density
+        } else {
+            if self.mass > 0. {
+                volume / self.mass
+            } else {
+                return None;
+            }
+        };
         Some(LiquidData {
             assignment_id:  self.assignment_id,
             assigment_type: self.assigment_type,
             cargo_type: self.cargo_type,
        //     cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
+            use_moment_of_inertia_max: self.use_moment_of_inertia_max,
+            is_cargo_tank: self.compartment_purpose == CompartmentPurpose::CargoTank,
             mass: self.mass,
             volume,
+            density,
         })
     }
 }

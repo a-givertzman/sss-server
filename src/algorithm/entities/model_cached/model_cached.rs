@@ -2,11 +2,13 @@ use super::{LocalCache, ModelCachedConf};
 use crate::{
     algorithm::{
         entities::{
-            AddVec, Bounds, Moment, Position, model_cached::{
+            AddVec, Bounds, Moment, Position,
+            model_cached::{
                 AreaShape, CompartmentBoundCache, CompartmentCache, CompartmentCacheResult,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
                 DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
-            }, ship_model::{stability_result::BalanceStabilityResult, *}
+            },
+            ship_model::{stability_result::BalanceStabilityResult, *},
         },
         eval::{StrengthBalanceCtx, strength_balance_eval},
     },
@@ -62,6 +64,10 @@ pub(crate) struct FloatingPositionResult {
     pub displacement: f64,
     /// Смещение центра объемного водоизмещения, м
     pub displacement_center: Position,
+    /// Массовое водоизмещение, т
+    pub mass: f64,
+    /// Смещение центра массы, м
+    pub mass_center: Position,
     /// Площадь ватерлинии, м^2
     pub area_wl: f64,
     /// Смещение центра тяжести ватеринии, м
@@ -74,8 +80,6 @@ pub(crate) struct FloatingPositionResult {
     pub rad_long: f64,
     /// Поперечный метацентрические радиус, м
     pub rad_trans: f64,
-    /// Смещение центра массы по оси Z
-    pub mass_z: f64,
 }
 //
 impl Display for FloatingPositionResult {
@@ -677,7 +681,7 @@ impl ModelCached {
         let (mut trim, mut draught) = (query.trim, query.draught);
         let (mut mass_sum, mut disp_sum) = (100000., 100000.);
         let mut epsilon_mass = 10.;
-        let mut epsilon_x;        
+        let mut epsilon_x;
         for _i in 0..50 {
             // trim
             for _j in 0..50 {
@@ -840,13 +844,14 @@ impl ModelCached {
             precision,
             displacement,
             displacement_center,
+            mass,
+            mass_center,
             area_wl,
             area_wl_center,
             length_wl,
             breadth_wl,
             rad_long,
             rad_trans,
-            mass_z,
         } = self
             .floating_position(FloatingPositionQuery {
                 water_density: query.water_density,
@@ -890,12 +895,20 @@ impl ModelCached {
             let trim = trim;
             let volume = cargo.volume;
             let epsilon = epsilon;
+            let cargo = cargo.clone();
             let results_ = liquid_results.clone();
             let handle = scheduler
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
-                        .get(0., trim, volume, epsilon)
+                        .get(
+                            0.,
+                            trim,
+                            volume,
+                            epsilon,
+                            cargo.use_moment_of_inertia_max,
+                            cargo.is_cargo_tank,
+                        )
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::LiquidResult::new(
                         //     cargo_id,
@@ -930,7 +943,7 @@ impl ModelCached {
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
-                        .get(0., 0., volume, epsilon)
+                        .get(0., 0., volume, epsilon, false, false)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
@@ -985,11 +998,20 @@ impl ModelCached {
         let epsilon = 0.001f64.max(epsilon);
         let mut angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
         angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
-        angles.append(&mut ((-8..=8).map(|v| v as f64 ).collect())); 
+        angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
         angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         angles.dedup();
         let (dso, entry_angle, flooding_angle) = self
-            .dso(query, draught_mid, trim_degree, epsilon, &angles, opening, deck_angle_point)
+            .dso(
+                query,
+                draught_mid,
+                trim_degree,
+                epsilon,
+                mass_center,
+                &angles,
+                opening,
+                deck_angle_point,
+            )
             .map_err(|err| error.pass(err))?;
         Ok(BalanceStabilityResult {
             roll: heel,
@@ -1009,7 +1031,7 @@ impl ModelCached {
             breadth_wl,
             rad_long,
             rad_trans,
-            mass_z,
+            mass_z: mass_center.z(),
             dso,
             entry_angle,
             flooding_angle,
@@ -1051,7 +1073,7 @@ impl ModelCached {
         let mut d_m: Option<f64> = None;
         for _i in 1..=1000 {
             let epsilon = (step_trim + step_heel) / 10.;
-            let (new_draught, new_d_v, new_d_m, _, displacement, disp_result, mass_z) = self
+            let (new_draught, new_d_v, new_d_m, mass_center, displacement, disp_result) = self
                 .position(
                     heel,
                     trim,
@@ -1074,13 +1096,14 @@ impl ModelCached {
                         precision,
                         displacement,
                         displacement_center: disp_result.volume_center,
+                        mass: mass_sum,
+                        mass_center,
                         area_wl: disp_result.area_wl,
                         area_wl_center: disp_result.area_wl_center,
                         length_wl: disp_result.length_wl,
                         breadth_wl: disp_result.breadth_wl,
                         rad_long: disp_result.inertia_long_y / displacement,
                         rad_trans: disp_result.inertia_trans_x / displacement,
-                        mass_z,
                     };
                     return Ok(result);
                 }
@@ -1113,6 +1136,7 @@ impl ModelCached {
         draught: f64,
         trim: f64,
         epsilon: f64,
+        cg: Position,
         angles: &[f64],
         opening: &[Position],
         deck_angle_point: &[Position],
@@ -1136,55 +1160,65 @@ impl ModelCached {
         let mut flooding_angle = Vec::new();
         let mut last_heel: Option<f64> = None;
         let max_heel = angles.last().ok_or(error.err("max_heel"))?;
-       // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
+        let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
+        let moment_sum = query.moment_const + moment_bulk; // постоянный момент
+        // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
         for &heel in angles {
-     //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
-            step_trim = if let Some(last_heel) = last_heel { step_trim*((heel - last_heel)*10.).max(1.)} else { 0.1 };
+            //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
+            step_trim = if let Some(last_heel) = last_heel {
+                step_trim * ((heel - last_heel) * 10.).max(1.)
+            } else {
+                0.1
+            };
             last_heel = Some(heel);
             let mut d_v: Option<f64> = None;
             for _i in 1..=100 {
                 let trim_epsilon = step_trim / 10.;
-                let (new_draught, new_d_v, _, cg, _, disp_result, _) = self
+                let (new_draught, new_d_v, _, _, _, disp_result) = self
                     .position(
                         heel,
                         trim,
                         draught,
                         query.water_density,
                         epsilon,
-                        query.mass_const + mass_bulk + mass_liquid, // постоянная масса
-                        query.moment_const + moment_bulk,           // постоянный момент
+                        mass_sum,
+                        moment_sum,
                         &query.liquid,
                         &query.damaged_compartment,
                     )
-                    .map_err(|err| error.pass(err))?;   
-             //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");  
+                    .map_err(|err| error.pass(err))?;
+                //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
-
-
-//"CompartmentPurpose"="cargo_tank
-
+                        let moment_liquid = self
+                            .moment_liquid(true, &query.liquid, heel, trim, epsilon)
+                            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+                        let delta_tg = (moment_sum + moment_liquid).to_pos(mass_sum) - cg;
                         let l = {
                             let [_, tcg, vcg] = cg.values();
                             let [_, tcb, vcb] = disp_result.volume_center.values();
+                            let [_, delta_tcg, delta_vcg] = delta_tg.values();
                             let sin_phy = heel.to_radians().sin();
                             let cos_phy = heel.to_radians().cos();
-                            let lv = tcb*cos_phy + vcb*sin_phy;
-                            let ld = tcg*cos_phy + vcg*sin_phy;                         
-                            // TODO let delta_l =... поправка от наклона воды
-                            let l = lv - ld;// - delta_l;
+                            let lv = tcb * cos_phy + vcb * sin_phy;
+                            let ld = tcg * cos_phy + vcg * sin_phy;
+                            let delta_l = delta_tcg * cos_phy + delta_vcg * sin_phy;
+                            let l = lv - ld - delta_l;
                             l
                         };
                         dso.push((heel, l));
                         let current_draught = |p: &Position| {
                             let tg_t = trim.to_radians().tan();
                             let tg_h = heel.to_radians().tan();
-                            let cos_h = heel.to_radians().cos();                            
-                            let draught = draught + p.z()*tg_h + (p.x() - self.model_center_coord.x())*tg_t/cos_h;
+                            let cos_h = heel.to_radians().cos();
+                            let draught = draught
+                                + p.z() * tg_h
+                                + (p.x() - self.model_center_coord.x()) * tg_t / cos_h;
                             draught - p.z()
                         };
                         let min_angle = |angles: &[Position]| {
-                            let mut angles: Vec<_> = angles.iter().map(|v| current_draught(v)).collect();
+                            let mut angles: Vec<_> =
+                                angles.iter().map(|v| current_draught(v)).collect();
                             angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
                             angles.first().unwrap_or(max_heel).to_owned()
                         };
@@ -1195,7 +1229,7 @@ impl ModelCached {
                 }
                 if let Some(old_d_v) = d_v {
                     if old_d_v.signum() != new_d_v.signum() {
-                        step_trim = step_trim*0.5;
+                        step_trim = step_trim * 0.5;
                     }
                 }
                 d_v = Some(new_d_v);
@@ -1230,11 +1264,11 @@ impl ModelCached {
         moment_sum: Position, // постоянный момент moment_const + moment_bulk
         liquid: &Vec<LiquidData>,
         damaged_compartment: &Vec<String>,
-    ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult, f64), Error> {
+    ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
         let error = Error::new(&self.dbg, "_floating_position");
         // учет смещения жидкости
         let moment_liquid = self
-            .moment_liquid(&liquid, heel, trim, epsilon)
+            .moment_liquid(false, &liquid, heel, trim, epsilon)
             .map_err(|err| error.pass_with("self.moment_liquid", err))?;
         // учет изменения водоизмещения из-за поврежденных отсеков
         // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
@@ -1318,7 +1352,7 @@ impl ModelCached {
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
-        Ok((draught, d_v, d_m, cg, displacement, disp_result, cg.z()))
+        Ok((draught, d_v, d_m, cg, displacement, disp_result))
     }
     // Считаем сыпучие грузы.
     // На них крен и дифферент не влияет.
@@ -1343,7 +1377,9 @@ impl ModelCached {
                             task_results.push((
                                 space_id,
                                 mass,
-                                compartment.read().get(0., 0., volume, epsilon),
+                                compartment
+                                    .read()
+                                    .get(0., 0., volume, epsilon, false, false),
                             ));
                             Ok(())
                         })
@@ -1408,6 +1444,7 @@ impl ModelCached {
     /// Считаем жидкие грузы
     fn moment_liquid(
         &self,
+        use_moment_max: bool, //признак использования момента от максимальной поправки
         liquids: &Vec<LiquidData>,
         heel: f64,
         trim: f64,
@@ -1425,16 +1462,23 @@ impl ModelCached {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
                     let space_id = liquid.space_id.clone();
-                    let mass = liquid.mass;
+                    let density = liquid.density;
                     let volume = liquid.volume;
+                    let mass = liquid.mass;
+                    let use_moment_of_inertia_max = liquid.use_moment_of_inertia_max;
+                    let is_cargo_tank = liquid.is_cargo_tank;
                     let compartment = compartment.clone();
                     let handle = scheduler
                         .spawn(move || {
-                            task_results.push((
-                                space_id,
-                                mass,
-                                compartment.read().get(heel, trim, volume, epsilon),
-                            ));
+                            let res = compartment.read().get(
+                                heel,
+                                trim,
+                                volume,
+                                epsilon,
+                                use_moment_of_inertia_max,
+                                is_cargo_tank,
+                            );
+                            task_results.push((space_id, mass, density, res));
                             Ok(())
                         })
                         .map_err(|err| {
@@ -1466,10 +1510,11 @@ impl ModelCached {
             }
         }
         while !task_results.is_empty() {
-            if let Some((space_id, mass, data)) = task_results.pop() {
+            if let Some((space_id, mass, density, data)) = task_results.pop() {
                 let CompartmentCacheResult {
                     level,
                     volume_center,
+                    volume,
                     ..
                 } = match data {
                     Ok(data) => data,
@@ -1480,6 +1525,11 @@ impl ModelCached {
                         errors.push(error);
                         continue;
                     }
+                };
+                let mass = if use_moment_max {
+                    volume * density
+                } else {
+                    mass
                 };
                 values.push((space_id, level, Moment::from_pos(volume_center, mass)));
             }
@@ -1588,6 +1638,3 @@ impl ModelCached {
         Ok(result)
     }
 }
-
-
-
