@@ -181,7 +181,7 @@ impl Connection {
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}.run | TcpStream read error: {:?}", dbg, err);
+                        log::trace!("{}.run | TcpStream read error: {:?}", dbg, err);
                         if let IsConnected::Closed(_) = Self::parse_err(&dbg, err) {
                             exit.store(true, Ordering::Release);
                             if let Err(err) = Self::close(&dbg, &stream) {

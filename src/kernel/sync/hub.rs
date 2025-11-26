@@ -60,7 +60,7 @@ impl Hub {
         let links = self.links.clone();
         let timeout = self.timeout;
         let exit = self.exit.clone();
-        log::debug!("{dbg}.listen | Starting...");
+        log::trace!("{dbg}.listen | Start...");
         let handle = scheduler.spawn(move || {
             while !exit.load(Ordering::Acquire) {
                 let mut closed_links = vec![];
@@ -108,7 +108,7 @@ impl Hub {
         });
         let dbg = self.name.join();
         let error = Error::new(&self.name, "listen");
-        log::debug!("{dbg}.listen | Starting - Ok");
+        log::debug!("{dbg}.listen | Start - Ok");
         handle.map_err(|err| error.pass(err.to_string()))
     }
     ///

@@ -1,4 +1,4 @@
-use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
+use std::{io::ErrorKind, net::TcpListener, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{collections::FxDashMap, sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{conf::Conf, kernel::{EvalEx, sync::Link}, server::{Connection, EvalResult, Event}};
@@ -84,16 +84,22 @@ impl Server {
                                         }
                                     }
                                 }
-                                Err(err) => log::warn!("{dbg}.run | Can't get incoming TcpStream, error: {:?}", err),
+                                Err(err) => if !exit.load(Ordering::Acquire) {
+                                    if err.kind() != ErrorKind::WouldBlock {
+                                        log::warn!("{dbg}.run | Can't get incoming TcpStream, error: {:?}", err)
+                                    }
+                                }
                             }
                             if exit.load(Ordering::Acquire) {
                                 break 'main;
                             }
+                            // Normal operation timeout between incoming connections
                             std::thread::sleep(Duration::from_millis(100));
                         }
                     }
                     Err(err) => log::warn!("{dbg}.run | Bind TcpServer error: {:?}", err),
                 }
+                // Normal operation timeout before next time bind server socket
                 std::thread::sleep(Duration::from_secs(1));
             }
             log::debug!("{dbg}.run | Exit");
