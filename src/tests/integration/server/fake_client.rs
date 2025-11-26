@@ -64,7 +64,7 @@ impl FakeClient {
                                         Err(err) => log::warn!("{dbg}.run | Step {step} Can't write Query {:?} to socket '{addr}', error: {:?}", request.query, err),
                                     }
                                 }
-                                TestCase::Reply((target_cot, target)) => {
+                                TestCase::Response((target_cot, target)) => {
                                     'read: loop {
                                         let mut buf = vec![0; 1024 * 4];
                                         match stream.read(&mut buf) {
