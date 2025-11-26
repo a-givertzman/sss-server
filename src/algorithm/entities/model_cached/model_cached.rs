@@ -117,7 +117,7 @@ pub struct ModelCached {
     /// Ship length between perpendiculars
     ship_length_lbp: f64,
     /// 3d model initial position in 3D space (midel).
-    pub model_center_coord: Position,
+    pub model_x: f64,
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
     /// Draught step for hull
@@ -158,11 +158,11 @@ impl ModelCached {
         let error = Error::new(&dbg, "new");
         let mut displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>> =
             IndexMap::new();
-        let delta_pos = Some(conf.model_center_coord.clone());
+        let model_x = Some(conf.model_x);
         let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
-            delta_pos,
+            model_x,
             conf.model_scale,
         )));
         displacement_shapes.insert("hull".to_owned(), displacement_shape.clone());
@@ -170,7 +170,7 @@ impl ModelCached {
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
             Some(conf.model_dir.clone().join(PathBuf::from("additionals"))),
-            delta_pos,
+            model_x,
             conf.model_scale,
         )));
         let windage_area = WindageArea::new(
@@ -246,7 +246,7 @@ impl ModelCached {
                 let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
                     &dbg,
                     path.clone(),
-                    Some(conf.model_center_coord.clone()),
+                    Some(conf.model_x),
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone() + "_damaged", shape.clone());
@@ -273,7 +273,7 @@ impl ModelCached {
         let model_cached = Self {
             dbg: dbg.clone(),
             ship_length_lbp: conf.ship_length_lbp,
-            model_center_coord: conf.model_center_coord.clone(),
+            model_x: conf.model_x,
             draught_min: conf.draught_min,
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
@@ -300,6 +300,13 @@ impl ModelCached {
         };
         Ok(model_cached)
     }
+
+
+    pub fn rewrite(&self) {
+        self.displacement.rewrite();
+        self.compartments.iter().for_each(|(_, v)| v.read().rewrite());
+    }
+
     /// reload all shapes
     pub fn reload_shapes(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "reload_shapes");
@@ -402,7 +409,7 @@ impl ModelCached {
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
-            self.model_center_coord.x(),
+            self.model_x,
             bounds.clone(),
             Arc::clone(&self.thread_pool),
         );
@@ -448,23 +455,23 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
+  /*      if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
-        }
+        }*/
         for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-        for (name, compartment) in &mut self.damaged_compartments {
+  /*      for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }
+        }*/
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -489,7 +496,7 @@ impl ModelCached {
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
-            self.model_center_coord.x(),
+            self.model_x,
             bounds.clone(),
             Arc::clone(&self.thread_pool),
         );
@@ -866,7 +873,7 @@ impl ModelCached {
             .map_err(|err| error.pass_with("self.floating_position", err))?;
         // println!("steps:{_i} time:{:?}", time.elapsed());
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
-            self.model_center_coord.x(),
+            self.model_x,
             self.ship_length_lbp,
             draught_mid,
             area_wl_center.x(),
@@ -1213,7 +1220,7 @@ impl ModelCached {
                             let cos_h = heel.to_radians().cos();
                             let draught = draught
                                 + p.z() * tg_h
-                                + (p.x() - self.model_center_coord.x()) * tg_t / cos_h;
+                                + (p.x() - self.model_x) * tg_t / cos_h;
                             draught - p.z()
                         };
                         let min_angle = |angles: &[Position]| {

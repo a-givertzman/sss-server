@@ -94,7 +94,7 @@ pub(crate) fn compartment_center(mesh: &TriMesh) -> Point3<f64> {
 
 /// Расчет положения корпуса
 pub fn position(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> Isometry3<f64> {
-    let heel_rad = -heel.to_radians();
+    let heel_rad = heel.to_radians();
     let trim_rad = trim.to_radians();
     let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
     let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());

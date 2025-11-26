@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project_id = "NULL";
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
-    let model_center_coord = Position::new(65.250, 0., 0.);
+    let model_x = 65.250;
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
     let mut model_cached = model_cached::ModelCached::new(
         &dbg,
@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_dir,
             cache_dir,
             model_scale: 1000.,
-            model_center_coord,
+            model_x,
             hull_heel_steps: vec![
                 -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
                 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
@@ -115,6 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
   //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
+    
 /*
     let res = model_cached.reload_shapes();            dbg!(&res);
  //   let res = model_cached.rebuild_caches();   dbg!(&res);
@@ -140,6 +141,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     ship_model.init().unwrap();
     ship_model.init_cache_bounded(&bounds).unwrap();
+
+    ship_model.rewrite();
+
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
     let ctx =   
