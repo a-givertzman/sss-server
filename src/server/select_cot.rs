@@ -1,12 +1,11 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
-use indexmap::IndexMap;
 use sal_core::error::Error;
-use crate::{kernel::{EvalEx, sync::Link}, server::{Cot, ErrorCode, ErrorReply, EvalResult, Request}};
+use crate::{kernel::{EvalEx, sync::Link, types::fx_map::FxIndexMap}, server::{Cot, ErrorCode, ErrorReply, EvalResult, Request}};
 ///
 /// Matching incoming messages by it's Cot
 /// - Forwarding matched messages to the associated handlers
 pub struct SelectCot<K> {
-    select: IndexMap<Cot, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send>>,
+    select: FxIndexMap<Cot, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send>>,
 }
 //
 //
@@ -15,7 +14,7 @@ impl<K> SelectCot<K> {
     /// Returns [SortByX] new instance
     pub fn new(select: Vec<(Cot, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send + 'static>)>) -> Self {
         Self {
-            select: IndexMap::from_iter(select),
+            select: FxIndexMap::from_iter(select),
         }
     }
 }
