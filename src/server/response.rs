@@ -1,5 +1,4 @@
 use sal_core::error::Error;
-
 use crate::server::{Cot, ErrorReply, Reply};
 
 ///
