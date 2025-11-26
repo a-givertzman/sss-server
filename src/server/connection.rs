@@ -291,9 +291,11 @@ impl Connection {
     ///
     /// Closes a connection
     pub fn close(dbg: &Dbg, stream: &TcpStream) -> Result<(), Error> {
-        stream
+        let r = stream
             .shutdown(Shutdown::Both)
-            .map_err(|err| Error::new(dbg, "close").pass(err.to_string()))
+            .map_err(|err| Error::new(dbg, "close").pass(err.to_string()));
+        log::debug!("{dbg}.close | Close tcp stream - Ok");
+        r
     }
     ///
     /// Checks if the Service has finished running.

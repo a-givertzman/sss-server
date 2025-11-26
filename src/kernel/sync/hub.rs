@@ -63,6 +63,7 @@ impl Hub {
         log::debug!("{dbg}.listen | Starting...");
         let handle = scheduler.spawn(move || {
             while !exit.load(Ordering::Acquire) {
+                let mut closed_links = vec![];
                 for entry in links.iter() {
                     let (id, link) = entry.pair();
                     match link.recv_timeout(timeout) {
@@ -84,17 +85,24 @@ impl Hub {
                                 None => {}
                             }
                         }
-                        Err(_err) => {
-                            links.remove(id);
-                            // let err = error.pass_with(format!("Link({id}) Recv error"), err.to_string());
-                            // log::warn!("{}", err);
-                        }
+                        Err(_) => closed_links.push(id.to_owned())
+                    }
+                    if exit.load(Ordering::Acquire) {
+                        break;
+                    }
+                }
+                for key in closed_links {
+                    if let Some((_, removed)) = links.remove(&key) {
+                        removed.exit();
+                        log::trace!("{dbg}.listen | Link '{key}' - closed");
                     }
                 }
             }
+            // log::debug!("{dbg}.listen | Closing Links...");
             for link in links.iter() {
                 link.exit();
             }
+            // log::debug!("{dbg}.listen | Closing Links - Ok");
             log::debug!("{dbg}.listen | Exit");
             Ok(())
         });
@@ -106,7 +114,7 @@ impl Hub {
     ///
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
         for link in self.links.iter() {
             link.exit();
         }

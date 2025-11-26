@@ -54,6 +54,9 @@ impl Server {
             'main: while !exit.load(Ordering::Acquire) {
                 match TcpListener::bind(conf.server.address.clone()) {
                     Ok(listener) => {
+                        if let Err(err) = listener.set_nonblocking(true) {
+                            log::warn!("{dbg}.wait | Can't switch TcpListener to nonblocking, error: {:?}", err);
+                        }
                         let listener= Arc::new(listener);
                         listeners.replace(listener.clone());
                         for stream in listener.incoming() {
@@ -86,12 +89,14 @@ impl Server {
                             if exit.load(Ordering::Acquire) {
                                 break 'main;
                             }
+                            std::thread::sleep(Duration::from_millis(100));
                         }
                     }
                     Err(err) => log::warn!("{dbg}.run | Bind TcpServer error: {:?}", err),
                 }
                 std::thread::sleep(Duration::from_secs(1));
             }
+            log::debug!("{dbg}.run | Exit");
             Ok(())
         }).map_err(|err| Error::new(&self.dbg, "run").pass(err))?;
         self.handles.push(handle);
@@ -113,12 +118,7 @@ impl Server {
     /// Sends exit signal to main tread
     #[allow(unused)]
     pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
-        if let Some(listener) = self.listener.take() {
-            if let Err(err) = listener.set_nonblocking(true) {
-                log::warn!("{}.wait | TcpListener set_nonblocking error: {:?}", self.dbg, err);
-            }
-        }
+        self.exit.store(true, Ordering::Release);
         for conn in self.connections.iter() {
             conn.exit();
         }

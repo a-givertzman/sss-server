@@ -70,7 +70,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         if let Err(err) = link.send(Event::from(&dbg, response)) {
             log::warn!("{dbg}.eval | Can't send reply: {:?}", err);
         }
-        let h = self.scheduler.spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             in_progress.store(true, Ordering::Release);
             //
             // Generate and return reply to the request
@@ -92,7 +92,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
             }
             Ok(())
         }).map_err(|err| error.pass_with("Can't spawn thread", err));
-        match h {
+        match handle {
             Ok(handle) => {
                 self.handles.push(handle);
                 Ok(None)
@@ -105,6 +105,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
     fn exit(&self) {
         // Halt continuous operations here
         self.exit.store(true, Ordering::Release);
+        self.ctx.exit();
     }
 }
 //
