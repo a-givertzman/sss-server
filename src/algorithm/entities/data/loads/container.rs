@@ -1,7 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных контейнеров
 use super::{AssignmentType, UnitCargoType};
-use crate::algorithm::entities::{Bound, Moment, Position, data::{DataArray, loads::{CargoType, LoadUnitData}}};
-use sal_core::error::Error;
+use crate::algorithm::entities::{data::{DataArray, loads::LoadUnitData}};
 use serde::Deserialize;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -43,14 +42,20 @@ impl LoadContainerArray {
             assigment_type: v.assigment_type,
             cargo_type: UnitCargoType::Container,
             mass: v.mass,
-            mass_shift: None,
+            mass_shift_x: None,
+            mass_shift_y: None,
+            mass_shift_z: None,
             stowage_factor: None,
             permeability: None,
             volume: None,
             icing_area: None,
-            centre_of_icing_area: None,
+            centre_of_icing_area_x: None,
+            centre_of_icing_area_y: None,
+            centre_of_icing_area_z: None,
             windage_area: None,
-            centre_of_windage_area: None,
+            centre_of_windage_area_x: None,
+            centre_of_windage_area_y: None,
+            centre_of_windage_area_z: None,
             bound_x1: v.bound_x1,
             bound_x2: v.bound_x2,
             bound_y1: v.bound_y1,

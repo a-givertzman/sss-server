@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use super::{AssignmentType, LiquidCargoType};
-use crate::algorithm::entities::{Position, data::{DataArray, loads::CompartmentPurpose}, ship_model::LiquidData};
+use crate::algorithm::entities::{data::{DataArray, loads::CompartmentPurpose}, ship_model::LiquidData};
 use serde::{Deserialize, Serialize};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -30,7 +30,9 @@ pub struct LoadLiquidData {
     /// Обьем, м^3
     pub volume: Option<f64>,
    /// Центр отсека, размещающего груз, м
-    pub mass_shift: Option<Position>,
+    pub mass_shift_x: Option<f64>,
+    pub mass_shift_y: Option<f64>,
+    pub mass_shift_z: Option<f64>,
    /// Признак использования максимального значения момента свободной поверхности жидкости
     pub use_moment_of_inertia_max: bool,  
     /// Момент свободной поверхности жидкости

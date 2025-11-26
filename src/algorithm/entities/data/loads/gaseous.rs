@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use serde::Deserialize;
-use crate::algorithm::entities::{Position, data::DataArray, ship_model::GaseousData};
+use crate::algorithm::entities::{data::DataArray, ship_model::GaseousData};
 use super::AssignmentType;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -24,7 +24,9 @@ pub struct LoadGaseousData {
     /// Общая масса, т
     pub volume: Option<f64>,
     /// Центр отсека, размещающего груз, м
-    pub mass_shift: Option<Position>,
+    pub mass_shift_x: Option<f64>,
+    pub mass_shift_y: Option<f64>,
+    pub mass_shift_z: Option<f64>,
 }
 //
 impl LoadGaseousData {

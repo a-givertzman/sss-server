@@ -154,7 +154,9 @@ impl Eval<(), EvalResult> for Initial {
                     stowage_factor, \
                     weight AS mass, \
                     shiftable AS shiftable, \
-                    centre_of_compartment as mass_shift
+                    centre_of_compartment_x as mass_shift_x,
+                    centre_of_compartment_y as mass_shift_y,
+                    centre_of_compartment_z as mass_shift_z
                 FROM 
                     bulk_cargo_view
                 WHERE 
@@ -180,7 +182,9 @@ impl Eval<(), EvalResult> for Initial {
                     weight AS mass, \
                     density, \
                     volume, \
-                    centre_of_compartment as mass_shift, \
+                    centre_of_compartment_x as mass_shift_x,
+                    centre_of_compartment_y as mass_shift_y,
+                    centre_of_compartment_z as mass_shift_z,
                     use_moment_of_inertia_max, \
                     long_moment_of_inertia_max, \
                     trans_moment_of_inertia_max
@@ -207,7 +211,9 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_type, \
                     density, \
                     weight AS mass, \
-                    centre_of_compartment as mass_shift
+                    centre_of_compartment_x as mass_shift_x,
+                    centre_of_compartment_y as mass_shift_y,
+                    centre_of_compartment_z as mass_shift_z
                 FROM 
                     gaseous_cargo_view
                 WHERE 
@@ -257,13 +263,19 @@ impl Eval<(), EvalResult> for Initial {
                     assigment_context as assigment_type, \
                     cargo_type, \
                     weight AS mass, \
-                    centre_of_gravity AS mass_shift, \
+                    centre_of_gravity_x AS mass_shift_x, \
+                    centre_of_gravity_y AS mass_shift_y, \
+                    centre_of_gravity_z AS mass_shift_z, \
                     stowage_factor, \
                     permeability, \
                     icing_area, \
-                    centre_of_icing_area, \
+                    centre_of_icing_area_x, \
+                    centre_of_icing_area_y, \
+                    centre_of_icing_area_z, \
                     windage_area, \
-                    centre_of_windage_area, \
+                    centre_of_windage_area_x, \
+                    centre_of_windage_area_y, \
+                    centre_of_windage_area_z, \
                     bound_x1, \
                     bound_x2, \
                     bound_y1, \
