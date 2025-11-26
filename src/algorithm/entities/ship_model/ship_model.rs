@@ -453,7 +453,9 @@ fn deck_angle_point(
         &api_client
             .fetch(&format!(
                 "SELECT 
-                    value as point
+                    value_x as point_x, \
+                    value_y as point_y, \
+                    value_z as point_z
                 FROM 
                     \"ship/ship_structures/deck_angle_point\" 
                 WHERE 
@@ -475,7 +477,9 @@ fn opening(
         &api_client
             .fetch(&format!(
                 "SELECT 
-                    value as point
+                    value_x as point_x, \
+                    value_y as point_y, \
+                    value_z as point_z
                 FROM 
                     \"ship/ship_structures/opening\" 
                 WHERE 

@@ -1,8 +1,9 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use std::collections::HashMap;
 
+use sal_core::error::Error;
 use serde::Deserialize;
-use crate::algorithm::entities::{data::DataArray, ship_model::GaseousData};
+use crate::algorithm::entities::{Position, data::DataArray, ship_model::GaseousData};
 use super::AssignmentType;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -38,6 +39,26 @@ impl LoadGaseousData {
             space_id: self.space_id.clone(),
             mass: self.mass,
         }
+    }
+//
+    pub fn mass_shift(&self) -> Result<Position, Error> {
+        let error = Error::new("LoadGaseousData", "mass_shift");
+        let center_x =  if let Some(x) = self.mass_shift_x {
+            x
+        } else {
+            return Err(error.err("no mass_shift_x"));
+        };
+        let center_y =  if let Some(v) = self.mass_shift_y {
+            v
+        } else {
+            return Err(error.err("no mass_shift_y"));
+        };
+        let center_z =  if let Some(v) = self.mass_shift_y {
+            v
+        } else {
+            return Err(error.err("no mass_shift_z and bound_z2"));
+        };
+        return Ok(Position::new(center_x, center_y, center_z));        
     }
 }
 

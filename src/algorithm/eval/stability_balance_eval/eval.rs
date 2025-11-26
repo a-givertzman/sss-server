@@ -95,7 +95,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .read()
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
-          //      dbg!(&result);
+                dbg!(&result);
                 //    dbg!(result.roll, result.trim_degree, result.draught_mean);
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);

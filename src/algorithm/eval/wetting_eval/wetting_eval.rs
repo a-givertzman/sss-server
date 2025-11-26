@@ -1,12 +1,12 @@
 //! Учет намокания груза
+use super::wetting_ctx::WettingCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{
     kernel::{eval::Eval, types::eval_result::EvalResult},
-    prelude::{InitialCtx, ContextWrite},
+    prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use super::wetting_ctx::WettingCtx;
 
 ///
 /// Учет намокания палубного груза.  
@@ -21,7 +21,10 @@ pub struct WettingEval {
 //
 impl WettingEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "WettingEval");
         Self {
             dbg,
@@ -39,30 +42,33 @@ impl Eval<(), EvalResult> for WettingEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = match initial.bounds.as_ref() {
                     Some(data) => data,
-                    None => {
-                        return Err(error.err("Read bounds error: no data!"))
-                    }
+                    None => return Err(error.err("Read bounds error: no data!")),
                 };
                 let unit = match initial.unit.as_ref() {
                     Some(data) => data,
-                    None => {
-                        return Err(error.err("Read unit error: no data!"))
-                    }
+                    None => return Err(error.err("Read unit error: no data!")),
                 };
                 let (mass, mass_moment) =
                     unit.iter()
                         .fold((0., Moment::zero()), |(res_mass, res_moment), v| {
-                            match (v.mass_shift, v.permeability) {
-                                (Some(v_mass_shift), Some(v_permeability)) => (
-                                    res_mass + v.mass * v_permeability,
-                                    res_moment
-                                        + Moment::from_pos(
-                                            v_mass_shift,
-                                            v.mass * v_permeability,
-                                        ),
-                                ),
-                                _ => (0., Position::zero()),
-                            }
+                            let mass_shift = match v.mass_shift() {
+                                Ok(v) => v,
+                                Err(err) => {
+                                    log::error!(
+                                        "{}",
+                                        error.pass_with(format!("{:?} mass_shift", v), err)
+                                    );
+                                    return (0., Position::zero());
+                                }
+                            };
+                            let permeability = match v.permeability {
+                                Some(v) => v,
+                                None => 0.,
+                            };
+                            (
+                                res_mass + v.mass * permeability,
+                                res_moment + Moment::from_pos(mass_shift, v.mass * permeability),
+                            )
                         });
                 let mass_array = bounds
                     .iter()
@@ -85,7 +91,11 @@ impl Eval<(), EvalResult> for WettingEval {
                             .sum()
                     })
                     .collect();
-                let mass_shift = if mass > 0. { mass_moment.scale(1. / mass) } else { Position::zero() };
+                let mass_shift = if mass > 0. {
+                    mass_moment.scale(1. / mass)
+                } else {
+                    Position::zero()
+                };
                 let result = WettingCtx {
                     mass,
                     mass_shift,
