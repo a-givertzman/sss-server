@@ -1,39 +1,48 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
-use indexmap::IndexMap;
 use sal_core::error::Error;
-use crate::{kernel::{EvalEx, sync::Link}, server::{EvalResult, Request}};
+use crate::{kernel::{EvalEx, sync::Link, types::fx_map::FxIndexMap}, server::{ErrorCode, ErrorReply, EvalResult, Request}};
 
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
 pub struct SelectAct<K> {
-    select: IndexMap<K, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send>>,
+    select: FxIndexMap<K, Box<dyn EvalEx<(Request<K>, Option<Link>), Result<(), Error>> + Send>>,
 }
 //
 //
 impl<K: Hash + Eq> SelectAct<K> {
     ///
     /// Returns [SelectAct] new instance
-    pub fn new(select: Vec<(K, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(K, Box<dyn EvalEx<(Request<K>, Option<Link>), Result<(), Error>> + Send + 'static>)>) -> Self {
         Self {
-            select: IndexMap::from_iter(select),
+            select: FxIndexMap::from_iter(select),
         }
     }
 }
 //
 //
-impl<K: Borrow<K> + Hash + Eq + Debug> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for SelectAct<K> {
+impl<K: Borrow<K> + Hash + Eq + Debug + Copy> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for SelectAct<K> {
     //
     //
-    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+    fn eval(&self, (request, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("SelectAct", "eval");
-        match self.select.get(&req.query_id) {
+        match self.select.get(&request.query_id) {
             Some(eval) => {
-                let _ = eval.eval((req, link));
-                Ok(None)
+                let query_id = request.query_id;
+                let response = request.reply_empty();
+                match eval.eval((request, link)) {
+                    Ok(_) => Ok(None),
+                    Err(err) => Ok(Some(response.into_err(ErrorReply::new(
+                        ErrorCode::InternalError,
+                        error.pass_with(format!("Request '{:?}' - failed", query_id), err),
+                    )))),
+                }
             },
-            None => Err(error.err(format!("Request {:?} - is not supported", req.query_id))),
+            None => Ok(Some(request.reply_err(ErrorReply::new(
+                ErrorCode::BadRequest,
+                error.err(format!("Request '{:?}' - is not supported", request.cot)),
+            )))),
         }
     }
     ///

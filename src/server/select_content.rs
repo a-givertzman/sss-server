@@ -1,7 +1,7 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use sal_core::error::Error;
 use sal_sync::collections::FxIndexMap;
-use crate::{kernel::{EvalEx, sync::Link}, server::{Content, EvalResult, Event, Request}};
+use crate::{kernel::{EvalEx, sync::Link}, server::{Content, ErrorCode, ErrorReply, EvalResult, Event, Request}};
 ///
 /// Matching incoming [Event]s by it's Content
 /// - Forwarding matched [Event]s to the associated handlers
@@ -30,11 +30,17 @@ impl<K: Borrow<K> + Hash + Eq + Debug + Copy> EvalEx<(Event<K>, Option<Link>), E
     fn eval(&self, (event, link): (Event<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("SelectContent", "eval");
         match self.select.get(&event.content) {
-            Some(eval) => match Request::from_event(event) {
+            Some(eval) => match Request::from_event(&event) {
                 Ok(req) => eval.eval((req, link)),
-                Err(err) => Err(error.pass(err)),
+                Err(err) => Ok(Some(event.reply_err(ErrorReply::new(
+                    ErrorCode::BadRequest,
+                    error.pass(err),
+                )))),
             },
-            None => Err(error.err(format!("{:?} - is not supported", event.content))),
+            None => Ok(Some(event.reply_err(ErrorReply::new(
+                ErrorCode::BadRequest,
+                error.err(format!("Content '{:?}' - is not supported", event.content)),
+            )))),
         }
         
     }

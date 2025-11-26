@@ -4,7 +4,7 @@ use sal_sync::{sync::Handles, thread_pool::Scheduler};
 use crate::{
     conf::CalculusConf,
     kernel::{EvalEx, sync::Link, types::eval_result::EvalResult},
-    server::{self, CalculusQuery, CalculusReply, CalculusStatus, ErrorCode, ErrorReply, Event, Query, Reply, Request, extract},
+    server::{CalculusQuery, CalculusReply, CalculusStatus, ErrorReply, Event, Query, Reply, Request, extract},
 };
 
 ///
@@ -43,8 +43,8 @@ impl SelectCalculus {
 }
 //
 //
-impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), server::EvalResult<K>> for SelectCalculus {
-    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> server::EvalResult<K> {
+impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), Result<(), Error>> for SelectCalculus {
+    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
         let link = link.ok_or(error.err("Can't get Link"))?;
@@ -95,7 +95,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         match handle {
             Ok(handle) => {
                 self.handles.push(handle);
-                Ok(None)
+                Ok(())
             }
             Err(err) => Err(err),
         }

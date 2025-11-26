@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use sal_core::{dbg::Dbg, error::Error};
 use serde::Serialize;
-use crate::server::{Bytes, Content, Cot, Reply, Response};
+use crate::server::{Bytes, Content, Cot, ErrorReply, Reply, Response};
 
 ///
 /// The [Event] contains the name and data bytes to be sent over the socket
@@ -99,6 +99,26 @@ impl<QueryId: Debug + Copy> Event<QueryId> {
                         .to_string()
                 ).unwrap_or(vec![]),
             },
+        }
+    }
+    ///
+    /// Returns [Response] to current incoming event with positive [Cot]::Con
+    pub fn reply(&self, reply: Reply) -> Response<QueryId> {
+        Response {
+            event_id: self.id,
+            query_id: self.query_id,
+            cot: self.cot.reply_ok(),
+            reply,
+        }
+    }
+    ///
+    /// Returns error [Response] to current [Request] with [Cot]::..Err
+    pub fn reply_err(&self, err: impl Into<ErrorReply>) -> Response<QueryId> {
+        Response {
+            event_id: self.id,
+            query_id: self.query_id,
+            cot: self.cot.reply_err(),
+            reply: Reply::error(err),
         }
     }
     ///

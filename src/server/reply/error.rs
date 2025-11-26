@@ -14,6 +14,7 @@ impl ErrorReply {
     /// Returns [ErrorReply] new instance
     /// - `c` - `ErrorCode` contains proper information for end user
     /// - `e` - Technical details about the error
+    #[allow(unused)]
     pub fn new(c: ErrorCode, e: impl Into<String>) -> Self {
         Self {
             code: c,

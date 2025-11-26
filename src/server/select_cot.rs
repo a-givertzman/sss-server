@@ -1,7 +1,7 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use crate::{kernel::{EvalEx, sync::Link}, server::{Cot, EvalResult, Request}};
+use crate::{kernel::{EvalEx, sync::Link}, server::{Cot, ErrorCode, ErrorReply, EvalResult, Request}};
 ///
 /// Matching incoming messages by it's Cot
 /// - Forwarding matched messages to the associated handlers
@@ -21,20 +21,26 @@ impl<K> SelectCot<K> {
 }
 //
 //
-impl<K: Borrow<K> + Hash + Eq + Debug> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for SelectCot<K> {
+impl<K: Borrow<K> + Hash + Eq + Debug + Copy> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for SelectCot<K> {
     //
     //
-    fn eval(&self, (query, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+    fn eval(&self, (request, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("SelectCot", "eval");
-        match self.select.get(&query.cot) {
+        match self.select.get(&request.cot) {
             Some(eval) => {
-                match query.cot {
-                    Cot::Act => eval.eval((query, link)),
-                    Cot::Req => eval.eval((query, None)),
-                    _ => Err(error.err(format!("Cot {:?} - is not supported", query.cot))),
+                match request.cot {
+                    Cot::Act => eval.eval((request, link)),
+                    Cot::Req => eval.eval((request, None)),
+                    _ => Ok(Some(request.reply_err(ErrorReply::new(
+                        ErrorCode::BadRequest,
+                        error.err(format!("Cot '{:?}' - is not supported", request.cot)),
+                    )))),
                 }
             },
-            None => Err(error.err(format!("Cot {:?} - is not supported", query.cot))),
+            None => Ok(Some(request.reply_err(ErrorReply::new(
+                ErrorCode::BadRequest,
+                error.err(format!("Cot '{:?}' - is not supported", request.cot)),
+            )))),
         }
     }
     ///

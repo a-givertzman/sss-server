@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
-use crate::{kernel::{EvalEx, sync::Link}, server::{DevStreamConf, Device, EvalResult, Event, Reply, Request}};
+use crate::{kernel::{EvalEx, sync::Link}, server::{DevStreamConf, Device, Event, Reply, Request}};
 
 ///
 /// Producess Device's events
@@ -42,11 +42,11 @@ impl DevStream {
 }
 //
 //
-impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for DevStream {
-    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), Result<(), Error>> for DevStream {
+    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> Result<(), Error> {
         let error = Error::new("DevStream", "eval");
         match self.is_active.load(Ordering::SeqCst) {
-            true => Ok(None),
+            true => Ok(()),
             false => match link {
                 Some(link) => {
                     let dbg = self.dbg.clone();
@@ -85,7 +85,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
                     let dbg = self.dbg.clone();
                     self.handle.push(handle);
                     log::info!("{dbg}.eval | Staring - Ok");
-                    Ok(None)
+                    Ok(())
                 }
                 None => Err(error.err("Link is missing")),
             },
