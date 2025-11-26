@@ -75,7 +75,10 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     + Moment::new(icing.mass * icing.mass_shift_x, 0., 0.)
                     + Moment::from_pos(wetting.mass_shift, wetting.mass);
                 //  dbg!(loads.shift_const, loads.shift_unit, loads.shift_gaseous, icing.mass_shift_x, wetting.mass_shift);
-                //  dbg!(loads.mass_const, loads.mass_unit, loads.mass_gaseous, icing.mass, wetting.mass);
+                let liquid: f64 = static_mass.liquid.iter().map(|v| v.mass).sum();
+                let bulk: f64 = static_mass.bulk.iter().map(|v| v.mass).sum();
+                let sum = liquid + bulk + static_mass.mass_const + static_mass.mass_unit + static_mass.mass_gaseous + icing.mass + wetting.mass;
+                  dbg!(sum, liquid, bulk, static_mass.mass_const, static_mass.mass_unit, static_mass.mass_gaseous, icing.mass, wetting.mass);
                 // Расчет баланса для остойчивости в модели
                 let stability_query = BalanceStabilityQuery {
                     water_density: voyage.density,
@@ -91,6 +94,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .read()
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
+          //      dbg!(&result);
                 //    dbg!(result.roll, result.trim_degree, result.draught_mean);
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
@@ -108,7 +112,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 );
                 ctx.write_params(ParameterID::CenterVolumeY, result.displacement_center.y());
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
-
                 let bulk = result
                     .bulk
                     .iter()

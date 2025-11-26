@@ -830,7 +830,7 @@ impl ModelCached {
     /// Расчет равновесного положения для остойчивости
     pub fn balance_stability(
         &self,
-        mut query: BalanceStabilityQuery,
+        query: BalanceStabilityQuery,
         opening: &[Position],
         deck_angle_point: &[Position],
         epsilon: f64,
@@ -1067,12 +1067,12 @@ impl ModelCached {
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
-        let mut step_trim = 0.5;
-        let mut step_heel = 1.0;
+        let mut step_trim = 0.5_f64;
+        let mut step_heel = 1.0_f64;
         let mut d_v: Option<f64> = None;
         let mut d_m: Option<f64> = None;
         for _i in 1..=1000 {
-            let epsilon = (step_trim + step_heel) / 10.;
+            let epsilon = (step_trim.max(step_heel)) / 10.;
             let (new_draught, new_d_v, new_d_m, mass_center, displacement, disp_result) = self
                 .position(
                     heel,
@@ -1110,17 +1110,20 @@ impl ModelCached {
             }
             if let Some(old_d_v) = d_v {
                 if old_d_v.signum() != new_d_v.signum() {
-                    step_trim *= 0.5;
+                    step_trim *= 0.1;
+                    step_heel *= 3.;
                 }
             }
             d_v = Some(new_d_v);
             if let Some(old_d_m) = d_m {
                 if old_d_m.signum() != new_d_m.signum() {
-                    step_heel *= 0.5;
+                    step_heel *= 0.1;
+                    step_trim *= 3.;
                 }
             }
             d_m = Some(new_d_m);
-            //       println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{epsilon} h:{heel}, t:{trim}, draught:{draught}, d_v:{new_d_v}, d_m:{new_d_m}");
+       //     println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
+       //     epsilon, heel, trim, draught, new_d_v, new_d_m);
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1237,18 +1240,18 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-        println!("\nmodel_cached dso: ");
+  /*      println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
-        }
-        println!("\nmodel_cached entry_angle: ");
+        }*/
+    /*    println!("\nmodel_cached entry_angle: ");
         for &(angle, value) in entry_angle.iter() {
             println!("{angle} {value};");
         }
         println!("\nmodel_cached flooding_angle: ");
         for &(angle, value) in flooding_angle.iter() {
             println!("{angle} {value};");
-        }
+        }*/
         Ok((dso, entry_angle, flooding_angle))
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы

@@ -156,6 +156,7 @@ impl Cache<f64> {
                         format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
                     );
                     *key = *keys.first().unwrap();
+                    return vec![*key];
                 } else if keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
                     log::error!(
@@ -164,9 +165,11 @@ impl Cache<f64> {
                         format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
                     );
                     *key = *keys.last().unwrap();
+                    return vec![*key];
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);
+                assert!(keys.len() > low_index, "{}", format!("{:?}, low_index:{low_index} key:{key}", keys));
                 return vec![keys[low_index - 1], keys[low_index]];
             })
             .collect();
