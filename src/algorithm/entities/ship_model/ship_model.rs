@@ -12,6 +12,7 @@ use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::StrengthBalanceCtx;
 use crate::infrostructure::ApiClient;
+use dashmap::DashMap;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::collections::HashMap;
@@ -26,7 +27,7 @@ pub struct ShipModel {
     //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
     horisontal_area: Option<Vec<HStrArea>>,
-    grain_moment: Option<HashMap<String, Curve<f64>>>,
+    grain_moment: Option<DashMap<String, Curve<f64>>>,
     model_cached: ModelCached,
     //    timeout: Duration,
     api_client: Arc<ApiClient>,
@@ -82,7 +83,7 @@ impl ShipModel {
             &self.api_client.clone(),
         )
         .map_err(|err| error.pass_with("grain_moment", err))?;
-        self.grain_moment = Some(grain_moment.clone());
+        self.grain_moment = Some(DashMap::from_iter(grain_moment));
         // TODO переделать, пока не понятно в какой момент должны читаться объемы
         // возможно их надо пересчитывать каждый расчет
         let max_compartment_volume = max_compartment_volume(
@@ -203,7 +204,7 @@ impl ShipModel {
                 return;
             }
             v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
-                curve.value(v.level).unwrap_or(0.)
+                curve.value().value(v.level).unwrap_or(0.)
             } else {
                 let error = error.err(format!("grain_moment.get(&v.space_id), {}", v.space_id));
                 log::error!("{}", error);
