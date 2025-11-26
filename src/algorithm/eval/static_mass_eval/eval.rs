@@ -102,7 +102,10 @@ impl Eval<(), EvalResult> for StaticMassEval {
                         .iter()
                         .filter_map(|v| match v.mass_shift() {
                             Ok(mass_shift) => Some((v.mass, mass_shift)),
-                            Err(_) => None,
+                            Err(err) => {
+                                log::error!("{}", error.pass_with(format!("{} {} mass_shift", v.space_id, v.cargo_name), err));
+                                None
+                            },
                         })
                         .fold(
                             (0., Moment::zero()),
@@ -116,6 +119,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
 
                     (mass_unit, moment_unit.to_pos(mass_unit), grain_bulkhead)
                 };
+                dbg!(mass_unit, &unit);
                 let liquid: Vec<_> = initial
                     .liquid
                     .clone()

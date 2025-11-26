@@ -78,6 +78,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 let liquid: f64 = static_mass.liquid.iter().map(|v| v.mass).sum();
                 let bulk: f64 = static_mass.bulk.iter().map(|v| v.mass).sum();
                 let sum = liquid + bulk + static_mass.mass_const + static_mass.mass_unit + static_mass.mass_gaseous + icing.mass + wetting.mass;
+                //  dbg!(&static_mass); 
                   dbg!(sum, liquid, bulk, static_mass.mass_const, static_mass.mass_unit, static_mass.mass_gaseous, icing.mass, wetting.mass);
                 // Расчет баланса для остойчивости в модели
                 let stability_query = BalanceStabilityQuery {

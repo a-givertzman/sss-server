@@ -57,7 +57,8 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .ok_or(error.err("initial error: no bounds!"))?;
                 let static_mass: StaticMassCtx = ctx.read();
                 let trim = ctx.read_params(ParameterID::TrimDeg);
-                let draught = ctx.read_params(ParameterID::DraughtMid);                
+                let draught = ctx.read_params(ParameterID::DraughtMid);    
+               // dbg!(&static_mass);            
                 // Расчет баланса для прочности в модели
                 let strength_query = BalanceStrengthQuery {
                     trim,
