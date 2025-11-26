@@ -66,17 +66,6 @@ impl CompartmentCache {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
-
-
-    pub fn rewrite(&self) {
-        let mut data = self
-            .cache
-            .as_ref().unwrap().get_data();
-        data.iter_mut().for_each(|v| v[5] = -v[5]);
-        save(&self.dbg, &self.cache_path(), data).unwrap();
-    }
-
-
     /// Расчет коэффициента проницаемости
     pub fn calc_coeff(&mut self, volume_max: f64) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "calc_coeff");

@@ -300,13 +300,6 @@ impl ModelCached {
         };
         Ok(model_cached)
     }
-
-
-    pub fn rewrite(&self) {
-        self.displacement.rewrite();
-        self.compartments.iter().for_each(|(_, v)| v.read().rewrite());
-    }
-
     /// reload all shapes
     pub fn reload_shapes(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "reload_shapes");
@@ -455,23 +448,23 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-  /*      if let Err(error) = self.displacement.rebuild() {
+        if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
-        }*/
+        }
         for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-  /*      for (name, compartment) in &mut self.damaged_compartments {
+        for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }*/
+        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",

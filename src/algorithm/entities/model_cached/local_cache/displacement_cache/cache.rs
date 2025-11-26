@@ -167,16 +167,6 @@ impl DisplacementCache {
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         Ok((cache.key_disp(0), cache.key_disp(1), cache.key_disp(2)))
     }
-
-
-
-    pub fn rewrite(&self) {
-        let mut data = self
-            .cache
-            .as_ref().unwrap().get_data();
-        data.iter_mut().for_each(|v| v[5] = -v[5]);
-        save(&self.dbg, &self.cache_path(), data).unwrap();
-    }
 }
 //
 //

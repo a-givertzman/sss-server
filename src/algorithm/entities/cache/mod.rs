@@ -296,8 +296,4 @@ impl Cache<f64> {
         let keys = &keys[index];
         (keys.first().unwrap().clone(), keys.last().unwrap().clone())
     }
-
-    pub fn get_data(&self) -> Vec<Vec<f64>> {
-        self.table.get().unwrap().clone()
-    }
 }

@@ -127,12 +127,6 @@ impl ShipModel {
             .init_bounded(bounds)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))
     }
-
-
-
-    pub fn rewrite(&self) {
-        self.model_cached.rewrite()
-    }
     ///
     /// TODO: Doc
     /*    pub fn bounds(&mut self, qnt_bounds: usize) -> Result<Bounds, Error> {

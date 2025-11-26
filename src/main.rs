@@ -115,7 +115,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
   //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-    
 /*
     let res = model_cached.reload_shapes();            dbg!(&res);
  //   let res = model_cached.rebuild_caches();   dbg!(&res);
@@ -123,8 +122,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
-*/
-    
+*/ 
     let api_client = Arc::new(ApiClient::new(
         &dbg,
         conf.api.address.database.clone(),
@@ -141,9 +139,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     ship_model.init().unwrap();
     ship_model.init_cache_bounded(&bounds).unwrap();
-
-    ship_model.rewrite();
-
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
     let ctx =   
