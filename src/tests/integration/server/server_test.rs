@@ -47,8 +47,11 @@ fn query_calculus() {
     let test_data = [
         (01, TestCase::Timeout(Duration::from_millis(100))),
         (02, TestCase::Request(Request { event_id: 0, query_id: QueryId::Calculus, cot: Cot::Act, content: Content::Json, query: Query::Calculus(CalculusQuery { ship_id: 111, project_id: "Test Proj".into() }) })),
-        (03, TestCase::Reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Ongoing }))),
-        (04, TestCase::Reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Done }))),
+        (03, TestCase::Reply((Cot::Inf, Reply::Calculus(CalculusReply { status: CalculusStatus::Ongoing })))),
+        (04, TestCase::Reply((Cot::ActCon, Reply::Calculus(CalculusReply { status: CalculusStatus::Done })))),
+        (05, TestCase::Timeout(Duration::from_millis(300))),
+        (06, TestCase::Request(Request { event_id: 0, query_id: QueryId::Calculus, cot: Cot::Req, content: Content::Json, query: Query::Calculus(CalculusQuery { ship_id: 111, project_id: "Test Proj".into() }) })),
+        (07, TestCase::Reply((Cot::ReqErr, Reply::Calculus(CalculusReply { status: CalculusStatus::Done })))),
     ];
     let tp = ThreadPool::new(&dbg, Some(4));
     let conf: Conf = serde_yaml::from_str(r#"
@@ -216,7 +219,7 @@ pub(super) enum TestCase {
     /// FakeClient sends request
     Request(Request<QueryId>),
     /// FakeClient expect reply
-    Reply(Reply),
+    Reply((Cot, Reply)),
     /// FakeClient wait before next operation
     Timeout(Duration),
 }

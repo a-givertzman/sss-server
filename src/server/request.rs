@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use sal_core::error::Error;
-use crate::server::{Content, Cot, Event, Query, Reply, Response};
+use crate::server::{Content, Cot, ErrorReply, Event, Query, Reply, Response};
 
 ///
 /// The [Request] contains information about the Event and `Query`
@@ -58,7 +58,7 @@ impl<QueryId: Debug + Copy> Request<QueryId> {
     }
     ///
     /// Returns error [Reply] to current [Request]
-    pub fn reply_err(&self, err: impl Into<String>) -> Response<QueryId> {
+    pub fn reply_err(&self, err: impl Into<ErrorReply>) -> Response<QueryId> {
         Response {
             event_id: self.event_id,
             query_id: self.query_id,

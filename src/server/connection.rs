@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{
     kernel::{EvalEx, sync::{Hub, Link}},
-    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, QueryId, Reply, SizedField, Terminator}
+    server::{ConnectionConf, Content, Cot, ErrorCode, ErrorReply, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, QueryId, Reply, SizedField, Terminator}
 };
 use super::{Event, Response};
 
@@ -166,7 +166,10 @@ impl Connection {
                                         event_id,
                                         query_id,
                                         cot: cot.reply_err(),
-                                        reply: Reply::error(error.pass(err).to_string()),
+                                        reply: Reply::error(ErrorReply {
+                                            code: ErrorCode::InternalError,
+                                            info: error.pass(err).into(),
+                                        }),
                                     }),
                                 };
                                 if let Some(response) = response {

@@ -4,7 +4,7 @@ use sal_sync::{sync::Handles, thread_pool::Scheduler};
 use crate::{
     conf::CalculusConf,
     kernel::{EvalEx, sync::Link, types::eval_result::EvalResult},
-    server::{self, CalculusQuery, CalculusReply, CalculusStatus, Event, Query, Reply, Request, extract},
+    server::{self, CalculusQuery, CalculusReply, CalculusStatus, ErrorCode, ErrorReply, Event, Query, Reply, Request, extract},
 };
 
 ///
@@ -84,7 +84,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
                     req.reply(Reply::Calculus(CalculusReply { status: CalculusStatus::Done }))
                 }
                 Err(err) => {
-                    req.reply_err(error1.pass_with("Calculations failed", err))
+                    req.reply_err(ErrorReply::internal(error1.pass_with("Calculations failed", err)))
                 }
             };
             if let Err(err) = link.send(Event::from(&dbg, response)) {

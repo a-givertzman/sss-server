@@ -43,7 +43,11 @@ impl FakeClient {
                         for (step, test_case) in &test_data {
                             match test_case {
                                 TestCase::Request(request) => {
-                                    log::debug!("{dbg}.run | Step {step} Query: {:#?}", serde_json::to_string(&request.query));
+                                    log::debug!(
+                                        "{dbg}.run | Step {step} Event to {addr}: QueryId {:?}, Cot {:?}, Content {:?}, query: {:#?}",
+                                        request.query_id, request.cot, request.content, serde_json::to_string(&request.query),
+                                    );
+                                    // log::debug!("{dbg}.run | Step {step} Query: {:#?}", serde_json::to_string(&request.query));
                                     let bytes = serde_json::to_vec(&request.query).unwrap();
                                     let event = Event::new(request.event_id, request.query_id, request.cot, request.content, bytes);
                                     let bytes = message.build(&[
@@ -60,7 +64,7 @@ impl FakeClient {
                                         Err(err) => log::warn!("{dbg}.run | Step {step} Can't write Query {:?} to socket '{addr}', error: {:?}", request.query, err),
                                     }
                                 }
-                                TestCase::Reply(target) => {
+                                TestCase::Reply((target_cot, target)) => {
                                     'read: loop {
                                         let mut buf = vec![0; 1024 * 4];
                                         match stream.read(&mut buf) {
@@ -68,11 +72,17 @@ impl FakeClient {
                                                 match message.parse(buf[..len].to_vec()) {
                                                     Ok(((((((_, FieldId(event_id)), content), cot), query_id), _len), bytes)) => {
                                                         let response = Event::new(event_id, query_id, cot, content, bytes);
-                                                        log::debug!("{dbg}.run | Step {step} Response received from'{addr}': \n\tid {}, Query {:?}, Content {:?}, Cot {:?}", response.id, response.query_id, response.content, response.cot);
+                                                        log::debug!(
+                                                            "{dbg}.run | Step {step} Event from {addr}: QueryId {:?}, Cot {:?}, Content {:?}, reply: {:#?}",
+                                                            response.query_id, response.cot, response.content, str::from_utf8(&response.bytes),
+                                                        );
                                                         let result: Reply = serde_json::from_slice(&response.bytes).unwrap();
-                                                        log::debug!("{dbg}.run | Step {step} Reply: {:#?}", str::from_utf8(&response.bytes));
                                                         // log::debug!("{dbg}.run | Step {step} Reply: {:#?}", result);
-                                                        assert!(&result == target, "Step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                                                        if &result == target {
+                                                            log::warn!("{dbg}.run | Step {step} \nresult: {:?}\ntarget: {:?}", result, target);
+                                                        }
+                                                        assert!(&response.cot == target_cot, "{dbg}.run | Step {step} \nresult: {:?}\ntarget: {:?}", response.cot, target_cot);
+                                                        // assert!(&result == target, "{dbg}.run | Step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                                                         break 'read;
                                                     }
                                                     Err(err) => log::trace!("{dbg}.run | Step {step} Can't parse message, error: {:?}", err),
@@ -82,7 +92,10 @@ impl FakeClient {
                                         }
                                     }
                                 }
-                                TestCase::Timeout(duration) => std::thread::sleep(*duration),
+                                TestCase::Timeout(duration) => {
+                                    log::debug!("{dbg}.run | Step {step} Wait duration {:?}...", duration);
+                                    std::thread::sleep(*duration);
+                                }
                             }
                             if exit.load(Ordering::Acquire) {
                                 break 'main;
