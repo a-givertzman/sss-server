@@ -1,5 +1,5 @@
 //!
-//! # Couse of transmission.
+//! # Cause and diraction of transmission.
 //! Bitmask (Enum) being a part of the [Point](../point/index.html).  
 //! Contains information about transmission cause and direction.  
 //! Basic values at the moment (can be extended):

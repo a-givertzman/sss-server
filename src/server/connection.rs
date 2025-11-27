@@ -44,13 +44,13 @@ impl Connection {
     ///
     /// Setups TCP [Message]
     pub(crate) fn tcp_message(dbg: &Dbg) -> Message<((((((((), ()), ()), FieldId), Content), Cot), QueryId), u32), Vec<u8>> {
-        const SYN: u8 = 0x22;
+        const SYN: u8 = 0x16;
         Message::new(
             dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
             vec![
                 FieldConf::Const(vec![SYN]),    // Syn
                 FieldConf::U32Be,               // ID
-                FieldConf::Byte,                // Kind
+                FieldConf::Byte,                // Content
                 FieldConf::Byte,                // Cot
                 FieldConf::U32Be,               // QueryId
                 FieldConf::U32Be,               // Size
@@ -89,12 +89,12 @@ impl Connection {
                                     Err(err) => Err(Error::new(dbg, "Cot::from_bytes").pass_with("Can't parse 'Cot' u8 field", err)),
                                 }
                             },
-                            FixedField::new(        // Kind | u8
+                            FixedField::new(        // Content | u8
                                 dbg,
                                 1,
                                 |dbg, bytes| {
                                     match Content::try_from(bytes) {
-                                        Ok(kind) => Ok(kind),
+                                        Ok(content) => Ok(content),
                                         Err(err) => Err(Error::new(dbg, "Kind::from_bytes").pass_with("Can't parse 'Kind' u8 field", err)),
                                     }
                                 },

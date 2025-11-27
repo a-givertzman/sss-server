@@ -5,6 +5,7 @@ use sal_core::error::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash, bincode::Encode, bincode::Decode)]
 #[repr(u32)]
 pub enum QueryId {
+    None         = 00,
     Calculus     = 16,
     /// TODO; To be deleted, just for example
     DeviceStream = 20,
