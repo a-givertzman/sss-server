@@ -2,12 +2,12 @@
 
 ## Description to Event structure
 
-**Bytes order**: Endian.little
-
 Event consits of three parts:
 - Start field SYN = 22 (0x16)
 - Header fields
 - Data
+
+**Bytes order**: All fields - Endian.little
 
 **Event Header**
 - Id        (4 bytes)
