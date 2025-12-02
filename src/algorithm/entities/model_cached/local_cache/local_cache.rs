@@ -70,10 +70,16 @@ pub(crate) trait LocalCache {
     /// - loads recalculated table
     fn rebuild(&mut self) -> Result<(), Error> {
         self.clear_exit();
-        match self.calculate().first() {
-            Some(err) => Err(Error::new(self.dbg(), "rebuild").pass(err.to_owned())),
-            None => Ok(()),
+        let errors = self.calculate();
+        if !errors.is_empty() {
+            return Err(Error::new(self.dbg(), "rebuild").pass_with(
+                "calculate",
+                errors
+                    .iter()
+                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
+            ));
         }
+        Ok(())
     }
     /// инициализация кэша заранее посчитанными данными
     fn init(&mut self) -> Result<(), Error> {

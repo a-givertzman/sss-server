@@ -3,7 +3,8 @@ use nalgebra::*;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use std::time::Duration;
 
 use crate::algorithm::entities::model_cached::shape::utils;
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
@@ -136,14 +137,14 @@ impl DisplacementShape {
         draught: f64,
     ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "displacement");
-        //    println!("{}.displacement | start {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
+        //     println!("{}.displacement | start {:3} {:3} {:3}", &self.dbg, heel, trim, draught);
         let position = self
-            .position(draught, heel, trim)
+            .position(heel, trim, draught)
             .map_err(|err| error.pass_with("self.position", err))?;
         let cuboid_half_size = 1000.;
         let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
         let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
-        //    println!("{}.displacement | intersection_with_cuboid {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
+        //        println!("{}.displacement | intersection_with_cuboid {:3} {:3} {:3}", &self.dbg, heel, trim, draught);
         let result = mesh.intersection_with_cuboid(
             &position,
             false,
@@ -159,21 +160,22 @@ impl DisplacementShape {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
                 None => {
-                    let center = self.center.unwrap();
+                    let center = self.center.ok_or(error.err("no center"))?;
                     return Ok((0., Position::new(center.x, -center.y, center.z + draught)));
-                } // return Err(error.err("mesh.intersection_with_plane error: no intersection!"));
+                }
             },
             Err(e) => return Err(error.pass_with("mesh.intersection_with_cuboid", e.to_string())),
         };
-        //    println!("{}.displacement | set_flags {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
+        //     println!("{}.displacement | set_flags {:3} {:3} {:3}", &self.dbg, heel, trim, draught);
         if let Err(error) = mesh
             .set_flags(TriMeshFlags::all())
             .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
         {
             log::error!("{}", error);
         }
-        //    println!("{}.displacement | mass_properties {:3} {:3} {:3}", &self.dbg, draught, heel, trim);
-        Ok(super::properties(&mesh, 1.))
+        let properties = super::properties(&mesh, 1.);
+        //    println!("{}.displacement | mass_properties {:3} {:3} {:3} {:3} {:3} {:3} {:3} {:3}", &self.dbg, heel, trim, draught, position.translation.x, position.translation.y, position.translation.z, properties.0, properties.1);
+        Ok(properties)
     }
     ///
     /// Расчет площади ватерлинии судна и положение ее центра в связанной с судной системой координат
@@ -186,7 +188,7 @@ impl DisplacementShape {
     ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "area");
         let position = self
-            .position(draught, heel, trim)
+            .position(heel, trim, draught)
             .map_err(|err| error.pass_with("self.position", err))?;
         let cuboid_half_size = 1000.;
         let hdz = 0.005;
@@ -207,7 +209,7 @@ impl DisplacementShape {
             Ok(mesh) => match mesh {
                 Some(mesh) => mesh,
                 None => {
-                    let center = self.center.unwrap();
+                    let center = self.center.ok_or(error.err("no center"))?;
                     return Ok((0., Position::new(center.x, -center.y, center.z + draught)));
                 } //  return Err(error.err("mesh.intersection_with_cuboid error: no intersection!"));
             },
@@ -240,7 +242,10 @@ impl DisplacementShape {
     /// полный объем модели
     pub fn properties(&self) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "volume");
-        Ok(super::properties(self.mesh.as_ref().ok_or(error.err("no mesh"))?, 1.))
+        Ok(super::properties(
+            self.mesh.as_ref().ok_or(error.err("no mesh"))?,
+            1.,
+        ))
     }
     ///
     /// Расчет водоизмещения для разных осадок (для шпации)
@@ -419,9 +424,10 @@ impl DisplacementShape {
     ///
     /// Расчет [момента инерции свободной поверхности жидкости](https://github.com/a-givertzman/sss/blob/cdef1e9a2133adeb2fe8abcda6229b206c28493c/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md#%D0%B2%D0%BB%D0%B8%D1%8F%D0%BD%D0%B8%D0%B5-%D1%81%D0%B2%D0%BE%D0%B1%D0%BE%D0%B4%D0%BD%D0%BE%D0%B9-%D0%BF%D0%BE%D0%B2%D0%B5%D1%80%D1%85%D0%BD%D0%BE%D1%81%D1%82%D0%B8)
     pub fn inertia(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, f64), Error> {
+        //     println!("{} {heel} {trim} {draught} start inertia", self.dbg);
         let error = Error::new(&self.dbg, "inertia");
         let position = self
-            .position(draught, heel, trim)
+            .position(heel, trim, draught)
             .map_err(|err| error.pass_with("self.position", err))?;
         let result = self
             .mesh
@@ -430,17 +436,39 @@ impl DisplacementShape {
             .intersection_with_plane(&position, &Vector3::z_axis(), 0., self.epsilon);
         match result {
             parry3d_f64::query::IntersectResult::Intersect(polyline) => {
+                let (mut min_x, mut max_x, mut min_y, mut max_y) =
+                    (f64::MAX, f64::MIN, f64::MAX, f64::MIN);
                 let vertices: Vec<_> = polyline
                     .vertices()
                     .iter()
                     .map(|p| position.transform_point(&p))
-                    .map(|p| Point2::new(p.x, p.y))
+                    .map(|p| {
+                        min_x = min_x.min(p.x);
+                        max_x = max_x.max(p.x);
+                        min_y = min_y.min(p.y);
+                        max_y = max_y.max(p.y);
+                        Point2::new(p.x, p.y)
+                    })
                     .collect();
-                let indices = polyline.indices().to_owned();
+                let indices = polyline.indices();
+                let max_delta = (max_y - min_y).max(max_x - min_x) as u32;
+                let resolution = (max_delta * 100).min(self.resolution);
+                if resolution < 2 {
+                    return Ok((0., 0.));
+                }
+      /*          dbg!(
+                    min_x,
+                    max_x,
+                    min_y,
+                    max_y,
+                    max_delta,
+                    resolution,
+                    self.resolution
+                );*/
                 let mut voxel_set = parry2d_f64::transformation::voxelization::VoxelSet::voxelize(
                     &vertices,
-                    &indices,
-                    self.resolution,
+                    indices,
+                    resolution,
                     parry2d_f64::transformation::voxelization::FillMode::FloodFill {
                         detect_cavities: true,
                         detect_self_intersections: false,

@@ -22,7 +22,7 @@ pub struct BuildCompartmentCache {
     shape: Arc<RwLock<DisplacementShape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    level_step: f64,
+    level_step_qnt: usize,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
@@ -37,7 +37,7 @@ impl BuildCompartmentCache {
         shape: Arc<RwLock<DisplacementShape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        level_step: f64,
+        level_step_qnt: usize,
         thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
@@ -46,7 +46,7 @@ impl BuildCompartmentCache {
             shape: shape.clone(),
             heel_steps,
             trim_steps,
-            level_step,
+            level_step_qnt,
             thread_pool,
             exit,
         }
@@ -56,7 +56,7 @@ impl BuildCompartmentCache {
     ///
     /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy]]
     pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
-        //dbg!("BuildCompartmentCache calculate begin");
+      //  dbg!("BuildCompartmentCache build begin");
         log::info!("{}.build | Starting build", &self.dbg);
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
         let error = Error::new(&self.dbg, "build");
@@ -82,7 +82,7 @@ impl BuildCompartmentCache {
             .fold(0., |acc, v| if acc < v.abs() { v.abs() } else { acc });
         let draught_steps = match shape
             .read()
-            .draught_steps(self.level_step, max_heel, max_trim)
+            .draught_steps(self.level_step_qnt, max_heel, max_trim)
         {
             Ok(draught_steps) => draught_steps,
             Err(err) => {
@@ -113,7 +113,7 @@ impl BuildCompartmentCache {
                     let thread_name =
                         format!("BuildCompartmentCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-                 //   println!("{}.build | Starting thread {thread_name}", &self.dbg);
+                    println!("{}.build | Starting thread {thread_name}", &self.dbg);
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let guard = shape.read();
@@ -143,7 +143,6 @@ impl BuildCompartmentCache {
             }
         }
         for task in tasks {
-            //    println!("task.join {}", task.name());
             log::info!("{}.build | join thread {}", &self.dbg, task.name());
             println!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
@@ -179,6 +178,7 @@ impl BuildCompartmentCache {
                         center_max.z(),
                         0.,
                         0.,
+                        volume_max*center_max.y(),
                     ]);
                 } else {
                     vec_results.push(vec![
@@ -191,6 +191,7 @@ impl BuildCompartmentCache {
                         center.z(),
                         i_x,
                         i_y,
+                        volume*center.y(),
                     ]);
                 }
             }
@@ -216,6 +217,7 @@ impl BuildCompartmentCache {
             v[6] = center_min.z();
             v[7] = 0.;
             v[8] = 0.;
+            v[9] = 0.;
         });
         (vec_results, errors)
     }

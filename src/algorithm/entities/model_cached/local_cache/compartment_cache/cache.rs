@@ -22,7 +22,7 @@ pub struct CompartmentCache {
     cache_dir: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    level_step: f64,
+    level_step_qnt: usize,
     /// Максимальный объем отсека из БД (Нетто)
     volume_max: Option<f64>,
     /// коэффициент проницаемости
@@ -48,7 +48,7 @@ impl CompartmentCache {
         compartment_id: String,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        level_step: f64,
+        level_step_qnt: usize,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("CompartmentCache_{compartment_id}"));
@@ -56,7 +56,7 @@ impl CompartmentCache {
             shape,
             heel_steps,
             trim_steps,
-            level_step,
+            level_step_qnt,
             volume_max: None,
             coeff: None,
             cache: None,
@@ -257,11 +257,14 @@ impl LocalCache for CompartmentCache {
             self.shape.clone(),
             self.heel_steps.clone(),
             self.trim_steps.clone(),
-            self.level_step,
+            self.level_step_qnt,
             Arc::clone(&self.thread_pool),
             self.exit.clone(),
         )
         .build();
+        if !errors.is_empty() {
+            return errors;
+        }
         let cache = if let Some(cache) = self.cache.take() {
             cache
         } else {

@@ -30,8 +30,8 @@ pub struct ModelCachedConf {
     /// Angle in degrees for compartments
     pub compartment_heel_steps: Vec<f64>,
     pub compartment_trim_steps: Vec<f64>,
-    /// Level for compartments
-    pub compartment_level_step: f64,    
+    /// Level steps for compartments
+    pub compartment_level_step_qnt: usize,    
     /// Level step for compartments
     pub bounds_level_step: f64,
 }

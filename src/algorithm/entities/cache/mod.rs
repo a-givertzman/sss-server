@@ -72,10 +72,10 @@ impl<T: PartialOrd> Cache<T> {
             .collect();
         self.table
             .set(vals.clone())
-            .map_err(|_| Error::new("Cache", "init").err("table.set"))?;
+            .map_err(|_| Error::new("Cache", "init").err("table.set error: already set"))?;
         self.keys
             .set(keys)
-            .map_err(|_| Error::new("Cache", "init").err("keys.set"))?;
+            .map_err(|_| Error::new("Cache", "init").err("keys.set error: already set"))?;
         Ok(())
     }
 }
