@@ -77,7 +77,7 @@ pub struct LiquidData {
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения    
     pub cargo_type: LiquidCargoType, // Тип жидкого груза
-    pub use_moment_of_inertia_max: bool, // Признак использования максимального значения момента свободной поверхности жидкости
+    pub use_max_moment: bool, // Признак использования максимального значения момента свободной поверхности жидкости
     pub is_cargo_tank: bool,
     pub mass: f64,
     pub volume: f64,

@@ -69,7 +69,7 @@ impl LoadLiquidData {
             cargo_type: self.cargo_type,
        //     cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),
-            use_moment_of_inertia_max: self.use_moment_of_inertia_max,
+            use_max_moment: self.use_moment_of_inertia_max,
             is_cargo_tank: self.compartment_purpose == CompartmentPurpose::CargoTank,
             mass: self.mass,
             volume,

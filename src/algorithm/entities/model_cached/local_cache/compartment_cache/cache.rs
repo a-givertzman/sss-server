@@ -92,7 +92,7 @@ impl CompartmentCache {
         trim: f64,
         volume: f64,
         epsilon: f64,
-        use_max_inertia_trans: bool, //признак пересчета объема от макс. момента
+        use_max_moment: bool, //признак пересчета объема от макс. момента
         is_cargo_tank: bool, 
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
@@ -104,8 +104,8 @@ impl CompartmentCache {
             epsilon,
         ).map_err(|err| error.pass(err))?;
         if !is_cargo_tank {// Для всех цистерн кроме грузовых
-            if use_max_inertia_trans { // Признак использования максимальной поправки
-                let (volume, volume_center, inertia_trans_x) = self._get_max_inertia_trans_x().map_err(|err| error.pass(err))?;
+            if use_max_moment { // Признак использования максимальной поправки
+                let (volume, volume_center, inertia_trans_x) = self._get_with_max_moment(heel).map_err(|err| error.pass(err))?;
                 result.inertia_trans_x = inertia_trans_x;   // максимальная поправка
                 result.volume = volume;             // соответствующий максимальной поправке объем
                 result.volume_center = volume_center;
@@ -173,11 +173,11 @@ impl CompartmentCache {
     }
     /// Получение значения кэша для для максимальной поправки при нулевых крене и дифференте
     /// Возвращает объем и значение поперечного момента
-    fn _get_max_inertia_trans_x(&self) -> Result<(f64, Position, f64), Error> {
-        let error = Error::new(self.dbg(), "_get_max_inertia_trans_x");
+    fn _get_with_max_moment(&self, heel: f64) -> Result<(f64, Position, f64), Error> {
+        let error = Error::new(self.dbg(), "_get_with_max_moment");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
-        let result = cache.value_disp_opt(7, &[Some(0.), Some(0.)])
+        let result = cache.value_disp_opt(8, &[Some(heel)])
             .ok_or(error.pass("no result"))?;
         Ok((result.1[3]*coeff, Position::new(result.1[4], result.1[5], result.1[6]), result.1[7]))  
     }

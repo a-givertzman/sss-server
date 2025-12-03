@@ -1539,7 +1539,7 @@ impl ModelCached {
                     let space_id = liquid.space_id.clone();
                     let density = liquid.density;
                     let volume = liquid.volume;
-                    let use_moment_of_inertia_max = liquid.use_moment_of_inertia_max;
+                    let use_max_moment = liquid.use_max_moment;
                     let is_cargo_tank = liquid.is_cargo_tank;
                     let compartment = compartment.clone();
                     let handle = scheduler
@@ -1551,7 +1551,7 @@ impl ModelCached {
                                     trim,
                                     volume,
                                     epsilon,
-                                    use_moment_of_inertia_max,
+                                    use_max_moment,
                                     is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
