@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .level(Logger::from_default_env().filter().as_str())
         .size(5 * 1024 * 1024)
         .rotate(10)
-        .tee(true)
+        .tee(false)
         .module(true)
         .start();
 
@@ -62,22 +62,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let ship_id = 2;
-    let project_id = "NULL";
-    let cache_dir: PathBuf = "src/assets/cache/sofia".into();
-    let model_dir: PathBuf = "src/assets/model/sofia".into();
-    let model_x = 65.250;
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
-/*
+
     let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
-    let model_dir: PathBuf = "src/assets/model/sofia/compartments/229.stl".into();
+    let model_dir: PathBuf = "src/assets/model/sofia/compartments/205.stl".into();
     let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
         &dbg, model_dir, None, 1000.,
     )));
     shape.write().init().unwrap();
     shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
-
-
     let mut cache = model_cached::CompartmentCache::new(
         &dbg,
         shape.clone(),
@@ -90,17 +83,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         10,
         Arc::clone(&thread_pool),
     );
-    dbg!(cache.rebuild());
-*/
+    cache.init().unwrap();
+    cache.calc_coeff(221.692).unwrap();
 
- /*   cache.init().unwrap();
-    cache.calc_coeff(221.692).unwrap();    
+    cache._get_with_max_moment(-50.).unwrap();
 
     let calc = |heel: f64| {
+        cache._get_with_max_moment(heel)
+    };
+ //   (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {:?}", calc(v)));
+
+
+
+  /*  let calc = |heel: f64| {
         cache.get(heel, 0., 111.9657, 0.0000001, false, false).unwrap().volume_center.y()
     };
     (0..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {}", calc(v)));
 */
+
+    return Ok(());
+
+
+
+    let ship_id = 2;
+    let project_id = "NULL";
+    let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+    let model_dir: PathBuf = "src/assets/model/sofia".into();
+    let model_x = 65.250;
+
+
 
     
 

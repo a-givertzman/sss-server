@@ -246,8 +246,8 @@ impl Cache<f64> {
     pub fn value_disp(&self, index: usize) -> (f64, f64) {
         let data = self.table.get().unwrap_or_else(|| {
             panic!(
-                "{}.{} | Cache error: no table! index:{index}",
-                self.dbg, "max_value"
+                "{}.{} | Cache error: no table!",
+                self.dbg, "value_disp"
             )
         });
         assert!(data[0].len() > index);
@@ -257,22 +257,19 @@ impl Cache<f64> {
         let v_max = v.iter().max_by(|a, b| a.partial_cmp(b).unwrap());
         (v_min.unwrap().clone(), v_max.unwrap().clone())
     }
-    /// Максимальное значение по индексу c условием
-    pub fn value_disp_opt(&self, index: usize, other: &[Option<f64>]) -> Option<(Vec<f64>, Vec<f64>)> {
+ /*   /// Максимальное значение по индексу c условием, возвращает значения только для существующих ключей
+    pub fn _value_disp_opt(&self, index: usize, query: &[Option<f64>]) -> Option<(Vec<f64>, Vec<f64>)> {
         let data = self.table.get().unwrap_or_else(|| {
             panic!(
-                "{}.{} | Cache error: no table! index:{index}",
-                self.dbg, "max_value"
+                "{}.{} | Cache error: no table!",
+                self.dbg, "value_disp_opt"
             )
         });
-        assert!(data[0].len() > index);
-        assert!(data[0].len() >= other.len());
-        assert!(other.len() <= index || other[index] == None);
         let v: Vec<_> = data
             .iter()
             .filter(|v| {
                 !v.iter()
-                    .zip(other.iter())
+                    .zip(query.iter())
                     .filter(|(_, o)| o.is_some())
                     .any(|(v, o)| *v != o.unwrap())
             })
@@ -284,7 +281,7 @@ impl Cache<f64> {
             (None, Some(v)) | (Some(v), None) => Some((v.to_vec(), v.to_vec())),
             (Some(v_min), Some(v_max)) => Some((v_min.to_vec(), v_max.to_vec())),
         }
-    }
+    }*/
     /// Максимальное значение ключа по индексу
     #[allow(dead_code)]
     pub fn key_disp(&self, index: usize) -> (f64, f64) {

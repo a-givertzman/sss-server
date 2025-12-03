@@ -1168,11 +1168,7 @@ impl ModelCached {
                             let ld = tcg * cos_phy + vcg * sin_phy;
                             let delta_l = delta_tcg * cos_phy + delta_vcg * sin_phy;
                             let l = lv - ld - delta_l;
-
-               //             println!("{heel} {trim} {moment_liquid_dso} {delta_moment_liquid} {delta_l} {lv} {l}");
-
-                      //      println!("delta_l: {heel} {delta_l};");
-                            //      dbg!(moment_sum, mass_sum, moment_liquid_balanced, moment_liquid, delta_moment_liquid, delta_tg, cg, lv, ld, delta_l, l);
+                  //         println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
                             l
                         };
                         dso.push((heel, l));
@@ -1523,7 +1519,8 @@ impl ModelCached {
         trim: f64,
         epsilon: f64,
     ) -> Result<Moment, Error> {
- //       if heel == 0. {  println!("\n\nmoment_liquid_dso heel:{} trim:{}\n", heel, trim,);  }
+       // if heel == 0. 
+      //  {  println!("\n\nmoment_liquid_dso heel:{} trim:{}\n", heel, trim,);  }
         let error = Error::new(&self.dbg, "moment_liquid_dso");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
@@ -1531,8 +1528,10 @@ impl ModelCached {
         let mut values = Vec::new();
         let scheduler = self.thread_pool.scheduler();
         for liquid in liquids {
+            dbg!(heel, &liquid);
             match self.compartments.get(&liquid.space_id) {
                 Some(compartment) => {
+                    dbg!(heel, "compartment ok");
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
@@ -1555,6 +1554,7 @@ impl ModelCached {
                                     is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
+                            dbg!(&res);
                             task_results.push((space_id, density, res));
                             Ok(())
                         })
@@ -1567,6 +1567,7 @@ impl ModelCached {
                             let error =
                                 error.pass_with(format!("handle for {}", liquid.space_id), err);
                             log::error!("{}", error);
+                            println!("{}", error);
                             errors.push(error);
                         }
                     };
@@ -1574,6 +1575,7 @@ impl ModelCached {
                 None => {
                     let error = error.err(format!("no compartment: {}", liquid.space_id));
                     log::error!("{}", error);
+                    println!("{}", error);
                     errors.push(error);
                 }
             }
@@ -1583,6 +1585,7 @@ impl ModelCached {
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
+                println!("{}", error);
                 errors.push(error);
             }
         }
@@ -1594,20 +1597,23 @@ impl ModelCached {
             )) = task_results.pop()
             {
       //          if _space_id == "217" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);  }
-      println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+          println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
                 values.push(Moment::from_pos(result.volume_center, result.volume * density));
             }
         }
         if !errors.is_empty() {
-            return Err(error.pass_with(
+            let error = error.pass_with(
                 "moment_liquid",
                 errors.iter().fold("errors:".to_string(), |acc, err| {
                     acc + &format!("\n{}", err)
                 }),
-            ));
+            );
+            log::error!("{}", error);
+            println!("{}", error);
+            return Err(error);
         }
         let sum_moment = values.into_iter().sum();
-    //    println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
+        println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
         Ok(sum_moment)
     }
     /// Считаем поврежденные отсеки

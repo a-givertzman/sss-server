@@ -42,9 +42,6 @@ pub struct LoadLiquidData {
 //
 impl LoadLiquidData {
     pub fn data(&self) -> Option<LiquidData> {
-        if self.mass <= 0. {
-            return None;
-        }
         let volume = if let Some(volume) = self.volume {
             volume
         } else {
@@ -82,6 +79,6 @@ pub type LoadLiquidArray = DataArray<LoadLiquidData>;
 //
 impl LoadLiquidArray {
     pub fn data(self) -> HashMap<usize, LoadLiquidData> {
-        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assignment_id, v)).collect()
+        self.data.into_iter().map(|v| (v.assignment_id, v)).collect()
     }
 }

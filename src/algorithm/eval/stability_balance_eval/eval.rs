@@ -113,7 +113,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 dbg!(mass_bulk_cargo, bulk_cargo_shift); 
 */
           //      dbg!(result.roll, result.trim_degree, result.draught_mean, result.mass_center ); 
-                dbg!(&result);
+        //        dbg!(&result);
            //     result.liquid.iter().for_each(|v| println!("'{}' {} {};", liquid_data.get(&v.assignment_id).unwrap().space_name, v.long_moment_of_inertia, v.trans_moment_of_inertia));
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);

@@ -96,6 +96,7 @@ impl CompartmentCache {
         is_cargo_tank: bool, 
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
+        println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let mut result = self.get_for_floating(
             heel,
@@ -103,6 +104,7 @@ impl CompartmentCache {
             volume,
             epsilon,
         ).map_err(|err| error.pass(err))?;
+        dbg!(heel, &result);
         if !is_cargo_tank {// Для всех цистерн кроме грузовых
             if use_max_moment {
                 result.volume = result.volume_from_moment;
@@ -126,6 +128,7 @@ impl CompartmentCache {
             ).map_err(|err| error.pass(err))?;
             result.inertia_trans_x = inertia_trans_x;
         }
+        println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
     }
     /// Получение значения из кэша для заданных условий для расчета равнвесного положения
@@ -147,13 +150,13 @@ impl CompartmentCache {
         for i in 0..=50 {
             let query = [heel, 0., level];
             let result = cache.get(&query);
-            assert!(result.len() == 6);
+            assert!(result.len() >= 6);
             let delta = result
                 .first()
                 .ok_or(error.pass("no result from cache.get(&query)"))?
                 - volume_;
             if delta.abs() <= epsilon || i >= 50 {
-       //         println!("compartment_cashe {} heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+                println!("compartment_cashe {} heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,
@@ -174,12 +177,15 @@ impl CompartmentCache {
     }
  /*   /// Получение значения кэша для для максимальной поправки при нулевых крене и дифференте
     /// Возвращает объем и значение поперечного момента
-    fn _get_with_max_moment(&self, heel: f64) -> Result<(f64, Position, f64), Error> {
+    pub fn _get_with_max_moment(&self, heel: f64) -> Result<(f64, Position, f64), Error> {
         let error = Error::new(self.dbg(), "_get_with_max_moment");
+        println!("compartment_cashe {} _get_with_max_moment start:  heel:{heel}", self.dbg);
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let result = cache.value_disp_opt(8, &[Some(heel)])
             .ok_or(error.pass("no result"))?;
+        assert!(result.1.len() >= 8);
+        println!("compartment_cashe {} _get_with_max_moment ok heel:{heel} result:{:?} ", self.dbg, result);
         Ok((result.1[3]*coeff, Position::new(result.1[4], result.1[5], result.1[6]), result.1[7]))  
     }
 */
