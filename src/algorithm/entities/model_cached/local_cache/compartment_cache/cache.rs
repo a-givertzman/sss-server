@@ -104,12 +104,10 @@ impl CompartmentCache {
             epsilon,
         ).map_err(|err| error.pass(err))?;
         if !is_cargo_tank {// Для всех цистерн кроме грузовых
-            if use_max_moment { // Признак использования максимальной поправки
-                let (volume, volume_center, inertia_trans_x) = self._get_with_max_moment(heel).map_err(|err| error.pass(err))?;
-                result.inertia_trans_x = inertia_trans_x;   // максимальная поправка
-                result.volume = volume;             // соответствующий максимальной поправке объем
-                result.volume_center = volume_center;
-            } else {    
+            if use_max_moment {
+                result.volume = result.volume_from_moment;
+                result.volume_center = result.volume_from_moment_center;
+            } else {
                 let volume_max = cache.value_disp(3).1;// максимальный объем
                 if volume >= volume_max*0.98 {
                     result.inertia_trans_x = 0.;
@@ -164,6 +162,9 @@ impl CompartmentCache {
                     volume_center: Position::new(result[1], result[2], result[3]),
                     inertia_trans_x: result[4],
                     inertia_long_y: result[5],
+                    moment_max: result[6],
+                    volume_from_moment: result[7],
+                    volume_from_moment_center: Position::new(result[8], result[9], result[10]),
                 });
             }
             step = step / 2.;
@@ -171,7 +172,7 @@ impl CompartmentCache {
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }
-    /// Получение значения кэша для для максимальной поправки при нулевых крене и дифференте
+ /*   /// Получение значения кэша для для максимальной поправки при нулевых крене и дифференте
     /// Возвращает объем и значение поперечного момента
     fn _get_with_max_moment(&self, heel: f64) -> Result<(f64, Position, f64), Error> {
         let error = Error::new(self.dbg(), "_get_with_max_moment");
@@ -181,7 +182,7 @@ impl CompartmentCache {
             .ok_or(error.pass("no result"))?;
         Ok((result.1[3]*coeff, Position::new(result.1[4], result.1[5], result.1[6]), result.1[7]))  
     }
-
+*/
 /*
    pub fn get(
         &self,

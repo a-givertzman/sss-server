@@ -54,9 +54,9 @@ impl BuildCompartmentCache {
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
     ///
-    /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy]]
+    /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy, max_moment, max_volume]]
     pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
-      //  dbg!("BuildCompartmentCache build begin");
+        //  dbg!("BuildCompartmentCache build begin");
         log::info!("{}.build | Starting build", &self.dbg);
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
         let error = Error::new(&self.dbg, "build");
@@ -80,18 +80,19 @@ impl BuildCompartmentCache {
             .trim_steps
             .iter()
             .fold(0., |acc, v| if acc < v.abs() { v.abs() } else { acc });
-        let draught_steps = match shape
-            .read()
-            .draught_steps(self.level_step_qnt, max_heel, max_trim)
-        {
-            Ok(draught_steps) => draught_steps,
-            Err(err) => {
-                return (
-                    vec![],
-                    vec![error.pass_with("shape.read().draught_steps()", err)],
-                );
-            }
-        };
+        let draught_steps =
+            match shape
+                .read()
+                .draught_steps(self.level_step_qnt, max_heel, max_trim)
+            {
+                Ok(draught_steps) => draught_steps,
+                Err(err) => {
+                    return (
+                        vec![],
+                        vec![error.pass_with("shape.read().draught_steps()", err)],
+                    );
+                }
+            };
         let draught_zero = match shape.read().size() {
             Ok((_, _, _, z_min)) => z_min,
             Err(err) => return (vec![], vec![error.pass_with("shape.read().size()", err)]),
@@ -100,6 +101,9 @@ impl BuildCompartmentCache {
             return (vec![], vec![error.err("draught_steps.len < 2")]);
         }
         let scheduler = self.thread_pool.scheduler();
+        assert!(self.heel_steps.len() > 1);
+        assert!(self.trim_steps.len() > 1);
+        assert!(draught_steps.len() > 1);
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -139,7 +143,7 @@ impl BuildCompartmentCache {
                         Ok(task) => tasks.push_back(task),
                         Err(err) => pass("task handle", err),
                     };
-              }
+                }
             }
         }
         for task in tasks {
@@ -178,7 +182,11 @@ impl BuildCompartmentCache {
                         center_max.z(),
                         0.,
                         0.,
-                        volume_max*center_max.y(),
+                        volume_max * center_max.y(),
+                        0.,
+                        0.,
+                        0.,
+                        0.,
                     ]);
                 } else {
                     vec_results.push(vec![
@@ -191,7 +199,11 @@ impl BuildCompartmentCache {
                         center.z(),
                         i_x,
                         i_y,
-                        volume*center.y(),
+                        volume * center.y(),
+                        0.,
+                        0.,
+                        0.,
+                        0.,                        
                     ]);
                 }
             }
@@ -219,6 +231,31 @@ impl BuildCompartmentCache {
             v[8] = 0.;
             v[9] = 0.;
         });
+        // Находим максимальный момент и соответствующий ему объем для каждого крена.
+        // Знак момента соответствует стороне крена
+        for &heel in &self.heel_steps {
+            let mut current_vec: Vec<_> = vec_results
+                .iter_mut()
+                .filter(|v| v[0] == heel)
+                .collect::<Vec<_>>();
+            current_vec.sort_by(|a, b| a[9].partial_cmp(&b[9]).unwrap());
+            let current = if heel < 0. {
+                current_vec.first().ok_or(error.pass("current_vec.first"))
+            } else {
+                current_vec.last().ok_or(error.pass("current_vec.last"))
+            }
+            .unwrap();
+            let (moment_max, volume_from_moment, x, y, z) =
+                (current[9], current[3], current[4], current[5], current[6]);
+            // Каждому крену соответсвует максимальный момент и соответствующий ему объем
+            current_vec.iter_mut().for_each(|v| {
+                v[9] = moment_max;
+                v[10] = volume_from_moment;
+                v[11] = x;
+                v[12] = y;
+                v[13] = z;
+            });
+        }
         (vec_results, errors)
     }
 }

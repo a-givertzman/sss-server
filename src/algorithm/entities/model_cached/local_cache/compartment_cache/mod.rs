@@ -16,5 +16,11 @@ pub struct CompartmentCacheResult {
     /// Поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
     pub inertia_trans_x: f64,    
     /// Продольный момент инерции площади ватерлинии относительно осей, параллельных осям Y, м^4 
-    pub inertia_long_y: f64,   
+    pub inertia_long_y: f64,  
+    /// Максимальный момент объема по Y для данного крена
+    pub moment_max: f64,
+    /// Объем соответствующий moment_max
+    pub volume_from_moment: f64,
+    /// Центр объема соответствующий moment_max
+    pub volume_from_moment_center: Position,
 }
