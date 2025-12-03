@@ -11,6 +11,7 @@ use std::{
 use crate::{
     algorithm::entities::{
         Position,
+        cache::Cache,
         model_cached::{DisplacementShape, Shape},
     },
     kernel::types::{Arc, RwLock},
@@ -103,6 +104,8 @@ impl BuildCompartmentCache {
         let scheduler = self.thread_pool.scheduler();
         assert!(self.heel_steps.len() > 1);
         assert!(self.trim_steps.len() > 1);
+        assert!(self.heel_steps.contains(&0.));
+        assert!(self.trim_steps.contains(&0.));
         assert!(draught_steps.len() > 1);
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
@@ -203,7 +206,7 @@ impl BuildCompartmentCache {
                         0.,
                         0.,
                         0.,
-                        0.,                        
+                        0.,
                     ]);
                 }
             }
@@ -231,6 +234,17 @@ impl BuildCompartmentCache {
             v[8] = 0.;
             v[9] = 0.;
         });
+        // кэш значений при нулевых крене и дифференте для нахождения базового момента объема
+        let mut base = vec_results
+            .iter()
+            .filter(|v| v[0] == 0. && v[1] == 0.)
+            .map(|v| vec![v[3], v[3] * v[5]])
+            .collect::<Vec<_>>();
+        base.sort_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
+        base.dedup();
+     //   dbg!(&base);        
+        let volume_cache = Cache::new(&self.dbg);
+        volume_cache.init(base).unwrap(); //TODO err
         // Находим максимальный момент и соответствующий ему объем для каждого крена.
         // Знак момента соответствует стороне крена
         for &heel in &self.heel_steps {
@@ -238,22 +252,32 @@ impl BuildCompartmentCache {
                 .iter_mut()
                 .filter(|v| v[0] == heel)
                 .collect::<Vec<_>>();
-            current_vec.sort_by(|a, b| a[9].partial_cmp(&b[9]).unwrap());
-            let current = if heel < 0. {
-                current_vec.first().ok_or(error.pass("current_vec.first"))
+            // считаем моменты и дельту
+            let moments = current_vec
+                .iter()
+                .map(|v| {
+                    let volume = v[3];
+                    let moment = v[9];
+                    let volume_shift = (v[3], v[4], v[5]);
+                    let base_moment = volume_cache.get(&[volume])[0];
+                    let delta_moment = moment - base_moment;
+                    (delta_moment, moment, volume, volume_shift)
+                })
+                .collect::<Vec<_>>();
+            let (_, moment_max, volume_from_moment, volume_shift) = if heel < 0. {
+                moments.iter().max_by(|a, b| b.0.partial_cmp(&a.0).unwrap())
             } else {
-                current_vec.last().ok_or(error.pass("current_vec.last"))
+                moments.iter().max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
             }
-            .unwrap();
-            let (moment_max, volume_from_moment, x, y, z) =
-                (current[9], current[3], current[4], current[5], current[6]);
+            .unwrap_or(&(0., 0., 0., (0., 0., 0.))); // TODO err        
+        //    println!("heel:{heel} {} {};", moment_max, volume_from_moment);
             // Каждому крену соответсвует максимальный момент и соответствующий ему объем
             current_vec.iter_mut().for_each(|v| {
-                v[9] = moment_max;
-                v[10] = volume_from_moment;
-                v[11] = x;
-                v[12] = y;
-                v[13] = z;
+                v[9] = *moment_max;
+                v[10] = *volume_from_moment;
+                v[11] = volume_shift.0;
+                v[12] = volume_shift.1;
+                v[13] = volume_shift.2;
             });
         }
         (vec_results, errors)

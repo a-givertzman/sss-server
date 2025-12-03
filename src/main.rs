@@ -63,37 +63,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
+
 /*
     let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
-    let model_dir: PathBuf = "src/assets/model/sofia/compartments/205.stl".into();
+    let model_dir: PathBuf = "src/assets/model/sofia/compartments/501.stl".into();
     let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
         &dbg, model_dir, None, 1000.,
     )));
     shape.write().init().unwrap();
-    shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
+  //  shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
     let mut cache = model_cached::CompartmentCache::new(
         &dbg,
         shape.clone(),
         cache_dir,
-        "229".to_owned(),
-      //  vec![-60., -40., -20., -10., -5., 0., 5., 10., 20., 40., 60.,],
-      //  vec![-40., -20., -10., -5., -2., 0., 2., 5., 10., 20., 40.,],
-        vec![-40., 0., 40.,],
+        "501".to_owned(),
+        vec![-10., -5., -2., 0.],
         vec![-20., 0., 20.,],
-        10,
+        3,
+    //    vec![-60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40., 60.,],
+   //     vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
+   //     vec![-40., 0., 40.,],
+    //    vec![-20., 0., 20.,],
+    //    10,
         Arc::clone(&thread_pool),
     );
-    cache.init().unwrap();
-    cache.calc_coeff(221.692).unwrap();
+    cache.rebuild().unwrap();
+ //   cache.init().unwrap();
+//    cache.calc_coeff(221.692).unwrap();
+    cache.calc_coeff(19.034).unwrap();
 
-    cache._get_with_max_moment(-50.).unwrap();
+    cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
+    return Ok(());
 
     let calc = |heel: f64| {
-        cache._get_with_max_moment(heel)
+        let result = cache.get_for_dso(heel, 0., 0., 0.000001, true, false).unwrap();
+        println!("heel:{heel} {} {};", result.volume_center.y(), result.volume);
     };
- //   (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {:?}", calc(v)));
 
-
+    (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
 
   /*  let calc = |heel: f64| {
         cache.get(heel, 0., 111.9657, 0.0000001, false, false).unwrap().volume_center.y()
