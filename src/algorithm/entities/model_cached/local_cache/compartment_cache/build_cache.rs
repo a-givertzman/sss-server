@@ -258,19 +258,19 @@ impl BuildCompartmentCache {
                 .map(|v| {
                     let volume = v[3];
                     let moment = v[9];
-                    let volume_shift = (v[3], v[4], v[5]);
+                    let volume_shift = (v[4], v[5], v[6]);
                     let base_moment = volume_cache.get(&[volume])[0];
                     let delta_moment = moment - base_moment;
                     (delta_moment, moment, volume, volume_shift)
                 })
                 .collect::<Vec<_>>();
             let (_, moment_max, volume_from_moment, volume_shift) = if heel < 0. {
-                moments.iter().max_by(|a, b| b.0.partial_cmp(&a.0).unwrap())
+                moments.iter().min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
             } else {
                 moments.iter().max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
             }
             .unwrap_or(&(0., 0., 0., (0., 0., 0.))); // TODO err        
-        //    println!("heel:{heel} {} {};", moment_max, volume_from_moment);
+            println!("heel:{heel} {} {} {:?};", moment_max, volume_from_moment, moments);
             // Каждому крену соответсвует максимальный момент и соответствующий ему объем
             current_vec.iter_mut().for_each(|v| {
                 v[9] = *moment_max;
