@@ -96,7 +96,7 @@ impl CompartmentCache {
         is_cargo_tank: bool, 
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
-        println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
+    //    println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let mut result = self.get_for_floating(
             heel,
@@ -104,7 +104,6 @@ impl CompartmentCache {
             volume,
             epsilon,
         ).map_err(|err| error.pass(err))?;
-        dbg!(heel, &result);
         if !is_cargo_tank {// Для всех цистерн кроме грузовых
             if use_max_moment {
                 result.volume = result.volume_from_moment;
@@ -128,7 +127,7 @@ impl CompartmentCache {
             ).map_err(|err| error.pass(err))?;
             result.inertia_trans_x = inertia_trans_x;
         }
-        println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
+    //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
     }
     /// Получение значения из кэша для заданных условий для расчета равнвесного положения
@@ -145,8 +144,9 @@ impl CompartmentCache {
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let volume_ = volume / coeff;
         let level_max = cache.value_disp(2).1;
-        let mut step = level_max / 2.;
-        let mut level = step;
+        let mut level = level_max / 2.;
+        let mut step = level_max / 4.;
+        let mut last_delta_signum = 1.;       
         for i in 0..=50 {
             let query = [heel, 0., level];
             let result = cache.get(&query);
@@ -155,8 +155,9 @@ impl CompartmentCache {
                 .first()
                 .ok_or(error.pass("no result from cache.get(&query)"))?
                 - volume_;
+        //    println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
             if delta.abs() <= epsilon || i >= 50 {
-                println!("compartment_cashe {} heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+        //        println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,
@@ -170,7 +171,10 @@ impl CompartmentCache {
                     volume_from_moment_center: Position::new(result[8], result[9], result[10]),
                 });
             }
-            step = step / 2.;
+            if last_delta_signum != delta.signum() {
+                step = step * 0.3;
+                last_delta_signum = delta.signum();
+            }
             level -= step * delta.signum();
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))

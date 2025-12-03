@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
-
+/*
     let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
     let model_dir: PathBuf = "src/assets/model/sofia/compartments/205.stl".into();
     let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
@@ -103,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     return Ok(());
 
-
+*/
 
     let ship_id = 2;
     let project_id = "NULL";

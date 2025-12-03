@@ -1168,7 +1168,8 @@ impl ModelCached {
                             let ld = tcg * cos_phy + vcg * sin_phy;
                             let delta_l = delta_tcg * cos_phy + delta_vcg * sin_phy;
                             let l = lv - ld - delta_l;
-                  //         println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                        //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                //        println!("{heel} {trim} {} {} {delta_l} {lv} {l};", moment_liquid_dso.y(), delta_moment_liquid.y());
                             l
                         };
                         dso.push((heel, l));
@@ -1528,10 +1529,8 @@ impl ModelCached {
         let mut values = Vec::new();
         let scheduler = self.thread_pool.scheduler();
         for liquid in liquids {
-            dbg!(heel, &liquid);
             match self.compartments.get(&liquid.space_id) {
                 Some(compartment) => {
-                    dbg!(heel, "compartment ok");
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
@@ -1554,7 +1553,6 @@ impl ModelCached {
                                     is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            dbg!(&res);
                             task_results.push((space_id, density, res));
                             Ok(())
                         })
@@ -1596,8 +1594,8 @@ impl ModelCached {
                 result,
             )) = task_results.pop()
             {
-      //          if _space_id == "217" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);  }
-          println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+                if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);  }
+        //  println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
                 values.push(Moment::from_pos(result.volume_center, result.volume * density));
             }
         }
@@ -1613,7 +1611,7 @@ impl ModelCached {
             return Err(error);
         }
         let sum_moment = values.into_iter().sum();
-        println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
+   //     println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
         Ok(sum_moment)
     }
     /// Считаем поврежденные отсеки
