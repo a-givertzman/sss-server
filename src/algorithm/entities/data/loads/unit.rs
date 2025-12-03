@@ -167,7 +167,7 @@ impl LoadUnitData {
             };
             y1 + (y2 - y1) / 2.
         };
-        let center_z =  if let Some(v) = self.mass_shift_y {
+        let center_z =  if let Some(v) = self.mass_shift_z {
             v
         } else {
             let z1 = if let Some(v) = self.bound_z1 {

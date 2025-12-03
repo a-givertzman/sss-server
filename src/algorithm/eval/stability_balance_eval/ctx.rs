@@ -1,5 +1,8 @@
 use bincode::{Decode, Encode};
-use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
+
+use crate::algorithm::entities::ship_model::stability_result::{BulkResult, LiquidResult};
+
+
 
 ///
 #[derive(Debug, Clone, Decode, Encode)]

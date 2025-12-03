@@ -5,7 +5,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{
-            Curve, ICurve, Moment, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
+            Curve, ICurve, Moment, data::loads::AssignmentType, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
         },
         eval::{IcingCtx, StaticMassCtx, WettingCtx, parameters::ParameterID},
     },
@@ -79,7 +79,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 let bulk: f64 = static_mass.bulk.iter().map(|v| v.mass).sum();
                 let sum = liquid + bulk + static_mass.mass_const + static_mass.mass_unit + static_mass.mass_gaseous + icing.mass + wetting.mass;
                 //  dbg!(&static_mass); 
-                  dbg!(sum, liquid, bulk, static_mass.mass_const, static_mass.mass_unit, static_mass.mass_gaseous, icing.mass, wetting.mass);
+          //      dbg!(sum, liquid, bulk, static_mass.mass_const, static_mass.mass_unit, static_mass.mass_gaseous, icing.mass, wetting.mass);
                 // Расчет баланса для остойчивости в модели
                 let stability_query = BalanceStabilityQuery {
                     water_density: voyage.density,
@@ -95,8 +95,26 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .read()
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
+
+       /*         let (mass_ballast, moment_ballast) = result.liquid.iter()
+                    .filter(|v| v.assigment_type == AssignmentType::Ballast)
+                        .fold((0., Moment::zero()), |(mass, moment), v| (mass + v.mass, moment + Moment::from_pos(v.mass_shift, v.mass)));
+                let ballast_shift = moment_ballast.to_pos(mass_ballast);
+                dbg!(mass_ballast, ballast_shift);
+                let (mass_liquid_stores, moment_liquid_stores) = result.liquid.iter()
+                    .filter(|v| v.assigment_type == AssignmentType::Stores)
+                        .fold((0., Moment::zero()), |(mass, moment), v| (mass + v.mass, moment + Moment::from_pos(v.mass_shift, v.mass)));
+                let liquid_stores_shift = moment_liquid_stores.to_pos(mass_liquid_stores);
+                dbg!(mass_liquid_stores, liquid_stores_shift);
+                let (mass_bulk_cargo, moment_bulk_cargo) = result.bulk.iter()
+                    .filter(|v| v.assigment_type == AssignmentType::CargoLoad)
+                        .fold((0., Moment::zero()), |(mass, moment), v| (mass + v.mass, moment + Moment::from_pos(v.mass_shift, v.mass)));
+                let bulk_cargo_shift = moment_bulk_cargo.to_pos(mass_bulk_cargo);     
+                dbg!(mass_bulk_cargo, bulk_cargo_shift); 
+*/
+          //      dbg!(result.roll, result.trim_degree, result.draught_mean, result.mass_center ); 
                 dbg!(&result);
-                //    dbg!(result.roll, result.trim_degree, result.draught_mean);
+           //     result.liquid.iter().for_each(|v| println!("'{}' {} {};", liquid_data.get(&v.assignment_id).unwrap().space_name, v.long_moment_of_inertia, v.trans_moment_of_inertia));
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
                 ctx.write_params(ParameterID::DraughtStern, result.draught_stern);
@@ -106,7 +124,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::Roll, result.roll);
                 ctx.write_params(ParameterID::MetacentricTransRad, result.rad_trans);
                 ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);
-                ctx.write_params(ParameterID::CenterMassZ, result.mass_z);
+                ctx.write_params(ParameterID::CenterMassZ, result.mass_center.z());
                 ctx.write_params(
                     ParameterID::CenterVolumeXFromStern,
                     result.displacement_center.x()
@@ -115,27 +133,10 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
                 let bulk = result
                     .bulk
-                    .iter()
-                    .filter_map(|res| {
-                        bulk_data.get(&res.assignment_id).map(|data| {
-                            super::bulk_result::BulkResult::new(data.space_id.clone(), res.moment)
-                        })
-                    })
-                    .collect();
+                    .clone();
                 let liquid = result
                     .liquid
-                    .iter()
-                    .filter_map(|res| {
-                        liquid_data.get(&res.assignment_id).map(|data| {
-                            super::liquid_result::LiquidResult::new(
-                                data.space_id.clone(),
-                                data.assigment_type,
-                                res.long_moment_of_inertia,
-                                res.trans_moment_of_inertia,
-                            )
-                        })
-                    })
-                    .collect();
+                    .clone();
                 let entry_angle = Curve::new_linear(&result.entry_angle)
                     .map_err(|err| error.pass_with("entry_angle curve", err))?
                     .value(0.)

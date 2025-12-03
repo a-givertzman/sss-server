@@ -67,6 +67,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     .map(|v| (v.mass, Bound::Value(v.bound_x1, v.bound_x2)))
                     .unzip();
                 let mass_const = lightship_values.iter().sum();
+            //    dbg!(mass_const, shift_const);
                 let lightship_bounds = Bounds::new(lightship_bounds)
                     .map_err(|err| error.pass_with("Bounds::new", err))?;
                 let distr_hull = bounds
@@ -101,7 +102,10 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     let (mass_unit, moment_unit) = unit
                         .iter()
                         .filter_map(|v| match v.mass_shift() {
-                            Ok(mass_shift) => Some((v.mass, mass_shift)),
+                            Ok(mass_shift) => {
+                    //            println!("{} {} {:.?} ", v.cargo_name, v.mass, mass_shift);
+                                Some((v.mass, mass_shift))
+                            },
                             Err(err) => {
                                 log::error!(
                                     "{}",
@@ -125,7 +129,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
 
                     (mass_unit, moment_unit.to_pos(mass_unit), grain_bulkhead)
                 };
-             //   dbg!(mass_unit, &unit);
+            //    dbg!(mass_unit, shift_unit);
                 let liquid: Vec<_> = initial
                     .liquid
                     .clone()
@@ -161,6 +165,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     }
                     None => return Err(error.err("Read gaseous error: no data!")),
                 };
+            //    dbg!(mass_gaseous, shift_gaseous);
                 let distr_unit = bounds
                     .iter()
                     .map(|b| unit.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)))

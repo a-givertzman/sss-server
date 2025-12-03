@@ -81,59 +81,58 @@ impl CompartmentCache {
         } else {
             1.
         });
-        //    println!("skjfskf calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
+    //    println!("compartment_cache calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
         Ok(())
     }
-    /// Получение значения для заданных условий
-    /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md
-    /// Возвращает (level, center of volume)
-    pub fn get(
+    /// Получение значения для заданных условий для расчета дсо
+    /// объем изменяется исходя из признаков
+    pub fn get_for_dso(
         &self,
         heel: f64,
         trim: f64,
         volume: f64,
         epsilon: f64,
-        use_max_inertia_trans: bool,
+        use_max_inertia_trans: bool, //признак пересчета объема от макс. момента
         is_cargo_tank: bool, 
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
-        let volume = volume / coeff;
-        let mut result = self._get(
+        let mut result = self.get_for_floating(
             heel,
             trim,
             volume,
             epsilon,
         ).map_err(|err| error.pass(err))?;
-        result.volume = volume * coeff;
         if !is_cargo_tank {// Для всех цистерн кроме грузовых
-            if use_max_inertia_trans { // Признак использования максимальной попрвавки
-                let (volume, inertia_trans_x) = self._get_max_inertia_trans_x().map_err(|err| error.pass(err))?;
+            if use_max_inertia_trans { // Признак использования максимальной поправки
+                let (volume, volume_center, inertia_trans_x) = self._get_max_inertia_trans_x().map_err(|err| error.pass(err))?;
                 result.inertia_trans_x = inertia_trans_x;   // максимальная поправка
-                result.volume = volume * coeff;             // соответствующий максимальной поправке объем
-                return Ok(result);
-            }            
-            let volume_max = cache.value_disp(3).1;// максимальный объем
-            if volume >= volume_max*0.98 {
-                result.inertia_trans_x = 0.;
+                result.volume = volume;             // соответствующий максимальной поправке объем
+                result.volume_center = volume_center;
+            } else {    
+                let volume_max = cache.value_disp(3).1;// максимальный объем
+                if volume >= volume_max*0.98 {
+                    result.inertia_trans_x = 0.;
+                    result.volume = 0.;
+                }
             }
-            return Ok(result);
+        } else {
+            // Для грузовых цистерн (перевозимых полезный груз, "CompartmentPurpose"="cargo_tank)
+            // считаем при крене 5 градусов
+            let heel = 5.0*heel.signum();
+            let CompartmentCacheResult{inertia_trans_x, ..} = self.get_for_floating(
+                heel,
+                trim,
+                volume,
+                epsilon,
+            ).map_err(|err| error.pass(err))?;
+            result.inertia_trans_x = inertia_trans_x;
         }
-        // Для грузовых цистерн (перевозимых полезный груз, "CompartmentPurpose"="cargo_tank)
-        // считаем при крене 5 градусов
-        let heel = 5.0*heel.signum();
-        let CompartmentCacheResult{inertia_trans_x, ..} = self._get(
-            heel,
-            trim,
-            volume,
-            epsilon,
-        ).map_err(|err| error.pass(err))?;
-        result.inertia_trans_x = inertia_trans_x;
         return Ok(result);
     }
-    /// Получение значения из кэша для заданных условий
-    fn _get(
+    /// Получение значения из кэша для заданных условий для расчета равнвесного положения
+    /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
+    pub fn get_for_floating(
         &self,
         heel: f64,
         trim: f64,
@@ -142,23 +141,26 @@ impl CompartmentCache {
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "_get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+        let volume_ = volume / coeff;
         let level_max = cache.value_disp(2).1;
         let mut step = level_max / 2.;
         let mut level = step;
         for i in 0..=50 {
-            let query = [heel, trim, level];
+            let query = [heel, 0., level];
             let result = cache.get(&query);
             assert!(result.len() == 6);
             let delta = result
                 .first()
                 .ok_or(error.pass("no result from cache.get(&query)"))?
-                - volume;
+                - volume_;
             if delta.abs() <= epsilon || i >= 50 {
+       //         println!("compartment_cashe {} heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,
                     level,
-                    volume,
+                    volume: volume_ * coeff,
                     volume_center: Position::new(result[1], result[2], result[3]),
                     inertia_trans_x: result[4],
                     inertia_long_y: result[5],
@@ -171,12 +173,13 @@ impl CompartmentCache {
     }
     /// Получение значения кэша для для максимальной поправки при нулевых крене и дифференте
     /// Возвращает объем и значение поперечного момента
-    fn _get_max_inertia_trans_x(&self) -> Result<(f64, f64), Error> {
+    fn _get_max_inertia_trans_x(&self) -> Result<(f64, Position, f64), Error> {
         let error = Error::new(self.dbg(), "_get_max_inertia_trans_x");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let result = cache.value_disp_opt(7, &[Some(0.), Some(0.)])
             .ok_or(error.pass("no result"))?;
-        Ok((result.1[0], result.1[4]))  
+        Ok((result.1[3]*coeff, Position::new(result.1[4], result.1[5], result.1[6]), result.1[7]))  
     }
 
 /*
