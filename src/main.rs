@@ -77,40 +77,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         shape.clone(),
         cache_dir,
         "501".to_owned(),
-        vec![-10., -5., -2., 0.],
-        vec![-20., 0., 20.,],
-        3,
-    //    vec![-60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40., 60.,],
-   //     vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
-   //     vec![-40., 0., 40.,],
-    //    vec![-20., 0., 20.,],
-    //    10,
+     //   (-60..=60).map(|v| v as f64).collect(),
+     //   vec![-5., 0., 5.,],
+     //   vec![-40., -20., -10., 0., 10., 20., 40.,],
+     //   40,
+        vec![-60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40., 60.,],
+        vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
+    //    vec![-2., -1., 0., 1., 2.,],
+    //    vec![-0.01, 0., 0.01,],
+    //    vec![-40., -20., -10., 0., 10., 20., 40.,],
+        20,
         Arc::clone(&thread_pool),
     );
     cache.rebuild().unwrap();
  //   cache.init().unwrap();
-//    cache.calc_coeff(221.692).unwrap();
-    cache.calc_coeff(19.034).unwrap();
+ //   cache.calc_coeff(221.692).unwrap(); //205
+    cache.calc_coeff(19.034).unwrap(); // 501
 
-    cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
+  //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
     return Ok(());
 
     let calc = |heel: f64| {
         let result = cache.get_for_dso(heel, 0., 0., 0.000001, true, false).unwrap();
-        println!("heel:{heel} {} {};", result.volume_center.y(), result.volume);
+   //     println!("heel:{:.1} {:.3} {:.3} {:.3};", heel, result.volume_center.y(), result.volume, result.volume_center.y()*result.volume);
     };
-
-    (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
+    (-40..=40).map(|v| (v as f64)).for_each(|v| calc(v));
+  //  (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
 
   /*  let calc = |heel: f64| {
         cache.get(heel, 0., 111.9657, 0.0000001, false, false).unwrap().volume_center.y()
     };
     (0..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {}", calc(v)));
 */
-
     return Ok(());
-
 */
+
 
     let ship_id = 2;
     let project_id = "NULL";
@@ -171,14 +172,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ];
       //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
         let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-/*
+
         let res = model_cached.reload_shapes();            dbg!(&res);
         let res = model_cached.rebuild_caches();   dbg!(&res);
       //  let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
       //  let res = model_cached.init();                     dbg!(&res);
        // let res = model_cached.init_bounded(&bounds);      dbg!(&res);
         return Ok(());
-*/
+
         let api_client = Arc::new(ApiClient::new(
             &dbg,
             conf.api.address.database.clone(),

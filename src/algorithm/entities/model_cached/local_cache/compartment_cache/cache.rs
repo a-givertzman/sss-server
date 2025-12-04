@@ -158,6 +158,7 @@ impl CompartmentCache {
         //    println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
             if delta.abs() <= epsilon || i >= 50 {
         //        println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+          //      dbg!(&result);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,

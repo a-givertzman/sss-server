@@ -241,44 +241,48 @@ impl BuildCompartmentCache {
             .map(|v| vec![v[3], v[3] * v[5]])
             .collect::<Vec<_>>();
         base.sort_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
-        base.dedup();
-     //   dbg!(&base);        
+        base.dedup();      
         let volume_cache = Cache::new(&self.dbg);
         volume_cache.init(base).unwrap(); //TODO err
         // Находим максимальный момент и соответствующий ему объем для каждого крена.
         // Знак момента соответствует стороне крена
         for &heel in &self.heel_steps {
-            let mut current_vec: Vec<_> = vec_results
-                .iter_mut()
-                .filter(|v| v[0] == heel)
-                .collect::<Vec<_>>();
-            // считаем моменты и дельту
-            let moments = current_vec
-                .iter()
-                .map(|v| {
-                    let volume = v[3];
-                    let moment = v[9];
-                    let volume_shift = (v[4], v[5], v[6]);
-                    let base_moment = volume_cache.get(&[volume])[0];
-                    let delta_moment = moment - base_moment;
-                    (delta_moment, moment, volume, volume_shift)
-                })
-                .collect::<Vec<_>>();
-            let (_, moment_max, volume_from_moment, volume_shift) = if heel < 0. {
-                moments.iter().min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-            } else {
-                moments.iter().max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-            }
-            .unwrap_or(&(0., 0., 0., (0., 0., 0.))); // TODO err        
-            println!("heel:{heel} {} {} {:?};", moment_max, volume_from_moment, moments);
-            // Каждому крену соответсвует максимальный момент и соответствующий ему объем
-            current_vec.iter_mut().for_each(|v| {
-                v[9] = *moment_max;
-                v[10] = *volume_from_moment;
-                v[11] = volume_shift.0;
-                v[12] = volume_shift.1;
-                v[13] = volume_shift.2;
-            });
+   //         for &trim in &self.trim_steps {
+                let mut current_vec: Vec<_> = vec_results
+                    .iter_mut()
+                    .filter(|v| v[0] == heel)// && v[1] == trim)
+                    .collect::<Vec<_>>();             
+                // считаем моменты и дельту
+                let moments = current_vec
+                    .iter()
+                    .filter(|v| v[1] == 0.)
+                    .map(|v| {
+                        let volume = v[3];
+                        let moment = v[9];
+                        let volume_shift = (v[4], v[5], v[6]);
+                        let base_moment = volume_cache.get(&[volume])[0];
+                        let delta_moment = moment - base_moment;
+                        (delta_moment, base_moment, moment, volume, volume_shift)
+                    })
+                    .collect::<Vec<_>>();
+                let (delta_moment, base_moment, moment_max, volume_from_moment, volume_shift) = if heel < 0. {
+                    moments.iter().min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+                } else {
+                    moments.iter().max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+                }
+                .unwrap_or(&(0., 0., 0., 0., (0., 0., 0.))); // TODO err        
+            //    println!("adasd heel:{heel} {} {} {} {} {};", delta_moment, base_moment, moment_max, volume_from_moment, volume_shift.1);
+           //     println!("{heel} {};", delta_moment);
+        //       moments.iter().for_each(|v| println!("{:.3} {:.3} {:.3} ({:.3} {:.3} {:.3})", v.0, v.1, v.2, v.3.0, v.3.1, v.3.2));
+                // Каждому крену соответсвует максимальный момент и соответствующий ему объем
+                current_vec.iter_mut().for_each(|v| {
+                    v[9] = *moment_max;
+                    v[10] = *volume_from_moment;
+                    v[11] = volume_shift.0;
+                    v[12] = volume_shift.1;
+                    v[13] = volume_shift.2;
+                });
+     //       }
         }
         (vec_results, errors)
     }

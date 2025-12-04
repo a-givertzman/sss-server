@@ -1594,7 +1594,7 @@ impl ModelCached {
                 result,
             )) = task_results.pop()
             {
-                if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);  }
+          //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
         //  println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
                 values.push(Moment::from_pos(result.volume_center, result.volume * density));
             }
