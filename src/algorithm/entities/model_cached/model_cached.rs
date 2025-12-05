@@ -693,7 +693,9 @@ impl ModelCached {
                 let liquid_results = Arc::new(Stack::new());
                 // жидкие грузы смещаются под действием силы тяжести
                 for cargo in &query.liquid {
-                    assert!(cargo.mass > 0.);
+                    if cargo.mass == 0. {
+                        continue;
+                    }
                     let assigment_type = cargo.assigment_type;
                     let space_id = cargo.space_id.clone();
                     let cargo_type = cargo.cargo_type;
@@ -1595,7 +1597,7 @@ impl ModelCached {
             )) = task_results.pop()
             {
           //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
-        //  println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+          println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
                 values.push(Moment::from_pos(result.volume_center, result.volume * density));
             }
         }
