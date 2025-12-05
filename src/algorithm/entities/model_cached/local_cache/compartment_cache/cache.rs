@@ -155,9 +155,9 @@ impl CompartmentCache {
                 .first()
                 .ok_or(error.pass("no result from cache.get(&query)"))?
                 - volume_;
-        //    println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+      //      println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
             if delta.abs() <= epsilon || i >= 50 {
-        //        println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+     //           println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
           //      dbg!(&result);
                 return Ok(CompartmentCacheResult {
                     heel,
@@ -167,7 +167,7 @@ impl CompartmentCache {
                     volume_center: Position::new(result[1], result[2], result[3]),
                     inertia_trans_x: result[4],
                     inertia_long_y: result[5],
-                    moment_max: result[6],
+                    max_moment: result[6], 
                     volume_from_moment: result[7],
                     volume_from_moment_center: Position::new(result[8], result[9], result[10]),
                 });

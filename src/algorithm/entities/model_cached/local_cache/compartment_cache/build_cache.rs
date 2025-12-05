@@ -12,7 +12,7 @@ use crate::{
     algorithm::entities::{
         Position,
         cache::Cache,
-        model_cached::{DisplacementShape, Shape},
+        model_cached::{CompartmentCacheResult, DisplacementShape, Shape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -166,74 +166,89 @@ impl BuildCompartmentCache {
                         continue;
                     }
                 };
-                let (i_x, i_y) = match inertia {
-                    Ok((x, y)) => (x, y),
-                    Err(err) => {
-                        pass("draft_results inertia", err);
-                        continue;
+                let (i_x, i_y) = if volume < volume_max {
+                    match inertia {
+                        Ok((x, y)) => (x, y),
+                        Err(err) => {
+                            pass("draft_results inertia", err);
+                            continue;
+                        }
                     }
-                };
-                if volume >= volume_max {
-                    // для полного объема значения заполняем руками для нормальной интерполяции
-                    vec_results.push(vec![
-                        heel,
-                        trim,
-                        draught,
-                        volume_max,
-                        center_max.x(),
-                        center_max.y(),
-                        center_max.z(),
-                        0.,
-                        0.,
-                        volume_max * center_max.y(),
-                        0.,
-                        0.,
-                        0.,
-                        0.,
-                    ]);
                 } else {
-                    vec_results.push(vec![
-                        heel,
-                        trim,
-                        draught,
-                        volume,
-                        center.x(),
-                        center.y(),
-                        center.z(),
-                        i_x,
-                        i_y,
-                        volume * center.y(),
-                        0.,
-                        0.,
-                        0.,
-                        0.,
-                    ]);
-                }
+                    (0., 0.)
+                };
+                vec_results.push(vec![
+                    heel,
+                    trim,
+                    draught,
+                    volume,
+                    center.x(),
+                    center.y(),
+                    center.z(),
+                    i_x,
+                    i_y,
+                    0.,
+                    0.,
+                    0.,
+                    0.,
+                    0.,
+                ]);
             }
         }
         // для пустого объема значения заполняем руками для нормальной интерполяции
-        // берем значения с ненулевым объемом
-        let mut tmp: Vec<_> = vec_results.iter().filter(|v| v[3] > 0.).collect();
-        // и сортируем чтобы найти значение с минимальными креном/дифферентом и объемом
-        tmp.sort_by(|a, b| {
-            (a[0].abs() * a[3] + a[1].abs() * a[3])
-                .partial_cmp(&(b[0].abs() * b[3] + b[1].abs() * b[3]))
-                .unwrap()
-        });
-        let center_min = if let Some(first) = tmp.first() {
-            Position::new(first[4], first[5], draught_zero)
-        } else {
-            Position::new(center_max.x(), center_max.y(), draught_zero)
-        };
-        // для пустого объема значения меняем значения
-        vec_results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
-            v[4] = center_min.x();
-            v[5] = center_min.y();
-            v[6] = center_min.z();
-            v[7] = 0.;
-            v[8] = 0.;
-            v[9] = 0.;
-        });
+        {
+            // берем значения с ненулевым объемом
+            let mut tmp: Vec<_> = vec_results.iter().filter(|v| v[3] > 0.).collect();
+            // и сортируем чтобы найти значение с минимальными креном/дифферентом и объемом
+            tmp.sort_by(|a, b| {
+                (a[0].abs() * a[3] + a[1].abs() * a[3])
+                    .partial_cmp(&(b[0].abs() * b[3] + b[1].abs() * b[3]))
+                    .unwrap()
+            });
+            let center_min = if let Some(first) = tmp.first() {
+                Position::new(first[4], first[5], draught_zero)
+            } else {
+                Position::new(center_max.x(), center_max.y(), draught_zero)
+            };
+            // для пустого объема значения меняем значения
+            vec_results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
+                v[4] = center_min.x();
+                v[5] = center_min.y();
+                v[6] = center_min.z();
+                v[7] = 0.;
+                v[8] = 0.;
+                v[9] = 0.;
+            });
+        }
+        for &heel in &self.heel_steps {
+            let sin_theta = heel.to_radians().sin();
+            for &trim in &self.trim_steps {
+                let mut current_vec: Vec<_> = vec_results
+                    .iter_mut()
+                    .filter(|v| v[0] == heel && v[1] == trim)
+                    .collect::<Vec<_>>();
+                let max_moment = current_vec.iter().max_by(|a, b| a[7].partial_cmp(&b[7]).unwrap()).unwrap();
+                let volume = max_moment[3];
+                let volume_shift = Position::new(max_moment[4], max_moment[5], max_moment[6]);
+                let max_trans_moment = max_moment[7];
+                if volume == 0. {
+                    // объем = 0, неправдоподобно, но пропускаем
+                    continue;
+                }
+                let max_moment_value = max_trans_moment*sin_theta/volume;
+            //    println!("adasd heel:{heel} trim:{trim} {} {} {} {max_moment_value};", max_trans_moment, volume, volume_shift.y());
+                // Каждому крену соответсвует максимальный момент и соответствующий ему объем
+                current_vec.iter_mut().for_each(|v| {
+                    v[9] = max_moment_value;
+                    v[10] = volume;
+                    v[11] = volume_shift.x();
+                    v[12] = volume_shift.y();
+                    v[13] = volume_shift.z();
+                });
+            }
+        }
+
+        /*
         // кэш значений при нулевых крене и дифференте для нахождения базового момента объема
         let mut base = vec_results
             .iter()
@@ -241,49 +256,54 @@ impl BuildCompartmentCache {
             .map(|v| vec![v[3], v[3] * v[5]])
             .collect::<Vec<_>>();
         base.sort_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
-        base.dedup();      
+        base.dedup();
+        base.iter().for_each(|v| println!("{:.3} {:.3})", v[0], v[1]));
         let volume_cache = Cache::new(&self.dbg);
         volume_cache.init(base).unwrap(); //TODO err
         // Находим максимальный момент и соответствующий ему объем для каждого крена.
         // Знак момента соответствует стороне крена
         for &heel in &self.heel_steps {
-   //         for &trim in &self.trim_steps {
-                let mut current_vec: Vec<_> = vec_results
-                    .iter_mut()
-                    .filter(|v| v[0] == heel)// && v[1] == trim)
-                    .collect::<Vec<_>>();             
-                // считаем моменты и дельту
-                let moments = current_vec
-                    .iter()
-                    .filter(|v| v[1] == 0.)
-                    .map(|v| {
-                        let volume = v[3];
-                        let moment = v[9];
-                        let volume_shift = (v[4], v[5], v[6]);
-                        let base_moment = volume_cache.get(&[volume])[0];
-                        let delta_moment = moment - base_moment;
-                        (delta_moment, base_moment, moment, volume, volume_shift)
-                    })
-                    .collect::<Vec<_>>();
-                let (delta_moment, base_moment, moment_max, volume_from_moment, volume_shift) = if heel < 0. {
+            let sin_theta = heel.to_radians().sin();
+            let cos_theta = heel.to_radians().cos();
+            //         for &trim in &self.trim_steps {
+            let mut current_vec: Vec<_> = vec_results
+                .iter_mut()
+                .filter(|v| v[0] == heel) // && v[1] == trim)
+                .collect::<Vec<_>>();
+            // считаем моменты и дельту
+            let moments = current_vec
+                .iter()
+                .filter(|v| v[1] == 0.)
+                .map(|v| {
+                    let volume = v[3];
+                    let volume_shift = (v[4], v[5], v[6]);
+                    let moment = (volume_shift.1*cos_theta + volume_shift.2*sin_theta)*volume;
+                    let base_moment = volume_cache.get(&[volume])[0];
+                    let delta_moment = moment - base_moment;
+                    if heel == 0. { println!("adasd heel:{heel} {} {} {} {} {};", base_moment, moment, delta_moment, volume, volume_shift.1);}
+                    (delta_moment, base_moment, moment, volume, volume_shift)
+                })
+                .collect::<Vec<_>>();
+            let (delta_moment, base_moment, moment_max, volume_from_moment, volume_shift) =
+                if heel < 0. {
                     moments.iter().min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
                 } else {
                     moments.iter().max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
                 }
-                .unwrap_or(&(0., 0., 0., 0., (0., 0., 0.))); // TODO err        
-            //    println!("adasd heel:{heel} {} {} {} {} {};", delta_moment, base_moment, moment_max, volume_from_moment, volume_shift.1);
-           //     println!("{heel} {};", delta_moment);
-        //       moments.iter().for_each(|v| println!("{:.3} {:.3} {:.3} ({:.3} {:.3} {:.3})", v.0, v.1, v.2, v.3.0, v.3.1, v.3.2));
-                // Каждому крену соответсвует максимальный момент и соответствующий ему объем
-                current_vec.iter_mut().for_each(|v| {
-                    v[9] = *moment_max;
-                    v[10] = *volume_from_moment;
-                    v[11] = volume_shift.0;
-                    v[12] = volume_shift.1;
-                    v[13] = volume_shift.2;
-                });
-     //       }
+                .unwrap_or(&(0., 0., 0., 0., (0., 0., 0.))); // TODO err
+                println!("adasd heel:{heel} {} {} {} {} {};", base_moment, moment_max, delta_moment, volume_from_moment, volume_shift.1);
+                if heel == 0. { println!("{heel} {};", delta_moment); }
+            //       moments.iter().for_each(|v| println!("{:.3} {:.3} {:.3} ({:.3} {:.3} {:.3})", v.0, v.1, v.2, v.3.0, v.3.1, v.3.2));
+            // Каждому крену соответсвует максимальный момент и соответствующий ему объем
+            current_vec.iter_mut().for_each(|v| {
+                v[9] = *volume_from_moment;
+                v[10] = volume_shift.0;
+                v[11] = volume_shift.1;
+                v[12] = volume_shift.2;
+            });
+            //       }
         }
+        */
         (vec_results, errors)
     }
 }

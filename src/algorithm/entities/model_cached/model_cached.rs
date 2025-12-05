@@ -1161,12 +1161,12 @@ impl ModelCached {
                             let [_, tcg, vcg] = cg.values();
                             let [_, tcb, vcb] = disp_result.volume_center.values();
                             let [_, delta_tcg, delta_vcg] = delta_tg.values();
-                            let sin_phy = heel.to_radians().sin();
-                            let cos_phy = heel.to_radians().cos();
-                            let lv = tcb * cos_phy + vcb * sin_phy;
+                            let sin_theta = heel.to_radians().sin();
+                            let cos_theta = heel.to_radians().cos();
+                            let lv = tcb * cos_theta + vcb * sin_theta;
                             //             println!("{heel} {lv};");
-                            let ld = tcg * cos_phy + vcg * sin_phy;
-                            let delta_l = delta_tcg * cos_phy + delta_vcg * sin_phy;
+                            let ld = tcg * cos_theta + vcg * sin_theta;
+                            let delta_l = delta_tcg * cos_theta + delta_vcg * sin_theta;
                             let l = lv - ld - delta_l;
                         //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
                 //        println!("{heel} {trim} {} {} {delta_l} {lv} {l};", moment_liquid_dso.y(), delta_moment_liquid.y());
