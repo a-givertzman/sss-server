@@ -128,7 +128,7 @@ impl Cache<f64> {
     /// qnt_keys >= vals len
     /// value is out of range
     /// value index is out of key index range - TODO описать подробнее
-    pub fn get(&self, query: &[f64]) -> Vec<f64> {
+    pub fn get(&self, query: &[&f64]) -> Vec<f64> {
         let mut query = Vec::from(query);
         let data = self
             .table
@@ -147,7 +147,7 @@ impl Cache<f64> {
                 if keys.contains(key) {
                     // ключ совпадает с одним из значений, возвращаем его
                     return vec![*key];
-                }                
+                }
                 if keys.first().unwrap() > key {
                     // ключ вышел за пределы значений
                     log::error!(
@@ -155,7 +155,7 @@ impl Cache<f64> {
                         self.dbg,
                         format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
                     );
-                    *key = *keys.first().unwrap();
+                    *key = keys.first().unwrap();
                     return vec![*key];
                 } else if keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
@@ -164,13 +164,17 @@ impl Cache<f64> {
                         self.dbg,
                         format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
                     );
-                    *key = *keys.last().unwrap();
+                    *key = keys.last().unwrap();
                     return vec![*key];
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);
-                assert!(keys.len() > low_index, "{}", format!("{:?}, low_index:{low_index} key:{key}", keys));
-                return vec![keys[low_index - 1], keys[low_index]];
+                assert!(
+                    keys.len() > low_index,
+                    "{}",
+                    format!("{:?}, low_index:{low_index} key:{key}", keys)
+                );
+                return vec![&keys[low_index - 1], &keys[low_index]];
             })
             .collect();
         // println!("{:?}", pairs);
@@ -179,7 +183,7 @@ impl Cache<f64> {
             .iter()
             .filter(|v| {
                 for (c, v) in pairs.iter().zip(v.iter()) {
-                    if !c.contains(v) {
+                    if !c.contains(&v) {
                         return false;
                     }
                 }
@@ -197,7 +201,7 @@ impl Cache<f64> {
                 debug_assert!(data.len() > 0);
                 if data.len() == 1 {
                     debug_assert_eq!(
-                        key,
+                        *key,
                         data[0],
                         "{}",
                         format!("key:{key}, data:{:?} query:{:?}", data, query)
@@ -207,7 +211,7 @@ impl Cache<f64> {
                 } else {
                     debug_assert_eq!(data.len(), 2);
                     debug_assert!(
-                        data[0] < key && key < data[1],
+                        data[0] < *key && *key < data[1],
                         "{}",
                         format!("key:{key}, data:{:?}", data)
                     );
@@ -242,7 +246,7 @@ impl Cache<f64> {
         //    dbg!(query, &result);
         result
     }
-    /// Максимальное значение по индексу
+    /*  /// Максимальное значение по индексу
     pub fn value_disp(&self, index: usize) -> (f64, f64) {
         let data = self.table.get().unwrap_or_else(|| {
             panic!(
@@ -256,35 +260,63 @@ impl Cache<f64> {
         let v_min = v.iter().min_by(|a, b| a.partial_cmp(b).unwrap());
         let v_max = v.iter().max_by(|a, b| a.partial_cmp(b).unwrap());
         (v_min.unwrap().clone(), v_max.unwrap().clone())
-    }
- /*   /// Максимальное значение по индексу c условием, возвращает значения только для существующих ключей
-    pub fn _value_disp_opt(&self, index: usize, query: &[Option<f64>]) -> Option<(Vec<f64>, Vec<f64>)> {
+    }*/
+    /// Вектор значений по индексам c условием, возвращает значения только для существующих ключей
+    /// ключи не должны содержать индексы значений
+    /// Возвращает Vec<(value from index1, value from index2)>
+    pub fn values_disp(&self, query: &[Option<f64>]) -> Vec<Vec<f64>> {
         let data = self.table.get().unwrap_or_else(|| {
-            panic!(
-                "{}.{} | Cache error: no table!",
-                self.dbg, "value_disp_opt"
-            )
+            panic!("{}.{} | Cache error: no table!", self.dbg, "value_disp_opt")
         });
-        let v: Vec<_> = data
+        let keys = self
+            .keys
+            .get()
+            .unwrap_or_else(|| panic!("{}.{} | Error: no keys!", self.dbg, "get"));
+        assert!(
+            data[0].len() > query.len(),
+            "{}",
+            format!("{}, {:?}", data[0].len(), query)
+        );
+        let query: Vec<_> = query
             .iter()
-            .filter(|v| {
-                !v.iter()
-                    .zip(query.iter())
-                    .filter(|(_, o)| o.is_some())
-                    .any(|(v, o)| *v != o.unwrap())
+            .enumerate()
+            .map(|(i, key)| {
+                let keys = &keys[i];
+                match key {
+                    Some(key) => vec![key],
+                    None => keys.iter().collect(),
+                }
             })
             .collect();
-        let v_min = v.iter().min_by(|a, b| a[index].partial_cmp(&b[index]).unwrap());
-        let v_max = v.iter().max_by(|a, b| a[index].partial_cmp(&b[index]).unwrap());
-        match (v_min, v_max) {
-            (None, None) => None,
-            (None, Some(v)) | (Some(v), None) => Some((v.to_vec(), v.to_vec())),
-            (Some(v_min), Some(v_max)) => Some((v_min.to_vec(), v_max.to_vec())),
+     //   dbg!(&query);
+        let mut i = 0;
+        let mut res = Vec::new();
+        loop {
+            let mut is_cancel = true;
+            let query: Vec<_> = query
+                .iter()
+                .map(|q| {
+                    if q.len() >= i+1 {
+                        is_cancel = false;
+                        q[i]
+                    } else {
+                        q.last().unwrap()
+                    }
+                })
+                .collect();
+       //     dbg!(i, is_cancel, &query);
+            if is_cancel {
+                break;
+            }
+            res.push(self.get(&query));
+            i += 1;
         }
-    }*/
-    /// Максимальное значение ключа по индексу
+    //    dbg!(&res);
+        res
+    }
+    /// Максимальное значение по индексу
     #[allow(dead_code)]
-    pub fn key_disp(&self, index: usize) -> (f64, f64) {
+    pub fn disp(&self, index: usize) -> (f64, f64) {
         let keys = self.keys.get().unwrap_or_else(|| {
             panic!(
                 "{}.{} | Cache error: no keys! index:{index}",

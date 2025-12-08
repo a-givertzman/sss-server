@@ -54,8 +54,8 @@ pub(crate) trait LocalCache {
     fn calculate(&mut self) -> Vec<Error>;
     ///
     /// Returns approximated values based on given set.
-    // TODO получение
-    fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
+    // TODO получениеf
+    fn get(&self, approx_vals: &[&f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
         Ok(self
             .cache()

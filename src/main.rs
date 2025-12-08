@@ -63,8 +63,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
-
-    /*
+/*
+    
         let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
         let model_dir: PathBuf = "src/assets/model/sofia/compartments/501.stl".into();
         let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &dbg,
             shape.clone(),
             cache_dir,
-            "205".to_owned(),
+            "501".to_owned(),
        //     (-60..=60).map(|v| v as f64).collect(),
          //   vec![-5., 0., 5.,],
          //   vec![-40., -20., -10., 0., 10., 20., 40.,],
@@ -91,16 +91,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         cache.rebuild().unwrap();
      //   cache.init().unwrap();
-        cache.calc_coeff(221.692).unwrap(); //205
-     //   cache.calc_coeff(19.034).unwrap(); // 501
+      //  cache.calc_coeff(221.692).unwrap(); //205
+        cache.calc_coeff(19.034).unwrap(); // 501
 
       //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
 
-        let calc = |heel: f64| {
-            let result = cache.get_for_dso(heel, 0., 0., 0.000001, true, false).unwrap();
-            println!("{:.1} {:.3} {:.3} {:.3};", heel, result.max_moment, result.volume, result.volume_center.y());
+
+      
+        let calc = |heel: f64, balanced_heel: f64, volume: f64| {
+            let result = cache.get_for_dso(heel, 0., volume, -3., 0., 0., false, false).unwrap();
+       //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+            println!("{:.1} {:.1} {:.3} {:.3};", heel, balanced_heel, volume, result);
         };
-        (-60..=60).map(|v| (v as f64)).for_each(|v| calc(v));
+
+        calc(0., -3., 1.);
+        calc(0., -3., 5.);
+        calc(0., -3., 10.);
+        calc(0., -3., 15.);
+
+        calc(-5., -3., 1.);
+        calc(-5., -3., 5.);
+        calc(-5., -3., 10.);
+        calc(-5., -3., 15.);        
+    //    (-60..=60).map(|v| (v as f64)).for_each(|v| calc(v, ));
+        
       //  (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
 
       /*  let calc = |heel: f64| {
@@ -171,8 +185,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-    /*
-            let res = model_cached.reload_shapes();            dbg!(&res);
+    
+  /*          let res = model_cached.reload_shapes();            dbg!(&res);
             let res = model_cached.rebuild_caches();   dbg!(&res);
           //  let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
           //  let res = model_cached.init();                     dbg!(&res);

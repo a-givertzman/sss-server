@@ -17,10 +17,10 @@ pub struct CompartmentCacheResult {
     pub inertia_trans_x: f64,    
     /// Продольный момент инерции площади ватерлинии относительно осей, параллельных осям Y, м^4 
     pub inertia_long_y: f64,  
-    /// Максимальный момент при текущих углах
-    pub max_moment: f64,
-    /// Объем соответствующий moment_max
-    pub volume_from_moment: f64,
-    /// Центр объема соответствующий moment_max
-    pub volume_from_moment_center: Position,
+    /// Максимальный поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub max_inertia_trans_x: f64,   
+    /// Абсолютный момент жидкости при текущих углах и объеме
+    pub abs_moment: f64,
+//    /// Максимальный момент жидкости при текущем крене
+ //   pub max_abs_moment: f64,
 }

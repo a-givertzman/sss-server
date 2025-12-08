@@ -898,6 +898,7 @@ impl ModelCached {
         let liquid = self
             .process_liquid(&query.liquid, heel, trim, epsilon)
             .map_err(|err| error.pass(err))?;
+
         let bulk = self
             .process_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass(err))?;
@@ -1118,9 +1119,6 @@ impl ModelCached {
         let max_heel = angles.last().ok_or(error.err("max_heel"))?;
         let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
         let moment_sum = query.moment_const + moment_bulk; // постоянный момент
-        let moment_liquid_dso_balanced = self
-            .moment_liquid_dso(&query.liquid, balanced_heel, balanced_trim, epsilon)
-            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
         // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
      //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
         for &heel in angles {
@@ -1154,24 +1152,21 @@ impl ModelCached {
                 //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
-                        let moment_liquid_dso = self
-                            .moment_liquid_dso(&query.liquid, heel, trim, epsilon)
+                        let delta_moment_liquid = self
+                            .moment_liquid_dso(&query.liquid, heel, trim,  balanced_heel, balanced_trim, epsilon)
                             .map_err(|err| error.pass_with("self.moment_liquid", err))?;
-                        let delta_moment_liquid = moment_liquid_dso - moment_liquid_dso_balanced;
-                        let delta_tg = delta_moment_liquid.to_pos(mass_sum);
                         let l = {
                             let [_, tcg, vcg] = cg.values();
                             let [_, tcb, vcb] = disp_result.volume_center.values();
-                            let [_, delta_tcg, delta_vcg] = delta_tg.values();
                             let sin_theta = heel.to_radians().sin();
                             let cos_theta = heel.to_radians().cos();
                             let lv = tcb * cos_theta + vcb * sin_theta;
                             //             println!("{heel} {lv};");
                             let ld = tcg * cos_theta + vcg * sin_theta;
-                            let delta_l = delta_tcg * cos_theta + delta_vcg * sin_theta;
+                            let delta_l = delta_moment_liquid/mass_sum;
                             let l = lv - ld - delta_l;
                         //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
-                //        println!("{heel} {trim} {} {} {delta_l} {lv} {l};", moment_liquid_dso.y(), delta_moment_liquid.y());
+                            println!("{heel} {trim} {delta_moment_liquid} {delta_l} {lv} {l};");
                             l
                         };
                         dso.push((heel, l));
@@ -1344,7 +1339,7 @@ impl ModelCached {
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
-                        .get_for_floating(0., 0., volume, epsilon)
+                        .get_current(0., 0., volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
@@ -1394,7 +1389,7 @@ impl ModelCached {
         let values = self
             .process_bulk(bulks, epsilon)
             .map_err(|err| error.pass_with("process_bulk", err))?;
-        let (sum_mass, sum_moment): (f64, Moment) =
+        let (_sum_mass, sum_moment): (f64, Moment) =
             values
                 .iter()
                 .fold((0., Moment::zero()), |(mass_sum, moment_sum), v| {
@@ -1403,7 +1398,7 @@ impl ModelCached {
                         moment_sum + Moment::from_pos(v.mass_shift, v.mass),
                     )
                 });
-        //    dbg!(sum_mass, sum_moment);
+        //    dbg!(_sum_mass, sum_moment);
         Ok(sum_moment)
     }
     /// Считаем жидкие грузы
@@ -1429,11 +1424,13 @@ impl ModelCached {
                     let cargo = cargo.clone();
                     let error_ = error.clone();
                     let compartment = compartment.clone();
+                    let use_max_moment = cargo.use_max_moment;
+                    let is_cargo_tank = cargo.is_cargo_tank;
                     let handle = scheduler
                         .spawn(move || {
                             let res = compartment
                                 .read()
-                                .get_for_floating(heel, trim, cargo.volume, epsilon)
+                                .get_for_stability(heel, trim, cargo.volume, epsilon, use_max_moment, is_cargo_tank)
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
                             task_results.push((space_id_.clone(), stability_result::LiquidResult::new(
                                 //     cargo_id,
@@ -1518,10 +1515,12 @@ impl ModelCached {
     fn moment_liquid_dso(
         &self,
         liquids: &Vec<LiquidData>,
-        heel: f64,
-        trim: f64,
+        current_heel: f64,
+        current_trim: f64,
+        balanced_heel: f64,
+        balanced_trim: f64,
         epsilon: f64,
-    ) -> Result<Moment, Error> {
+    ) -> Result<f64, Error> {
        // if heel == 0. 
       //  {  println!("\n\nmoment_liquid_dso heel:{} trim:{}\n", heel, trim,);  }
         let error = Error::new(&self.dbg, "moment_liquid_dso");
@@ -1530,26 +1529,28 @@ impl ModelCached {
         let mut errors = Vec::new();
         let mut values = Vec::new();
         let scheduler = self.thread_pool.scheduler();
-        for liquid in liquids {
-            match self.compartments.get(&liquid.space_id) {
+        for cargo in liquids {
+            match self.compartments.get(&cargo.space_id) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
-                    let space_id = liquid.space_id.clone();
-                    let density = liquid.density;
-                    let volume = liquid.volume;
-                    let use_max_moment = liquid.use_max_moment;
-                    let is_cargo_tank = liquid.is_cargo_tank;
+                    let space_id = cargo.space_id.clone();
+                    let density = cargo.density;
+                    let volume = cargo.volume;
+                    let use_max_moment = cargo.use_max_moment;
+                    let is_cargo_tank = cargo.is_cargo_tank;
                     let compartment = compartment.clone();
                     let handle = scheduler
                         .spawn(move || {
                             let res = compartment
                                 .read()
                                 .get_for_dso(
-                                    heel,
-                                    trim,
+                                    current_heel,
+                                    current_trim,
                                     volume,
+                                    balanced_heel,
+                                    balanced_trim,
                                     epsilon,
                                     use_max_moment,
                                     is_cargo_tank,
@@ -1559,13 +1560,13 @@ impl ModelCached {
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", liquid.space_id), err)
+                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
                             let error =
-                                error.pass_with(format!("handle for {}", liquid.space_id), err);
+                                error.pass_with(format!("handle for {}", cargo.space_id), err);
                             log::error!("{}", error);
                             println!("{}", error);
                             errors.push(error);
@@ -1573,7 +1574,7 @@ impl ModelCached {
                     };
                 }
                 None => {
-                    let error = error.err(format!("no compartment: {}", liquid.space_id));
+                    let error = error.err(format!("no compartment: {}", cargo.space_id));
                     log::error!("{}", error);
                     println!("{}", error);
                     errors.push(error);
@@ -1592,13 +1593,14 @@ impl ModelCached {
         while !task_results.is_empty() {
             if let Some((
                 _space_id,
-                density,
-                result,
+                _density,
+                delta_moment,
             )) = task_results.pop()
             {
           //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
-          println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
-                values.push(Moment::from_pos(result.volume_center, result.volume * density));
+               // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+                println!("moment_liquid_dso heel:{current_heel} space_id:{} {};", _space_id, delta_moment);
+                values.push(delta_moment);
             }
         }
         if !errors.is_empty() {

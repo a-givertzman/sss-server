@@ -187,11 +187,9 @@ impl BuildCompartmentCache {
                     center.z(),
                     i_x,
                     i_y,
-                    0.,
-                    0.,
-                    0.,
-                    0.,
-                    0.,
+                    0., // i_x max
+                    0., // abs_moment
+            //        0., // max_abs_moment
                 ]);
             }
         }
@@ -218,34 +216,41 @@ impl BuildCompartmentCache {
                 v[7] = 0.;
                 v[8] = 0.;
                 v[9] = 0.;
+                v[10] = 0.;
+           //     v[11] = 0.;
             });
         }
         for &heel in &self.heel_steps {
             let sin_theta = heel.to_radians().sin();
-            for &trim in &self.trim_steps {
-                let mut current_vec: Vec<_> = vec_results
-                    .iter_mut()
-                    .filter(|v| v[0] == heel && v[1] == trim)
-                    .collect::<Vec<_>>();
-                let max_moment = current_vec.iter().max_by(|a, b| a[7].partial_cmp(&b[7]).unwrap()).unwrap();
-                let volume = max_moment[3];
-                let volume_shift = Position::new(max_moment[4], max_moment[5], max_moment[6]);
-                let max_trans_moment = max_moment[7];
-                if volume == 0. {
-                    // объем = 0, неправдоподобно, но пропускаем
-                    continue;
+            let cos_theta = heel.to_radians().cos();
+            let mut current_vec: Vec<_> = vec_results
+                .iter_mut()
+                .filter(|v| v[0] == heel)
+                .collect::<Vec<_>>();
+           let max_inertia_trans_x = current_vec
+                .iter()
+                .map(|v| v[7])
+                .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                .unwrap(); 
+            current_vec.iter_mut().for_each(|v| {
+                    v[9] = max_inertia_trans_x;
+                    v[10] = (v[5] * cos_theta + v[6] * sin_theta) * v[3]; // абсолютный момент жидкости            
                 }
-                let max_moment_value = max_trans_moment*sin_theta/volume;
-            //    println!("adasd heel:{heel} trim:{trim} {} {} {} {max_moment_value};", max_trans_moment, volume, volume_shift.y());
-                // Каждому крену соответсвует максимальный момент и соответствующий ему объем
-                current_vec.iter_mut().for_each(|v| {
-                    v[9] = max_moment_value;
-                    v[10] = volume;
-                    v[11] = volume_shift.x();
-                    v[12] = volume_shift.y();
-                    v[13] = volume_shift.z();
-                });
-            }
+            );
+         
+ /*            current_vec.iter_mut().for_each(|v| 
+                    v[10] = (v[5] * cos_theta + v[6] * sin_theta) * v[3] // абсолютный момент жидкости            
+            );
+            let max_abs_moment = current_vec
+                .iter()
+                .map(|v| v[10])
+                .max_by(|a, b| (a*heel.signum()).partial_cmp(&(b*heel.signum())).unwrap())
+                .unwrap();            
+      //      println!("adasd heel:{heel} {sin_theta} {cos_theta} {max_abs_moment} {max_inertia_trans_x}");  
+            current_vec.iter_mut().for_each(|v| {
+                v[9] = max_inertia_trans_x;
+                v[11] = max_abs_moment;
+            });*/
         }
 
         /*
