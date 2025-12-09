@@ -506,8 +506,8 @@ impl DisplacementShape {
                             i_y + x_array[voxel.coords.x as usize],
                         )
                     });
-                let i_x = i_x * qrt_scale * voxel_volume;
-                let i_y = i_y * qrt_scale * voxel_volume;
+                let i_x = i_x * i_x * qrt_scale * voxel_volume;
+                let i_y = i_y * i_y * qrt_scale * voxel_volume;
                 Ok((i_x, i_y))
             }
             parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
