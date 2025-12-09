@@ -79,6 +79,36 @@ impl CompartmentCache {
         //    println!("compartment_cache calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
         Ok(())
     }
+   /// Получение значения для заданных условий для расчета дсо
+    /// объем изменяется исходя из признаков
+    pub fn get_Ixx(
+        &self,
+        volume: f64,
+        epsilon: f64,
+        use_max_moment: bool, //признак пересчета объема от макс. момента
+        is_cargo_tank: bool,
+    ) -> Result<f64, Error> {
+        let error = Error::new(self.dbg(), "get_Ixx");
+        //    println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
+        let current = self
+            .get(0., 0., volume, epsilon)
+            .map_err(|err| error.pass(err))?;
+        if !is_cargo_tank && use_max_moment {          
+    //        println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", max_moment.1, max_moment.2, max_moment.3, max_moment.0);
+            return Ok(current.max_inertia_trans_x);
+        }
+        if !is_cargo_tank {
+            let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+            let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+            let (_, max_volume) = cache.disp(3);
+            let volume = volume / coeff;
+            if volume >= max_volume * 0.98 {
+                return Ok(0.);
+            }
+        }
+  //      println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", volume, current.abs_moment, balanced.abs_moment, res);
+        Ok(current.inertia_trans_x)
+    }
     /// Получение значения для заданных условий для расчета дсо
     /// объем изменяется исходя из признаков
     pub fn get_for_dso(
@@ -138,7 +168,7 @@ impl CompartmentCache {
                     .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
                     .ok_or(error.pass("max_moment"))?
             };
-            println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", max_moment.1, max_moment.2, max_moment.3, max_moment.0);
+    //        println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", max_moment.1, max_moment.2, max_moment.3, max_moment.0);
             return Ok(max_moment.0);
         }
         if !is_cargo_tank {
@@ -155,7 +185,7 @@ impl CompartmentCache {
             .get(balanced_heel, balanced_trim, volume, epsilon)
             .map_err(|err| error.pass(err))?;
         let res = current.abs_moment - balanced.abs_moment;
-        println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", volume, current.abs_moment, balanced.abs_moment, res);
+  //      println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", volume, current.abs_moment, balanced.abs_moment, res);
         Ok(res)
     }
     /// Получение значения для заданных условий для расчета влияния свободной поверхности
