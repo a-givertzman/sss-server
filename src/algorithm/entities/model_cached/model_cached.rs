@@ -1339,7 +1339,7 @@ impl ModelCached {
                 .spawn(move || {
                     let compartment_result = compartment
                         .read()
-                        .get_current(0., 0., volume, epsilon)
+                        .get(0., 0., volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
@@ -1593,14 +1593,14 @@ impl ModelCached {
         while !task_results.is_empty() {
             if let Some((
                 _space_id,
-                _density,
+                density,
                 delta_moment,
             )) = task_results.pop()
             {
           //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
                // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
                 println!("moment_liquid_dso heel:{current_heel} space_id:{} {};", _space_id, delta_moment);
-                values.push(delta_moment);
+                values.push(delta_moment*density);
             }
         }
         if !errors.is_empty() {

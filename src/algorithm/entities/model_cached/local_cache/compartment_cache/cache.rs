@@ -125,24 +125,22 @@ impl CompartmentCache {
                 let balanced = balanced
                     .value(volume)
                     .map_err(|err| error.pass_with("balanced", err))?;
-                values.push(current - balanced);
+                values.push((current - balanced, volume, current, balanced));
             }
             let max_moment = if current_heel >= balanced_heel {
                 values
                     .iter()
-                    .max_by(|a, b| a.partial_cmp(b).unwrap())
+                    .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
                     .ok_or(error.pass("max_moment"))?
             } else {
                 values
                     .iter()
-                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
                     .ok_or(error.pass("max_moment"))?
             };
-            return Ok(*max_moment);
+            println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", max_moment.1, max_moment.2, max_moment.3, max_moment.0);
+            return Ok(max_moment.0);
         }
-        let current = self
-            .get_current(current_heel, current_trim, volume, epsilon)
-            .map_err(|err| error.pass(err))?;
         if !is_cargo_tank {
             let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
             let volume = volume / coeff;
@@ -150,7 +148,15 @@ impl CompartmentCache {
                 return Ok(0.);
             }
         }
-        Ok(current.abs_moment)
+        let current = self
+            .get(current_heel, current_trim, volume, epsilon)
+            .map_err(|err| error.pass(err))?;
+        let balanced = self
+            .get(balanced_heel, balanced_trim, volume, epsilon)
+            .map_err(|err| error.pass(err))?;
+        let res = current.abs_moment - balanced.abs_moment;
+        println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", volume, current.abs_moment, balanced.abs_moment, res);
+        Ok(res)
     }
     /// Получение значения для заданных условий для расчета влияния свободной поверхности
     /// объем изменяется исходя из признаков
@@ -168,7 +174,7 @@ impl CompartmentCache {
         //    println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let mut result = self
-            .get_current(heel, trim, volume, epsilon)
+            .get(heel, trim, volume, epsilon)
             .map_err(|err| error.pass(err))?;
         if !is_cargo_tank {
             // Для всех цистерн кроме грузовых
@@ -187,7 +193,7 @@ impl CompartmentCache {
             let CompartmentCacheResult {
                 inertia_trans_x, ..
             } = self
-                .get_current(heel, trim, volume, epsilon)
+                .get(heel, trim, volume, epsilon)
                 .map_err(|err| error.pass(err))?;
             result.inertia_trans_x = inertia_trans_x;
         }
@@ -196,7 +202,7 @@ impl CompartmentCache {
     }
     /// Получение значения из кэша для заданных условий для расчета равнвесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
-    pub fn get_current(
+    pub fn get(
         &self,
         heel: f64,
         trim: f64,

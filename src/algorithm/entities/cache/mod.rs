@@ -296,11 +296,11 @@ impl Cache<f64> {
             let query: Vec<_> = query
                 .iter()
                 .map(|q| {
-                    if q.len() >= i+1 {
-                        is_cancel = false;
-                        q[i]
-                    } else {
+                    if q.len() <= i+1 {
                         q.last().unwrap()
+                    } else {
+                        is_cancel = false;
+                        q[i]                        
                     }
                 })
                 .collect();
