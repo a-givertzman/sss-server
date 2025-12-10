@@ -485,7 +485,7 @@ impl ModelCached {
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-        let displacement_shape = self
+/*        let displacement_shape = self
             .displacement_shapes
             .get("hull")
             .ok_or(error.err("no displacement_shape"))?;
@@ -503,7 +503,7 @@ impl ModelCached {
             .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
         self.displacement_bounded
             .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-
+*/
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{compartment_id}");
