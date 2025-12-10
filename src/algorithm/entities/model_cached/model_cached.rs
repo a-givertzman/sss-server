@@ -1620,11 +1620,11 @@ impl ModelCached {
             if let Some((_space_id, density, moment)) = task_results.pop() {
                 //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
                 // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
-                println!(
+      /*          println!(
                     "moment_liquid_dso heel:{current_heel} space_id:{} {};",
                     _space_id,
                     moment
-                );
+                );*/
                 values.push(moment * density);
             }
         }
