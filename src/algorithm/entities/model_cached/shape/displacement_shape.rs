@@ -451,12 +451,13 @@ impl DisplacementShape {
                     })
                     .collect();
                 let indices = polyline.indices();
+        //        dbg!(&vertices, &indices);
                 let max_delta = (max_y - min_y).max(max_x - min_x) as u32;
                 let resolution = (max_delta * 100).min(self.resolution);
                 if resolution < 2 {
                     return Ok((0., 0.));
                 }
-      /*          dbg!(
+        /*        dbg!(
                     min_x,
                     max_x,
                     min_y,
@@ -470,7 +471,7 @@ impl DisplacementShape {
                     indices,
                     resolution,
                     parry2d_f64::transformation::voxelization::FillMode::FloodFill {
-                        detect_cavities: true,
+                        detect_cavities: false,
                         detect_self_intersections: false,
                     },
                     false,
@@ -489,6 +490,7 @@ impl DisplacementShape {
                 let voxel_area_center_y = v_y * voxel_volume / voxels_volume;
                 voxel_set.compute_bb();
                 let max_bb = voxel_set.max_bb_voxels();
+          //      dbg!(scale, voxels_volume, voxel_volume, voxel_area_center_x, voxel_area_center_y, max_bb);
                 let x_array: Vec<_> = (0..=max_bb.x)
                     .map(|v| v as f64 - voxel_area_center_x)
                     .map(|v| v * v)
@@ -506,8 +508,8 @@ impl DisplacementShape {
                             i_y + x_array[voxel.coords.x as usize],
                         )
                     });
-                let i_x = i_x * i_x * qrt_scale * voxel_volume;
-                let i_y = i_y * i_y * qrt_scale * voxel_volume;
+                let i_x = i_x * qrt_scale * voxel_volume;
+                let i_y = i_y * qrt_scale * voxel_volume;
                 Ok((i_x, i_y))
             }
             parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
