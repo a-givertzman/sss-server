@@ -451,18 +451,18 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-  /*      if let Err(error) = self.displacement.rebuild() {
+        if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
         if let Err(error) = self.windage_area.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-  */      for (name, compartment) in &mut self.compartments {
+  /*      for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
-        }
+        }*/
   /*      for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
