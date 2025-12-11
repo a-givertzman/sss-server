@@ -126,7 +126,7 @@ impl BuildDisplacementCache {
                     let thread_name =
                         format!("BuildDisplacementCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-                    //  println!("Starting thread {thread_name}");
+                    println!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let guard = shape.read();
@@ -157,7 +157,10 @@ impl BuildDisplacementCache {
             }
         }
         for task in tasks {
-            log::info!("{}.build | join thread {}", &self.dbg, task.name());
+            let string =
+                format!("{}.build | join thread {}", &self.dbg, task.name());
+            println!("{string}");
+            log::info!("{string}");
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

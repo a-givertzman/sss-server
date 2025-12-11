@@ -8,5 +8,5 @@ pub mod vertical_area;
 
 pub use computed_frame::*;
 pub use physical_frame::*;
-pub use horizontal_area::*;
+//pub use horizontal_area::*;
 pub use vertical_area::*;

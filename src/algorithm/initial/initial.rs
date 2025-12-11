@@ -1,14 +1,17 @@
 use std::sync::Arc;
 
 use super::initial_ctx::InitialCtx;
+use crate::algorithm::entities::data::stability::ship_type::ShipType;
+use crate::algorithm::entities::data::stability::{BowBoardDataArray, DraftMarkDataArray, IcingArray, LoadLineDataArray, NavigationArea, ScrewDataArray, ship_type};
+use crate::algorithm::entities::model_cached::ModelCached;
+use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
-use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::data::{
-    BowBoardDataArray, CoefficientKArray, CoefficientKThetaArray, DraftMarkDataArray,
-    LoadLineDataArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, NavigationArea,
-    ScrewDataArray, loads::*, MetacentricHeightSubdivisionArray,
+    CoefficientKArray, CoefficientKThetaArray, 
+    MultiplerSArray, MultiplerX1Array, MultiplerX2Array, 
+    loads::*, MetacentricHeightSubdivisionArray,
 };
-use crate::algorithm::entities::data::{IcingArray, ShipArray, ShipParametersArray, VoyageArray};
+use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::kernel::types::RwLock;
 use crate::kernel::types::eval_result::EvalResult;
@@ -151,7 +154,9 @@ impl Eval<(), EvalResult> for Initial {
                     stowage_factor, \
                     weight AS mass, \
                     shiftable AS shiftable, \
-                    centre_of_compartment as mass_shift
+                    centre_of_compartment_x as mass_shift_x,
+                    centre_of_compartment_y as mass_shift_y,
+                    centre_of_compartment_z as mass_shift_z
                 FROM 
                     bulk_cargo_view
                 WHERE 
@@ -172,11 +177,14 @@ impl Eval<(), EvalResult> for Initial {
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
+                    compartment_purpose as compartment_purpose, \
                     cargo_type, \
                     weight AS mass, \
                     density, \
                     volume, \
-                    centre_of_compartment as mass_shift, \
+                    centre_of_compartment_x as mass_shift_x,
+                    centre_of_compartment_y as mass_shift_y,
+                    centre_of_compartment_z as mass_shift_z,
                     use_moment_of_inertia_max, \
                     long_moment_of_inertia_max, \
                     trans_moment_of_inertia_max
@@ -203,7 +211,9 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_type, \
                     density, \
                     weight AS mass, \
-                    centre_of_compartment as mass_shift
+                    centre_of_compartment_x as mass_shift_x,
+                    centre_of_compartment_y as mass_shift_y,
+                    centre_of_compartment_z as mass_shift_z
                 FROM 
                     gaseous_cargo_view
                 WHERE 
@@ -253,13 +263,19 @@ impl Eval<(), EvalResult> for Initial {
                     assigment_context as assigment_type, \
                     cargo_type, \
                     weight AS mass, \
-                    centre_of_gravity AS mass_shift, \
+                    centre_of_gravity_x AS mass_shift_x, \
+                    centre_of_gravity_y AS mass_shift_y, \
+                    centre_of_gravity_z AS mass_shift_z, \
                     stowage_factor, \
                     permeability, \
                     icing_area, \
-                    centre_of_icing_area, \
+                    centre_of_icing_area_x, \
+                    centre_of_icing_area_y, \
+                    centre_of_icing_area_z, \
                     windage_area, \
-                    centre_of_windage_area, \
+                    centre_of_windage_area_x, \
+                    centre_of_windage_area_y, \
+                    centre_of_windage_area_z, \
                     bound_x1, \
                     bound_x2, \
                     bound_y1, \

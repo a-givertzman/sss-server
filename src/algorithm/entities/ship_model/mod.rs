@@ -53,10 +53,8 @@ pub struct BalanceStabilityQuery {
     pub liquid: Vec<LiquidData>,
     /// Положение зерновых перегородок, координата по х
     pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
-    //    /// номера поврежденных помещений, TODO - только для аварийного расчета
-    //    pub damaged_compartment: Vec<String>,
-    /// точность расчета
-    pub epsilon: f64,
+    /// номера поврежденных помещений, TODO - только для аварийного расчета
+    pub damaged_compartment: Vec<String>,
 }
 ///
 /// Груз, для которого центр массы и распределение зависит от
@@ -79,8 +77,11 @@ pub struct LiquidData {
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения    
     pub cargo_type: LiquidCargoType, // Тип жидкого груза
+    pub use_max_moment: bool, // Признак использования максимального значения момента свободной поверхности жидкости
+    pub is_cargo_tank: bool,
     pub mass: f64,
     pub volume: f64,
+    pub density: f64,
 }
 ///
 /// Газообразный груз
@@ -93,9 +94,26 @@ pub struct GaseousData {
     pub space_id: String, // ID помещения
     pub mass: f64,
 }
-///
+/// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
 #[derive(Debug, Clone)]
-pub struct BoundArea {
+pub struct StrengthArea {
     pub v: Vec<f64>,
     pub h: Vec<f64>,
+}
+/// Площади и моменты поверхности корпуса для расчета остойчивости
+#[derive(Debug, Clone)]
+pub struct StabilityArea {
+    /// Площадь парусности сплошных поверхностей для осадки d_min без палубного груза
+    pub area_windage: f64,
+    /// Положение центра парусности сплошных поверхностей по оси Z относительно опорной плоскости
+    pub area_windage_z: f64,
+    /// Разница в площадях парусности для текущей осадки и осадки d_min без палубного груза
+    pub delta_area_windage: f64,
+    /// Площадь горизонтальных поверхностей судна
+    pub area_horisontal: f64,
+    /// Положение центра площади горизонтальных поверхностей по оси Z относительно опорной плоскости 
+    pub area_horisontal_z: f64,
+    /// Отстояние по вертикали центра площади проекции подводной части корпуса на диаметральную плоскость 
+    /// в прямом положении судна (при нулевом крене) на спокойной воде для текущей осадки [м]
+    pub area_volume_z: f64,
 }

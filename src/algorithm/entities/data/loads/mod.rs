@@ -156,3 +156,55 @@ impl std::fmt::Display for UnitCargoType {
         )
     }
 }
+/// Тип груза для отсека
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum CompartmentPurpose {
+    #[serde(alias = "subdivision_compartment")] // Отсек деления на отсеки. Является независимым отсеком, в
+                                // рамках которого ограничивается поступление воды при его повреждении
+    SubdivisionCompartment,
+    #[serde(alias = "hold")] // Отсек является грузовым трюмом, предназначенным для перевозки сухих грузов
+    Hold,
+    #[serde(alias = "cargo_tank")] // Отсек является грузовым танком, предназначенным для перевозки жидких грузов
+    CargoTank,
+    #[serde(alias = "cargo_gaseous_tank")] // Отсек является грузовым танком, предназначенным для перевозки газообразных грузов
+    CargoGaseousTank,
+    #[serde(alias = "ballast_tank")] // Отсек предназначен для перевозки водяного балласта
+    BallastTank,
+    #[serde(alias = "lubricating_oil_tank")]
+    LubricatingOilTank,
+    #[serde(alias = "fresh_water_tank")] // Отсек предназначен для перевозки пресной воды
+    FreshWaterTank,
+    #[serde(alias = "urea_tank")] // Отсек предназначен для перевозки мочевины
+    UreaTank,
+    #[serde(alias = "sundry_tank")] // Отсек предназначен для перевозки грязных жидкостей
+    SundryTank,
+    #[serde(alias = "fuel_tank")] // Отсек предназначен для перевозки топлива
+    FuelTank,
+    #[serde(alias = "deck_well")] // Помещение является палубным колодцем
+    DeckWell,
+    #[serde(alias = "undefined")] // Назначение отсека не определено
+    Undefined,
+}
+//
+impl std::fmt::Display for CompartmentPurpose {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                CompartmentPurpose::SubdivisionCompartment => "subdivision_compartment",
+                CompartmentPurpose::Hold => "hold",
+                CompartmentPurpose::CargoTank => "cargo_tank",
+                CompartmentPurpose::CargoGaseousTank => "cargo_gaseous_tank",
+                CompartmentPurpose::BallastTank => "ballast_tank",
+                CompartmentPurpose::LubricatingOilTank => "lubricating_oil_tank",
+                CompartmentPurpose::FreshWaterTank => "fresh_water_tank",
+                CompartmentPurpose::UreaTank => "urea_tank",
+                CompartmentPurpose::SundryTank => "sundry_tank",
+                CompartmentPurpose::FuelTank => "fuel_tank",
+                CompartmentPurpose::DeckWell => "deck_well",
+                CompartmentPurpose::Undefined => "undefined",
+            },
+        )
+    }
+}

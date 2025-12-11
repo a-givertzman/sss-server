@@ -98,8 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
-*/
-    
+
     let api_client = Arc::new(ApiClient::new(
         &dbg,
         conf.api.address.database.clone(),
@@ -111,12 +110,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &dbg,
         ship_id,
         project_id.to_owned(),
+        bounds.clone(),
         model_cached,
         api_client.clone(),
     );
     let bounds = Bounds::from_array(&Calculus::PHYSICAL_FRAMES, 0.).unwrap();
     ship_model.init().unwrap();
-    ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
     let server = Server::new(
         &dbg,

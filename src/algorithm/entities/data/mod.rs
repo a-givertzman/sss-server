@@ -15,9 +15,6 @@ pub use ship::*;
 pub use voyage::*;
 pub use ship_data::*;
 //pub use result::*;
-pub use stability::*;
-pub use strength::*;
-
 
 pub use stability::multipler_s::MultiplerSArray as MultiplerSArray;
 pub use stability::MultiplerX1Array as MultiplerX1Array;

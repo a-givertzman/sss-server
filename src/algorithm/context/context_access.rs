@@ -44,7 +44,6 @@ impl ContextParamsRead for Context {
         params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
     }
 }
-
 //
 //
 impl ContextWrite<InitialCtx> for Context {
@@ -214,7 +213,6 @@ impl ContextRead<BendingMomentCtx> for Context {
         self.bending_moment.clone().unwrap()
     }
 }
-/*
 //
 impl ContextWrite<StabilityAreaCtx> for Context {
     fn write(mut self, value: StabilityAreaCtx) -> Result<Self, Error> {
@@ -285,18 +283,6 @@ impl ContextWrite<RollingPeriodCtx> for Context {
 impl ContextRead<RollingPeriodCtx> for Context {
     fn read(&self) -> RollingPeriodCtx {
         self.roll_period.clone().unwrap()
-    }
-}
-//
-impl ContextWrite<RollingFrequencyCtx> for Context {
-    fn write(mut self, value: RollingFrequencyCtx) -> Result<Self, Error> {
-        self.roll_frequency = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<RollingFrequencyCtx> for Context {
-    fn read(&self) -> RollingFrequencyCtx {
-        self.roll_frequency.clone().unwrap()
     }
 }
 //
@@ -527,6 +513,7 @@ impl ContextRead<CriterionDraughtCtx> for Context {
         self.criterion_draught.clone().unwrap()
     }
 }
+
 //
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> Result<Self, Error> {
@@ -551,7 +538,7 @@ impl ContextRead<DraftMarkCtx> for Context {
         self.draft_mark.clone().unwrap()
     }
 }
-*/
+
 
 
 

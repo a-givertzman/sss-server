@@ -74,7 +74,7 @@ impl DisplacementBoundCache {
                     //            let draught = draught_mid + delta_draught * (dx - self.length_lbp / 2. + self.center_x);
                     let draught = draught_mid + center_x * trim.to_radians().sin();
                   //       dbg!(draught_mid, dx, draught);
-                    cache.get(&vec![draught])[0]
+                    cache.get(&[&draught])[0]
                 }
                 None => 0.,
             })
@@ -89,7 +89,7 @@ impl DisplacementBoundCache {
         let result = caches
             .iter()
             .map(|(_, cache)| match cache {
-                Some(cache) => cache.value_disp(1).1,
+                Some(cache) => cache.disp(1).1,
                 None => 0.,
             })
             .collect();

@@ -37,8 +37,7 @@ pub struct Context {
     /// Срезающая сила, действующая на корпус судна
     pub(super) shear_force: Option<ShearForceCtx>,
     /// Изгибающий момент
-    pub(super) bending_moment: Option<BendingMomentCtx>,
-    /*
+    pub(super) bending_moment: Option<BendingMomentCtx>,  
     /// Площади горизонтальных поверхностей и
     /// площади парусности судна для расчета остойчивости
     pub(super) stability_area: Option<StabilityAreaCtx>,
@@ -52,10 +51,8 @@ pub struct Context {
     pub(super) windage: Option<WindageCtx>,
     /// Период собственных бортовых колебаний судна 
     pub(super) roll_period: Option<RollingPeriodCtx>,
-    /// Частота собственных бортовых колебаний судна
-    pub(super) roll_frequency: Option<RollingFrequencyCtx>,
     /// Амплитуда качки судна  
-    pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
+    pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,  
     /// Критерий погоды К
     pub(super) wheather: Option<WheatherCtx>,
     /// Статический угол крена от действия постоянного ветра
@@ -96,7 +93,6 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
-*/
     ///
     /// Uset for testing only
     #[allow(dead_code)]

@@ -1,4 +1,6 @@
-use crate::algorithm::entities::Position;
+use bincode::{Decode, Encode};
+
+use crate::algorithm::entities::{Position, data::loads::AssignmentType};
 ///
 /// Структура для данных результата расчета баланса судна для остойчивости.
 /// Содержит массу судна, грузов и положение зерновых перегородок
@@ -22,10 +24,8 @@ pub struct BalanceStabilityResult {
     pub displacement: f64,
     /// Смещение центра объемного водоизмещения, м
     pub displacement_center: Position,
-    /// Данные сыпучих грузов
-    pub bulk: Vec<BulkResult>,
-    /// Данные жидких грузов
-    pub liquid: Vec<LiquidResult>,
+    /// Смещение центра массы, м
+    pub mass_center: Position,
     /// Площадь ватерлинии, м^2
     pub area_wl: f64,
     /// Смещение центра тяжести ватеринии, м
@@ -38,10 +38,6 @@ pub struct BalanceStabilityResult {
     pub rad_long: f64,
     /// Поперечный метацентрические радиус, м
     pub rad_trans: f64,
-    // ///  Угол входа в воду кромки палубы, градусы
-    //  pub entry_angle: f64,
-    //  ///  Угол заливания отверстий, градусы
-    //  pub flooding_angle: f64,
     //  /// Суммарная площадь проекции на диаметральную плоскость, в пределах
     //  /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна
     //  /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2
@@ -49,17 +45,31 @@ pub struct BalanceStabilityResult {
     //  /// Площади боковой и горизонтальной поверхностей для расчета остойчивости, м^2
     //  pub const_area_v: Vec<(f64, Position)>,
     //  pub const_area_h: Vec<(f64, Position)>,
-    //  /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы
-    //  pub pantocaren: Vec<(f64, f64)>,
+    /// Данные сыпучих грузов
+    pub bulk: Vec<BulkResult>,
+    /// Данные жидких грузов
+    pub liquid: Vec<LiquidResult>,
+    /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы
+    pub dso: Vec<(f64, f64)>,
+    ///  Массив значений угола входа в воду кромки палубы от крена
+    ///  для текущих значений дифферента и осадки, градусы
+    pub entry_angle: Vec<(f64, f64)>,
+    ///  Массив значений угол заливания отверстий от крена
+    ///  для текущих значений дифферента и осадки, градусы
+    pub flooding_angle: Vec<(f64, f64)>,
 }
 ///
 /// TODO: Type doc here
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Decode, Encode)]
 pub struct LiquidResult {
     /// ID assigned
     pub assignment_id: usize,
- //   /// смещение центра массы
- //   pub mass_shift: Position,
+    /// Тип назначения груза
+    pub assigment_type: AssignmentType,  
+    /// Масса груза
+    pub mass: f64,
+    /// Смещение центра массы груза
+    pub mass_shift: Position, 
     /// продольный момент свободной поверхности жидкости
     pub long_moment_of_inertia: f64,
     /// поперечный момент свободной поверхности жидкости
@@ -70,27 +80,35 @@ impl LiquidResult {
     ///
     pub fn new(
         assignment_id: usize,
-   //     mass_shift: Position,
+        assigment_type: AssignmentType, 
+        mass: f64,
+        mass_shift: Position,
         long_moment_of_inertia: f64,
         trans_moment_of_inertia: f64,
     ) -> Self {
         Self {
             assignment_id,
-    //        mass_shift,
+            assigment_type, 
+            mass,
+            mass_shift,
             long_moment_of_inertia,
             trans_moment_of_inertia,
         }
     }
 }
 /// TODO: Type doc here
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
     /// ID помещения
     pub space_id: String,  // TODO - убрать после переноса расчета момента в модель
     /// ID assigned
     pub assignment_id: usize,
- //   /// смещение центра массы
- //   pub mass_shift: Position,
+    /// Тип назначения груза
+    pub assigment_type: AssignmentType,  
+    /// Масса груза
+    pub mass: f64,
+    /// Смещение центра массы груза
+    pub mass_shift: Position, 
     ///  Признак смещаемости груза
     pub shiftable: bool, 
     /// Уровень заполнения отсека
@@ -104,14 +122,18 @@ impl BulkResult {
     pub fn new(
         space_id: String,
         assignment_id: usize,
-    //    mass_shift: Position,
+        assigment_type: AssignmentType, 
+        mass: f64,
+        mass_shift: Position,
         shiftable: bool,
         level: f64,
     ) -> Self {
         Self {
             space_id,
             assignment_id,
-      //      mass_shift,
+            assigment_type, 
+            mass,
+            mass_shift,
             shiftable,
             level,
             moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
