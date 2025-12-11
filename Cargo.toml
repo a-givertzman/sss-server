@@ -18,7 +18,6 @@ sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
 #
 # 3D Libs
-nalgebra = "~0.34"
 obj = "~0.10"
 stl_io = "~0.10"
 #parry3d-f64 = "~0.25"
@@ -39,10 +38,8 @@ bincode = { version = "~2.0", features = ["std"] }
 #
 # Regex
 regex = "~1.12"
-regex = "~1.12"
 #
 # Collections
-indexmap = "~2.12"
 indexmap = "~2.12"
 rustc-hash = "~2.1"
 dashmap = "~6.1"
