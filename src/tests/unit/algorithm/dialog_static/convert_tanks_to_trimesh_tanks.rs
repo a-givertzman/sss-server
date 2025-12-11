@@ -17,10 +17,11 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            Zg, 
-            convert_to_trimesh_ctx::ConvertToTrimeshCtx, 
-            convert_to_trimesh_eval::ConvertToTrimeshEval, 
-            import_3d_model_eval::Import3DModelEval
+            Zg, import_tanks::{
+                convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx, 
+                convert_tanks_to_trimesh_eval::ConvertTanksToTrimeshEval, 
+                import_3d_tanks_eval::Import3DTanksEval
+            }, 
         }
     }, 
     kernel::{
@@ -100,64 +101,35 @@ fn convert_to_trimesh() {
     let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(31));
     test_duration.run().unwrap();
     let test_data = [
-        // (1, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_1"),
-        (2, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\vessel_suraface_unboxes_АРК_2023"),
-        // (3, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\nasal_block"),
-        // (4, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_2"),
-        // (5, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_3"),
-        // (6, "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\test_4"),
+        (
+            1,
+            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\tanks_test_1"
+        ),
     ];
-    for (step, path_3d_model) in test_data.iter() {
-        log::debug!("Step {}: processing {}", step, path_3d_model);
+    for (step, path_3d_tanks) in test_data.iter() {
+        log::debug!("Step {}: processing {}", step, path_3d_tanks);
         let mut initial_data = InitialCtx::new(0, "Unit-test");
-        initial_data.path_3d_model = path_3d_model.to_string();
+        initial_data.path_3d_tanks = path_3d_tanks.to_string();
         let ctx = MocEval {
             ctx: Context::new(initial_data),
         };
-        let result = ConvertToTrimeshEval::new("Test", Import3DModelEval::new("Test", ctx))
+        let result = ConvertTanksToTrimeshEval::new("Test", Import3DTanksEval::new("Test", ctx))
             .eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<ConvertToTrimeshCtx>::read(&ctx).clone();
+                let result = ContextRead::<ConvertTanksToTrimeshCtx>::read(&ctx).clone();
                 let mut i = 0;
-                // let mut mesh_with_flags = result.nasal_block.clone().unwrap();
-                // //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                // if mesh_with_flags.vertices().len() > 0 {
-                //     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\nasal_{}.stl", i));
-                //     if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                //         log::error!("Failed to write nasal mesh {}: {}", i, e);
-                //     }
-                //     i += 1;
-                // }
-                let mut i = 0;
-                // let mut mesh_with_flags = result.stern_block.clone().unwrap();
-                // //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                // if mesh_with_flags.vertices().len() > 0 {
-                //     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\stern_{}.stl", i));
-                //     if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                //         log::error!("Failed to write nasal mesh {}: {}", i, e);
-                //     }
-                //     i += 1;
-                // }
-                let mut mesh_with_flags = result.surface_outer_body.clone().unwrap();
-                //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                if mesh_with_flags.vertices().len() > 0 {
-                    let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_outer.stl"));
-                    if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                        log::error!("Failed to write nasal mesh {}", e);
+                let mut mesh_with_flags = result.compartment_corner_points.clone().unwrap();
+                // let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
+                for meshs in mesh_with_flags {
+                    if meshs.vertices().len() > 0 {
+                        let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks_{}.stl", i));
+                        if let Err(e) = write_stl(&path, &meshs) {
+                            log::error!("Failed to write nasal mesh {}", e);
+                        }
+                        i += 1;
                     }
                 }
-                log::debug!("Volume of surface outer body: {:?}", volume(&result.surface_outer_body.unwrap()));
-                // let mut i = 0;
-                // let mut mesh_with_flags = result.surface_superstructure.clone().unwrap();
-                // //let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                // if mesh_with_flags.vertices().len() > 0 {
-                //     let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\surface_superstructure_{}.stl", i));
-                //     if let Err(e) = write_stl(&path, &mesh_with_flags) {
-                //         log::error!("Failed to write nasal mesh {}: {}", i, e);
-                //     }
-                //     i += 1;
-                // }
             },
             Err(err) => {
                 log::error!("Step {} failed with error: {:#?}", step, err);

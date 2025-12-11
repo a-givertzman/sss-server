@@ -60,6 +60,8 @@ pub struct InitialCtx {
     pub h_subdivision: Option<Vec<(f64, f64)>>,
     /// Путь к файлу 3D модели из Диалог Статика
     pub path_3d_model: String,
+    /// Путь к файлу 3D отсекам из Диалог Статика
+    pub path_3d_tanks: String,
 }
 impl InitialCtx {
     ///

@@ -1,2 +1,4 @@
-mod convert_to_trimesh_test;
+mod convert_tanks_to_trimesh_tanks;
+mod convert_model_to_trimesh_test;
 mod import_3d_model_test;
+mod import_3d_tanks_test;
