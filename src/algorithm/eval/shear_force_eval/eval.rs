@@ -1,4 +1,4 @@
-use super::ctx::ShearForceCtx;
+use crate::ShearForceCtx;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,

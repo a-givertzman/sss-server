@@ -1,9 +1,9 @@
-use super::ctx::TotalForceCtx;
+use crate::TotalForceCtx;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,
         entities::{MultipleSingle, SubVec},
-        eval::{DynamicMassCtx, StaticMassCtx, StrengthBalanceCtx},
+        eval::{DynamicMassCtx, StrengthBalanceCtx},
     },
     kernel::{eval::Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},

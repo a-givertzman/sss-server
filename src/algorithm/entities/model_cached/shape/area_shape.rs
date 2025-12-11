@@ -4,8 +4,11 @@ use parry3d_f64::shape::{TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
+
+use crate::algorithm::entities::Position;
+use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, write_stl};
 ///
-/// Примитив для расчета площади горизонтальной поверхности фигуры
+/// Примитив для расчета площадeй фигуры
 #[derive(Clone)]
 pub struct AreaShape {
     dbg: Dbg,
@@ -87,8 +90,8 @@ impl AreaShape {
         (self.voxels, self.voxel_scale) = {
             let aabb = mesh.local_aabb();
             let (dx, dz) = {
-                let center = self.center.as_ref().unwrap();
-                (aabb.mins.coords.x - center.x, aabb.mins.coords.z - center.z)
+                //          let center = self.center.as_ref().unwrap();
+                (aabb.mins.coords.x, aabb.mins.coords.z)
             };
             // разбиваем поверхность полученного над водой объема на воксели
             let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
@@ -134,24 +137,16 @@ impl AreaShape {
         Ok(())
     }
     /// Расчет поверхности парусности
-    /// Возвращает повернутое и смещенное разбиение [dx, area]
-    pub fn windage_area_data(&self, draught: f64) -> Result<Vec<(f64, Vec<(f64, f64)>)>, Error> {
+    /// Возвращает разбиение [dx, [dz, area]]
+    pub fn windage_area_data(&self) -> Result<Vec<(f64, Vec<(f64, f64)>)>, Error> {
         let error = Error::new(&self.dbg, "windage_area_data");
         let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
         let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
         let voxel_area = voxel_scale * voxel_scale;
-        let center = self.center.ok_or(error.err("no center"))?;
+        //    let center =  self.center.ok_or(error.err("no center"))?;
         let result: Vec<_> = voxels
             .iter()
-            .map(|(x, v)| {
-                (
-                    *x + center.x,
-                    v.iter()
-                        .map(|z| (z + center.z - draught, voxel_area))
-                        .filter(|(z, _)| *z >= 0.)
-                        .collect(),
-                )
-            })
+            .map(|(x, v)| (*x, v.iter().map(|z| (*z, voxel_area)).collect()))
             .collect();
         Ok(result)
     }

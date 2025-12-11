@@ -239,11 +239,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &dbg,
         ship_id,
         project_id.to_owned(),
+        bounds.clone(),
         model_cached,
         Arc::clone(&api_client),
     );
     ship_model.init().unwrap();
-    ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
     let ctx =
@@ -363,19 +363,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _result = DraftMarkEval::new(
         &tmp_dbg,
         CriterionDraughtEval::new(
-            &tmp_dbg,
+            &dbg,
             ReserveBuoyncyEval::new(
-                &tmp_dbg,
+                &dbg,
                 ScrewEval::new(
-                    &tmp_dbg,
+                    &dbg,
                     BowBoardEval::new(
-                        &tmp_dbg,
+                        &dbg,
                         LoadLineEval::new(
-                            &tmp_dbg,
+                            &dbg,
                             ZgEval::new(
-                                    thread_pool.scheduler(),
-                                    &tmp_dbg,
-                              //      &ship_model,
+                                    thread_pool,
+                                    &dbg,
                                     ctx,
                             ),
                         ),
@@ -384,7 +383,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     )
-    .eval(());*/
+    .eval(());
 
     // let initial: &InitialCtx = ctx.as_ref();
     ctx.unwrap();
