@@ -5,7 +5,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{
-            Curve, ICurve, Moment, data::loads::AssignmentType, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
+            Curve, ICurve, Moment, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
         },
         eval::{IcingCtx, StaticMassCtx, WettingCtx, parameters::ParameterID},
     },

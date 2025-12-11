@@ -64,108 +64,138 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
 
-
-
-        let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
-        let model_dir: PathBuf = "src/assets/model/sofia/compartments/arc_bc2dd.stl".into();
-        let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-            &dbg, model_dir, None, 1000.,
-        )));
-        shape.write().init().unwrap();
-      //  shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
-        let mut cache = model_cached::CompartmentCache::new(
-            &dbg,
-            shape.clone(),
-            cache_dir,
-            "arc_bc2dd".to_owned(),
-       //     (-60..=60).map(|v| v as f64).collect(),
-         //   vec![-5., 0., 5.,],
-         //   vec![-40., -20., -10., 0., 10., 20., 40.,],
-         //   40,
-            vec![-80., -70., -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40., 60., 70., 80.,],
+    let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
+    let model_dir: PathBuf = "src/assets/model/sofia/compartments/arc_bc2dd.stl".into();
+    let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
+        &dbg, model_dir, None, 1000.,
+    )));
+    shape.write().init().unwrap();
+    //  shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
+    let mut cache = model_cached::CompartmentCache::new(
+        &dbg,
+        shape.clone(),
+        cache_dir,
+        "arc_bc2dd".to_owned(),
+        //     (-60..=60).map(|v| v as f64).collect(),
+        //   vec![-5., 0., 5.,],
+        //   vec![-40., -20., -10., 0., 10., 20., 40.,],
+        //   40,
+        vec![
+            -80., -70., -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20.,
+            30., 40., 60., 70., 80.,
+        ],
         //    vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
         //    vec![-2., -1., 0., 1., 2.,],
         //    vec![-0.01, 0., 0.01,],
-            vec![-40., -20., -10., 0., 10., 20., 40.,],
-            20,
-            Arc::clone(&thread_pool),
-        );
-      //  cache.rebuild().unwrap();
-        cache.init().unwrap();
-      //  cache.calc_coeff(221.692).unwrap(); //205
+        vec![-40., -20., -10., 0., 10., 20., 40.],
+        20,
+        Arc::clone(&thread_pool),
+    );
+    //  cache.rebuild().unwrap();
+    cache.init().unwrap();
+    //  cache.calc_coeff(221.692).unwrap(); //205
     //    cache.calc_coeff(19.034).unwrap(); // 501
     //    cache.calc_coeff(35.146).unwrap(); // 402
-        cache.calc_coeff(96.78).unwrap();  //arc_bc2dd
+    cache.calc_coeff(96.78).unwrap(); //arc_bc2dd
     //    cache.calc_coeff(99.7776).unwrap();
 
-      //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
+    //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
 
-        let calc = |heel: f64,| {
-            let result = cache.get(heel, 0., 48.1, 0.000001).unwrap();
-       //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
-            let fix_moment = (result.volume_center.y()*heel.to_radians().cos() + result.volume_center.z()*heel.to_radians().sin())*result.volume*1.025;
-            println!("{:.1} {:.6} {:.6} {:.6} {:.6} {:.6};", heel, result.volume, result.volume_center.y(), result.volume_center.z(), result.abs_moment*1.025, fix_moment);//result.inertia_trans_x*1.025);
-        };
+    let calc = |heel: f64| {
+        let result = cache.get(heel, 0., 48.1, 0.000001).unwrap();
+        //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+        let fix_moment = (result.volume_center.y() * heel.to_radians().cos()
+            + result.volume_center.z() * heel.to_radians().sin())
+            * result.volume
+            * 1.025;
+        println!(
+            "{:.1} {:.6} {:.6} {:.6} {:.6} {:.6};",
+            heel,
+            result.volume,
+            result.volume_center.y(),
+            result.volume_center.z(),
+            result.abs_moment * 1.025,
+            fix_moment
+        ); //result.inertia_trans_x*1.025);
+    };
 
-        calc(0.);
-        calc(5.);
-        calc(10.);
-        calc(15.);
-        calc(20.);
-        calc(25.);
-        calc(30.);
-        calc(40.);
-        calc(50.);
-        calc(60.);
-        calc(70.);
-        calc(80.);
-        return Ok(());
+    calc(0.);
+    calc(5.);
+    calc(10.);
+    calc(15.);
+    calc(20.);
+    calc(25.);
+    calc(30.);
+    calc(40.);
+    calc(50.);
+    calc(60.);
+    calc(70.);
+    calc(80.);
+    return Ok(());
 
-/*
-      
-        let calc = |heel: f64, balanced_heel: f64, volume: f64| {
-            let result = cache.get_for_dso(heel, 0., volume, -3., 0., 0., false, false).unwrap();
-       //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
-            println!("{:.1} {:.1} {:.3} {:.3};", heel, balanced_heel, volume, result);
-        };
+    /*
 
-        calc(0., -3., 1.);
-        calc(0., -3., 5.);
-        calc(0., -3., 10.);
-        calc(0., -3., 15.);
+            let calc = |heel: f64, balanced_heel: f64, volume: f64| {
+                let result = cache.get_for_dso(heel, 0., volume, -3., 0., 0., false, false).unwrap();
+           //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+                println!("{:.1} {:.1} {:.3} {:.3};", heel, balanced_heel, volume, result);
+            };
 
-        calc(-5., -3., 1.);
-        calc(-5., -3., 5.);
-        calc(-5., -3., 10.);
-        calc(-5., -3., 15.); 
-*/
+            calc(0., -3., 1.);
+            calc(0., -3., 5.);
+            calc(0., -3., 10.);
+            calc(0., -3., 15.);
 
-        let calc = |volume: f64| {
-            let result = cache.get(0., 0., volume, 0.000001).unwrap();
-       //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
-            println!("{:.6} {:.6} {:.6};", result.level, result.volume, result.inertia_trans_x);
-        };
+            calc(-5., -3., 1.);
+            calc(-5., -3., 5.);
+            calc(-5., -3., 10.);
+            calc(-5., -3., 15.);
+    */
 
-        (0..=35).map(|v| (v as f64)).for_each(|v| calc(v, ));
-        
-      //  (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
+    let calc = |volume: f64| {
+        let result = cache.get(0., 0., volume, 0.000001).unwrap();
+        //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+        println!(
+            "{:.6} {:.6} {:.6};",
+            result.level, result.volume, result.inertia_trans_x
+        );
+    };
 
-      /*  let calc = |heel: f64| {
+    (0..=35).map(|v| (v as f64)).for_each(|v| calc(v));
+
+    //  (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
+
+    /*  let calc = |heel: f64| {
             cache.get(heel, 0., 111.9657, 0.0000001, false, false).unwrap().volume_center.y()
         };
         (0..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {}", calc(v)));
     */
-        return Ok(());
-    
-
-
+    return Ok(());
 
     let ship_id = 2;
     let project_id = "NULL";
     let cache_dir: PathBuf = "src/assets/cache/sofia".into();
     let model_dir: PathBuf = "src/assets/model/sofia".into();
     let model_x = 65.250;
-
+    let physical_frames = [
+        -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
+        6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
+        17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
+        27.48, 28.22, 28.96, 29.7, 30.44, 31.18, 31.92, 32.66, 33.4, 34.14, 34.88, 35.62, 36.36,
+        37.1, 37.84, 38.58, 39.32, 40.06, 40.80, 41.54, 42.28, 43.02, 43.76, 44.5, 45.24, 45.98,
+        46.72, 47.46, 48.2, 48.94, 49.68, 50.42, 51.16, 51.9, 52.64, 53.38, 54.12, 54.86, 55.6,
+        56.34, 57.08, 57.82, 58.56, 59.30, 60.04, 60.78, 61.52, 62.26, 63.0, 63.74, 64.48, 65.22,
+        65.96, 66.7, 67.44, 68.18, 68.92, 69.66, 70.4, 71.14, 71.88, 72.62, 73.36, 74.1, 74.84,
+        75.58, 76.32, 77.06, 77.8, 78.54, 79.28, 80.02, 80.76, 81.5, 82.24, 82.98, 83.72, 84.46,
+        85.2, 85.94, 86.68, 87.42, 88.16, 88.9, 89.64, 90.38, 91.12, 91.86, 92.6, 93.34, 94.08,
+        94.82, 95.56, 96.3, 97.04, 97.78, 98.52, 99.26, 100.0, 100.74, 101.48, 102.22, 102.96,
+        103.7, 104.44, 105.18, 105.92, 106.66, 107.4, 108.14, 108.88, 109.62, 110.36, 111.1,
+        111.84, 112.58, 113.32, 114.06, 114.8, 115.54, 116.28, 117.02, 117.76, 118.5, 119.24,
+        119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
+        128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
+    ];
+    //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
+    let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
     let mut model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
@@ -197,37 +227,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             hull_draught_step: 0.5,
             bounds_level_step: 0.1,
             compartment_level_step_qnt: 20,
+            bounds,
         },
         Arc::clone(&thread_pool),
     )
     .unwrap();
-    let physical_frames = [
-        -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
-        6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
-        17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
-        27.48, 28.22, 28.96, 29.7, 30.44, 31.18, 31.92, 32.66, 33.4, 34.14, 34.88, 35.62, 36.36,
-        37.1, 37.84, 38.58, 39.32, 40.06, 40.80, 41.54, 42.28, 43.02, 43.76, 44.5, 45.24, 45.98,
-        46.72, 47.46, 48.2, 48.94, 49.68, 50.42, 51.16, 51.9, 52.64, 53.38, 54.12, 54.86, 55.6,
-        56.34, 57.08, 57.82, 58.56, 59.30, 60.04, 60.78, 61.52, 62.26, 63.0, 63.74, 64.48, 65.22,
-        65.96, 66.7, 67.44, 68.18, 68.92, 69.66, 70.4, 71.14, 71.88, 72.62, 73.36, 74.1, 74.84,
-        75.58, 76.32, 77.06, 77.8, 78.54, 79.28, 80.02, 80.76, 81.5, 82.24, 82.98, 83.72, 84.46,
-        85.2, 85.94, 86.68, 87.42, 88.16, 88.9, 89.64, 90.38, 91.12, 91.86, 92.6, 93.34, 94.08,
-        94.82, 95.56, 96.3, 97.04, 97.78, 98.52, 99.26, 100.0, 100.74, 101.48, 102.22, 102.96,
-        103.7, 104.44, 105.18, 105.92, 106.66, 107.4, 108.14, 108.88, 109.62, 110.36, 111.1,
-        111.84, 112.58, 113.32, 114.06, 114.8, 115.54, 116.28, 117.02, 117.76, 118.5, 119.24,
-        119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
-        128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
-    ];
-    //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
-    let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-    
-            let res = model_cached.reload_shapes();            dbg!(&res);
-        //    let res = model_cached.rebuild_caches();   dbg!(&res);
-            let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
-          //  let res = model_cached.init();                     dbg!(&res);
-           // let res = model_cached.init_bounded(&bounds);      dbg!(&res);
-            return Ok(());
-    
+
+    let res = model_cached.reload_shapes();
+    dbg!(&res);
+    //    let res = model_cached.rebuild_caches();   dbg!(&res);
+    let res = model_cached.rebuild_bounds(&bounds);
+    dbg!(&res);
+    //  let res = model_cached.init();                     dbg!(&res);
+    // let res = model_cached.init_bounded(&bounds);      dbg!(&res);
+    return Ok(());
+
     let api_client = Arc::new(ApiClient::new(
         &dbg,
         conf.api.address.database.clone(),
@@ -360,33 +374,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ;
 
     /*
-    let _result = DraftMarkEval::new(
-        &tmp_dbg,
-        CriterionDraughtEval::new(
-            &dbg,
-            ReserveBuoyncyEval::new(
+        let _result = DraftMarkEval::new(
+            &tmp_dbg,
+            CriterionDraughtEval::new(
                 &dbg,
-                ScrewEval::new(
+                ReserveBuoyncyEval::new(
                     &dbg,
-                    BowBoardEval::new(
+                    ScrewEval::new(
                         &dbg,
-                        LoadLineEval::new(
+                        BowBoardEval::new(
                             &dbg,
-                            ZgEval::new(
-                                    thread_pool,
-                                    &dbg,
-                                    ctx,
+                            LoadLineEval::new(
+                                &dbg,
+                                ZgEval::new(
+                                        thread_pool,
+                                        &dbg,
+                                        ctx,
+                                ),
                             ),
                         ),
                     ),
                 ),
             ),
-        ),
-    )
-    .eval(());
+        )
+        .eval(());
 
-    // let initial: &InitialCtx = ctx.as_ref();
-    ctx.unwrap();
-
+        // let initial: &InitialCtx = ctx.as_ref();
+        ctx.unwrap();
+    */
     Ok(())
 }

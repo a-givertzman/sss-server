@@ -7,7 +7,7 @@ use crate::{
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 ///
 ///
 /// Площадь парусности корпуса и конструкций

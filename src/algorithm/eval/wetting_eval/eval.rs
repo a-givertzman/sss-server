@@ -1,5 +1,4 @@
 //! Учет намокания груза
-use super::wetting_ctx::WettingCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::{

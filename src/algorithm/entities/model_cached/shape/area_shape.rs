@@ -5,8 +5,6 @@ use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 
-use crate::algorithm::entities::Position;
-use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, write_stl};
 ///
 /// Примитив для расчета площадeй фигуры
 #[derive(Clone)]

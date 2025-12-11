@@ -157,7 +157,7 @@ impl ShipModel {
     /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
     pub fn strength_area(&self) -> Result<StrengthArea, Error> {
         let error = Error::new(&self.dbg, "strength_area");
-        let bounds = self.bounds; 
+        let bounds = &self.bounds; 
         let windage_area = self
             .model_cached
             .bounded_windage_area()
@@ -239,8 +239,6 @@ impl ShipModel {
             area_volume_z,
         })
     }
-    /// TODO: Doc
-    pub fn bow_area
     ///
     /// TODO: Doc
     pub fn compute_stability(
@@ -284,6 +282,8 @@ impl ShipModel {
             .balance_strength(query)
             .map_err(|err| Error::new(&self.dbg, "compute_strength").pass(err))
     }
+    /// TODO: Doc
+    pub fn bow_area
 }
 //
 //
