@@ -1,5 +1,5 @@
-use std::{collections::HashMap, path::PathBuf};
-use crate::algorithm::entities::Position;
+use std::path::PathBuf;
+use crate::algorithm::entities::{Bounds, Position};
 ///
 /// [super::ModelCached] configuration.
 ///
@@ -13,7 +13,7 @@ pub struct ModelCachedConf {
     pub model_scale: f64,
     /// Hull
     /// Waterline initial position in 3D space (midel).
-    pub model_center_coord: Position,
+    pub model_x: f64,
     /// Ship length between perpendiculars
     pub ship_length_lbp: f64,
     /// Minimal draught
@@ -30,8 +30,10 @@ pub struct ModelCachedConf {
     /// Angle in degrees for compartments
     pub compartment_heel_steps: Vec<f64>,
     pub compartment_trim_steps: Vec<f64>,
-    /// Level for compartments
-    pub compartment_level_step: f64,    
+    /// Level steps for compartments
+    pub compartment_level_step_qnt: usize,    
     /// Level step for compartments
     pub bounds_level_step: f64,
+    /// Bounds
+    pub bounds: Bounds,
 }

@@ -1,4 +1,4 @@
 //! Критерий минимальной метацентрической высоты
-pub mod min_metacentric_height_ctx;
-pub mod min_metacentric_height_eval;
+pub mod ctx;
+pub mod eval;
 

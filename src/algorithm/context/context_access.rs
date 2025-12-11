@@ -44,7 +44,6 @@ impl ContextParamsRead for Context {
         params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
     }
 }
-
 //
 //
 impl ContextWrite<InitialCtx> for Context {
@@ -502,7 +501,7 @@ impl ContextRead<CriterionDraughtCtx> for Context {
         self.criterion_draught.clone().unwrap()
     }
 }
-/*
+
 //
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> Result<Self, Error> {
@@ -526,7 +525,7 @@ impl ContextRead<DraftMarkCtx> for Context {
     fn read(&self) -> DraftMarkCtx {
         self.draft_mark.clone().unwrap()
     }
-}*/
+}
 
 
 

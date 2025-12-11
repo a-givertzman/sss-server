@@ -1,6 +1,7 @@
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::ICurve;
-use crate::algorithm::entities::data::DataArray;
+use crate::algorithm::entities::Position;
+use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabArea;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabAreaArray;
@@ -28,9 +29,12 @@ pub struct ShipModel {
     ship_id: usize,
     //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
+    bounds: Bounds,
     horisontal_area_str: Option<Vec<HStrArea>>,
     horisontal_area_stab: Option<Vec<HStabArea>>,
     grain_moment: Option<HashMap<String, Curve<f64>>>,
+    opening: Option<Vec<Position>>,
+    deck_angle_point: Option<Vec<Position>>,
     model_cached: ModelCached,
     //    timeout: Duration,
     api_client: Arc<ApiClient>,
@@ -51,6 +55,7 @@ impl ShipModel {
         ship_id: usize,
         //    ship_file_name: String,
         project_id: String,
+        bounds: Bounds,
         model_cached: ModelCached,
         api_client: Arc<ApiClient>,
     ) -> Self {
@@ -63,9 +68,12 @@ impl ShipModel {
             ship_id,
             //      ship_file_name,
             project_id,
+            bounds,
             horisontal_area_str: None,
             horisontal_area_stab: None,
             grain_moment: None,
+            opening: None,
+            deck_angle_point: None,
             model_cached: model_cached,
             //    timeout: Self::DEFAULT_TIMEOUT,
             api_client,
@@ -74,27 +82,36 @@ impl ShipModel {
     /// TODO - Doc
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
-        let horisontal_area_str = horisontal_area_str(
+        self.horisontal_area_str = Some(horisontal_area_str(
             self.ship_id,
             self.project_id.clone(),
             &self.api_client.clone(),
         )
-        .map_err(|err| error.pass_with("horisontal_area_str", err))?;
-        self.horisontal_area_str = Some(horisontal_area_str.clone());
-        let horisontal_area_stab = horisontal_area_stab(
+        .map_err(|err| error.pass(err))?);
+        self.horisontal_area_stab = Some(horisontal_area_stab(
             self.ship_id,
             self.project_id.clone(),
             &self.api_client.clone(),
         )
-        .map_err(|err| error.pass_with("horisontal_area_stab", err))?;
-        self.horisontal_area_stab = Some(horisontal_area_stab.clone());
-        let grain_moment = grain_moment(
+        .map_err(|err| error.pass(err))?);
+        self.grain_moment = Some(grain_moment(
             self.ship_id,
             self.project_id.clone(),
             &self.api_client.clone(),
         )
-        .map_err(|err| error.pass_with("grain_moment", err))?;
-        self.grain_moment = Some(grain_moment.clone());
+        .map_err(|err| error.pass(err))?);
+        self.opening = Some(opening(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.clone(),
+        )
+        .map_err(|err| error.pass(err))?);
+        self.deck_angle_point = Some(deck_angle_point(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.clone(),
+        )
+        .map_err(|err| error.pass(err))?);
         // TODO переделать, пока не понятно в какой момент должны читаться объемы
         // возможно их надо пересчитывать каждый расчет
         let max_compartment_volume = max_compartment_volume(
@@ -104,13 +121,7 @@ impl ShipModel {
         )
         .map_err(|err| error.pass_with("max_compartment_volume", err))?;
         self.model_cached
-            .init(max_compartment_volume)
-            .map_err(|err| Error::new(&self.dbg, "init").pass(err))
-    }
-    /// TODO - Doc
-    pub fn init_cache_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        self.model_cached
-            .init_bounded(bounds)
+            .init(max_compartment_volume, &self.bounds)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))
     }
     ///
@@ -144,11 +155,12 @@ impl ShipModel {
     */
     ///
     /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
-    pub fn strength_area(&self, bounds: &Bounds) -> Result<StrengthArea, Error> {
+    pub fn strength_area(&self) -> Result<StrengthArea, Error> {
         let error = Error::new(&self.dbg, "strength_area");
+        let bounds = &self.bounds; 
         let windage_area = self
             .model_cached
-            .bounded_windage_area(bounds)
+            .bounded_windage_area()
             .map_err(|err| error.pass_with("model_cached.bounded_windage_area", err))?;
         let horisontal_area = self
             .horisontal_area_str
@@ -198,20 +210,20 @@ impl ShipModel {
     }
     ///
     /// Площади и моменты поверхности корпуса для расчета остойчивости
-    pub fn stability_area(&self) -> Result<StabilityArea, Error> {
+    pub fn stability_area(&self, draught: f64) -> Result<StabilityArea, Error> {
         let error = Error::new(&self.dbg, "stability_area");
-        let (area_windage, moment_windage) = self
+        let (area_windage, area_windage_z, delta_area_windage, area_volume_z) = self
             .model_cached
-            .windage_area()
+            .windage_area(draught)
             .map_err(|err| error.pass_with("model_cached.windage_area", err))?;
         let area_horisontal = self
             .horisontal_area_stab
             .clone()
             .ok_or(error.err("no horisontal_area"))?;
-        let (area_horisontal, moment_horisontal) = area_horisontal
+        let (area_horisontal, area_horisontal_z) = area_horisontal
             .into_iter()
-            .fold((0., Moment::zero()), |(sum_a, sum_m), v| {
-                (sum_a + v.value, sum_m + Moment::new(v.value*v.shift_x, v.value*v.shift_y, v.value*v.shift_z))
+            .fold((0., 0.), |(sum_a, sum_z), v| {
+                (sum_a + v.value, sum_z + v.value*v.shift_z)
             });
         /*     println!("\nhorisontal_area_values\n");
                 horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
@@ -220,9 +232,11 @@ impl ShipModel {
         */
         Ok(StabilityArea {
             area_windage,
-            moment_windage,
+            area_windage_z,
+            delta_area_windage,
             area_horisontal,
-            moment_horisontal,
+            area_horisontal_z,
+            area_volume_z,
         })
     }
     ///
@@ -232,9 +246,11 @@ impl ShipModel {
         query: BalanceStabilityQuery,
     ) -> Result<BalanceStabilityResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
+        let opening = self.opening.as_ref().ok_or(error.err("opening"))?;
+        let deck_angle_point = self.deck_angle_point.as_ref().ok_or(error.err("deck_angle_point"))?;
         let mut result = self
             .model_cached
-            .balance_stability(query, 0.000001)
+            .balance_stability(query, opening, deck_angle_point, 0.000001)
             .map_err(|err| error.pass(err))?;
         let grain_moment = self
             .grain_moment
@@ -266,6 +282,8 @@ impl ShipModel {
             .balance_strength(query)
             .map_err(|err| Error::new(&self.dbg, "compute_strength").pass(err))
     }
+    /// TODO: Doc
+    pub fn bow_area
 }
 //
 //
@@ -283,8 +301,10 @@ impl Debug for ShipModel {
             .finish()
     }
 }
+// временные функции пока непонятно как работать с базой при изменении данных
+// TODO - перенести все в контекст
 ///
-/// Type doc comment
+/// Получение шпаций, вероятно не нужно, шпации будут считаться из физических фреймов
 fn get_bounds(
     api_client: &ApiClient,
     ship_id: usize,
@@ -373,38 +393,6 @@ fn horisontal_area_stab(
     )?).map_err(|e| err.pass(e.to_string()))?;
     Ok(area.data())
 }
-/*
-///
-/// Computes ...
-/// - `exit` - used to breake long havy computation if possible
-fn bounded_horisontal_area(
-    bounds: &Bounds,
-    ship_id: usize,
-    api_client: &ApiClient,
-) -> Result<Vec<f64>, Error> {
-    let err = Error::new("ShipModel", "bounded_horisontal_area");
-    let area = HStrAreaArray::parse(
-        &api_client.fetch(&format!(
-            "SELECT name, value, bound_x1, bound_x2 FROM horizontal_area_strength WHERE ship_id={} ORDER BY bound_x1 ASC;",
-            ship_id
-        )).map_err(|e| err.pass(e.to_string()))?
-    ).map_err(|e| err.pass(e.to_string()))?;
-    let area: Vec<_> = area
-        .data()
-        .into_iter()
-        .map(|v| (v.value, Bound::new(v.bound_x1, v.bound_x2).unwrap()))
-        .collect();
-    let area: Vec<f64> = bounds
-        .iter()
-        .map(|b1| {
-                area.iter().fold(0., |sum, &(v, b2)|
-                    sum + v * b1.part_ratio(&b2).unwrap_or(0.)
-                )
-        })
-        .collect();
-    Ok(area)
-}
-*/
 /// Чтение данных объемного кренящего момента для зерна.
 /// Возвращает мапу (ид отсека, кривая момента от уровня заполнения отсека)
 fn grain_moment(
@@ -442,7 +430,7 @@ fn max_compartment_volume(
     let data = VolumeDataArray::parse(
         &api_client
             .fetch(&format!(
-                "SELECT
+            "SELECT
                 s.space_id as space_id, \
                 c.volume_max as volume_max
             FROM
@@ -452,6 +440,54 @@ fn max_compartment_volume(
             WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
             ))
             .map_err(|err| error.pass_with("api_client.fetch", err))?,
+    )
+    .map_err(|err| error.pass_with("parse", err))?;
+    Ok(data.data())
+}
+/// Чтение таблицы угла входа в воду кромки палубы
+fn deck_angle_point(
+    ship_id: usize,
+    project_id: String,
+    api_client: &ApiClient,
+) -> Result<Vec<Position>, Error> {
+    let error = Error::new("ShipModel", "deck_angle_point");
+    let data = PointDataArray::parse(
+        &api_client
+            .fetch(&format!(
+                "SELECT 
+                    value_x as point_x, \
+                    value_y as point_y, \
+                    value_z as point_z
+                FROM 
+                    \"ship/ship_structures/deck_angle_point\" 
+                WHERE 
+                    ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+            ))
+            .map_err(|err| error.pass_with("deck_angle_point", err))?,
+    )
+    .map_err(|err| error.pass_with("parse", err))?;
+    Ok(data.data())
+}
+/// Чтение таблицы открытых отверстий
+fn opening(
+    ship_id: usize,
+    project_id: String,
+    api_client: &ApiClient,
+) -> Result<Vec<Position>, Error> {
+    let error = Error::new("ShipModel", "opening");
+    let data = PointDataArray::parse(
+        &api_client
+            .fetch(&format!(
+                "SELECT 
+                    value_x as point_x, \
+                    value_y as point_y, \
+                    value_z as point_z
+                FROM 
+                    \"ship/ship_structures/opening\" 
+                WHERE 
+                    ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+            ))
+            .map_err(|err| error.pass_with("opening", err))?,
     )
     .map_err(|err| error.pass_with("parse", err))?;
     Ok(data.data())

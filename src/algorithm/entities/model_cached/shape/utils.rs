@@ -4,6 +4,8 @@ use parry3d_f64::shape::{TriMesh, TriMeshFlags};
 use sal_core::error::Error;
 use std::io::Write;
 use std::path::PathBuf;
+
+use crate::algorithm::entities::Position;
 ///
 /// Load data from .obj file
 fn load_obj(path: PathBuf) -> Result<TriMesh, Error> {
@@ -93,6 +95,19 @@ pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
             err.to_string(),
         )
     })
+}
+/// полный объем модели
+pub fn properties(mesh: &TriMesh, density: f64) -> (f64, Position) {
+    let properties = parry3d_f64::shape::Shape::mass_properties(mesh, density);
+    let mass = if properties.inv_mass > 0. { 1. / properties.inv_mass } else { 0. };
+    (
+        mass,
+        Position::new(
+            properties.local_com.x,
+            -properties.local_com.y,
+            properties.local_com.z,
+        ),
+    )
 }
 /// Объем меша
 pub fn volume(mesh: &TriMesh) -> f64 {

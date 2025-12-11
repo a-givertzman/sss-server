@@ -1,5 +1,8 @@
 use bincode::{Decode, Encode};
-use super::{bulk_result::BulkResult, liquid_result::LiquidResult};
+
+use crate::algorithm::entities::ship_model::stability_result::{BulkResult, LiquidResult};
+
+
 
 ///
 #[derive(Debug, Clone, Decode, Encode)]
@@ -20,16 +23,14 @@ pub struct StabilityBalanceCtx {
     pub length_wl: f64,
     ///  Ширина по ватерлинии при текущей осадке, м
     pub breadth_wl: f64,
-  //  ///  Отстояние по вертикали центра площади проекции подводной части корпуса, м
- //   pub volume_shift_z: f64,
-  //  ///  Угол входа в воду кромки палубы, градусы
-  //  pub entry_angle: f64,
-  //  ///  Угол заливания отверстий, градусы
- //   pub flooding_angle: f64,
-  //  /// Суммарная площадь проекции на диаметральную плоскость, в пределах  
- //   /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна  
-  //  /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2
- //   pub bow_area: f64,
+    ///  Угол входа в воду кромки палубы, градусы
+    pub entry_angle: f64,
+    ///  Угол заливания отверстий, градусы
+    pub flooding_angle: f64,
+    /// Суммарная площадь проекции на диаметральную плоскость, в пределах  
+    /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна  
+    /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2
+    pub bow_area: f64,
  //   /// Площади боковой и горизонтальной поверхностей для расчета остойчивости, м^2
   //  pub const_area_v: Vec<(f64, Position)>,
  //   pub const_area_h: Vec<(f64, Position)>,

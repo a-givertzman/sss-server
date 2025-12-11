@@ -12,6 +12,7 @@ use algorithm::entities::{Position, Position2d};
 
 use algorithm::eval::*;
 
+use crate::algorithm::entities::model_cached::{CompartmentCacheResult, LocalCache, Shape};
 use app::app::App;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
@@ -23,23 +24,26 @@ use kernel::{
     types::{Arc, RwLock},
 };
 //use prelude::*;
-use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::ThreadPool;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::entities::{
     Bounds, Moment,
     model_cached::{self, DisplacementShape, Draught},
 };
 use crate::prelude::{Context, Initial, InitialCtx};
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::thread_pool::ThreadPool;
 use std::rc::Rc;
 use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-  /*  DebugSession::new()
-        .filter(LogLevel::Info)
-        .module("api-tools", LogLevel::Error)
-        .init();*/
+    unsafe { std::env::set_var("RUST_BACKTRACE", "full") };
+
+    /*  DebugSession::new()
+    .filter(LogLevel::Info)
+    .module("api-tools", LogLevel::Error)
+    .init();*/
+
     let _log2 = log2::open("log.txt")
         .level(Logger::from_default_env().filter().as_str())
         .size(5 * 1024 * 1024)
@@ -49,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .start();
 
     //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
-    
+
     let dbg = Dbg::own("main");
     let path = "config.yaml";
     let mut app = App::new(path);
@@ -58,44 +62,121 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
+    let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
+
+    let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
+    let model_dir: PathBuf = "src/assets/model/sofia/compartments/arc_bc2dd.stl".into();
+    let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
+        &dbg, model_dir, None, 1000.,
+    )));
+    shape.write().init().unwrap();
+    //  shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
+    let mut cache = model_cached::CompartmentCache::new(
+        &dbg,
+        shape.clone(),
+        cache_dir,
+        "arc_bc2dd".to_owned(),
+        //     (-60..=60).map(|v| v as f64).collect(),
+        //   vec![-5., 0., 5.,],
+        //   vec![-40., -20., -10., 0., 10., 20., 40.,],
+        //   40,
+        vec![
+            -80., -70., -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20.,
+            30., 40., 60., 70., 80.,
+        ],
+        //    vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
+        //    vec![-2., -1., 0., 1., 2.,],
+        //    vec![-0.01, 0., 0.01,],
+        vec![-40., -20., -10., 0., 10., 20., 40.],
+        20,
+        Arc::clone(&thread_pool),
+    );
+    //  cache.rebuild().unwrap();
+    cache.init().unwrap();
+    //  cache.calc_coeff(221.692).unwrap(); //205
+    //    cache.calc_coeff(19.034).unwrap(); // 501
+    //    cache.calc_coeff(35.146).unwrap(); // 402
+    cache.calc_coeff(96.78).unwrap(); //arc_bc2dd
+    //    cache.calc_coeff(99.7776).unwrap();
+
+    //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
+
+    let calc = |heel: f64| {
+        let result = cache.get(heel, 0., 48.1, 0.000001).unwrap();
+        //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+        let fix_moment = (result.volume_center.y() * heel.to_radians().cos()
+            + result.volume_center.z() * heel.to_radians().sin())
+            * result.volume
+            * 1.025;
+        println!(
+            "{:.1} {:.6} {:.6} {:.6} {:.6} {:.6};",
+            heel,
+            result.volume,
+            result.volume_center.y(),
+            result.volume_center.z(),
+            result.abs_moment * 1.025,
+            fix_moment
+        ); //result.inertia_trans_x*1.025);
+    };
+
+    calc(0.);
+    calc(5.);
+    calc(10.);
+    calc(15.);
+    calc(20.);
+    calc(25.);
+    calc(30.);
+    calc(40.);
+    calc(50.);
+    calc(60.);
+    calc(70.);
+    calc(80.);
+    return Ok(());
+
+    /*
+
+            let calc = |heel: f64, balanced_heel: f64, volume: f64| {
+                let result = cache.get_for_dso(heel, 0., volume, -3., 0., 0., false, false).unwrap();
+           //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+                println!("{:.1} {:.1} {:.3} {:.3};", heel, balanced_heel, volume, result);
+            };
+
+            calc(0., -3., 1.);
+            calc(0., -3., 5.);
+            calc(0., -3., 10.);
+            calc(0., -3., 15.);
+
+            calc(-5., -3., 1.);
+            calc(-5., -3., 5.);
+            calc(-5., -3., 10.);
+            calc(-5., -3., 15.);
+    */
+
+    let calc = |volume: f64| {
+        let result = cache.get(0., 0., volume, 0.000001).unwrap();
+        //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+        println!(
+            "{:.6} {:.6} {:.6};",
+            result.level, result.volume, result.inertia_trans_x
+        );
+    };
+
+    (0..=35).map(|v| (v as f64)).for_each(|v| calc(v));
+
+    //  (-60..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| calc(v));
+
+    /*  let calc = |heel: f64| {
+            cache.get(heel, 0., 111.9657, 0.0000001, false, false).unwrap().volume_center.y()
+        };
+        (0..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {}", calc(v)));
+    */
+    return Ok(());
+
     let ship_id = 2;
     let project_id = "NULL";
-    let cache_dir = "src/assets/cache/sofia".into();
-    let model_dir = "src/assets/model/sofia".into();
-    let model_center_coord = Position::new(65.250, 0., 0.);
-    let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
-    let mut model_cached = model_cached::ModelCached::new(
-        &dbg,
-        model_cached::ModelCachedConf {
-            model_dir,
-            cache_dir,
-            model_scale: 1000.,
-            model_center_coord,
-            hull_heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
-                10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
-            ],
-            hull_trim_steps: vec![
-                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2.,
-                3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
-            ],
-            compartment_heel_steps: vec![
-                -60., -15., -5., 0., 5., 15., 60.,
-            ],
-            compartment_trim_steps: vec![
-                -40., -10., -5., 0., 5., 10., 40.,
-            ],
-            ship_length_lbp: 130.5,
-            draught_min: 2.001,
-            hull_draught_min: 0.5,
-            hull_draught_max: 14.,
-            hull_draught_step: 0.5,
-            bounds_level_step: 0.1,
-            compartment_level_step: 1.
-        },
-        Arc::clone(&thread_pool),
-    )
-    .unwrap();
+    let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+    let model_dir: PathBuf = "src/assets/model/sofia".into();
+    let model_x = 65.250;
     let physical_frames = [
         -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
         6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
@@ -113,17 +194,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
         128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
     ];
-  //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
+    //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
-/*
-    let res = model_cached.reload_shapes();            dbg!(&res);
- //   let res = model_cached.rebuild_caches();   dbg!(&res);
-    let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
-  //  let res = model_cached.init();                     dbg!(&res);
-  //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
+    let mut model_cached = model_cached::ModelCached::new(
+        &dbg,
+        model_cached::ModelCachedConf {
+            model_dir,
+            cache_dir,
+            model_scale: 1000.,
+            model_x,
+            hull_heel_steps: vec![
+                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
+                10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
+            ],
+            hull_trim_steps: vec![
+                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2.,
+                3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+            ],
+            compartment_heel_steps: vec![
+                -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,
+                60.,
+            ],
+            compartment_trim_steps: vec![
+                -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,
+            ],
+            //    compartment_heel_steps: (-60..=60).filter(|v| v%5 == 0).map(|v| v as f64).collect(),
+            //    compartment_trim_steps: vec![0., 1.,],
+            ship_length_lbp: 130.5,
+            draught_min: 2.001,
+            hull_draught_min: 0.5,
+            hull_draught_max: 14.,
+            hull_draught_step: 0.5,
+            bounds_level_step: 0.1,
+            compartment_level_step_qnt: 20,
+            bounds,
+        },
+        Arc::clone(&thread_pool),
+    )
+    .unwrap();
+
+    let res = model_cached.reload_shapes();
+    dbg!(&res);
+    //    let res = model_cached.rebuild_caches();   dbg!(&res);
+    let res = model_cached.rebuild_bounds(&bounds);
+    dbg!(&res);
+    //  let res = model_cached.init();                     dbg!(&res);
+    // let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
-*/
-    
+
     let api_client = Arc::new(ApiClient::new(
         &dbg,
         conf.api.address.database.clone(),
@@ -135,91 +253,92 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &dbg,
         ship_id,
         project_id.to_owned(),
+        bounds.clone(),
         model_cached,
         Arc::clone(&api_client),
     );
     ship_model.init().unwrap();
-    ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
     log::debug!("main | Calculations...");
-    let ctx =   
-    CriterionStabilityEval::new(
-        &dbg,
-        MetacentricHeightSubdivisionEval::new(
+    let ctx =
+        CriterionStabilityEval::new(
             &dbg,
-            GrainEval::new(
+            MetacentricHeightSubdivisionEval::new(
                 &dbg,
-                CirculationEval::new(
+                GrainEval::new(
                     &dbg,
-                    AccelerationEval::new(
+                    CirculationEval::new(
                         &dbg,
-                        MinMetacentricHeightEval::new(
+                        AccelerationEval::new(
                             &dbg,
-                            DSOAngleMaxEval::new(
+                            MinMetacentricHeightEval::new(
                                 &dbg,
-                                DSOTimberMaxEval::new(
+                                DSOAngleMaxEval::new(
                                     &dbg,
-                                    DSOIcingMaxEval::new(
+                                    DSOTimberMaxEval::new(
                                         &dbg,
-                                        DSOMaxEval::new(
+                                        DSOIcingMaxEval::new(
                                             &dbg,
-                                            DSOAreaEval::new(
+                                            DSOMaxEval::new(
                                                 &dbg,
-                                                StaticAngleEval::new(
+                                                DSOAreaEval::new(
                                                     &dbg,
-                                                    WheatherEval::new(
+                                                    StaticAngleEval::new(
                                                         &dbg,
-                                                        RollingAmplitudeEval::new(
+                                                        WheatherEval::new(
                                                             &dbg,
-                                                            RollingPeriodEval::new(
+                                                            RollingAmplitudeEval::new(
                                                                 &dbg,
-                                                                WindEval::new(
+                                                                RollingPeriodEval::new(
                                                                     &dbg,
-                                                                    WindageEval::new(
+                                                                    WindEval::new(
                                                                         &dbg,
-                                                                        LeverDiagramEval::new(
+                                                                        WindageEval::new(
                                                                             &dbg,
-                                                                            //   link,
-                                                                            MetacentricHeightEval::new(
+                                                                            LeverDiagramEval::new(
                                                                                 &dbg,
-                                                                                // Before ZG
-                                                                                StabilityAreaEval::new(
+                                                                                //   link,
+                                                                                MetacentricHeightEval::new(
                                                                                     &dbg,
-                                                                                    ship_model.clone(),
-                                                                                    
-
-                                                                BendingMomentEval::new(
-                                                                    &dbg,
-                                                                    ShearForceEval::new(
-                                                                        &dbg,
-                                                                        TotalForceEval::new(
-                                                                            &dbg,                                                                                
-                                                                            DynamicMassEval::new(
-                                                                                &dbg,
-                                                                                StrengthBalanceEval::new(
-                                                                                    &dbg,
-                                                                                    ship_model.clone(),
-                                                                                    StabilityBalanceEval::new(
+                                                                                    // Before ZG
+                                                                                    StabilityAreaEval::new(
                                                                                         &dbg,
                                                                                         ship_model.clone(),
-                                                                                        StaticMassEval::new(
+
+
+                                                                    BendingMomentEval::new(
+                                                                        &dbg,
+                                                                        ShearForceEval::new(
+                                                                            &dbg,
+                                                                            TotalForceEval::new(
+                                                                                &dbg,
+                                                                                DynamicMassEval::new(
+                                                                                    &dbg,
+                                                                                    StrengthBalanceEval::new(
+                                                                                        &dbg,
+                                                                                        ship_model.clone(),
+                                                                                        StabilityBalanceEval::new(
                                                                                             &dbg,
-                                                                                            WettingEval::new(
+                                                                                            ship_model.clone(),
+                                                                                            StaticMassEval::new(
                                                                                                 &dbg,
-                                                                                                IcingEval::new(
+                                                                                                WettingEval::new(
                                                                                                     &dbg,
-                                                                                                    StrengthAreaEval::new(
+                                                                                                    IcingEval::new(
                                                                                                         &dbg,
-                                                                                                        ship_model.clone(),
-                                                                                                        IcingTimberEval::new(
+                                                                                                        StrengthAreaEval::new(
                                                                                                             &dbg,
-                                                                                                            IcingStabEval::new(
+                                                                                                            ship_model.clone(),
+                                                                                                            IcingTimberEval::new(
                                                                                                                 &dbg,
-                                                                                                                Initial::new(
+                                                                                                                IcingStabEval::new(
                                                                                                                     &dbg,
-                                                                                                                    ship_model.clone(),
-                                                                                                                    Arc::clone(&api_client),
-                                                                                                                    Context::new(InitialCtx::new(ship_id, project_id, bounds)),
+                                                                                                                    Initial::new(
+                                                                                                                        &dbg,
+                                                                                                                        ship_model.clone(),
+                                                                                                                        Arc::clone(&api_client),
+                                                                                                                        Context::new(InitialCtx::new(ship_id, project_id, bounds)),
+                                                                                                                    ),
                                                                                                                 ),
                                                                                                             ),
                                                                                                         ),
@@ -232,16 +351,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                             ),
                                                                         ),
                                                                     ),
-                                                                ),
-                                                                               ),
+                                                                                   ),
+                                                                                ),
                                                                             ),
                                                                         ),
                                                                     ),
                                                                 ),
                                                             ),
                                                         ),
-                                                    ),
-                                                  ),
+                                                      ),
+                                                ),
                                             ),
                                         ),
                                     ),
@@ -251,39 +370,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
             ),
-        ),
-    ).eval(Zg(0.))
-    ;
+        ).eval(Zg(0.))
+        ;
 
-/*    
-    let _result = DraftMarkEval::new(
-        &tmp_dbg,
-        CriterionDraughtEval::new(
+    /*
+        let _result = DraftMarkEval::new(
             &tmp_dbg,
-            ReserveBuoyncyEval::new(
-                &tmp_dbg,
-                ScrewEval::new(
-                    &tmp_dbg,
-                    BowBoardEval::new(
-                        &tmp_dbg,
-                        LoadLineEval::new(
-                            &tmp_dbg,
-                            ZgEval::new(
-                                    thread_pool.scheduler(),
-                                    &tmp_dbg,
-                              //      &ship_model,
-                                    ctx,
+            CriterionDraughtEval::new(
+                &dbg,
+                ReserveBuoyncyEval::new(
+                    &dbg,
+                    ScrewEval::new(
+                        &dbg,
+                        BowBoardEval::new(
+                            &dbg,
+                            LoadLineEval::new(
+                                &dbg,
+                                ZgEval::new(
+                                        thread_pool,
+                                        &dbg,
+                                        ctx,
+                                ),
                             ),
                         ),
                     ),
                 ),
             ),
-        ),
-    )
-    .eval(());*/
+        )
+        .eval(());
 
-   // let initial: &InitialCtx = ctx.as_ref();
-    ctx.unwrap();
-    
+        // let initial: &InitialCtx = ctx.as_ref();
+        ctx.unwrap();
+    */
     Ok(())
 }

@@ -77,8 +77,11 @@ pub struct LiquidData {
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения    
     pub cargo_type: LiquidCargoType, // Тип жидкого груза
+    pub use_max_moment: bool, // Признак использования максимального значения момента свободной поверхности жидкости
+    pub is_cargo_tank: bool,
     pub mass: f64,
     pub volume: f64,
+    pub density: f64,
 }
 ///
 /// Газообразный груз
@@ -100,8 +103,17 @@ pub struct StrengthArea {
 /// Площади и моменты поверхности корпуса для расчета остойчивости
 #[derive(Debug, Clone)]
 pub struct StabilityArea {
+    /// Площадь парусности сплошных поверхностей для осадки d_min без палубного груза
     pub area_windage: f64,
-    pub moment_windage: Moment,
+    /// Положение центра парусности сплошных поверхностей по оси Z относительно опорной плоскости
+    pub area_windage_z: f64,
+    /// Разница в площадях парусности для текущей осадки и осадки d_min без палубного груза
+    pub delta_area_windage: f64,
+    /// Площадь горизонтальных поверхностей судна
     pub area_horisontal: f64,
-    pub moment_horisontal: Moment,
+    /// Положение центра площади горизонтальных поверхностей по оси Z относительно опорной плоскости 
+    pub area_horisontal_z: f64,
+    /// Отстояние по вертикали центра площади проекции подводной части корпуса на диаметральную плоскость 
+    /// в прямом положении судна (при нулевом крене) на спокойной воде для текущей осадки [м]
+    pub area_volume_z: f64,
 }

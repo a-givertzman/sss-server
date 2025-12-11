@@ -127,7 +127,7 @@ impl DisplacementCache {
             if draught < self.draught_min || draught > self.draught_max {
                 return Err(error.err(format!("draught < min_draught || draught > max_draught, draught:{draught} min_draught:{} max_draught:{}", self.draught_min, self.draught_max)));
             }
-            let query = [heel, trim, draught];
+            let query = [&heel, &trim, &draught];
             let result = cache.get(&query);
             assert!(result.len() == 12);
             let res_volume = result[0];
@@ -159,13 +159,13 @@ impl DisplacementCache {
     pub fn get_volume_disp(&self) -> Result<(f64, f64), Error> {
         let error = Error::new(self.dbg(), "get_max_volume");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        Ok(cache.value_disp(3))
+        Ok(cache.disp(3))
     }
     // min/max for (heel, trim, draught)
     pub fn get_keys_disp(&self) -> Result<((f64, f64), (f64, f64), (f64, f64)), Error> {
         let error = Error::new(self.dbg(), "get_keys");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        Ok((cache.key_disp(0), cache.key_disp(1), cache.key_disp(2)))
+        Ok((cache.disp(0), cache.disp(1), cache.disp(2)))
     }
 }
 //
