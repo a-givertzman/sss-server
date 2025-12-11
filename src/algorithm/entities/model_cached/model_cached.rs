@@ -485,25 +485,25 @@ impl ModelCached {
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-/*        let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-        let mut displacement_bound = DisplacementBoundCache::new(
-            &self.dbg,
-            displacement_shape.clone(),
-            self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
-            self.model_x,
-            bounds.clone(),
-            Arc::clone(&self.thread_pool),
-        );
-        displacement_bound
-            .rebuild()
-            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
-        self.displacement_bounded
-            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-*/
+        /*        let displacement_shape = self
+                    .displacement_shapes
+                    .get("hull")
+                    .ok_or(error.err("no displacement_shape"))?;
+                let mut displacement_bound = DisplacementBoundCache::new(
+                    &self.dbg,
+                    displacement_shape.clone(),
+                    self.cache_dir.clone().join("disp_bounded"),
+                    self.bounds_level_step,
+                    self.model_x,
+                    bounds.clone(),
+                    Arc::clone(&self.thread_pool),
+                );
+                displacement_bound
+                    .rebuild()
+                    .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+                self.displacement_bounded
+                    .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+        */
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{compartment_id}");
@@ -900,11 +900,9 @@ impl ModelCached {
         let liquid = self
             .process_liquid(&query.liquid, heel, trim, epsilon)
             .map_err(|err| error.pass(err))?;
-
         let bulk = self
             .process_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass(err))?;
-
         let epsilon = 0.001f64.max(epsilon);
         let mut angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
         angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
@@ -912,7 +910,7 @@ impl ModelCached {
         angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         angles.dedup();
         let (dso, entry_angle, flooding_angle) = self
-            .dso(
+            .dso_surface_moment(
                 query,
                 heel,
                 trim_degree,
@@ -1086,9 +1084,11 @@ impl ModelCached {
         Err(error.err(format!("query:{:?} error: no result", query)))
     }
     /// Расчет диаграммы статической остойчивости
+    /// на основе фактического кренящего момента.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
     /// angles - углы крена должны быть отсортированны по возрастанию
     /// возвращает (dso, entry_angle, flooding_angle) зависимости от угла крена
-    pub(crate) fn dso(
+    pub(crate) fn dso_abs_moment(
         &self,
         query: BalanceStabilityQuery,
         balanced_heel: f64,
@@ -1155,7 +1155,7 @@ impl ModelCached {
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
                         let delta_moment_liquid = self
-                            .moment_liquid_dso(
+                            .moment_liquid_dso_abs_moment(
                                 &query.liquid,
                                 heel,
                                 trim,
@@ -1177,6 +1177,139 @@ impl ModelCached {
                             let l = lv - ld - delta_l;
                             //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
                             println!("{heel} {trim} {delta_moment_liquid} {delta_l} {lv} {l};");
+                            l
+                        };
+                        dso.push((heel, l));
+                        let current_draught = |p: &Position| {
+                            let tg_t = trim.to_radians().tan();
+                            let tg_h = heel.to_radians().tan();
+                            let cos_h = heel.to_radians().cos();
+                            let draught =
+                                draught + p.z() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                            draught - p.z()
+                        };
+                        let min_angle = |angles: &[Position]| {
+                            let mut angles: Vec<_> =
+                                angles.iter().map(|v| current_draught(v)).collect();
+                            angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                            angles.first().unwrap_or(max_heel).to_owned()
+                        };
+                        entry_angle.push((heel, min_angle(opening)));
+                        flooding_angle.push((heel, min_angle(deck_angle_point)));
+                        break;
+                    }
+                }
+                if let Some(old_d_v) = d_v {
+                    if old_d_v.signum() != new_d_v.signum() {
+                        step_trim = step_trim * 0.5;
+                    }
+                }
+                d_v = Some(new_d_v);
+                trim = trim + step_trim * new_d_v.signum();
+                draught = new_draught;
+            }
+        }
+        println!("\nmodel_cached dso: ");
+        for &(angle, value) in dso.iter() {
+            println!("{angle} {value};");
+        }
+        /*       println!("\nmodel_cached entry_angle: ");
+        for &(angle, value) in entry_angle.iter() {
+            println!("{angle} {value};");
+        }
+        println!("\nmodel_cached flooding_angle: ");
+        for &(angle, value) in flooding_angle.iter() {
+            println!("{angle} {value};");
+        }*/
+        Ok((dso, entry_angle, flooding_angle))
+    }
+    /// Расчет диаграммы статической остойчивости
+    /// на основе поперечного момента инерции площади ватерлинии.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
+    /// angles - углы крена должны быть отсортированны по возрастанию
+    /// возвращает (dso, entry_angle, flooding_angle) зависимости от угла крена
+    pub(crate) fn dso_surface_moment(
+        &self,
+        query: BalanceStabilityQuery,
+        balanced_heel: f64,
+        balanced_trim: f64,
+        balanced_draught: f64,
+        epsilon: f64,
+        cg: Position,
+        angles: &[f64],
+        opening: &[Position],
+        deck_angle_point: &[Position],
+    ) -> Result<(Vec<(f64, f64)>, Vec<(f64, f64)>, Vec<(f64, f64)>), Error> {
+        let error = Error::new(&self.dbg, "floating_position");
+        if query.water_density <= 0. {
+            return Err(error.err("water_density <= 0."));
+        }
+        // Считаем сыпучие грузы.
+        // На них крен и дифферент не влияет.
+        let moment_bulk = self
+            .moment_bulk_floating(&query.bulk, epsilon)
+            .map_err(|err| error.pass_with("self.bulk_moment", err))?;
+        let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
+        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
+        let mut trim = balanced_trim;
+        let mut draught = balanced_draught;
+        let mut step_trim = 0.1;
+        let mut dso = Vec::new();
+        let mut entry_angle = Vec::new();
+        let mut flooding_angle = Vec::new();
+        let mut last_heel: Option<f64> = None;
+        let max_heel = angles.last().ok_or(error.err("max_heel"))?;
+        let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
+        let moment_sum = query.moment_const + moment_bulk; // постоянный момент
+        let moment_liquid_surface = self // момент инерции площади ватерлинии жидкости
+            .moment_liquid_dso_surface_moment(&query.liquid, epsilon)
+            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+        // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
+        //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
+        for &heel in angles {
+            //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
+            step_trim = if let Some(last_heel) = last_heel {
+                step_trim * ((heel - last_heel) * 10.).max(1.)
+            } else {
+                0.1
+            };
+            last_heel = Some(heel);
+            let mut d_v: Option<f64> = None;
+            //      println!("model_cached dso lv:");
+            for _i in 1..=100 {
+                let trim_epsilon = step_trim / 10.;
+                let moment_liquid_floating = self
+                    .moment_liquid_floating(&query.liquid, heel, trim, epsilon)
+                    .map_err(|err| error.pass_with("self.moment_liquid_dso", err))?;
+                let (new_draught, new_d_v, _, _, _, disp_result) = self
+                    .position(
+                        heel,
+                        trim,
+                        draught,
+                        query.water_density,
+                        epsilon,
+                        mass_sum,
+                        moment_sum,
+                        moment_liquid_floating,
+                        &query.damaged_compartment,
+                    )
+                    .map_err(|err| error.pass(err))?;
+                //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
+                if epsilon >= trim_epsilon {
+                    if epsilon >= new_d_v.abs() {
+                        let l = {
+                            let [_, tcg, vcg] = cg.values();
+                            let [_, tcb, vcb] = disp_result.volume_center.values();
+                            let sin_theta = heel.to_radians().sin();
+                            let cos_theta = heel.to_radians().cos();
+                            let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
+                            let lv = tcb * cos_theta + vcb * sin_theta;
+                            //             println!("{heel} {lv};");
+                            let ld = tcg * cos_theta + vcg * sin_theta;
+                            let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
+                            let l = lv - ld - delta_l;
+                            //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                       //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
                             l
                         };
                         dso.push((heel, l));
@@ -1533,8 +1666,10 @@ impl ModelCached {
         Ok(sum_moment)
     }
     /// Считаем момент жидких грузов для расчета ДСО
+    /// на основе фактического кренящего момента.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
     /// объем меняется в зависимости от признаков и процента наполнения отсека
-    fn moment_liquid_dso(
+    fn moment_liquid_dso_abs_moment(
         &self,
         liquids: &Vec<LiquidData>,
         current_heel: f64,
@@ -1565,22 +1700,18 @@ impl ModelCached {
                     let compartment = compartment.clone();
                     let handle = scheduler
                         .spawn(move || {
-                            /*      let res = compartment
-                            .read()
-                            .get_for_dso(
-                                current_heel,
-                                current_trim,
-                                volume,
-                                balanced_heel,
-                                balanced_trim,
-                                epsilon,
-                                use_max_moment,
-                                is_cargo_tank,
-                            )
-                            .map_err(|err| error_.pass_with("compartment.get", err))?;*/
                             let res = compartment
                                 .read()
-                                .get_Ixx(volume, epsilon, use_max_moment, is_cargo_tank)
+                                .get_for_dso_abs_moment(
+                                    current_heel,
+                                    current_trim,
+                                    volume,
+                                    balanced_heel,
+                                    balanced_trim,
+                                    epsilon,
+                                    use_max_moment,
+                                    is_cargo_tank,
+                                )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
                             task_results.push((space_id, density, res));
                             Ok(())
@@ -1620,7 +1751,108 @@ impl ModelCached {
             if let Some((_space_id, density, moment)) = task_results.pop() {
                 //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
                 // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
-      /*          println!(
+                /*          println!(
+                    "moment_liquid_dso heel:{current_heel} space_id:{} {};",
+                    _space_id,
+                    moment
+                );*/
+                values.push(moment * density);
+            }
+        }
+        if !errors.is_empty() {
+            let error = error.pass_with(
+                "moment_liquid",
+                errors.iter().fold("errors:".to_string(), |acc, err| {
+                    acc + &format!("\n{}", err)
+                }),
+            );
+            log::error!("{}", error);
+            println!("{}", error);
+            return Err(error);
+        }
+        let sum_moment = values.into_iter().sum();
+        //     println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
+        Ok(sum_moment)
+    }
+    /// Считаем момент жидких грузов для расчета ДСО
+    /// на основе поперечного момента инерции площади ватерлинии.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
+    /// объем меняется в зависимости от признаков и процента наполнения отсека
+    fn moment_liquid_dso_surface_moment(
+        &self,
+        liquids: &Vec<LiquidData>,
+        epsilon: f64,
+    ) -> Result<f64, Error> {
+        // if heel == 0.
+        //  {  println!("\n\nmoment_liquid_dso heel:{} trim:{}\n", heel, trim,);  }
+        let error = Error::new(&self.dbg, "moment_liquid_dso");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let task_results = Arc::new(Stack::new());
+        let mut errors = Vec::new();
+        let mut values = Vec::new();
+        let scheduler = self.thread_pool.scheduler();
+        for cargo in liquids {
+            match self.compartments.get(&cargo.space_id) {
+                Some(compartment) => {
+                    let task_results = task_results.clone();
+                    let epsilon = epsilon.clone();
+                    let error_ = error.clone();
+                    let space_id = cargo.space_id.clone();
+                    let density = cargo.density;
+                    let volume = cargo.volume;
+                    let use_max_moment = cargo.use_max_moment;
+                    let is_cargo_tank = cargo.is_cargo_tank;
+                    let compartment = compartment.clone();
+                    let handle = scheduler
+                        .spawn(move || {
+                            let res = compartment
+                                .read()
+                                .get_for_dso_surface_moment(
+                                    volume,
+                                    epsilon,
+                                    use_max_moment,
+                                    is_cargo_tank,
+                                )
+                                .map_err(|err| error_.pass_with("compartment.get", err))?;
+                            task_results.push((space_id, density, res));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => {
+                            let error =
+                                error.pass_with(format!("handle for {}", cargo.space_id), err);
+                            log::error!("{}", error);
+                            println!("{}", error);
+                            errors.push(error);
+                        }
+                    };
+                }
+                None => {
+                    let error = error.err(format!("no compartment: {}", cargo.space_id));
+                    log::error!("{}", error);
+                    println!("{}", error);
+                    errors.push(error);
+                }
+            }
+        }
+        for task in tasks {
+            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                println!("{}", error);
+                errors.push(error);
+            }
+        }
+        while !task_results.is_empty() {
+            if let Some((_space_id, density, moment)) = task_results.pop() {
+                //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
+                // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+                /*          println!(
                     "moment_liquid_dso heel:{current_heel} space_id:{} {};",
                     _space_id,
                     moment

@@ -66,9 +66,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-   /* 
         let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
-        let model_dir: PathBuf = "src/assets/model/sofia/compartments/402.stl".into();
+        let model_dir: PathBuf = "src/assets/model/sofia/compartments/arc_bc2dd.stl".into();
         let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg, model_dir, None, 1000.,
         )));
@@ -78,12 +77,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &dbg,
             shape.clone(),
             cache_dir,
-            "402".to_owned(),
+            "arc_bc2dd".to_owned(),
        //     (-60..=60).map(|v| v as f64).collect(),
          //   vec![-5., 0., 5.,],
          //   vec![-40., -20., -10., 0., 10., 20., 40.,],
          //   40,
-            vec![-60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40., 60.,],
+            vec![-80., -70., -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40., 60., 70., 80.,],
         //    vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
         //    vec![-2., -1., 0., 1., 2.,],
         //    vec![-0.01, 0., 0.01,],
@@ -91,13 +90,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             20,
             Arc::clone(&thread_pool),
         );
-    //    cache.rebuild().unwrap();
+      //  cache.rebuild().unwrap();
         cache.init().unwrap();
       //  cache.calc_coeff(221.692).unwrap(); //205
     //    cache.calc_coeff(19.034).unwrap(); // 501
-        cache.calc_coeff(35.146).unwrap(); // 402
+    //    cache.calc_coeff(35.146).unwrap(); // 402
+        cache.calc_coeff(96.78).unwrap();  //arc_bc2dd
+    //    cache.calc_coeff(99.7776).unwrap();
 
       //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
+
+        let calc = |heel: f64,| {
+            let result = cache.get(heel, 0., 48.1, 0.000001).unwrap();
+       //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+            let fix_moment = (result.volume_center.y()*heel.to_radians().cos() + result.volume_center.z()*heel.to_radians().sin())*result.volume*1.025;
+            println!("{:.1} {:.6} {:.6} {:.6} {:.6} {:.6};", heel, result.volume, result.volume_center.y(), result.volume_center.z(), result.abs_moment*1.025, fix_moment);//result.inertia_trans_x*1.025);
+        };
+
+        calc(0.);
+        calc(5.);
+        calc(10.);
+        calc(15.);
+        calc(20.);
+        calc(25.);
+        calc(30.);
+        calc(40.);
+        calc(50.);
+        calc(60.);
+        calc(70.);
+        calc(80.);
+        return Ok(());
 
 /*
       
@@ -134,7 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (0..=60).filter(|v| v%10 == 0).map(|v| v as f64).for_each(|v| println!("{v} {}", calc(v)));
     */
         return Ok(());
-  */  
+    
 
 
 
