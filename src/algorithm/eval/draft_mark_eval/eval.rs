@@ -1,8 +1,7 @@
-use crate::DraftMarkCtx;
 use super::DraftMarkResult;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
 use crate::algorithm::entities::{Curve, ICurve};
-use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::{DraftMarkCtx, parameters::ParameterID};
 use crate::{
     prelude::ContextWrite,
     algorithm::context::context_access::ContextReadRef,

@@ -5,7 +5,6 @@ use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabArea;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabAreaArray;
-use crate::algorithm::entities::data::strength::ComputedFrameDataArray;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrArea;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrAreaArray;
 use crate::algorithm::entities::model_cached::ModelCached;
@@ -16,11 +15,10 @@ use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::StrengthBalanceCtx;
 use crate::infrostructure::ApiClient;
-use dashmap::DashMap;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::collections::HashMap;
-use std::{fmt::Debug, sync::Arc, time::Duration};
+use std::{fmt::Debug, sync::Arc};
 ///
 ///
 pub struct ShipModel {
@@ -264,7 +262,7 @@ impl ShipModel {
                 return;
             }
             v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
-                curve.value().value(v.level).unwrap_or(0.)
+                curve.value(v.level).unwrap_or(0.)
             } else {
                 let error = error.err(format!("grain_moment.get(&v.space_id), {}", v.space_id));
                 log::error!("{}", error);
@@ -283,8 +281,6 @@ impl ShipModel {
             .balance_strength(query)
             .map_err(|err| Error::new(&self.dbg, "compute_strength").pass(err))
     }
-    /// TODO: Doc
-    pub fn bow_area
 }
 //
 //
@@ -304,6 +300,7 @@ impl Debug for ShipModel {
 }
 // временные функции пока непонятно как работать с базой при изменении данных
 // TODO - перенести все в контекст
+/*
 ///
 /// Получение шпаций, вероятно не нужно, шпации будут считаться из физических фреймов
 fn get_bounds(
@@ -368,6 +365,7 @@ fn get_bounds(
     };
     Ok(bounds)
 }
+*/
 /// Чтение данных горизонтальных поверхностей для прочности из базы
 fn horisontal_area_str(
     ship_id: usize,

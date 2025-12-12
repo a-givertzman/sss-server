@@ -1,4 +1,4 @@
-use crate::BowBoardCtx;
+use crate::algorithm::eval::BowBoardCtx;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextReadRef};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};

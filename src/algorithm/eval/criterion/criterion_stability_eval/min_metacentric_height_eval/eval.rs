@@ -1,4 +1,4 @@
-use crate::MinMetacentricHeightCtx;
+use crate::algorithm::eval::MinMetacentricHeightCtx;
 use crate::{
     algorithm::{
         entities::data::{loads::UnitCargoType, stability::ship_type::ShipType},

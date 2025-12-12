@@ -1,4 +1,4 @@
-use crate::TotalForceCtx;
+use crate::algorithm::eval::TotalForceCtx;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,

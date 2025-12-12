@@ -34,6 +34,4 @@ pub struct ModelCachedConf {
     pub compartment_level_step_qnt: usize,    
     /// Level step for compartments
     pub bounds_level_step: f64,
-    /// Bounds
-    pub bounds: Bounds,
 }

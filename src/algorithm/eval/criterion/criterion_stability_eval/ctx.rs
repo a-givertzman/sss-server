@@ -1,6 +1,6 @@
 //! Результаты расчета критериев проверки остойчивости судна
 
-use crate::CriterionData;
+use crate::algorithm::eval::CriterionData;
 #[derive(Debug, Clone)]
 pub struct CriterionStabilityCtx {
     /// 

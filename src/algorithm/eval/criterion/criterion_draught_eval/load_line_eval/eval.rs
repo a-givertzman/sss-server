@@ -1,4 +1,4 @@
-use crate::LoadLineCtx;
+use crate::algorithm::eval::LoadLineCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};

@@ -1,5 +1,6 @@
-use crate::StabilityAreaCtx;
+use crate::algorithm::eval::StabilityAreaCtx;
 use crate::algorithm::eval::parameters::ParameterID;
+use crate::kernel::Eval;
 use crate::prelude::ContextParamsRead;
 use crate::{
     algorithm::{
@@ -12,7 +13,6 @@ use crate::{
         eval::IcingTimberCtx,
     },
     kernel::{
-        eval::Eval,
         types::{Arc, eval_result::EvalResult},
     },
     prelude::{ContextWrite, InitialCtx},

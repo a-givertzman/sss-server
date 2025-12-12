@@ -1,4 +1,4 @@
-use crate::MetacentricHeightSubdivisionCtx;
+use crate::algorithm::eval::MetacentricHeightSubdivisionCtx;
 use crate::algorithm::entities::{Curve, ICurve};
 use crate::{
     algorithm::eval::{

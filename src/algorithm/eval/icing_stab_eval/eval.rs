@@ -1,5 +1,5 @@
 use sal_core::{dbg::Dbg, error::Error};
-use crate::IcingStabCtx;
+use crate::algorithm::eval::IcingStabCtx;
 use crate::{
     algorithm::{context::context_access::ContextReadRef, entities::icing_stab::IcingStabType},
     kernel::{Eval, types::eval_result::EvalResult},

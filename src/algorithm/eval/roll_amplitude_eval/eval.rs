@@ -1,4 +1,4 @@
-use crate::RollingAmplitudeCtx;
+use crate::algorithm::eval::RollingAmplitudeCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::zg_eval::Zg;

@@ -146,13 +146,13 @@ impl Bounds {
     }*/
     /// Преобразование диапазона значений
     /// Возвращает вектор значений values в распределении bounds, пересчитанный к распределению self
-    pub fn intersect(&self, bounds: &Bounds, values: &[f64]) -> Result<Vec<f64>, Error> {
+    pub fn intersect(&self, src_bounds: &Bounds, src_values: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new("Bounds", "intersect");
-        let bounds = bounds.iter();
-        if bounds.len() != values.len() {
+        let bounds = src_bounds.iter();
+        if bounds.len() != src_values.len() {
             return Err(error.err("bounds.len() != values.len()"));
         }
-        let query_data: Vec<_> = bounds.zip(values.iter()).collect();
+        let query_data: Vec<_> = bounds.zip(src_values.iter()).collect();
         let self_bounds = &self.values;
         let (mut query_index, mut self_index) = (0, 0);
         let mut current_q_i = None;

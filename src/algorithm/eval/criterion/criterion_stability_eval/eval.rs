@@ -1,10 +1,11 @@
-use crate::CriterionStabilityCtx;
+use crate::algorithm::eval::CriterionStabilityCtx;
+use crate::kernel::Eval;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::data::{loads::UnitCargoType, stability::{NavigationArea, ship_type::ShipType}},
         eval::{zg_eval::Zg, *},
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx},
+    }, kernel::{types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

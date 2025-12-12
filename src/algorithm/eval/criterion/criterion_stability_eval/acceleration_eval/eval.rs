@@ -1,10 +1,9 @@
-use crate::AccelerationCtx;
+use crate::algorithm::eval::{AccelerationCtx, MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx};
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
-    MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx,
     prelude::*,
     kernel::{Eval, types::eval_result::EvalResult},
 };

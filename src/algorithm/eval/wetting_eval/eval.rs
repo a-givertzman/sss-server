@@ -1,12 +1,13 @@
 //! Учет намокания груза
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
+use crate::kernel::Eval;
 use crate::{
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use crate::WettingCtx;
+use crate::algorithm::eval::WettingCtx;
 
 ///
 /// Учет намокания палубного груза.  

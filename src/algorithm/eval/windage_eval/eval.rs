@@ -1,8 +1,9 @@
-use crate::WindageCtx;
+use crate::algorithm::eval::WindageCtx;
+use crate::kernel::Eval;
 use crate::{
     algorithm::{
         context::context_access::ContextRead, eval::{parameters::ParameterID, zg_eval::Zg, IcingStabCtx, StabilityAreaCtx}
-    }, kernel::{eval::Eval, types::eval_result::EvalResult}, prelude::ContextWrite,
+    }, kernel::{ types::eval_result::EvalResult}, prelude::ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
-use crate::StabilityBalanceCtx;
+use crate::algorithm::eval::StabilityBalanceCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
@@ -155,7 +155,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     breadth_wl: result.breadth_wl,                    
                     entry_angle,
                     flooding_angle,
-                    bow_area,
+                    bow_area: result.bow_area,
                     dso: result.dso,
                 };
                 ctx.write(result)

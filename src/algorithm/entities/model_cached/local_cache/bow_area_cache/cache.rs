@@ -72,6 +72,46 @@ impl BowAreaCache {
             area_volume_z: result[2],
         })
     }
+
+        /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
+    /// Возвращает повернутое и смещенное разбиение [dx, area]
+    pub fn bow_area(&self, lbp: f64, draught: f64, trim: f64) -> Result<f64, Error> {
+        let error = Error::new(&self.dbg, "bow_area");
+        let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
+        let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
+        let center = self.center.ok_or(error.err("no center"))?;
+        let sin_trim = trim.to_radians().sin();
+        let len_start = lbp * 0.85;
+        let len_end = lbp;
+        let len_start_l = len_start - voxel_scale / 2.;
+        let len_start_h = len_start + voxel_scale / 2.;
+        let len_end_l = len_end - voxel_scale / 2.;
+        let len_end_h = len_end + voxel_scale / 2.;
+        let result = voxels
+            .iter()
+            .filter(|(x, _)| *x > len_start_l && *x < len_end_h)
+            .map(|(x, v)| {
+                let x = *x;
+                let draught = draught + (x - center.x) * sin_trim;
+                let draught_l = draught - voxel_scale / 2.;
+                let draught_h = draught + voxel_scale / 2.;
+                let area = v
+                    .iter()
+                    .filter(|&&z| z > draught_l)
+                    .map(|&z| (z - draught_h).min(voxel_scale) * voxel_scale)
+                    .sum::<f64>();
+                area * if x < len_start_h {
+                    (len_start_h - x) / voxel_scale
+                } else if x > len_end_l {
+                    (x - len_end_l) / voxel_scale
+                } else {
+                    1.
+                }
+            })
+            .sum();
+        Ok(result)
+    }
 }
 //
 //

@@ -2,7 +2,10 @@ mod file_io;
 mod tests;
 
 use crate::{
-    algorithm::entities::{Bounds, model_cached::{AreaCache, AreaCacheResult, AreaShape, BowAreaCache, LocalCache}},
+    algorithm::entities::{
+        Bounds,
+        model_cached::{AreaCache, AreaCacheResult, AreaData, AreaShape, BowAreaCache, LocalCache},
+    },
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
@@ -23,7 +26,6 @@ pub struct WindageArea {
     bow_area: Option<BowAreaCache>,
     /// Cache read from `self.file_path`.
     values: Option<Vec<f64>>, //распределение
-    bounds: Bounds,
     draught_min: f64,
     thread_pool: Arc<ThreadPool>,
 }
@@ -38,7 +40,6 @@ impl WindageArea {
         parent: &Dbg,
         shape: Arc<RwLock<AreaShape>>,
         cache_dir: PathBuf,
-        bounds: Bounds,
         draught_min: f64,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
@@ -50,13 +51,12 @@ impl WindageArea {
             windage_area: None,
             bow_area: None,
             values: None,
-            bounds,
             draught_min,
             thread_pool,
         }
     }
     //
-    pub fn rebuild(&mut self) -> Result<(), Error> {
+    pub fn rebuild(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "calculate");
         let area_data = self
             .shape
@@ -64,23 +64,27 @@ impl WindageArea {
             .windage_area_data()
             .map_err(|err| error.pass_with("shape.windage_area_data", err))?;
         let cache_path = self.cache_dir.join("windage_area");
-        file_io::save(&self.dbg, &cache_path, &area_data)
+        file_io::save(&self.dbg, &cache_path, area_data)
             .map_err(|err| error.pass_with("file_io::save", err))?;
-        self.init()
+        self.init(bounds)
     }
     /// инициализация заранее посчитанными данными
-    pub fn init(&mut self) -> Result<(), Error> {
+    pub fn init(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
         let cache_path = self.cache_dir.join("windage_area");
-        let area_data = file_io::read(&self.dbg, &cache_path)
+        let AreaData {
+            x_start,
+            x_end,
+            voxels,
+        } = file_io::read(&self.dbg, &cache_path)
             .map_err(|err| error.pass_with("file_io::read", err))?;
-        let area_data = Arc::new(area_data);
+        let area_data = Arc::new(voxels);
         let mut windage_area = AreaCache::new(
             &self.dbg,
             self.draught_min,
             Arc::clone(&area_data),
             self.cache_dir.clone(),
-            Arc::clone(&self.thread_pool)
+            Arc::clone(&self.thread_pool),
         );
         let errors = windage_area.calculate();
         if !errors.is_empty() {
@@ -97,48 +101,58 @@ impl WindageArea {
             self.draught_min,
             Arc::clone(&area_data),
             self.cache_dir.clone(),
-            Arc::clone(&self.thread_pool)
+            Arc::clone(&self.thread_pool),
         );
+        self.bow_area = Some(bow_area);
         let mut area_sum = 0.;
         let (mut moment_x, mut moment_z) = (0., 0.);
-        let area_data: Vec<_> = area_data.into_iter().map(|(x, v)| {
-            let a = v.iter().map(|(_, a)| a).sum();
-            area_sum += a;
-            moment_x += x * a;
-            v.into_iter().for_each(|(z, a)| moment_z += a*z );      
-            (x, a)
-        }).collect();
-        let bounds = {
-            let x_min = area_data
-                .first()
-                .ok_or(error.err("empty result from _windage_area"))?
-                .0;
-            let x_max = area_data
-                .last()
-                .ok_or(error.err("empty result from _windage_area"))?
-                .0;
-            let dx = (x_max - x_min) / (2. * ((area_data.len() - 1) as f64));
-            let (min, max, n) = (x_min - dx, x_max + dx, area_data.len());
-            Bounds::from_min_max(min, max, n).map_err(|err| {
-                error.pass_with(
-                    format!("Bounds::from_min_max min:{min}, max:{max}, n:{n}"),
-                    err,
-                )
-            })?
-        };
-        let values: Vec<f64> = area_data.into_iter().map(|(_, v)| v).collect();
-        self.values = Some(self.bounds
-            .intersect(&bounds, &values)
-            .map_err(|err| error.pass_with("bounds.intersect", err))?);
+        let area_data: Vec<_> = area_data
+            .iter()
+            .map(|(x, v)| {
+                let a = v.iter().map(|(_, a)| a).sum();
+                area_sum += a;
+                moment_x += x * a;
+                v.into_iter().for_each(|(z, a)| moment_z += a * z);
+                (x, a)
+            })
+            .collect();
+        let src_bounds = Bounds::from_min_max(x_start, x_end, area_data.len()).map_err(|err| {
+            error.pass_with(
+                format!(
+                    "Bounds::from_min_max x_start:{x_start}, x_end:{x_end}, n:{}",
+                    area_data.len()
+                ),
+                err,
+            )
+        })?;
+        let src_values: Vec<f64> = area_data.into_iter().map(|(_, v)| v).collect();
+        self.values = Some(
+            bounds
+                .intersect(&src_bounds, &src_values)
+                .map_err(|err| error.pass_with("bounds.intersect", err))?,
+        );
         Ok(())
     }
     /// Расчет площади и центра площади парусности
     /// Возаращает (area_windage, area_windage_z, delta_area_windage, area_volume_z)
     pub fn windage_area(&self, draught: f64) -> Result<(f64, f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "windage_area");
-        let windage_area = self.windage_area.as_ref().ok_or(error.pass("no windage_area"))?; 
-        let AreaCacheResult{ area_windage, area_windage_z, delta_area_windage, area_volume_z } = windage_area.get(draught).map_err(|err| error.pass(err))?;
-        Ok((area_windage, area_windage_z, delta_area_windage, area_volume_z))
+        let windage_area = self
+            .windage_area
+            .as_ref()
+            .ok_or(error.pass("no windage_area"))?;
+        let AreaCacheResult {
+            area_windage,
+            area_windage_z,
+            delta_area_windage,
+            area_volume_z,
+        } = windage_area.get(draught).map_err(|err| error.pass(err))?;
+        Ok((
+            area_windage,
+            area_windage_z,
+            delta_area_windage,
+            area_volume_z,
+        ))
     }
     /// Расчет распределения площади парусности
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
@@ -147,43 +161,9 @@ impl WindageArea {
         // набор значений площади в разбиении по площади части модели над водой
         self.values.clone().ok_or(error.pass("no values"))
     }
-    /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
-    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
-    /// Возвращает повернутое и смещенное разбиение [dx, area]
-    pub fn bow_area(&self, lbp: f64, draught: f64, trim: f64) -> Result<f64, Error> {
-        let error = Error::new(&self.dbg, "bow_area");
-        let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
-        let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
-        let center = self.center.ok_or(error.err("no center"))?;
-        let sin_trim = trim.to_radians().sin();
-        let len_start = lbp * 0.85;
-        let len_end = lbp;
-        let len_start_l = len_start - voxel_scale / 2.;
-        let len_start_h = len_start + voxel_scale / 2.;
-        let len_end_l = len_end - voxel_scale / 2.;
-        let len_end_h = len_end + voxel_scale / 2.;
-        let result = voxels
-            .iter()
-            .filter(|(x, _)| *x > len_start_l && *x < len_end_h)
-            .map(|(x, v)| {
-                let x = *x;
-                let draught = draught + (x - center.x) * sin_trim;
-                let draught_l = draught - voxel_scale / 2.;
-                let draught_h = draught + voxel_scale / 2.;
-                let area = v
-                    .iter()
-                    .filter(|&&z| z > draught_l)
-                    .map(|&z| (z - draught_h).min(voxel_scale) * voxel_scale)
-                    .sum::<f64>();
-                area * if x < len_start_h {
-                    (len_start_h - x) / voxel_scale
-                } else if x > len_end_l {
-                    (x - len_end_l) / voxel_scale
-                } else {
-                    1.
-                }
-            })
-            .sum();
-        Ok(result)
+
+    ///
+    pub fn bow_area(&self, trim: f64) -> Result<f64, Error> {
+        TODO
     }
 }

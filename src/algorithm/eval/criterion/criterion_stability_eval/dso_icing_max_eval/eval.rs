@@ -1,4 +1,4 @@
-use crate::DSOIcingMaxCtx;
+use crate::algorithm::eval::DSOIcingMaxCtx;
 use crate::{
     algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, zg_eval::Zg},
     kernel::{Eval, types::eval_result::EvalResult},

@@ -1,4 +1,4 @@
-use crate::DSOMaxCtx;
+use crate::algorithm::eval::DSOMaxCtx;
 use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::algorithm::eval::{CriterionData, CriterionID};

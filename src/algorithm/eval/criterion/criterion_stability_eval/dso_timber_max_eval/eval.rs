@@ -1,4 +1,4 @@
-use crate::DSOTimberMaxCtx;
+use crate::algorithm::eval::DSOTimberMaxCtx;
 use crate::{
     prelude::*,
     algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, zg_eval::Zg},

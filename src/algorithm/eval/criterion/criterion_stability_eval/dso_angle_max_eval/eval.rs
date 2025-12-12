@@ -1,4 +1,4 @@
-use crate::DSOAngleMaxCtx;
+use crate::algorithm::eval::DSOAngleMaxCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},

@@ -1,4 +1,4 @@
-use crate::StaticAngleCtx;
+use crate::algorithm::eval::StaticAngleCtx;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::data::stability::ship_type::*;
 use crate::algorithm::eval::zg_eval::Zg;

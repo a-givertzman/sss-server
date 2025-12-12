@@ -1,7 +1,8 @@
-use crate::CriterionDraughtCtx;
+use crate::algorithm::eval::CriterionDraughtCtx;
+use crate::kernel::Eval;
 use crate::{
     algorithm::{eval::*, entities::data::stability::ship_type::ShipType},
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{types::eval_result::EvalResult},
     prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};

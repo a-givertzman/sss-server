@@ -1,4 +1,4 @@
-use crate::StrengthAreaCtx;
+use crate::algorithm::eval::StrengthAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},

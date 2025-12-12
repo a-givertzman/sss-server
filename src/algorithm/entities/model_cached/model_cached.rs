@@ -4,11 +4,14 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaShape, CompartmentBoundCache, CompartmentCache, CompartmentCacheResult,
+                AreaShape, CompartmentBoundCache, CompartmentCache,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
                 DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
             },
-            ship_model::{stability_result::BalanceStabilityResult, *},
+            ship_model::{
+                stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
+                *,
+            },
         },
         eval::{StrengthBalanceCtx, strength_balance_eval},
     },
@@ -63,6 +66,10 @@ pub(crate) struct FloatingPositionResult {
     pub displacement: f64,
     /// Смещение центра объемного водоизмещения, м
     pub displacement_center: Position,
+    /// Массовое водоизмещение, т
+    pub mass: f64,
+    /// Смещение центра массы, м
+    pub mass_center: Position,
     /// Площадь ватерлинии, м^2
     pub area_wl: f64,
     /// Смещение центра тяжести ватеринии, м
@@ -112,7 +119,7 @@ pub struct ModelCached {
     /// Ship length between perpendiculars
     ship_length_lbp: f64,
     /// 3d model initial position in 3D space (midel).
-    pub model_center_coord: Position,
+    model_x: f64,
     /// Waterline coord Z in 3D space (midel) initial position.
     draught_min: f64,
     /// Draught step for hull
@@ -137,7 +144,7 @@ pub struct ModelCached {
     displacement_bounded: HashMap<usize, Arc<RwLock<DisplacementBoundCache>>>,
     /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
     compartments_bounded: HashMap<usize, IndexMap<String, Arc<RwLock<CompartmentBoundCache>>>>,
-    tp: Arc<ThreadPool>,
+    thread_pool: Arc<ThreadPool>,
 }
 //
 //
@@ -147,17 +154,17 @@ impl ModelCached {
     pub fn new(
         parent: &Dbg,
         conf: ModelCachedConf,
-        tp: Arc<ThreadPool>,
+        thread_pool: Arc<ThreadPool>,
     ) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
         let mut displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>> =
             IndexMap::new();
-        let delta_pos = Some(conf.model_center_coord.clone());
+        let model_x = Some(conf.model_x);
         let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
-            delta_pos,
+            model_x,
             conf.model_scale,
         )));
         displacement_shapes.insert("hull".to_owned(), displacement_shape.clone());
@@ -165,14 +172,15 @@ impl ModelCached {
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
             Some(conf.model_dir.clone().join(PathBuf::from("additionals"))),
-            delta_pos,
+            model_x,
             conf.model_scale,
         )));
         let windage_area = WindageArea::new(
             &dbg,
             windage_shape.clone(),
             conf.cache_dir.clone(),
-            conf.hull_draught_min,
+            conf.draught_min,
+            Arc::clone(&thread_pool),
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
@@ -220,8 +228,8 @@ impl ModelCached {
                         name.clone(),
                         conf.compartment_heel_steps.clone(),
                         conf.compartment_trim_steps.clone(),
-                        conf.compartment_level_step,
-                        Arc::clone(&tp),
+                        conf.compartment_level_step_qnt,
+                        Arc::clone(&thread_pool),
                     ))),
                 ))
             })
@@ -241,7 +249,7 @@ impl ModelCached {
                 let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
                     &dbg,
                     path.clone(),
-                    Some(conf.model_center_coord.clone()),
+                    Some(conf.model_x),
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone() + "_damaged", shape.clone());
@@ -259,7 +267,7 @@ impl ModelCached {
                         conf.hull_draught_min,
                         conf.hull_draught_max,
                         conf.hull_draught_step,
-                        Arc::clone(&tp),
+                        Arc::clone(&thread_pool),
                     ))),
                 ))
             })
@@ -268,8 +276,8 @@ impl ModelCached {
         let model_cached = Self {
             dbg: dbg.clone(),
             ship_length_lbp: conf.ship_length_lbp,
-            model_center_coord: conf.model_center_coord.clone(),
-            draught_min: conf.hull_draught_min,
+            model_x: conf.model_x,
+            draught_min: conf.draught_min,
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
@@ -284,14 +292,14 @@ impl ModelCached {
                 conf.hull_draught_min,
                 conf.hull_draught_max,
                 conf.hull_draught_step,
-                Arc::clone(&tp),
+                Arc::clone(&thread_pool),
             ),
             compartments,
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
             compartments_bounded: HashMap::new(),
-            tp,
+            thread_pool,
         };
         Ok(model_cached)
     }
@@ -301,7 +309,7 @@ impl ModelCached {
         let mut errors = Vec::new();
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
-        let scheduler = self.tp.scheduler();
+        let scheduler = self.thread_pool.scheduler();
         // Сначала считаем модели в разных потоках
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
@@ -354,7 +362,11 @@ impl ModelCached {
         Ok(())
     }
     /// инициализация кэшей заранее посчитанными данными
-    pub fn init(&mut self, compartments_volume_max: HashMap<String, f64>) -> Result<(), Error> {
+    pub fn init(
+        &mut self,
+        compartments_volume_max: HashMap<String, f64>,
+        bounds: &Bounds,
+    ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
         let error = Error::new(self.dbg.clone(), "init");
         self.displacement
@@ -365,25 +377,23 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let volume_max = compartments_volume_max.get(name).ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
-            guard.calc_coeff(*volume_max)
+            let volume_max = compartments_volume_max
+                .get(name)
+                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            guard
+                .calc_coeff(*volume_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
-        /*     for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+        /*     TODO - пока не используются, потом будет отдельный расчет
+        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
             damaged_compartment
                 .write()
                 .init()
                 .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
         }*/
         self.windage_area
-            .init()
+            .init(&bounds)
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
-        Ok(())
-    }
-    /// инициализация кэшей заранее посчитанными данными
-    pub fn init_bounded(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        //   dbg!(self.dbg.clone(), "init_bounded");
-        let error = Error::new(self.dbg.clone(), "init_bounded");
         let bounds_qnt = bounds.len_qnt();
         let displacement_shape = self
             .displacement_shapes
@@ -394,9 +404,9 @@ impl ModelCached {
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
-            self.model_center_coord.x(),
+            self.model_x,
             bounds.clone(),
-            Arc::clone(&self.tp),
+            Arc::clone(&self.thread_pool),
         );
         displacement_bound
             .init()
@@ -443,20 +453,17 @@ impl ModelCached {
         if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-        if let Err(error) = self.windage_area.rebuild() {
-            errors.push(("displacement".to_owned(), error));
-        }
         for (name, compartment) in &mut self.compartments {
-    //        println!("model_cached rebuild compartment:{name}");
+            //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-        for (name, compartment) in &mut self.damaged_compartments {
+        /*   TODO    for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }
+        }*/
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_caches",
@@ -481,19 +488,19 @@ impl ModelCached {
             displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
             self.bounds_level_step,
-            self.model_center_coord.x(),
+            self.model_x,
             bounds.clone(),
-            Arc::clone(&self.tp),
+            Arc::clone(&self.thread_pool),
         );
         displacement_bound
             .rebuild()
             .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
         self.displacement_bounded
             .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-
+        self.windage_area.rebuild(bounds).map_err(|err| error.pass_with("windage_area.rebuild", err))?;
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
-      //      println!("model_cached build_bounded compartment:{compartment_id}");
+            //      println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -523,21 +530,27 @@ impl ModelCached {
         Ok((x, y, z))
     }
     //
-    pub fn bounded_windage_area(&self, bounds: &Bounds) -> Result<Vec<f64>, Error> {
-        self.windage_area
-            .bounded_windage_area(&bounds)
-            .map_err(|err| {
-                Error::new(&self.dbg, "bounded_windage_area")
-                    .pass_with("self.windage_area.bounded_windage_area", err)
-            })
+    pub fn bounded_windage_area(&self) -> Result<Vec<f64>, Error> {
+        self.windage_area.bounded_windage_area().map_err(|err| {
+            Error::new(&self.dbg, "bounded_windage_area")
+                .pass_with("self.windage_area.bounded_windage_area", err)
+        })
     }
-    //
-    pub fn windage_area(&mut self) -> Result<(f64, f64), Error> {
-        self.windage_area.windage_area().map_err(|err| {
+    /// Расчет параметров поверхности
+    /// draught_min - минимальная осадка без груза
+    /// draught_current - текущая осадка
+    /// Возаращает (area_windage, area_windage_z, delta_area_windage, area_volume_z)
+    /// area_windage - Площадь парусности сплошных поверхностей для осадки d_min без палубного груза
+    /// area_windage_z - Положение центра парусности сплошных поверхностей по оси Z относительно опорной плоскости
+    /// delta_area_windage - Разница в площадях парусности для текущей осадки и осадки d_min без палубного груза
+    /// area_volume_z - Отстояние по вертикали центра площади проекции подводной части корпуса на диаметральную плоскость
+    /// в прямом положении судна (при нулевом крене) на спокойной воде для текущей осадки [м]
+    pub fn windage_area(&self, draught: f64) -> Result<(f64, f64, f64, f64), Error> {
+        self.windage_area.windage_area(draught).map_err(|err| {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
     }
-    /// Расчет равновесного положения для прочности
+     /// Расчет равновесного положения для прочности
     pub fn balance_strength(
         &self,
         query: BalanceStrengthQuery,
@@ -558,7 +571,7 @@ impl ModelCached {
             .compartments_bounded
             .get(&query.bounds.len_qnt())
             .ok_or(error.err("no compartments_bounded"))?;
-        let scheduler = self.tp.scheduler();
+        let scheduler = self.thread_pool.scheduler();
         // расчет эпюр масс для газообразных грузов
         // они не смещаются, поэтому считаем их один раз
         let mut tasks: Vec<JoinHandle<_>> = vec![];
@@ -672,7 +685,8 @@ impl ModelCached {
         let mut res_displacement_distr = Vec::new();
         let (mut trim, mut draught) = (query.trim, query.draught);
         let (mut mass_sum, mut disp_sum) = (100000., 100000.);
-        let (mut epsilon_mass, mut epsilon_x): (f64, f64) = (10., 1.);
+        let mut epsilon_mass = 10.;
+        let mut epsilon_x;
         for _i in 0..50 {
             // trim
             for _j in 0..50 {
@@ -681,7 +695,9 @@ impl ModelCached {
                 let liquid_results = Arc::new(Stack::new());
                 // жидкие грузы смещаются под действием силы тяжести
                 for cargo in &query.liquid {
-                    assert!(cargo.mass > 0.);
+                    if cargo.mass == 0. {
+                        continue;
+                    }
                     let assigment_type = cargo.assigment_type;
                     let space_id = cargo.space_id.clone();
                     let cargo_type = cargo.cargo_type;
@@ -822,9 +838,25 @@ impl ModelCached {
     pub fn balance_stability(
         &self,
         query: BalanceStabilityQuery,
+        opening: &[Position],
+        deck_angle_point: &[Position],
+        epsilon: f64,
     ) -> Result<BalanceStabilityResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "balance_stability");
+
+        /*      let liquids = query.liquid.clone();
+                let mass_const = query.mass_const;
+                let moment_const = query.moment_const;
+                let mass_before_sum = query.mass_const
+                    + query
+                        .liquid
+                        .iter()
+                        .map(|v: &LiquidData| v.mass)
+                        .sum::<f64>()
+                    + query.bulk.iter().map(|v| v.mass).sum::<f64>();
+                dbg!(mass_before_sum);
+        */
         let FloatingPositionResult {
             heel,
             trim,
@@ -832,6 +864,8 @@ impl ModelCached {
             precision,
             displacement,
             displacement_center,
+            mass,
+            mass_center,
             area_wl,
             area_wl_center,
             length_wl,
@@ -847,12 +881,12 @@ impl ModelCached {
                 liquid: query.liquid.clone(),
                 grain_bulkhead: query.grain_bulkhead.clone(), // TODO
                 damaged_compartment: Vec::new(),
-                epsilon: query.epsilon,
+                epsilon,
             })
             .map_err(|err| error.pass_with("self.floating_position", err))?;
         // println!("steps:{_i} time:{:?}", time.elapsed());
         let (draught_bow, draught_stern, draught_mean) = Draught::new(
-            self.model_center_coord.x(),
+            self.model_x,
             self.ship_length_lbp,
             draught_mid,
             area_wl_center.x(),
@@ -863,116 +897,72 @@ impl ModelCached {
         .calculate();
         let trim_degree = trim;
         let trim_meter = trim.to_radians().tan() * self.ship_length_lbp;
-        let mut errors = Vec::new();
-        let mut tasks: Vec<JoinHandle<_>> = vec![];
-        let liquid_results = Arc::new(Stack::new());
-        let bulk_results = Arc::new(Stack::new());
-        let scheduler = self.tp.scheduler();
-        for cargo in query.liquid {
-            assert!(cargo.mass > 0.);
-            let assignment_id = cargo.assignment_id;
-            let space_id = cargo.space_id.clone();
-            let error_ = error.err(format!("compartment_{space_id} liquid work"));
-            let compartment = self
-                .compartments
-                .get(&space_id)
-                .ok_or(error.err(format!("no compartment:{space_id}")))?
-                .clone();
-            let trim = trim;
-            let volume = cargo.volume;
-            let epsilon = query.epsilon;
-            let results_ = liquid_results.clone();
-            let handle = scheduler
-                .spawn(move || {
-                    let compartment_result = compartment
-                        .read()
-                        .get(0., trim, volume, epsilon)
-                        .map_err(|err| error_.pass_with("compartment.get", err))?;
-                    results_.push(stability_result::LiquidResult::new(
-                        //     cargo_id,
-                        assignment_id,
-                        //     compartment_result.volume_center,
-                        compartment_result.inertia_long_y,
-                        compartment_result.inertia_trans_x,
-                    ));
-                    Ok(())
-                })
-                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
-            match handle {
-                Ok(task) => tasks.push(task),
-                Err(err) => errors.push(err),
-            };
-        }
-        for cargo in query.bulk {
-            assert!(cargo.mass > 0.);
-            let assignment_id = cargo.assignment_id;
-            let space_id = cargo.space_id.clone();
-            let error_ = error.err(format!("compartment_{space_id} bulk work"));
-            let compartment = self
-                .compartments
-                .get(&space_id)
-                .ok_or(error.err(format!("no compartment:{space_id}")))?
-                .clone();
-            let volume = cargo.volume;
-            let shiftable = cargo.shiftable;
-            let epsilon = query.epsilon;
-            let results_ = bulk_results.clone();
-            let handle = scheduler
-                .spawn(move || {
-                    let compartment_result = compartment
-                        .read()
-                        .get(0., 0., volume, epsilon)
-                        .map_err(|err| error_.pass_with("compartment.get", err))?;
-                    results_.push(stability_result::BulkResult::new(
-                        //       cargo_id,
-                        space_id,
-                        assignment_id,
-                        shiftable,
-                        compartment_result.level,
-                        //       compartment_result.volume_center,
-                    ));
-                    Ok(())
-                })
-                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
-            match handle {
-                Ok(task) => tasks.push(task),
-                Err(err) => errors.push(err),
-            };
-        }
-        for task in tasks {
-            log::info!("{}.balance | join thread {}", &self.dbg, task.name());
-            if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                errors.push(error);
-            }
-        }
-        if !errors.is_empty() {
-            return Err(error.pass_with(
-                "rebuild_caches",
-                errors
-                    .iter()
-                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
-            ));
-        }
-        let liquid = {
-            let mut result = Vec::new();
-            while !liquid_results.is_empty() {
-                if let Some(data) = liquid_results.pop() {
-                    result.push(data);
-                }
-            }
-            result
-        };
-        let bulk = {
-            let mut result = Vec::new();
-            while !bulk_results.is_empty() {
-                if let Some(data) = bulk_results.pop() {
-                    result.push(data);
-                }
-            }
-            result
-        };
+        let liquid = self
+            .process_liquid(&query.liquid, heel, trim, epsilon)
+            .map_err(|err| error.pass(err))?;
+        let bulk = self
+            .process_bulk(&query.bulk, epsilon)
+            .map_err(|err| error.pass(err))?;
+        let epsilon = 0.001f64.max(epsilon);
+        let mut angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
+        angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
+        angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
+        angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        angles.dedup();
+        let (dso, entry_angle, flooding_angle) = self
+            .dso_surface_moment(
+                query,
+                heel,
+                trim_degree,
+                draught_mid,
+                epsilon,
+                mass_center,
+                &angles,
+                opening,
+                deck_angle_point,
+            )
+            .map_err(|err| error.pass(err))?;
+
+        /*       let (mass_liquid, moment_liquid) =
+                    liquid
+                        .iter()
+                        .fold((0., Moment::zero()), |(mass, moment), v| {
+                            (
+                                mass + v.mass,
+                                moment + Moment::from_pos(v.mass_shift, v.mass),
+                            )
+                        });
+                let (mass_bulk, moment_bulk) =
+                    bulk.iter().fold((0., Moment::zero()), |(mass, moment), v| {
+                        (
+                            mass + v.mass,
+                            moment + Moment::from_pos(v.mass_shift, v.mass),
+                        )
+                    });
+
+                //    let center_liquid = moment_liquid.to_pos(mass_liquid);
+                //    let center_bulk = moment_bulk.to_pos(mass_bulk);
+                let _moment_liquid = self
+                    .moment_liquid_floating(&liquids, heel, trim, epsilon)
+                    .unwrap();
+                let mass_sum = mass_const + mass_liquid + mass_bulk;
+                let moment_sum = moment_const + moment_liquid + moment_bulk;
+                let center_mass_sum = moment_sum.to_pos(mass_sum);
+                dbg!(
+                    heel,
+                    trim,
+                    epsilon,
+                    moment_const + moment_bulk,
+                    mass_liquid,
+                    _moment_liquid,
+                    moment_liquid,
+                    mass_sum,
+                    center_mass_sum
+                );
+        */
+
+        let bow_area = self.windage_area.bow_area(trim_degree).map_err(|err| error.pass(err))?;  
+         
         Ok(BalanceStabilityResult {
             roll: heel,
             trim_degree,
@@ -991,6 +981,11 @@ impl ModelCached {
             breadth_wl,
             rad_long,
             rad_trans,
+            mass_center,
+            dso,
+            entry_angle,
+            flooding_angle,
+            bow_area,
         })
     }
     /// Расчет равновесного положения
@@ -1009,13 +1004,14 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk(&query.bulk, query.epsilon)
+            .moment_bulk_floating(&query.bulk, query.epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
+        //   dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
         let moment_sum = query.moment_const + moment_bulk; // постоянный момент
-        let volume = mass_sum/query.water_density;
+        let volume = mass_sum / query.water_density;
         // допустимый объем корпуса
         if volume <= min_volume || volume >= max_volume {
             return Err(error.err(format!("volume <= min_volume || volume >= max_volume, mass:{mass_sum} min_volume:{min_volume} max_volume:{max_volume} water_density:{}", query.water_density)));
@@ -1023,13 +1019,17 @@ impl ModelCached {
         let mut heel = 0.0;
         let mut trim = 0.0;
         let mut draught = self.draught_min;
-        let mut step_trim = 0.5;
-        let mut step_heel = 1.0;
+        let mut step_trim = 0.5_f64;
+        let mut step_heel = 1.0_f64;
         let mut d_v: Option<f64> = None;
         let mut d_m: Option<f64> = None;
         for _i in 1..=1000 {
-            let epsilon = (step_trim + step_heel) / 10.;
-            let (new_draught, new_d_v, new_d_m, _, displacement, disp_result) = self
+            let epsilon = (step_trim.max(step_heel)) / 10.;
+            // учет смещения жидкости
+            let moment_liquid = self
+                .moment_liquid_floating(&query.liquid, heel, trim, epsilon)
+                .map_err(|err| error.pass_with("self.moment_liquid_floating", err))?;
+            let (new_draught, new_d_v, new_d_m, mass_center, displacement, disp_result) = self
                 .position(
                     heel,
                     trim,
@@ -1038,13 +1038,14 @@ impl ModelCached {
                     epsilon,
                     mass_sum,
                     moment_sum,
-                    &query.liquid,
+                    moment_liquid,
                     &query.damaged_compartment,
                 )
                 .map_err(|err| error.pass(err))?;
             if query.epsilon >= epsilon {
                 let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
                 if precision < query.epsilon {
+                    //                    dbg!(heel, trim, epsilon, mass_center, disp_result.volume_center);
                     let result = FloatingPositionResult {
                         heel,
                         trim,
@@ -1052,6 +1053,8 @@ impl ModelCached {
                         precision,
                         displacement,
                         displacement_center: disp_result.volume_center,
+                        mass: mass_sum,
+                        mass_center,
                         area_wl: disp_result.area_wl,
                         area_wl_center: disp_result.area_wl_center,
                         length_wl: disp_result.length_wl,
@@ -1064,17 +1067,20 @@ impl ModelCached {
             }
             if let Some(old_d_v) = d_v {
                 if old_d_v.signum() != new_d_v.signum() {
-                    step_trim *= 0.5;
+                    step_trim *= 0.1;
+                    step_heel *= 3.;
                 }
             }
             d_v = Some(new_d_v);
             if let Some(old_d_m) = d_m {
                 if old_d_m.signum() != new_d_m.signum() {
-                    step_heel *= 0.5;
+                    step_heel *= 0.1;
+                    step_trim *= 3.;
                 }
             }
             d_m = Some(new_d_m);
-    //       println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{epsilon} h:{heel}, t:{trim}, draught:{draught}, d_v:{new_d_v}, d_m:{new_d_m}");
+            //     println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
+            //     epsilon, heel, trim, draught, new_d_v, new_d_m);
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1082,13 +1088,22 @@ impl ModelCached {
         Err(error.err(format!("query:{:?} error: no result", query)))
     }
     /// Расчет диаграммы статической остойчивости
-    pub(crate) fn dso(
+    /// на основе фактического кренящего момента.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
+    /// angles - углы крена должны быть отсортированны по возрастанию
+    /// возвращает (dso, entry_angle, flooding_angle) зависимости от угла крена
+    pub(crate) fn dso_abs_moment(
         &self,
-        query: FloatingPositionQuery,
-        draught: f64,
-        trim: f64,
-        heel_max: f64,
-    ) -> Result<Vec<(f64, f64)>, Error> {
+        query: BalanceStabilityQuery,
+        balanced_heel: f64,
+        balanced_trim: f64,
+        balanced_draught: f64,
+        epsilon: f64,
+        cg: Position,
+        angles: &[f64],
+        opening: &[Position],
+        deck_angle_point: &[Position],
+    ) -> Result<(Vec<(f64, f64)>, Vec<(f64, f64)>, Vec<(f64, f64)>), Error> {
         let error = Error::new(&self.dbg, "floating_position");
         if query.water_density <= 0. {
             return Err(error.err("water_density <= 0."));
@@ -1096,52 +1111,101 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk(&query.bulk, query.epsilon)
+            .moment_bulk_floating(&query.bulk, epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
-        let max = (heel_max * 10.) as i32;
-        let min = -max;
-        let heel = (min..=max).map(|i| i as f64 * 0.1).collect::<Vec<f64>>();
+        let mut trim = balanced_trim;
+        let mut draught = balanced_draught;
+        let mut step_trim = 0.1;
         let mut dso = Vec::new();
-        for heel in heel {
-            let mut trim = trim;
-            let mut draught = draught;
-            let mut step_trim = 0.5;
+        let mut entry_angle = Vec::new();
+        let mut flooding_angle = Vec::new();
+        let mut last_heel: Option<f64> = None;
+        let max_heel = angles.last().ok_or(error.err("max_heel"))?;
+        let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
+        let moment_sum = query.moment_const + moment_bulk; // постоянный момент
+        // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
+        //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
+        for &heel in angles {
+            //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
+            step_trim = if let Some(last_heel) = last_heel {
+                step_trim * ((heel - last_heel) * 10.).max(1.)
+            } else {
+                0.1
+            };
+            last_heel = Some(heel);
             let mut d_v: Option<f64> = None;
+            //      println!("model_cached dso lv:");
             for _i in 1..=100 {
-                let epsilon = step_trim / 10.;
-                let (new_draught, new_d_v, _, cg, _, disp_result) = self
+                let trim_epsilon = step_trim / 10.;
+                let moment_liquid_floating = self
+                    .moment_liquid_floating(&query.liquid, heel, trim, epsilon)
+                    .map_err(|err| error.pass_with("self.moment_liquid_dso", err))?;
+                let (new_draught, new_d_v, _, _, _, disp_result) = self
                     .position(
                         heel,
                         trim,
                         draught,
                         query.water_density,
                         epsilon,
-                        query.mass_const + mass_bulk + mass_liquid, // постоянная масса
-                        query.moment_const + moment_bulk,           // постоянный момент
-                        &query.liquid,
+                        mass_sum,
+                        moment_sum,
+                        moment_liquid_floating,
                         &query.damaged_compartment,
                     )
                     .map_err(|err| error.pass(err))?;
-                if query.epsilon <= epsilon {
-                    let precision = new_d_v.abs();
-                    if precision < query.epsilon {
-                        let [_, yg, zg] = cg.values();
-                        let [_, yc, zc] = disp_result.volume_center.values();
-                        let l = if heel.abs() > f64::EPSILON {
-                            let ctg_phy = 1.0 / heel.to_radians().tan();
-                            (yg * ctg_phy + zg - yc * ctg_phy - zc) / (1. + ctg_phy.powi(2)).sqrt()
-                        } else {
-                            yg - yc
+                //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
+                if epsilon >= trim_epsilon {
+                    if epsilon >= new_d_v.abs() {
+                        let delta_moment_liquid = self
+                            .moment_liquid_dso_abs_moment(
+                                &query.liquid,
+                                heel,
+                                trim,
+                                balanced_heel,
+                                balanced_trim,
+                                epsilon,
+                            )
+                            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+                        let l = {
+                            let [_, tcg, vcg] = cg.values();
+                            let [_, tcb, vcb] = disp_result.volume_center.values();
+                            let sin_theta = heel.to_radians().sin();
+                            let cos_theta = heel.to_radians().cos();
+                            let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
+                            let lv = tcb * cos_theta + vcb * sin_theta;
+                            //             println!("{heel} {lv};");
+                            let ld = tcg * cos_theta + vcg * sin_theta;
+                            let delta_l = delta_moment_liquid * sin_delta_angle / mass_sum;
+                            let l = lv - ld - delta_l;
+                            //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                            println!("{heel} {trim} {delta_moment_liquid} {delta_l} {lv} {l};");
+                            l
                         };
                         dso.push((heel, l));
+                        let current_draught = |p: &Position| {
+                            let tg_t = trim.to_radians().tan();
+                            let tg_h = heel.to_radians().tan();
+                            let cos_h = heel.to_radians().cos();
+                            let draught =
+                                draught + p.z() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                            draught - p.z()
+                        };
+                        let min_angle = |angles: &[Position]| {
+                            let mut angles: Vec<_> =
+                                angles.iter().map(|v| current_draught(v)).collect();
+                            angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                            angles.first().unwrap_or(max_heel).to_owned()
+                        };
+                        entry_angle.push((heel, min_angle(opening)));
+                        flooding_angle.push((heel, min_angle(deck_angle_point)));
                         break;
                     }
                 }
                 if let Some(old_d_v) = d_v {
                     if old_d_v.signum() != new_d_v.signum() {
-                        step_trim *= 0.5;
+                        step_trim = step_trim * 0.5;
                     }
                 }
                 d_v = Some(new_d_v);
@@ -1149,14 +1213,155 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-   /*     println!("\nmodel_cached dso: ");
+        println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
-            println!("{angle} {value}");
+            println!("{angle} {value};");
+        }
+        /*       println!("\nmodel_cached entry_angle: ");
+        for &(angle, value) in entry_angle.iter() {
+            println!("{angle} {value};");
+        }
+        println!("\nmodel_cached flooding_angle: ");
+        for &(angle, value) in flooding_angle.iter() {
+            println!("{angle} {value};");
         }*/
-        Ok(dso)
+        Ok((dso, entry_angle, flooding_angle))
+    }
+    /// Расчет диаграммы статической остойчивости
+    /// на основе поперечного момента инерции площади ватерлинии.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
+    /// angles - углы крена должны быть отсортированны по возрастанию
+    /// возвращает (dso, entry_angle, flooding_angle) зависимости от угла крена
+    pub(crate) fn dso_surface_moment(
+        &self,
+        query: BalanceStabilityQuery,
+        balanced_heel: f64,
+        balanced_trim: f64,
+        balanced_draught: f64,
+        epsilon: f64,
+        cg: Position,
+        angles: &[f64],
+        opening: &[Position],
+        deck_angle_point: &[Position],
+    ) -> Result<(Vec<(f64, f64)>, Vec<(f64, f64)>, Vec<(f64, f64)>), Error> {
+        let error = Error::new(&self.dbg, "floating_position");
+        if query.water_density <= 0. {
+            return Err(error.err("water_density <= 0."));
+        }
+        // Считаем сыпучие грузы.
+        // На них крен и дифферент не влияет.
+        let moment_bulk = self
+            .moment_bulk_floating(&query.bulk, epsilon)
+            .map_err(|err| error.pass_with("self.bulk_moment", err))?;
+        let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
+        let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
+        let mut trim = balanced_trim;
+        let mut draught = balanced_draught;
+        let mut step_trim = 0.1;
+        let mut dso = Vec::new();
+        let mut entry_angle = Vec::new();
+        let mut flooding_angle = Vec::new();
+        let mut last_heel: Option<f64> = None;
+        let max_heel = angles.last().ok_or(error.err("max_heel"))?;
+        let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
+        let moment_sum = query.moment_const + moment_bulk; // постоянный момент
+        let moment_liquid_surface = self // момент инерции площади ватерлинии жидкости
+            .moment_liquid_dso_surface_moment(&query.liquid, epsilon)
+            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+        // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
+        //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
+        for &heel in angles {
+            //       println!("\nmodel_cached dso heel:{heel} epsilon:{epsilon} step_trim:{}", step_trim);
+            step_trim = if let Some(last_heel) = last_heel {
+                step_trim * ((heel - last_heel) * 10.).max(1.)
+            } else {
+                0.1
+            };
+            last_heel = Some(heel);
+            let mut d_v: Option<f64> = None;
+            //      println!("model_cached dso lv:");
+            for _i in 1..=100 {
+                let trim_epsilon = step_trim / 10.;
+                let moment_liquid_floating = self
+                    .moment_liquid_floating(&query.liquid, heel, trim, epsilon)
+                    .map_err(|err| error.pass_with("self.moment_liquid_dso", err))?;
+                let (new_draught, new_d_v, _, _, _, disp_result) = self
+                    .position(
+                        heel,
+                        trim,
+                        draught,
+                        query.water_density,
+                        epsilon,
+                        mass_sum,
+                        moment_sum,
+                        moment_liquid_floating,
+                        &query.damaged_compartment,
+                    )
+                    .map_err(|err| error.pass(err))?;
+                //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
+                if epsilon >= trim_epsilon {
+                    if epsilon >= new_d_v.abs() {
+                        let l = {
+                            let [_, tcg, vcg] = cg.values();
+                            let [_, tcb, vcb] = disp_result.volume_center.values();
+                            let sin_theta = heel.to_radians().sin();
+                            let cos_theta = heel.to_radians().cos();
+                            let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
+                            let lv = tcb * cos_theta + vcb * sin_theta;
+                            //             println!("{heel} {lv};");
+                            let ld = tcg * cos_theta + vcg * sin_theta;
+                            let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
+                            let l = lv - ld - delta_l;
+                            //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                       //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
+                            l
+                        };
+                        dso.push((heel, l));
+                        let current_draught = |p: &Position| {
+                            let tg_t = trim.to_radians().tan();
+                            let tg_h = heel.to_radians().tan();
+                            let cos_h = heel.to_radians().cos();
+                            let draught =
+                                draught + p.z() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                            draught - p.z()
+                        };
+                        let min_angle = |angles: &[Position]| {
+                            let mut angles: Vec<_> =
+                                angles.iter().map(|v| current_draught(v)).collect();
+                            angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                            angles.first().unwrap_or(max_heel).to_owned()
+                        };
+                        entry_angle.push((heel, min_angle(opening)));
+                        flooding_angle.push((heel, min_angle(deck_angle_point)));
+                        break;
+                    }
+                }
+                if let Some(old_d_v) = d_v {
+                    if old_d_v.signum() != new_d_v.signum() {
+                        step_trim = step_trim * 0.5;
+                    }
+                }
+                d_v = Some(new_d_v);
+                trim = trim + step_trim * new_d_v.signum();
+                draught = new_draught;
+            }
+        }
+        println!("\nmodel_cached dso: ");
+        for &(angle, value) in dso.iter() {
+            println!("{angle} {value};");
+        }
+        /*       println!("\nmodel_cached entry_angle: ");
+        for &(angle, value) in entry_angle.iter() {
+            println!("{angle} {value};");
+        }
+        println!("\nmodel_cached flooding_angle: ");
+        for &(angle, value) in flooding_angle.iter() {
+            println!("{angle} {value};");
+        }*/
+        Ok((dso, entry_angle, flooding_angle))
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы
-    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result)
+    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
     fn position(
         &self,
         heel: f64,
@@ -1166,14 +1371,10 @@ impl ModelCached {
         epsilon: f64,
         mass_sum: f64,        // постоянная масса mass_const + mass_bulk + mass_liquid
         moment_sum: Position, // постоянный момент moment_const + moment_bulk
-        liquid: &Vec<LiquidData>,
+        moment_liquid: Moment,
         damaged_compartment: &Vec<String>,
     ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
         let error = Error::new(&self.dbg, "_floating_position");
-        // учет смещения жидкости
-        let moment_liquid = self
-            .moment_liquid(&liquid, heel, trim, epsilon)
-            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
         // учет изменения водоизмещения из-за поврежденных отсеков
         // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
         let (mass_damaged_compartment, moment_damaged_compartment) = self
@@ -1205,10 +1406,12 @@ impl ModelCached {
             heel_rotation * trim_rotation
         };
         // центр тяжести корпуса
-        let cg = {
+        let cg: Position = {
+            //        dbg!(moment_sum, moment_liquid, mass_sum);
             let moment_sum = moment_sum + moment_liquid + moment_damaged_compartment;
             moment_sum.to_pos(mass_sum)
         };
+        //    dbg!(cg);
         // Определение невязки
         let cg_h = {
             // Через центр плавучести CB проводится горизонтальная плоскость
@@ -1260,136 +1463,158 @@ impl ModelCached {
     }
     // Считаем сыпучие грузы.
     // На них крен и дифферент не влияет.
-    fn moment_bulk(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Moment, Error> {
+    fn process_bulk(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Vec<BulkResult>, Error> {
         let error = Error::new(&self.dbg, "moment_bulk");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
-        let mut values = Vec::new();
-        let scheduler = self.tp.scheduler();
-        for bulk in bulks {
-            match self.compartments.get(&bulk.space_id) {
-                Some(compartment) => {
-                    let task_results = task_results.clone();
-                    let epsilon = epsilon.clone();
-                    let space_id = bulk.space_id.clone();
-                    let mass = bulk.mass;
-                    let volume = bulk.volume;
-                    let compartment = compartment.clone();
-                    let handle = scheduler
-                        .spawn(move || {
-                            task_results.push((
-                                space_id,
-                                mass,
-                                compartment.read().get(0., 0., volume, epsilon),
-                            ));
-                            Ok(())
-                        })
-                        .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", bulk.space_id), err)
-                        });
-                    match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => {
-                            let error =
-                                error.pass_with(format!("handle for {}", bulk.space_id), err);
-                            log::error!("{}", error);
-                            errors.push(error);
-                        }
-                    };
-                }
-                None => {
-                    let error = error.err(format!("no compartment: {}", bulk.space_id));
-                    log::error!("{}", error);
-                    errors.push(error);
-                }
-            }
+        let scheduler = self.thread_pool.scheduler();
+        for cargo in bulks {
+            assert!(cargo.mass > 0.);
+            let space_id = cargo.space_id.clone();
+            let error_ = error.err(format!("compartment_{space_id} bulk work"));
+            let compartment = self
+                .compartments
+                .get(&space_id)
+                .ok_or(error.err(format!("no compartment:{space_id}")))?
+                .clone();
+            let volume = cargo.volume;
+            let cargo = cargo.clone();
+            let epsilon = epsilon;
+            let results_ = task_results.clone();
+            let handle = scheduler
+                .spawn(move || {
+                    let compartment_result = compartment
+                        .read()
+                        .get(0., 0., volume, epsilon)
+                        .map_err(|err| error_.pass_with("compartment.get", err))?;
+                    results_.push(stability_result::BulkResult::new(
+                        //       cargo_id,
+                        space_id,
+                        cargo.assignment_id,
+                        cargo.assigment_type,
+                        cargo.mass,
+                        compartment_result.volume_center,
+                        cargo.shiftable,
+                        compartment_result.level,
+                    ));
+                    Ok(())
+                })
+                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+            match handle {
+                Ok(task) => tasks.push(task),
+                Err(err) => errors.push(err),
+            };
         }
         for task in tasks {
-            log::info!("{}.moment_bulk | join thread {}", &self.dbg, task.name());
+            log::info!("{}.balance | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
                 errors.push(error);
             }
         }
-        while !task_results.is_empty() {
-            if let Some((space_id, mass, data)) = task_results.pop() {
-                let CompartmentCacheResult {
-                    level,
-                    volume_center,
-                    ..
-                } = match data {
-                    Ok(data) => data,
-                    Err(err) => {
-                        let error = error
-                            .pass_with(format!("task_results data in {space_id}"), err.to_string());
-                        log::error!("{}", error);
-                        errors.push(error);
-                        continue;
-                    }
-                };
-                values.push((space_id, level, Moment::from_pos(volume_center, mass)));
-            }
-        }
         if !errors.is_empty() {
             return Err(error.pass_with(
-                "moment_bulk",
+                "rebuild_caches",
                 errors
                     .iter()
-                    .fold(String::new(), |acc, err| acc + &format!("\n{}", err)),
+                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
             ));
         }
-        let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
+        let mut result = Vec::new();
+        while !task_results.is_empty() {
+            if let Some(data) = task_results.pop() {
+                result.push(data);
+            }
+        }
+        Ok(result)
+    }
+    /// Считаем момент сыпучих грузов
+    fn moment_bulk_floating(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Moment, Error> {
+        let error = Error::new(&self.dbg, "moment_bulk_floating");
+        let values = self
+            .process_bulk(bulks, epsilon)
+            .map_err(|err| error.pass_with("process_bulk", err))?;
+        let (_sum_mass, sum_moment): (f64, Moment) =
+            values
+                .iter()
+                .fold((0., Moment::zero()), |(mass_sum, moment_sum), v| {
+                    (
+                        mass_sum + v.mass,
+                        moment_sum + Moment::from_pos(v.mass_shift, v.mass),
+                    )
+                });
+        //    dbg!(_sum_mass, sum_moment);
         Ok(sum_moment)
     }
     /// Считаем жидкие грузы
-    fn moment_liquid(
+    fn process_liquid(
         &self,
         liquids: &Vec<LiquidData>,
         heel: f64,
         trim: f64,
         epsilon: f64,
-    ) -> Result<Moment, Error> {
-        let error = Error::new(&self.dbg, "moment_liquid");
+    ) -> Result<Vec<LiquidResult>, Error> {
+        //     if heel == 0. {  println!("\n\nprocess_liquid heel:{} trim:{}\n", heel, trim,);  }
+        let error = Error::new(&self.dbg, "process_liquid");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
-        let mut values = Vec::new();
-        let scheduler = self.tp.scheduler();
-        for liquid in liquids {
-            match self.compartments.get(&liquid.space_id) {
+        let scheduler = self.thread_pool.scheduler();
+        for cargo in liquids {
+            match self.compartments.get(&cargo.space_id) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
-                    let space_id = liquid.space_id.clone();
-                    let mass = liquid.mass;
-                    let volume = liquid.volume;
+                    let space_id_ = cargo.space_id.clone();
+                    let cargo = cargo.clone();
+                    let error_ = error.clone();
                     let compartment = compartment.clone();
+                    let use_max_moment = cargo.use_max_moment;
+                    let is_cargo_tank = cargo.is_cargo_tank;
                     let handle = scheduler
                         .spawn(move || {
+                            let res = compartment
+                                .read()
+                                .get_for_stability(
+                                    heel,
+                                    trim,
+                                    cargo.volume,
+                                    epsilon,
+                                    use_max_moment,
+                                    is_cargo_tank,
+                                )
+                                .map_err(|err| error_.pass_with("compartment.get", err))?;
                             task_results.push((
-                                space_id,
-                                mass,
-                                compartment.read().get(heel, trim, volume, epsilon),
+                                space_id_.clone(),
+                                stability_result::LiquidResult::new(
+                                    //     cargo_id,
+                                    cargo.assignment_id,
+                                    cargo.assigment_type,
+                                    cargo.mass,
+                                    res.volume_center,
+                                    res.inertia_long_y,
+                                    res.inertia_trans_x,
+                                ),
                             ));
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", liquid.space_id), err)
+                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
                             let error =
-                                error.pass_with(format!("handle for {}", liquid.space_id), err);
+                                error.pass_with(format!("handle for {}", cargo.space_id), err);
                             log::error!("{}", error);
                             errors.push(error);
                         }
                     };
                 }
                 None => {
-                    let error = error.err(format!("no compartment: {}", liquid.space_id));
+                    let error = error.err(format!("no compartment: {}", cargo.space_id));
                     log::error!("{}", error);
                     errors.push(error);
                 }
@@ -1403,25 +1628,6 @@ impl ModelCached {
                 errors.push(error);
             }
         }
-        while !task_results.is_empty() {
-            if let Some((space_id, mass, data)) = task_results.pop() {
-                let CompartmentCacheResult {
-                    level,
-                    volume_center,
-                    ..
-                } = match data {
-                    Ok(data) => data,
-                    Err(err) => {
-                        let error = error
-                            .pass_with(format!("task_results data in {space_id}"), err.to_string());
-                        log::error!("{}", error);
-                        errors.push(error);
-                        continue;
-                    }
-                };
-                values.push((space_id, level, Moment::from_pos(volume_center, mass)));
-            }
-        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "moment_liquid",
@@ -1430,7 +1636,247 @@ impl ModelCached {
                 }),
             ));
         }
-        let sum_moment: Moment = values.iter().map(|(_, _, m)| *m).sum();
+        let mut values = Vec::new();
+        while !task_results.is_empty() {
+            if let Some((_space_id, result)) = task_results.pop() {
+                //         if heel == 0. { println!("{} {} {};", _space_id, result.mass_shift.y(), result.trans_moment_of_inertia);  }
+                values.push(result);
+            }
+        }
+        Ok(values)
+    }
+    /// Считаем момент жидких грузов
+    fn moment_liquid_floating(
+        &self,
+        liquids: &Vec<LiquidData>,
+        heel: f64,
+        trim: f64,
+        epsilon: f64,
+    ) -> Result<Moment, Error> {
+        let error = Error::new(&self.dbg, "moment_liquid");
+        let values = self
+            .process_liquid(liquids, heel, trim, epsilon)
+            .map_err(|err| error.pass_with("process_liquid", err))?;
+        let (_, sum_moment): (f64, Moment) =
+            values
+                .iter()
+                .fold((0., Moment::zero()), |(mass_sum, moment_sum), v| {
+                    (
+                        mass_sum + v.mass,
+                        moment_sum + Moment::from_pos(v.mass_shift, v.mass),
+                    )
+                });
+        //   dbg!(sum_mass, sum_moment);
+        Ok(sum_moment)
+    }
+    /// Считаем момент жидких грузов для расчета ДСО
+    /// на основе фактического кренящего момента.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
+    /// объем меняется в зависимости от признаков и процента наполнения отсека
+    fn moment_liquid_dso_abs_moment(
+        &self,
+        liquids: &Vec<LiquidData>,
+        current_heel: f64,
+        current_trim: f64,
+        balanced_heel: f64,
+        balanced_trim: f64,
+        epsilon: f64,
+    ) -> Result<f64, Error> {
+        // if heel == 0.
+        //  {  println!("\n\nmoment_liquid_dso heel:{} trim:{}\n", heel, trim,);  }
+        let error = Error::new(&self.dbg, "moment_liquid_dso");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let task_results = Arc::new(Stack::new());
+        let mut errors = Vec::new();
+        let mut values = Vec::new();
+        let scheduler = self.thread_pool.scheduler();
+        for cargo in liquids {
+            match self.compartments.get(&cargo.space_id) {
+                Some(compartment) => {
+                    let task_results = task_results.clone();
+                    let epsilon = epsilon.clone();
+                    let error_ = error.clone();
+                    let space_id = cargo.space_id.clone();
+                    let density = cargo.density;
+                    let volume = cargo.volume;
+                    let use_max_moment = cargo.use_max_moment;
+                    let is_cargo_tank = cargo.is_cargo_tank;
+                    let compartment = compartment.clone();
+                    let handle = scheduler
+                        .spawn(move || {
+                            let res = compartment
+                                .read()
+                                .get_for_dso_abs_moment(
+                                    current_heel,
+                                    current_trim,
+                                    volume,
+                                    balanced_heel,
+                                    balanced_trim,
+                                    epsilon,
+                                    use_max_moment,
+                                    is_cargo_tank,
+                                )
+                                .map_err(|err| error_.pass_with("compartment.get", err))?;
+                            task_results.push((space_id, density, res));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => {
+                            let error =
+                                error.pass_with(format!("handle for {}", cargo.space_id), err);
+                            log::error!("{}", error);
+                            println!("{}", error);
+                            errors.push(error);
+                        }
+                    };
+                }
+                None => {
+                    let error = error.err(format!("no compartment: {}", cargo.space_id));
+                    log::error!("{}", error);
+                    println!("{}", error);
+                    errors.push(error);
+                }
+            }
+        }
+        for task in tasks {
+            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                println!("{}", error);
+                errors.push(error);
+            }
+        }
+        while !task_results.is_empty() {
+            if let Some((_space_id, density, moment)) = task_results.pop() {
+                //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
+                // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+                /*          println!(
+                    "moment_liquid_dso heel:{current_heel} space_id:{} {};",
+                    _space_id,
+                    moment
+                );*/
+                values.push(moment * density);
+            }
+        }
+        if !errors.is_empty() {
+            let error = error.pass_with(
+                "moment_liquid",
+                errors.iter().fold("errors:".to_string(), |acc, err| {
+                    acc + &format!("\n{}", err)
+                }),
+            );
+            log::error!("{}", error);
+            println!("{}", error);
+            return Err(error);
+        }
+        let sum_moment = values.into_iter().sum();
+        //     println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
+        Ok(sum_moment)
+    }
+    /// Считаем момент жидких грузов для расчета ДСО
+    /// на основе поперечного момента инерции площади ватерлинии.
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter02_bigAngles/deltaL.md]
+    /// объем меняется в зависимости от признаков и процента наполнения отсека
+    fn moment_liquid_dso_surface_moment(
+        &self,
+        liquids: &Vec<LiquidData>,
+        epsilon: f64,
+    ) -> Result<f64, Error> {
+        // if heel == 0.
+        //  {  println!("\n\nmoment_liquid_dso heel:{} trim:{}\n", heel, trim,);  }
+        let error = Error::new(&self.dbg, "moment_liquid_dso");
+        let mut tasks: Vec<JoinHandle<_>> = vec![];
+        let task_results = Arc::new(Stack::new());
+        let mut errors = Vec::new();
+        let mut values = Vec::new();
+        let scheduler = self.thread_pool.scheduler();
+        for cargo in liquids {
+            match self.compartments.get(&cargo.space_id) {
+                Some(compartment) => {
+                    let task_results = task_results.clone();
+                    let epsilon = epsilon.clone();
+                    let error_ = error.clone();
+                    let space_id = cargo.space_id.clone();
+                    let density = cargo.density;
+                    let volume = cargo.volume;
+                    let use_max_moment = cargo.use_max_moment;
+                    let is_cargo_tank = cargo.is_cargo_tank;
+                    let compartment = compartment.clone();
+                    let handle = scheduler
+                        .spawn(move || {
+                            let res = compartment
+                                .read()
+                                .get_for_dso_surface_moment(
+                                    volume,
+                                    epsilon,
+                                    use_max_moment,
+                                    is_cargo_tank,
+                                )
+                                .map_err(|err| error_.pass_with("compartment.get", err))?;
+                            task_results.push((space_id, density, res));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => {
+                            let error =
+                                error.pass_with(format!("handle for {}", cargo.space_id), err);
+                            log::error!("{}", error);
+                            println!("{}", error);
+                            errors.push(error);
+                        }
+                    };
+                }
+                None => {
+                    let error = error.err(format!("no compartment: {}", cargo.space_id));
+                    log::error!("{}", error);
+                    println!("{}", error);
+                    errors.push(error);
+                }
+            }
+        }
+        for task in tasks {
+            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
+            if let Err(err) = task.join() {
+                let error = error.pass_with("task join", err.to_string());
+                log::error!("{}", error);
+                println!("{}", error);
+                errors.push(error);
+            }
+        }
+        while !task_results.is_empty() {
+            if let Some((_space_id, density, moment)) = task_results.pop() {
+                //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
+                // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+                /*          println!(
+                    "moment_liquid_dso heel:{current_heel} space_id:{} {};",
+                    _space_id,
+                    moment
+                );*/
+                values.push(moment * density);
+            }
+        }
+        if !errors.is_empty() {
+            let error = error.pass_with(
+                "moment_liquid",
+                errors.iter().fold("errors:".to_string(), |acc, err| {
+                    acc + &format!("\n{}", err)
+                }),
+            );
+            log::error!("{}", error);
+            println!("{}", error);
+            return Err(error);
+        }
+        let sum_moment = values.into_iter().sum();
+        //     println!("moment_liquid_dso sum_moment {heel} {sum_moment}");
         Ok(sum_moment)
     }
     /// Считаем поврежденные отсеки
@@ -1447,7 +1893,7 @@ impl ModelCached {
         let task_results = Arc::new(Stack::new());
         let mut errors = Vec::new();
         let mut values = Vec::new();
-        let scheduler = self.tp.scheduler();
+        let scheduler = self.thread_pool.scheduler();
         for damaged_compartment in damaged_compartments {
             match self.damaged_compartments.get(damaged_compartment) {
                 Some(compartment) => {

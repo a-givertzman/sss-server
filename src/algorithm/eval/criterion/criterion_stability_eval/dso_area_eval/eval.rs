@@ -1,4 +1,4 @@
-use crate::DSOAreaCtx;
+use crate::algorithm::eval::DSOAreaCtx;
 use crate::{
     algorithm::{
         entities::data::stability::ship_type::ShipType, eval::{CriterionData, CriterionID, LeverDiagramCtx, StabilityBalanceCtx, zg_eval::Zg}
