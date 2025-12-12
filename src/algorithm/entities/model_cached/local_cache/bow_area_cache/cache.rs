@@ -21,7 +21,7 @@ use std::{
 /// values:[volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
 pub struct BowAreaCache {
     dbg: Dbg,
-    data: Arc<Vec<(f64, Vec<(f64, f64)>)>>,
+    data: Vec<(f64, Vec<(f64, f64)>)>,
     cache: Option<Cache<f64>>,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
@@ -35,45 +35,35 @@ impl BowAreaCache {
     /// TODO - panic
     pub fn new(
         parent: &Dbg,
-        draught_min: f64,
-        data: Arc<Vec<(f64, Vec<(f64, f64)>)>>,
-        cache_dir: impl AsRef<Path>,
+        data: Vec<(f64, Vec<(f64, f64)>)>,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, "BowAreaCache");
-        let path = cache_dir.as_ref().join("bow_area_cache");
         Self {
             dbg,
-            draught_min,
             data,
-            cache_path: path,
             cache: None,
             thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
+
+    pub fn init(&mut self) {
+
+    }
     /// Получение данных кэша для текущего положения
     /// Итерационно подбирает значение водоизмещения по осадке
     /// Паникует если draught выходит за диапазон осадок
-    pub fn get(&self, draught: f64) -> Result<BowAreaCacheResult, Error> {
+    pub fn get(&self, trim: f64, draught: f64) -> Result<f64, Error> {
         assert!(draught > 0.);
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let query = [draught];
+        let query = [&trim, &draught];
         let result = cache.get(&query);
         assert!(result.len() == 1);
-        let query = [self.draught_min];
-        let result_min = cache.get(&query);
-        assert!(result_min.len() == 3);
-        Ok(BowAreaCacheResult {
-            area_windage: result[0],
-            area_windage_z: result[1],
-            delta_area_windage: result_min[0] - result[0],
-            area_volume_z: result[2],
-        })
+        Ok(result[0])
     }
-
-        /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
+    /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
     /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
     /// Возвращает повернутое и смещенное разбиение [dx, area]
     pub fn bow_area(&self, lbp: f64, draught: f64, trim: f64) -> Result<f64, Error> {

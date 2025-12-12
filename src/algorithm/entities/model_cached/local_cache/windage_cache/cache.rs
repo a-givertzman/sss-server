@@ -23,7 +23,7 @@ pub struct AreaCache {
     dbg: Dbg,
     draught_min: f64,
     cache_path: PathBuf,
-    data: Arc<Vec<(f64, Vec<(f64, f64)>)>>,
+    data: Vec<(f64, Vec<(f64, f64)>)>,
     cache: Option<Cache<f64>>,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
@@ -38,7 +38,7 @@ impl AreaCache {
     pub fn new(
         parent: &Dbg,
         draught_min: f64,
-        data: Arc<Vec<(f64, Vec<(f64, f64)>)>>,
+        data: Vec<(f64, Vec<(f64, f64)>)>,
         cache_dir: impl AsRef<Path>,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
@@ -82,7 +82,7 @@ impl LocalCache for AreaCache {
     fn calculate(&mut self) -> Vec<Error> {
         //   dbg!("AreaCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
-        let data = Arc::clone(&self.data);
+        let data = &self.data;
         let mut errors = Vec::new();
         let mut pass = |message: &str, err: Error| {
             let error = error.pass_with(message, err);

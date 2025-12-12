@@ -78,11 +78,10 @@ impl WindageArea {
             voxels,
         } = file_io::read(&self.dbg, &cache_path)
             .map_err(|err| error.pass_with("file_io::read", err))?;
-        let area_data = Arc::new(voxels);
         let mut windage_area = AreaCache::new(
             &self.dbg,
             self.draught_min,
-            Arc::clone(&area_data),
+            voxels.clone(),
             self.cache_dir.clone(),
             Arc::clone(&self.thread_pool),
         );
@@ -96,17 +95,14 @@ impl WindageArea {
             ));
         }
         self.windage_area = Some(windage_area);
-        let mut bow_area = BowAreaCache::new(
-            &self.dbg,
-            self.draught_min,
-            Arc::clone(&area_data),
-            self.cache_dir.clone(),
-            Arc::clone(&self.thread_pool),
-        );
+        let bow_area_data = get_bow_area_data(&voxels).map_err(|err| error.pass(err))?;
+        let mut bow_area =
+            BowAreaCache::new(&self.dbg, bow_area_data, Arc::clone(&self.thread_pool));
+        bow_area.init();
         self.bow_area = Some(bow_area);
         let mut area_sum = 0.;
         let (mut moment_x, mut moment_z) = (0., 0.);
-        let area_data: Vec<_> = area_data
+        let area_data: Vec<_> = voxels
             .iter()
             .map(|(x, v)| {
                 let a = v.iter().map(|(_, a)| a).sum();
@@ -161,9 +157,59 @@ impl WindageArea {
         // набор значений площади в разбиении по площади части модели над водой
         self.values.clone().ok_or(error.pass("no values"))
     }
-
-    ///
-    pub fn bow_area(&self, trim: f64) -> Result<f64, Error> {
-        TODO
+    /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
+    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
+    pub fn bow_area(&self, trim: f64, draught: f64) -> Result<f64, Error> {
+        let error = Error::new(&self.dbg, "bounded_windage_area");
+        // набор значений площади в разбиении по площади части модели над водой
+        self.bow_area
+            .as_ref()
+            .ok_or(error.pass("no bow_area"))?
+            .get(trim, draught)
+            .map_err(|err| error.pass(err))
     }
+}
+
+/// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
+/// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
+/// Возвращает набор вокселей для кэша обрезанных по длине по длине в корме 0.15LBP от носового перпендикуляра
+/// b в нос носовым перпендикуляром
+fn get_bow_area_data(
+    parent: &Dbg,
+    voxels: Vec<(f64, Vec<(f64, f64)>)>,
+    lbp: f64,
+) -> Result<Vec<(f64, Vec<(f64, f64)>)>, Error> {
+    let error = Error::new(parent, "bow_area");
+    let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
+    let center = self.center.ok_or(error.err("no center"))?;
+    let sin_trim = trim.to_radians().sin();
+    let len_start = lbp * 0.85;
+    let len_end = lbp;
+    let len_start_l = len_start - voxel_scale / 2.;
+    let len_start_h = len_start + voxel_scale / 2.;
+    let len_end_l = len_end - voxel_scale / 2.;
+    let len_end_h = len_end + voxel_scale / 2.;
+    let result = voxels
+        .iter()
+        .filter(|(x, _)| *x > len_start_l && *x < len_end_h)
+        .map(|(x, v)| {
+            let x = *x;
+            let draught = draught + (x - center.x) * sin_trim;
+            let draught_l = draught - voxel_scale / 2.;
+            let draught_h = draught + voxel_scale / 2.;
+            let area = v
+                .iter()
+                .filter(|&&z| z > draught_l)
+                .map(|&z| (z - draught_h).min(voxel_scale) * voxel_scale)
+                .sum::<f64>();
+            area * if x < len_start_h {
+                (len_start_h - x) / voxel_scale
+            } else if x > len_end_l {
+                (x - len_end_l) / voxel_scale
+            } else {
+                1.
+            }
+        })
+        .sum();
+    Ok(result)
 }

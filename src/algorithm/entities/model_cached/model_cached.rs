@@ -4,9 +4,9 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaShape, CompartmentBoundCache, CompartmentCache,
-                DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
-                DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
+                AreaShape, CompartmentBoundCache, CompartmentCache, DamagedCompartmentCache,
+                DisplacementBoundCache, DisplacementCache, DisplacementCacheResult,
+                DisplacementShape, Draught, Shape, WindageArea,
             },
             ship_model::{
                 stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
@@ -497,7 +497,9 @@ impl ModelCached {
             .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
         self.displacement_bounded
             .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-        self.windage_area.rebuild(bounds).map_err(|err| error.pass_with("windage_area.rebuild", err))?;
+        self.windage_area
+            .rebuild(bounds)
+            .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{compartment_id}");
@@ -550,7 +552,7 @@ impl ModelCached {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
     }
-     /// Расчет равновесного положения для прочности
+    /// Расчет равновесного положения для прочности
     pub fn balance_strength(
         &self,
         query: BalanceStrengthQuery,
@@ -922,7 +924,10 @@ impl ModelCached {
                 deck_angle_point,
             )
             .map_err(|err| error.pass(err))?;
-
+        let bow_area = self
+            .windage_area
+            .bow_area(trim_degree, draught_mid)
+            .map_err(|err| error.pass(err))?;
         /*       let (mass_liquid, moment_liquid) =
                     liquid
                         .iter()
@@ -960,9 +965,6 @@ impl ModelCached {
                     center_mass_sum
                 );
         */
-
-        let bow_area = self.windage_area.bow_area(trim_degree).map_err(|err| error.pass(err))?;  
-         
         Ok(BalanceStabilityResult {
             roll: heel,
             trim_degree,
@@ -1265,9 +1267,10 @@ impl ModelCached {
         let max_heel = angles.last().ok_or(error.err("max_heel"))?;
         let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
         let moment_sum = query.moment_const + moment_bulk; // постоянный момент
-        let moment_liquid_surface = self // момент инерции площади ватерлинии жидкости
-            .moment_liquid_dso_surface_moment(&query.liquid, epsilon)
-            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+        let moment_liquid_surface =
+            self // момент инерции площади ватерлинии жидкости
+                .moment_liquid_dso_surface_moment(&query.liquid, epsilon)
+                .map_err(|err| error.pass_with("self.moment_liquid", err))?;
         // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
         //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
         for &heel in angles {
@@ -1313,7 +1316,7 @@ impl ModelCached {
                             let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
                             let l = lv - ld - delta_l;
                             //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
-                       //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
+                            //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
                             l
                         };
                         dso.push((heel, l));
