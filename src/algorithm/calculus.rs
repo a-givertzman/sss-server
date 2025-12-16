@@ -122,7 +122,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                                                     &dbg,
                                                                                                     IcingEval::new(
                                                                                                         &dbg,
-                                                                                                        StrengthAreaEval::new(
+                                                                                                        StaticAreaEval::new(
                                                                                                             &dbg,
                                                                                                             self.ship_model.clone(),
                                                                                                             IcingTimberEval::new(

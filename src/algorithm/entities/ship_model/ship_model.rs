@@ -7,6 +7,7 @@ use crate::algorithm::entities::data::stability::horizontal_area::HStabArea;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabAreaArray;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrArea;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrAreaArray;
+use crate::algorithm::entities::model_cached::AreaResult;
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
@@ -81,36 +82,46 @@ impl ShipModel {
     /// TODO - Doc
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
-        self.horisontal_area_str = Some(horisontal_area_str(
-            self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
-        )
-        .map_err(|err| error.pass(err))?);
-        self.horisontal_area_stab = Some(horisontal_area_stab(
-            self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
-        )
-        .map_err(|err| error.pass(err))?);
-        self.grain_moment = Some(grain_moment(
-            self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
-        )
-        .map_err(|err| error.pass(err))?);
-        self.opening = Some(opening(
-            self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
-        )
-        .map_err(|err| error.pass(err))?);
-        self.deck_angle_point = Some(deck_angle_point(
-            self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
-        )
-        .map_err(|err| error.pass(err))?);
+        self.horisontal_area_str = Some(
+            horisontal_area_str(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?,
+        );
+        self.horisontal_area_stab = Some(
+            horisontal_area_stab(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?,
+        );
+        self.grain_moment = Some(
+            grain_moment(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?,
+        );
+        self.opening = Some(
+            opening(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?,
+        );
+        self.deck_angle_point = Some(
+            deck_angle_point(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?,
+        );
         // TODO переделать, пока не понятно в какой момент должны читаться объемы
         // возможно их надо пересчитывать каждый расчет
         let max_compartment_volume = max_compartment_volume(
@@ -156,7 +167,7 @@ impl ShipModel {
     /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
     pub fn strength_area(&self) -> Result<StrengthArea, Error> {
         let error = Error::new(&self.dbg, "strength_area");
-        let bounds = &self.bounds; 
+        let bounds = &self.bounds;
         let windage_area = self
             .model_cached
             .bounded_windage_area()
@@ -209,11 +220,19 @@ impl ShipModel {
     }
     ///
     /// Площади и моменты поверхности корпуса для расчета остойчивости
-    pub fn stability_area(&self, draught: f64) -> Result<StabilityArea, Error> {
+    pub fn stability_area(&self, draught_mid: f64) -> Result<StabilityArea, Error> {
         let error = Error::new(&self.dbg, "stability_area");
-        let (area_windage, area_windage_z, delta_area_windage, area_volume_z) = self
+        let AreaResult {
+            av_cs_dmin,
+            mv_x_cs_dmin,
+            mv_z_cs_dmin,
+            delta_av,
+            delta_mv_x,
+            delta_mv_z,
+            area_volume_z,
+        } = self
             .model_cached
-            .windage_area(draught)
+            .windage_area(draught_mid)
             .map_err(|err| error.pass_with("model_cached.windage_area", err))?;
         let area_horisontal = self
             .horisontal_area_stab
@@ -222,7 +241,7 @@ impl ShipModel {
         let (area_horisontal, area_horisontal_z) = area_horisontal
             .into_iter()
             .fold((0., 0.), |(sum_a, sum_z), v| {
-                (sum_a + v.value, sum_z + v.value*v.shift_z)
+                (sum_a + v.value, sum_z + v.value * v.shift_z)
             });
         /*     println!("\nhorisontal_area_values\n");
                 horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
@@ -230,12 +249,15 @@ impl ShipModel {
                 windage_area.iter().for_each(|v| print!(" {:.3}", v));
         */
         Ok(StabilityArea {
-            area_windage,
-            area_windage_z,
-            delta_area_windage,
+            av_cs_dmin,
+            mv_x_cs_dmin,
+            mv_z_cs_dmin,
+            delta_av,
+            delta_mv_x,
+            delta_mv_z,
+            area_volume_z,
             area_horisontal,
             area_horisontal_z,
-            area_volume_z,
         })
     }
     ///
@@ -246,7 +268,10 @@ impl ShipModel {
     ) -> Result<BalanceStabilityResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
         let opening = self.opening.as_ref().ok_or(error.err("opening"))?;
-        let deck_angle_point = self.deck_angle_point.as_ref().ok_or(error.err("deck_angle_point"))?;
+        let deck_angle_point = self
+            .deck_angle_point
+            .as_ref()
+            .ok_or(error.err("deck_angle_point"))?;
         let mut result = self
             .model_cached
             .balance_stability(query, opening, deck_angle_point, 0.000001)
@@ -429,7 +454,7 @@ fn max_compartment_volume(
     let data = VolumeDataArray::parse(
         &api_client
             .fetch(&format!(
-            "SELECT
+                "SELECT
                 s.space_id as space_id, \
                 c.volume_max as volume_max
             FROM

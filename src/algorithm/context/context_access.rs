@@ -70,15 +70,15 @@ impl ContextReadRef<Option<TestingCtx>> for Context {
     }
 }
 //
-impl ContextWrite<StrengthAreaCtx> for Context {
-    fn write(mut self, value: StrengthAreaCtx) -> Result<Self, Error> {
-        self.strength_area = Some(value);
+impl ContextWrite<StaticAreaCtx> for Context {
+    fn write(mut self, value: StaticAreaCtx) -> Result<Self, Error> {
+        self.static_area = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<StrengthAreaCtx> for Context {
-    fn read(&self) -> StrengthAreaCtx {
-        self.strength_area.clone().unwrap()
+impl ContextRead<StaticAreaCtx> for Context {
+    fn read(&self) -> StaticAreaCtx {
+        self.static_area.clone().unwrap()
     }
 }
 //
@@ -214,15 +214,15 @@ impl ContextRead<BendingMomentCtx> for Context {
     }
 }
 //
-impl ContextWrite<StabilityAreaCtx> for Context {
-    fn write(mut self, value: StabilityAreaCtx) -> Result<Self, Error> {
-        self.stability_area = Some(value);
+impl ContextWrite<UnitAreaCtx> for Context {
+    fn write(mut self, value: UnitAreaCtx) -> Result<Self, Error> {
+        self.unit_area = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<StabilityAreaCtx> for Context {
-    fn read(&self) -> StabilityAreaCtx {
-        self.stability_area.clone().unwrap()
+impl ContextRead<UnitAreaCtx> for Context {
+    fn read(&self) -> UnitAreaCtx {
+        self.unit_area.clone().unwrap()
     }
 }
 //

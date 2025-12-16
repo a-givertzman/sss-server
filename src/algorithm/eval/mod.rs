@@ -1,5 +1,5 @@
 //! Entities implemented the Eval trate
-mod strength_area_eval;
+mod static_area_eval;
 mod icing_stab_eval;
 mod icing_eval;
 mod wetting_eval;
@@ -11,7 +11,7 @@ pub mod strength_balance_eval;
 mod total_force_eval;
 mod shear_force_eval;
 mod bending_moment_eval;
-mod stability_area_eval;
+mod unit_area_eval;
 mod metacentric_height_eval;
 mod lever_diagram_eval;
 mod wind_eval;
@@ -25,8 +25,8 @@ mod zg_eval;
 pub mod parameters;
 
 
-pub use strength_area_eval::eval::StrengthAreaEval;
-pub use strength_area_eval::ctx::StrengthAreaCtx; 
+pub use static_area_eval::eval::StaticAreaEval;
+pub use static_area_eval::ctx::StaticAreaCtx; 
 
 pub use icing_stab_eval::eval::IcingStabEval;
 pub use icing_stab_eval::ctx::IcingStabCtx;
@@ -61,8 +61,8 @@ pub use shear_force_eval::ctx::ShearForceCtx;
 pub use bending_moment_eval::eval::BendingMomentEval;
 pub use bending_moment_eval::ctx::BendingMomentCtx;
 
-pub use stability_area_eval::eval::StabilityAreaEval;
-pub use stability_area_eval::ctx::StabilityAreaCtx;
+pub use unit_area_eval::eval::UnitAreaEval;
+pub use unit_area_eval::ctx::UnitAreaCtx;
 
 pub use metacentric_height_eval::eval::MetacentricHeightEval;
 pub use metacentric_height_eval::ctx::MetacentricHeightCtx;

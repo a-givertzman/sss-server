@@ -47,14 +47,14 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let bulk_data = initial
+             /*   let bulk_data = initial
                     .bulk
                     .clone()
                     .ok_or(error.err("Read bulk error: no data!"))?;
                 let liquid_data = initial
                     .liquid
                     .clone()
-                    .ok_or(error.err("Read liquid error: no data!"))?;
+                    .ok_or(error.err("Read liquid error: no data!"))?;*/
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -72,12 +72,12 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 let moment_const = Moment::from_pos(static_mass.shift_const, static_mass.mass_const)
                     + Moment::from_pos(static_mass.shift_unit, static_mass.mass_unit)
                     + Moment::from_pos(static_mass.shift_gaseous, static_mass.mass_gaseous)
-                    + Moment::new(icing.mass * icing.mass_shift_x, 0., 0.)
+                    + Moment::from_pos(icing.mass_shift, icing.mass)
                     + Moment::from_pos(wetting.mass_shift, wetting.mass);
                 //  dbg!(loads.shift_const, loads.shift_unit, loads.shift_gaseous, icing.mass_shift_x, wetting.mass_shift);
-                let liquid: f64 = static_mass.liquid.iter().map(|v| v.mass).sum();
-                let bulk: f64 = static_mass.bulk.iter().map(|v| v.mass).sum();
-                let sum = liquid + bulk + static_mass.mass_const + static_mass.mass_unit + static_mass.mass_gaseous + icing.mass + wetting.mass;
+             //   let liquid: f64 = static_mass.liquid.iter().map(|v| v.mass).sum();
+             //   let bulk: f64 = static_mass.bulk.iter().map(|v| v.mass).sum();
+           //     let sum = liquid + bulk + static_mass.mass_const + static_mass.mass_unit + static_mass.mass_gaseous + icing.mass + wetting.mass;
                 //  dbg!(&static_mass); 
           //      dbg!(sum, liquid, bulk, static_mass.mass_const, static_mass.mass_unit, static_mass.mass_gaseous, icing.mass, wetting.mass);
                 // Расчет баланса для остойчивости в модели

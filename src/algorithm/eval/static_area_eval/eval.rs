@@ -1,30 +1,37 @@
-use crate::algorithm::eval::StrengthAreaCtx;
+use crate::algorithm::entities::Moment;
+use crate::algorithm::eval::StaticAreaCtx;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::{Bound, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel},
+        entities::{
+            Bound, Position, data::loads::UnitCargoType, ship_model::ship_model::ShipModel,
+        },
         eval::IcingTimberCtx,
-    }, 
-    kernel::{Eval, types::{Arc, RwLock, eval_result::EvalResult}}, prelude::{ContextWrite, InitialCtx},
+    },
+    kernel::{
+        Eval,
+        types::{Arc, RwLock, eval_result::EvalResult},
+    },
+    prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Площади боковой и горизонтальной поверхностей для расчета прочности
-pub struct StrengthAreaEval {
+pub struct StaticAreaEval {
     dbg: Dbg,
     model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
-impl StrengthAreaEval {
+impl StaticAreaEval {
     ///
     pub fn new(
         parent: impl Into<String>,
         model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
-        let dbg = Dbg::new(parent, "StrengthAreaEval");
+        let dbg = Dbg::new(parent, "StaticAreaEval");
         Self {
             dbg,
             model,
@@ -34,7 +41,7 @@ impl StrengthAreaEval {
     //
     //
 }
-impl Eval<(), EvalResult> for StrengthAreaEval {
+impl Eval<(), EvalResult> for StaticAreaEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
@@ -55,30 +62,26 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     Some(data) => data,
                     None => return Err(error.err("Read bounds error: no data!")),
                 };
-                // 
+                //
                 // Тут все вроде правильно раскрыл,
                 // Но так много действий и так сложно получается,
                 // может получится хотя бы часть из них вынести в метод,
                 // вроде бы действия однообразные все время должны быть
                 let (const_area_v, const_area_h) = match self.model.read().strength_area() {
-                         Ok(areas) => (areas.v, areas.h),
+                    Ok(areas) => (areas.v, areas.h),
                     Err(err) => return Err(error.pass_with("model.bound_areas", err)),
                 };
                 let icing_timber_bound: IcingTimberCtx = ctx.read();
                 let icing_timber_bound_x = match icing_timber_bound.bound_x() {
                     Ok(data) => data,
                     Err(err) => {
-                        return Err(
-                            error.pass_with("Read icing_timber_bound_x error", err),
-                        );
+                        return Err(error.pass_with("Read icing_timber_bound_x error", err));
                     }
                 };
                 let icing_timber_bound_y = match icing_timber_bound.bound_y() {
                     Ok(data) => data,
                     Err(err) => {
-                        return Err(
-                            error.pass_with("Read icing_timber_bound_y error", err),
-                        );
+                        return Err(error.pass_with("Read icing_timber_bound_y error", err));
                     }
                 };
                 // Ищем площадь парусности палубных грузов.
@@ -113,10 +116,8 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     let mut current_area = match const_area_v.get(i) {
                         Some(&data) => data,
                         None => {
-                            return Err(
-                                error
-                                    .err(format!("const_area_v.get error: no value for bound {i}")),
-                            );
+                            return Err(error
+                                .err(format!("const_area_v.get error: no value for bound {i}")));
                         }
                     };
                     // Пересечение шпации и диапазона грузов
@@ -155,37 +156,41 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                     Position::zero()
                 };
                 // Горизонтальная площадь обледенения палубного груза - леса
-                let mut area_timber_h_values = Vec::new();
-               // Полная горизонтальная площадь палубного груза - леса
-               let mut full_area_timber_h_values = Vec::new();
-               // Момент площади обледенения палубного груза - леса
-                let mut area_timber_moment = 0.;
+                let mut area_timber_icing_h_values = Vec::new();
+                // Полная горизонтальная площадь палубного груза - леса
+                let mut full_area_timber_icing_h_values = Vec::new();
+                // Момент площади обледенения палубного груза - леса
+                let mut icing_timber_moment = Moment::zero();
+                // Изменение момента горизонтальной площади обледенения палубного груза - леса
+                // относительно палубы
+                let mut icing_delta_timber_moment = Moment::zero();            
                 for bound_x in bounds.iter() {
-                    let mut current_area = 0.;
-                    let mut full_current_area = 0.;
+                    let mut icing_current_area = 0.;
+                    let mut full_icing_current_area = 0.;
                     for u in &timber_unit {
-                        full_current_area += u.icing_area.unwrap_or(0.);
-                        current_area += match u.icing_area(
+                        full_icing_current_area += u.icing_area.unwrap_or(0.);
+                        match u.icing_area(
                             &bound_x
                                 .intersect(&icing_timber_bound_x)
                                 .unwrap_or(Bound::None),
                             &icing_timber_bound_y,
                         ) {
-                            Ok(area) => area.0,
+                            Ok((area, moment, delta_moment)) => {
+                                icing_current_area += area;
+                                icing_timber_moment += moment;
+                                icing_delta_timber_moment += delta_moment;
+                            }
                             Err(err) => {
-                                return Err(
-                                    error.pass_with("Read unit horizontal_area error", err),
-                                );
+                                return Err(error.pass_with("Read unit horizontal_area error", err));
                             }
                         };
                     }
-                    area_timber_moment += current_area * bound_x.center().unwrap_or(0.);
-                    area_timber_h_values.push(current_area);
-                    full_area_timber_h_values.push(full_current_area);
+                    area_timber_icing_h_values.push(icing_current_area);
+                    full_area_timber_icing_h_values.push(full_icing_current_area);
                 }
-                let area_timber_h = area_timber_h_values.iter().sum();
-                let area_timber_h_shift = if area_timber_h > 0. {
-                    Position::new(area_timber_moment / area_timber_h, 0., 0.)
+                let area_timber_icing_h = area_timber_icing_h_values.iter().sum();
+                let area_timber_icing_h_shift = if area_timber_icing_h > 0. {
+                    Position::new(icing_delta_timber_moment.z() / area_timber_icing_h, 0., 0.)
                 } else {
                     Position::zero()
                 };
@@ -195,14 +200,15 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 for (i, bound_x) in bounds.iter().enumerate() {
                     // Площадь горизонтальной поверхности корпуса, попадающая в текущую шпацию
                     // вычитаем площадь палубного груза - леса
-                    let current_area = match (const_area_h.get(i), full_area_timber_h_values.get(i)) {
+                    let current_area = match (const_area_h.get(i), full_area_timber_icing_h_values.get(i))
+                    {
                         (Some(&current_const_area), Some(&current_timber_area)) => {
                             (current_const_area - current_timber_area).max(0.)
                         }
                         (Some(&current_const_area), None) => current_const_area,
                         _ => {
                             return Err(
-                                error.err(format!("area_h.get error: no value for bound {i}")),
+                                error.err(format!("area_h.get error: no value for bound {i}"))
                             );
                         }
                     };
@@ -215,16 +221,18 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
                 } else {
                     Position::zero()
                 };
-                let result = StrengthAreaCtx {
+                let result = StaticAreaCtx {
                     area_v,
                     area_v_shift,
                     area_v_values,
                     area_h,
                     area_h_shift,
                     area_h_values,
-                    area_timber_h,
-                    area_timber_h_shift,
-                    area_timber_h_values,
+                    area_timber_icing_h,
+                    area_timber_icing_h_shift,
+                    area_timber_icing_h_values,
+                    icing_timber_moment,
+                    icing_delta_timber_moment,
                 };
                 ctx.write(result)
             }
@@ -234,9 +242,9 @@ impl Eval<(), EvalResult> for StrengthAreaEval {
 }
 //
 //
-impl std::fmt::Debug for StrengthAreaEval {
+impl std::fmt::Debug for StaticAreaEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StrengthAreaEval")
+        f.debug_struct("StaticAreaEval")
             .field("dbg", &self.dbg)
             .finish()
     }

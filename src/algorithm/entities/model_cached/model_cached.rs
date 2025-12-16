@@ -4,9 +4,7 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaShape, CompartmentBoundCache, CompartmentCache, DamagedCompartmentCache,
-                DisplacementBoundCache, DisplacementCache, DisplacementCacheResult,
-                DisplacementShape, Draught, Shape, WindageArea,
+                AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache, DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache, DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea
             },
             ship_model::{
                 stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
@@ -392,7 +390,7 @@ impl ModelCached {
                 .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
         }*/
         self.windage_area
-            .init(&bounds)
+            .init()
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
         let bounds_qnt = bounds.len_qnt();
         let displacement_shape = self
@@ -498,7 +496,7 @@ impl ModelCached {
         self.displacement_bounded
             .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
         self.windage_area
-            .rebuild(bounds)
+            .rebuild(bounds, self.ship_length_lbp)
             .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
         let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
@@ -539,15 +537,7 @@ impl ModelCached {
         })
     }
     /// Расчет параметров поверхности
-    /// draught_min - минимальная осадка без груза
-    /// draught_current - текущая осадка
-    /// Возаращает (area_windage, area_windage_z, delta_area_windage, area_volume_z)
-    /// area_windage - Площадь парусности сплошных поверхностей для осадки d_min без палубного груза
-    /// area_windage_z - Положение центра парусности сплошных поверхностей по оси Z относительно опорной плоскости
-    /// delta_area_windage - Разница в площадях парусности для текущей осадки и осадки d_min без палубного груза
-    /// area_volume_z - Отстояние по вертикали центра площади проекции подводной части корпуса на диаметральную плоскость
-    /// в прямом положении судна (при нулевом крене) на спокойной воде для текущей осадки [м]
-    pub fn windage_area(&self, draught: f64) -> Result<(f64, f64, f64, f64), Error> {
+    pub fn windage_area(&self, draught: f64) -> Result<AreaResult, Error> {
         self.windage_area.windage_area(draught).map_err(|err| {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })

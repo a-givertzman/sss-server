@@ -1,13 +1,13 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{BowAreaCacheResult, local_cache::LocalCache, save},
+        model_cached::{local_cache::LocalCache, save},
     },
     kernel::types::Arc,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    sync::{RwLock, Stack},
+    sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
 use std::{
@@ -15,13 +15,15 @@ use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
 };
-///
-/// Pre-calculated cache for floating position algorithm.
-/// contains keys: [heel, trim, draught]
-/// values:[volume, x, y, z, area, x, y, z, waterline_x, waterline_y]
+/// TODO
+/// Pre-calculated cache for bow area cache
+/// contains keys: [draught]
+/// values:[area]
 pub struct BowAreaCache {
     dbg: Dbg,
-    data: Vec<(f64, Vec<(f64, f64)>)>,
+    cache_path: PathBuf,
+    voxels: Option<Vec<(f64, Vec<(f64, f64)>)>>,
+    voxel_scale: Option<f64>,
     cache: Option<Cache<f64>>,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
@@ -35,21 +37,22 @@ impl BowAreaCache {
     /// TODO - panic
     pub fn new(
         parent: &Dbg,
-        data: Vec<(f64, Vec<(f64, f64)>)>,
+        voxels: Option<Vec<(f64, Vec<(f64, f64)>)>>,
+        voxel_scale: Option<f64>,        
+        cache_dir: impl AsRef<Path>,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, "BowAreaCache");
+        let path = cache_dir.as_ref().join("bow_area_cache");
         Self {
             dbg,
-            data,
+            voxels,
+            voxel_scale,
+            cache_path: path,
             cache: None,
             thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
         }
-    }
-
-    pub fn init(&mut self) {
-
     }
     /// Получение данных кэша для текущего положения
     /// Итерационно подбирает значение водоизмещения по осадке
@@ -63,45 +66,6 @@ impl BowAreaCache {
         assert!(result.len() == 1);
         Ok(result[0])
     }
-    /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
-    /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
-    /// Возвращает повернутое и смещенное разбиение [dx, area]
-    pub fn bow_area(&self, lbp: f64, draught: f64, trim: f64) -> Result<f64, Error> {
-        let error = Error::new(&self.dbg, "bow_area");
-        let voxels = self.voxels.as_ref().ok_or(error.err("no voxels"))?;
-        let voxel_scale = self.voxel_scale.ok_or(error.err("no voxel_scale"))?;
-        let center = self.center.ok_or(error.err("no center"))?;
-        let sin_trim = trim.to_radians().sin();
-        let len_start = lbp * 0.85;
-        let len_end = lbp;
-        let len_start_l = len_start - voxel_scale / 2.;
-        let len_start_h = len_start + voxel_scale / 2.;
-        let len_end_l = len_end - voxel_scale / 2.;
-        let len_end_h = len_end + voxel_scale / 2.;
-        let result = voxels
-            .iter()
-            .filter(|(x, _)| *x > len_start_l && *x < len_end_h)
-            .map(|(x, v)| {
-                let x = *x;
-                let draught = draught + (x - center.x) * sin_trim;
-                let draught_l = draught - voxel_scale / 2.;
-                let draught_h = draught + voxel_scale / 2.;
-                let area = v
-                    .iter()
-                    .filter(|&&z| z > draught_l)
-                    .map(|&z| (z - draught_h).min(voxel_scale) * voxel_scale)
-                    .sum::<f64>();
-                area * if x < len_start_h {
-                    (len_start_h - x) / voxel_scale
-                } else if x > len_end_l {
-                    (x - len_end_l) / voxel_scale
-                } else {
-                    1.
-                }
-            })
-            .sum();
-        Ok(result)
-    }
 }
 //
 //
@@ -110,14 +74,29 @@ impl LocalCache for BowAreaCache {
     fn calculate(&mut self) -> Vec<Error> {
         //   dbg!("BowAreaCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
-        let data = Arc::clone(&self.data);
+        let voxels = match self.voxels.as_ref() {
+            Some(voxels) => voxels.clone(),
+            None => {
+                let error = error.pass("no voxels");
+                log::error!("{:?}", &error);
+                return vec![error];
+            }
+        };
+        let voxel_scale = match self.voxel_scale {
+            Some(voxel_scale) => voxel_scale,
+            None => {
+                let error = error.pass("no voxel_scale");
+                log::error!("{:?}", &error);
+                return vec![error];
+            }
+        };
         let mut errors = Vec::new();
         let mut pass = |message: &str, err: Error| {
             let error = error.pass_with(message, err);
             log::error!("{:?}", &error);
             errors.push(error);
         };
-        let mut draught_array: Vec<f64> = data
+        let mut draught_array: Vec<f64> = voxels
             .iter()
             .map(|(_, v)| v.iter().map(|(z, _)| *z).collect::<Vec<f64>>())
             .flatten()
@@ -125,70 +104,48 @@ impl LocalCache for BowAreaCache {
         draught_array.push(0.);
         draught_array.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         draught_array.dedup();
-        let data: Vec<(f64, f64, f64)> = data
-            .iter()
-            .map(|(x, v)| v.iter().map(|(z, a)| (*x, *z, *a)).collect::<Vec<_>>())
-            .flatten()
-            .collect::<Vec<_>>();
-        let data = Arc::new(data);
+        let trim_array: Vec<_> = (-40..=40).map(|v| v as f64).collect();
+        let voxels = Arc::new(voxels);
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
         let results = Arc::new(Stack::new());
         let scheduler = self.thread_pool.scheduler();
         'draught: for draught in draught_array {
-            if self.exit.load(Ordering::SeqCst) {
-                break 'draught;
+            for &trim in &trim_array {
+                if self.exit.load(Ordering::SeqCst) {
+                    break 'draught;
+                }
+                //  let dbg_ = self.dbg.clone();
+                let results = results.clone();
+                let thread_name = format!("BowAreaCache calculate {draught} {trim}");
+                let voxels = Arc::clone(&voxels);
+                log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                println!("Starting thread {thread_name}");
+                let handle = scheduler
+                    .spawn_named(thread_name, move || {
+                        let area = bow_area(voxels, voxel_scale, draught, trim);
+                        results.push((draught, trim, area));
+                        Ok(())
+                    })
+                    .map_err(|err| {
+                        error.pass_with(format!("spawn task draught:{draught}"), err.to_string())
+                    });
+                match handle {
+                    Ok(task) => tasks.push_back(task),
+                    Err(err) => pass("task handle", err),
+                };
             }
-            //  let dbg_ = self.dbg.clone();
-            let results = results.clone();
-            let data: Arc<Vec<_>> = Arc::clone(&data);
-            let thread_name = format!("BowAreaCache calculate {draught}");
-            log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-            //  println!("Starting thread {thread_name}");
-            let handle = scheduler
-                .spawn_named(thread_name, move || {
-                    let (windage, volume): (Vec<_>, Vec<_>) =
-                        data.iter().partition(|(_, z, _)| *z > draught);
-                    let (area_windage, windage_moment) = windage
-                        .into_iter()
-                        .fold((0., 0.), |(sum_a, sum_m), (_, z, a)| {
-                            (sum_a + a, sum_m + z * a)
-                        });
-                    let area_windage_z = if area_windage > 0. {
-                        windage_moment / area_windage
-                    } else {
-                        0.
-                    };
-                    let (area_volume, volume_moment) = volume
-                        .into_iter()
-                        .fold((0., 0.), |(sum_a, sum_m), (_, z, a)| {
-                            (sum_a + a, sum_m + z * a)
-                        });
-                    let area_volume_z = if area_volume > 0. {
-                        volume_moment / area_volume
-                    } else {
-                        0.
-                    };
-                    results.push((draught, area_windage, area_windage_z, area_volume_z));
-                    Ok(())
-                })
-                .map_err(|err| {
-                    error.pass_with(format!("spawn task draught:{draught}"), err.to_string())
-                });
-            match handle {
-                Ok(task) => tasks.push_back(task),
-                Err(err) => pass("task handle", err),
-            };
         }
         for task in tasks {
             log::info!("{}.build | join thread {}", &self.dbg, task.name());
+            println!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
         }
         let mut vec_results = Vec::new();
         while !results.is_empty() {
-            if let Some((draught, area_windage, area_windage_z, area_volume_z)) = results.pop() {
-                vec_results.push(vec![draught, area_windage, area_windage_z, area_volume_z]);
+            if let Some((draught, trim, area)) = results.pop() {
+                vec_results.push(vec![draught, trim, area]);
             }
         }
         let cache = if let Some(cache) = self.cache.take() {
@@ -230,4 +187,31 @@ impl LocalCache for BowAreaCache {
     fn set_cache(&mut self, cache: Cache<f64>) {
         let _ = self.cache.insert(cache);
     }
+}
+
+/// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
+/// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
+/// Возвращает повернутое и смещенное разбиение [dx, area]
+fn bow_area(voxels: Arc::<Vec<(f64, Vec<(f64, f64)>)>>, voxel_scale: f64, draught: f64, trim: f64) -> f64 {
+    let sin_trim = trim.to_radians().sin();
+    voxels
+        .iter()
+        .map(|(x, v)| {
+            let x = *x;
+            let draught = draught + x * sin_trim;
+            let draught_l = draught - voxel_scale / 2.;
+            let draught_h = draught + voxel_scale / 2.;
+            v
+                .iter()
+                .filter(|&&(z, _)| z > draught_l)
+                .map(|&(z, a)|
+                    if z < draught_h {
+                        (draught_h - z)*a / voxel_scale
+                    } else {
+                        a
+                    }
+                )
+                .sum::<f64>()
+        })
+        .sum()
 }

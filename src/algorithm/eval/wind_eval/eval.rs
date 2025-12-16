@@ -37,19 +37,19 @@ impl Eval<Zg, EvalResult> for WindEval {
                 let windage: WindageCtx = ctx.read(); 
                 let gravity_g = 9.81;
                 let ship = initial.ship.as_ref().unwrap();
-                let p_v = ship.p_v;
+                let pv = ship.pv;
                 let m = ship.m;
-                let a_v = windage.a_v;
-                let z_v = windage.z_v;
+                let av = windage.av;
+                let zv = windage.zv;
                 let mass = ctx.read_params(ParameterID::Displacement);
-                let arm_wind_static = (p_v * a_v * z_v) / (1000. * gravity_g * mass);
+                let arm_wind_static = (pv * av * zv) / (1000. * gravity_g * mass);
                 let arm_wind_dynamic = (1. + m) * arm_wind_static;          
-                log::trace!("\t Wind arm_wind_static mass_sum:{mass} p_v:{p_v} a_v:{a_v} z_v:{z_v} arm_wind_static:{arm_wind_static} arm_wind_dynamic:{arm_wind_dynamic}");
+                log::trace!("\t Wind arm_wind_static mass_sum:{mass} pv:{pv} av:{av} zv:{zv} arm_wind_static:{arm_wind_static} arm_wind_dynamic:{arm_wind_dynamic}");
                 ctx.write_params(ParameterID::DynamicWindageHeelingLever, arm_wind_dynamic);
-                ctx.write_params(ParameterID::WindPressure, p_v);
-                ctx.write_params(ParameterID::WindageArea, a_v);
+                ctx.write_params(ParameterID::WindPressure, pv);
+                ctx.write_params(ParameterID::WindageArea, av);
                 let draught_mean = ctx.read_params(ParameterID::DraughtMean);
-                ctx.write_params(ParameterID::WindageAreaLever, z_v - draught_mean/2.);
+                ctx.write_params(ParameterID::WindageAreaLever, zv - draught_mean/2.);
                 ctx.write_params(ParameterID::StaticWindageHeelingLever, arm_wind_static);
                 let result = WindCtx {
                     arm_wind_static,

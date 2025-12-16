@@ -1,13 +1,13 @@
 use crate::{
     algorithm::entities::{
         cache::Cache,
-        model_cached::{AreaCacheResult, local_cache::LocalCache, save},
+        model_cached::{AreaResult, local_cache::LocalCache, save},
     },
     kernel::types::Arc,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    sync::{RwLock, Stack},
+    sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
 use std::{
@@ -23,7 +23,7 @@ pub struct AreaCache {
     dbg: Dbg,
     draught_min: f64,
     cache_path: PathBuf,
-    data: Vec<(f64, Vec<(f64, f64)>)>,
+    voxels: Option<Vec<(f64, Vec<(f64, f64)>)>>,
     cache: Option<Cache<f64>>,
     thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
@@ -38,7 +38,7 @@ impl AreaCache {
     pub fn new(
         parent: &Dbg,
         draught_min: f64,
-        data: Vec<(f64, Vec<(f64, f64)>)>,
+        voxels: Option<Vec<(f64, Vec<(f64, f64)>)>>,
         cache_dir: impl AsRef<Path>,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
@@ -47,8 +47,8 @@ impl AreaCache {
         Self {
             dbg,
             draught_min,
-            data,
             cache_path: path,
+            voxels,
             cache: None,
             thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
@@ -57,21 +57,26 @@ impl AreaCache {
     /// Получение данных кэша для текущего положения
     /// Итерационно подбирает значение водоизмещения по осадке
     /// Паникует если draught выходит за диапазон осадок
-    pub fn get(&self, draught: f64) -> Result<AreaCacheResult, Error> {
+    pub fn get(&self, draught: f64) -> Result<AreaResult, Error> {
         assert!(draught > 0.);
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let query = [&draught];
-        let result = cache.get(&query);
-        assert!(result.len() == 3);
+        let result = cache.get(&query); // moment_x, moment_z, area, area_volume_z
+        assert!(result.len() == 4);
         let query = [&self.draught_min];
         let result_min = cache.get(&query);
-        assert!(result_min.len() == 3);
-        Ok(AreaCacheResult {
-            area_windage: result[0],
-            area_windage_z: result[1],
-            delta_area_windage: result_min[0] - result[0],
-            area_volume_z: result[2],
+        let av_cs_dmin = result_min[2];
+        let mv_x_cs_dmin = result_min[0];
+        let mv_z_cs_dmin = result_min[1];
+        Ok(AreaResult {
+            av_cs_dmin,
+            mv_x_cs_dmin,
+            mv_z_cs_dmin,
+            delta_av: av_cs_dmin - result[2],
+            delta_mv_x: mv_x_cs_dmin - result[0],
+            delta_mv_z: mv_z_cs_dmin - result[1],
+            area_volume_z: result[3],
         })
     }
 }
@@ -82,14 +87,21 @@ impl LocalCache for AreaCache {
     fn calculate(&mut self) -> Vec<Error> {
         //   dbg!("AreaCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
-        let data = &self.data;
+        let voxels = match self.voxels.as_ref() {
+            Some(voxels) => voxels,
+            None => {
+                let error = error.pass("no voxels");
+                log::error!("{:?}", &error);
+                return vec![error];
+            }
+        };
         let mut errors = Vec::new();
         let mut pass = |message: &str, err: Error| {
             let error = error.pass_with(message, err);
             log::error!("{:?}", &error);
             errors.push(error);
         };
-        let mut draught_array: Vec<f64> = data
+        let mut draught_array: Vec<f64> = voxels
             .iter()
             .map(|(_, v)| v.iter().map(|(z, _)| *z).collect::<Vec<f64>>())
             .flatten()
@@ -97,7 +109,7 @@ impl LocalCache for AreaCache {
         draught_array.push(0.);
         draught_array.sort_by(|a, b| a.partial_cmp(&b).unwrap());
         draught_array.dedup();
-        let data: Vec<(f64, f64, f64)> = data
+        let data: Vec<(f64, f64, f64)> = voxels
             .iter()
             .map(|(x, v)| v.iter().map(|(z, a)| (*x, *z, *a)).collect::<Vec<_>>())
             .flatten()
@@ -120,16 +132,11 @@ impl LocalCache for AreaCache {
                 .spawn_named(thread_name, move || {
                     let (windage, volume): (Vec<_>, Vec<_>) =
                         data.iter().partition(|(_, z, _)| *z > draught);
-                    let (area_windage, windage_moment) = windage
+                    let (moment_x, moment_z, area) = windage
                         .into_iter()
-                        .fold((0., 0.), |(sum_a, sum_m), (_, z, a)| {
-                            (sum_a + a, sum_m + z * a)
+                        .fold((0., 0., 0.), |(sum_x, sum_z, sum_a), (x, z, a)| {
+                            (sum_x + x * a, sum_z + z * a, sum_a + a)
                         });
-                    let area_windage_z = if area_windage > 0. {
-                        windage_moment / area_windage
-                    } else {
-                        0.
-                    };
                     let (area_volume, volume_moment) = volume
                         .into_iter()
                         .fold((0., 0.), |(sum_a, sum_m), (_, z, a)| {
@@ -140,7 +147,7 @@ impl LocalCache for AreaCache {
                     } else {
                         0.
                     };
-                    results.push((draught, area_windage, area_windage_z, area_volume_z));
+                    results.push((draught, moment_x, moment_z, area, area_volume_z));
                     Ok(())
                 })
                 .map_err(|err| {
@@ -159,8 +166,8 @@ impl LocalCache for AreaCache {
         }
         let mut vec_results = Vec::new();
         while !results.is_empty() {
-            if let Some((draught, area_windage, area_windage_z, area_volume_z)) = results.pop() {
-                vec_results.push(vec![draught, area_windage, area_windage_z, area_volume_z]);
+            if let Some((draught, moment_x, moment_z, area, area_volume_z)) = results.pop() {
+                vec_results.push(vec![draught, moment_x, moment_z, area, area_volume_z]);
             }
         }
         let cache = if let Some(cache) = self.cache.take() {

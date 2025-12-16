@@ -15,7 +15,7 @@ pub struct Context {
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub(super) parameters: Parameters,
     /// Распределение площади для расчета прочности
-    pub(super) strength_area: Option<StrengthAreaCtx>,
+    pub(super) static_area: Option<StaticAreaCtx>,
     /// Коэффициенты для расчета обледенения судна
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
@@ -38,9 +38,8 @@ pub struct Context {
     pub(super) shear_force: Option<ShearForceCtx>,
     /// Изгибающий момент
     pub(super) bending_moment: Option<BendingMomentCtx>,  
-    /// Площади горизонтальных поверхностей и
-    /// площади парусности судна для расчета остойчивости
-    pub(super) stability_area: Option<StabilityAreaCtx>,
+    /// Площади парусности палубных грузов для расчета остойчивости
+    pub(super) unit_area: Option<UnitAreaCtx>,
     /// Исправленная метацентрическая высота
     pub(super) metacentric_height: Option<MetacentricHeightCtx>,
     /// Диаграмма плеч статической и динамической остойчивости

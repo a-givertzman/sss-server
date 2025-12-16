@@ -1,6 +1,6 @@
 use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::entities::Moment;
-use crate::algorithm::eval::{IcingCtx, IcingStabCtx, StrengthAreaCtx};
+use crate::algorithm::eval::{IcingCtx, IcingStabCtx, StaticAreaCtx};
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{InitialCtx, ContextWrite},
@@ -42,7 +42,7 @@ impl Eval<(), EvalResult> for IcingEval {
                         return Err(error.err("Read bounds error: no data!"))
                     }
                 };
-                let area_strength: StrengthAreaCtx = ctx.read();
+                let area_strength: StaticAreaCtx = ctx.read();
                 let icing_stab: IcingStabCtx = ctx.read();
                 let mut mass_values = Vec::new();
             //    let mut mass_moment_x_sum = 0.;
@@ -65,7 +65,7 @@ impl Eval<(), EvalResult> for IcingEval {
                             return Err(error.err(format!("area_strength.area_v.get error: no value for bound {i}")));
                         }
                     };
-                    let current_area_timber_h = match area_strength.area_timber_h_values.get(i) {
+                    let current_area_timber_h = match area_strength.area_timber_icing_h_values.get(i) {
                         Some(&data) => data,
                         None => {
                             return Err(error.err(format!("area_strength.area_timber_h.get error: no value for bound {i}")));
@@ -82,17 +82,17 @@ impl Eval<(), EvalResult> for IcingEval {
                 }
                 let mass_v = area_strength.area_v * (1. + icing_stab.coef_v_ds_area) * icing_stab.mass_v;
                 let mass_h = area_strength.area_h * icing_stab.mass_desc_h;
-                let mass_timber_h = area_strength.area_timber_h * (icing_stab.mass_timber_h - icing_stab.mass_desc_h);                  
+                let mass_timber_h = area_strength.area_timber_icing_h * (icing_stab.mass_timber_h - icing_stab.mass_desc_h);                  
                 let mass_sum = mass_v + mass_h + mass_timber_h;
                 assert!((mass_sum - mass_values.iter().sum::<f64>()).abs() < 0.0001);
                 let moment_v = Moment::from_pos(area_strength.area_v_shift, mass_v);
                 let moment_h = Moment::from_pos(area_strength.area_h_shift, mass_h);
-                let moment_timber_h = Moment::from_pos(area_strength.area_timber_h_shift, mass_timber_h);            
-                let moment_sum = moment_v + moment_h + moment_timber_h;
-                let mass_shift_x = if mass_sum > 0. { moment_sum.x()/mass_sum } else { 0. };
+                let moment_timber = Moment::from_pos(area_strength.area_timber_icing_h_shift, mass_timber_h);            
+                let moment_sum = moment_v + moment_h + moment_timber;
+                let mass_shift = moment_sum.to_pos(mass_sum);
                 let result = IcingCtx {
                     mass: mass_sum,
-                    mass_shift_x,
+                    mass_shift,
                     mass_values,
                 };
                 ctx.write(result)
