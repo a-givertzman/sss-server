@@ -2,7 +2,7 @@ use crate::{
     algorithm::entities::{
         Position,
         cache::Cache,
-        model_cached::{DisplacementCacheResult, DisplacementShape, local_cache::LocalCache, save},
+        model_cached::{DisplacementCacheResult, DisplacementShape, get_volume, local_cache::LocalCache, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -98,7 +98,7 @@ impl DisplacementCache {
         }
     }
     /// Получение данных кэша для текущего положения
-    /// Итерационно подбирает значение водоизмещения по осадке
+    /// Итерационно подбирает значение водоизмещения по осадке    
     pub fn get(
         &self,
         heel: f64,
@@ -107,54 +107,87 @@ impl DisplacementCache {
         epsilon: f64,
     ) -> Result<DisplacementCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
-//     println!("displacement_cache get begin, heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon}");
-        if heel < self.heel_min || heel > self.heel_max {
-            return Err(error.err(format!(
-                "heel < min_heel || heel > max_heel, heel:{heel} min_heel:{} max_heel:{}",
-                self.heel_min, self.heel_max
-            )));
-        }
-        if trim < self.trim_min || trim > self.trim_max {
-            return Err(error.err(format!(
-                "trim < min_trim || trim > max_trim, trim:{trim} min_trim:{} max_trim:{}",
-                self.trim_min, self.trim_max
-            )));
-        }        
-        let mut step = self.draught_max / 2.;
-        let mut draught = step + 0.5;
+        /*      println!(
+            "{} get start, heel:{heel} trim:{trim} volume:{volume}",
+            self.dbg
+        );*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        for i in 0..=50 {
-            if draught < self.draught_min || draught > self.draught_max {
-                return Err(error.err(format!("draught < min_draught || draught > max_draught, draught:{draught} min_draught:{} max_draught:{}", self.draught_min, self.draught_max)));
-            }
-            let query = [&heel, &trim, &draught];
-            let result = cache.get(&query);
-            assert!(result.len() == 12);
-            let res_volume = result[0];
-            let delta = res_volume - volume;
-            if delta.abs() <= epsilon || i >= 50 {
-                return Ok(DisplacementCacheResult {
-                    heel,
-                    trim,
-                    draught,
-                    volume,
-                    volume_center: Position::new(result[1], result[2], result[3]),
-                    area_wl: result[4],
-                    area_wl_center: Position::new(result[5], result[6], result[7]),
-                    inertia_trans_x: result[8],
-                    inertia_long_y: result[9],
-                    length_wl: result[10],
-                    breadth_wl: result[11],
-                });
-            }
-            //     println!("{}", &format!("i:{i} draught:{draught} step:{step} delta:{delta}"));
-            step = step / 2.;
-            draught -= step * delta.signum();
-        }
-        Err(error.pass(format!(
-            "no result for epsilon:{epsilon} volume:{volume} step:{step} draught:{draught}"
-        )))
+        let (draught, result) =
+            get_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
+                .map_err(|err| error.pass(err))?;
+        Ok(DisplacementCacheResult {
+            heel,
+            trim,
+            draught,
+            volume: result[0],
+            volume_center: Position::new(result[1], result[2], result[3]),
+            area_wl: result[4],
+            area_wl_center: Position::new(result[5], result[6], result[7]),
+            inertia_trans_x: result[8],
+            inertia_long_y: result[9],
+            length_wl: result[10],
+            breadth_wl: result[11],
+        })
     }
+    /*
+        /// Получение данных кэша для текущего положения
+        /// Итерационно подбирает значение водоизмещения по осадке
+        pub fn get(
+            &self,
+            heel: f64,
+            trim: f64,
+            volume: f64,
+            epsilon: f64,
+        ) -> Result<DisplacementCacheResult, Error> {
+            let error = Error::new(self.dbg(), "get");
+    //     println!("displacement_cache get begin, heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon}");
+            if heel < self.heel_min || heel > self.heel_max {
+                return Err(error.err(format!(
+                    "heel < min_heel || heel > max_heel, heel:{heel} min_heel:{} max_heel:{}",
+                    self.heel_min, self.heel_max
+                )));
+            }
+            if trim < self.trim_min || trim > self.trim_max {
+                return Err(error.err(format!(
+                    "trim < min_trim || trim > max_trim, trim:{trim} min_trim:{} max_trim:{}",
+                    self.trim_min, self.trim_max
+                )));
+            }
+            let mut step = self.draught_max / 2.;
+            let mut draught = step + 0.5;
+            let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+            for i in 0..=50 {
+                if draught < self.draught_min || draught > self.draught_max {
+                    return Err(error.err(format!("draught < min_draught || draught > max_draught, draught:{draught} min_draught:{} max_draught:{}", self.draught_min, self.draught_max)));
+                }
+                let query = [&heel, &trim, &draught];
+                let result = cache.get(&query);
+                assert!(result.len() == 12);
+                let res_volume = result[0];
+                let delta = res_volume - volume;
+                if delta.abs() <= epsilon || i >= 50 {
+                    return Ok(DisplacementCacheResult {
+                        heel,
+                        trim,
+                        draught,
+                        volume,
+                        volume_center: Position::new(result[1], result[2], result[3]),
+                        area_wl: result[4],
+                        area_wl_center: Position::new(result[5], result[6], result[7]),
+                        inertia_trans_x: result[8],
+                        inertia_long_y: result[9],
+                        length_wl: result[10],
+                        breadth_wl: result[11],
+                    });
+                }
+                //     println!("{}", &format!("i:{i} draught:{draught} step:{step} delta:{delta}"));
+                step = step / 2.;
+                draught -= step * delta.signum();
+            }
+            Err(error.pass(format!(
+                "no result for epsilon:{epsilon} volume:{volume} step:{step} draught:{draught}"
+            )))
+        }*/
     //
     pub fn get_volume_disp(&self) -> Result<(f64, f64), Error> {
         let error = Error::new(self.dbg(), "get_max_volume");
