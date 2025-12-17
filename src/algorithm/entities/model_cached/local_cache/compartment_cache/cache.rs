@@ -76,7 +76,7 @@ impl CompartmentCache {
         } else {
             1.
         });
-        //    println!("compartment_cache calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
+       // println!("compartment_cache calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
         Ok(())
     }
     /// Получение значения для заданных условий для расчета дсо
@@ -243,7 +243,7 @@ impl CompartmentCache {
         volume: f64,
         epsilon: f64,
     ) -> Result<CompartmentCacheResult, Error> {
-        let error = Error::new(self.dbg(), "get_for_floating");
+        let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let volume_ = volume / coeff;
@@ -259,9 +259,9 @@ impl CompartmentCache {
                 .first()
                 .ok_or(error.pass("no result from cache.get(&query)"))?
                 - volume_;
-            //      println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+            //    println!("compartment_cashe {} get heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
             if delta.abs() <= epsilon || i >= 50 {
-                //           println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+            //    println!("compartment_cashe {} get heel:{heel} level:{level} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,

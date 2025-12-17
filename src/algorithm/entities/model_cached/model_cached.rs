@@ -448,10 +448,10 @@ impl ModelCached {
         let error = Error::new(&self.dbg, "rebuild_caches");
         let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
+   /*     if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
         }
-        for (name, compartment) in &mut self.compartments {
+ */     for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("compartment ".to_owned() + name), error));
@@ -495,10 +495,10 @@ impl ModelCached {
             .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
         self.displacement_bounded
             .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-  */      self.windage_area
+        self.windage_area
             .rebuild(bounds, self.ship_length_lbp)
             .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
-  /*      let mut cache_map = IndexMap::new();
+  */      let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
@@ -515,7 +515,7 @@ impl ModelCached {
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
-  */      Ok(())
+        Ok(())
     }
     //
     pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {

@@ -51,10 +51,10 @@ pub trait Shape {
         let mut result = vec![]; 
         let max_dx = (aabb.maxs.x - center.x).max(center.x - aabb.mins.x);
         let max_dy = (aabb.maxs.y - center.y).max(center.y - aabb.mins.y);
-        let max_dz = max_dx*max_trim.sin().abs() + max_dy*max_heel.sin().abs()*max_trim.cos();
+        let max_dz = max_dx*max_trim.to_radians().tan().abs() + max_dy*max_heel.to_radians().tan().abs()*max_trim.to_radians().cos();
         let delta_z = aabb.maxs.z - aabb.mins.z;
         let min_z = -max_dz;
-        let max_z = delta_z + max_dz*2.;
+        let max_z = delta_z + max_dz;
         let step = delta_z/(level_step_qnt as f64 - 1.);    
         let step_max_dz = if max_dz*2. > delta_z {
             2.*max_dz/(level_step_qnt as f64 - 1.)
@@ -63,25 +63,26 @@ pub trait Shape {
         };  
         let mut current = min_z;
         let mut current_step = step_max_dz;
-        while current + current_step <= aabb.mins.z {
+        while current + current_step/2. <= 0. {
             result.push(current);
             current += current_step;
         }
-        current = aabb.mins.z;
+        current = 0.;
         current_step = step;
-        while current + current_step <= aabb.maxs.z {
+        while current + current_step/2. <= delta_z {
             result.push(current);
             current += current_step;
         }
-        current = aabb.maxs.z;
+        current = delta_z;
         current_step = step_max_dz;
-        while current + current_step <= max_z {
+        while current + current_step/2. <= max_z {
             result.push(current);
             current += current_step;
         }
         result.push(max_z);
-        println!("shape draught_steps {} {} {} {} {} {} {} {} {:?}", 
-        max_dx, max_dy, max_dz, step_max_dz, max_z, aabb.mins.z, aabb.maxs.z, level_step_qnt, result);
+      //  log::debug!("shape draught_steps max_dx:{} max_dy:{} max_dz:{} delta_z:{} step_max_dz:{} min_z:{} max_z:{} aabb.mins.z:{} aabb.maxs.z:{} level_step_qnt:{}", 
+      //      max_dx, max_dy, max_dz, delta_z, step_max_dz, min_z, max_z, aabb.mins.z, aabb.maxs.z, level_step_qnt);
+      //  log::debug!("shape draught_steps {:?}", result);
         Ok(result)
     }
   /*  fn draught_steps(&self, draught_qnt_steps: usize) -> Result<Vec<f64>, Error> {

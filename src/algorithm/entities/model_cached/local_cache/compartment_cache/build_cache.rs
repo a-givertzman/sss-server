@@ -151,7 +151,7 @@ impl BuildCompartmentCache {
         }
         for task in tasks {
             log::info!("{}.build | join thread {}", &self.dbg, task.name());
-            println!("{}.build | join thread {}", &self.dbg, task.name());
+         //   println!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
@@ -189,7 +189,6 @@ impl BuildCompartmentCache {
                     i_y,
                     0., // i_x max
                     0., // abs_moment
-            //        0., // max_abs_moment
                 ]);
             }
         }
@@ -217,7 +216,6 @@ impl BuildCompartmentCache {
                 v[8] = 0.;
                 v[9] = 0.;
                 v[10] = 0.;
-           //     v[11] = 0.;
             });
         }
         for &heel in &self.heel_steps {
@@ -252,63 +250,6 @@ impl BuildCompartmentCache {
                 v[11] = max_abs_moment;
             });*/
         }
-
-        /*
-        // кэш значений при нулевых крене и дифференте для нахождения базового момента объема
-        let mut base = vec_results
-            .iter()
-            .filter(|v| v[0] == 0. && v[1] == 0.)
-            .map(|v| vec![v[3], v[3] * v[5]])
-            .collect::<Vec<_>>();
-        base.sort_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
-        base.dedup();
-        base.iter().for_each(|v| println!("{:.3} {:.3})", v[0], v[1]));
-        let volume_cache = Cache::new(&self.dbg);
-        volume_cache.init(base).unwrap(); //TODO err
-        // Находим максимальный момент и соответствующий ему объем для каждого крена.
-        // Знак момента соответствует стороне крена
-        for &heel in &self.heel_steps {
-            let sin_theta = heel.to_radians().sin();
-            let cos_theta = heel.to_radians().cos();
-            //         for &trim in &self.trim_steps {
-            let mut current_vec: Vec<_> = vec_results
-                .iter_mut()
-                .filter(|v| v[0] == heel) // && v[1] == trim)
-                .collect::<Vec<_>>();
-            // считаем моменты и дельту
-            let moments = current_vec
-                .iter()
-                .filter(|v| v[1] == 0.)
-                .map(|v| {
-                    let volume = v[3];
-                    let volume_shift = (v[4], v[5], v[6]);
-                    let moment = (volume_shift.1*cos_theta + volume_shift.2*sin_theta)*volume;
-                    let base_moment = volume_cache.get(&[volume])[0];
-                    let delta_moment = moment - base_moment;
-                    if heel == 0. { println!("adasd heel:{heel} {} {} {} {} {};", base_moment, moment, delta_moment, volume, volume_shift.1);}
-                    (delta_moment, base_moment, moment, volume, volume_shift)
-                })
-                .collect::<Vec<_>>();
-            let (delta_moment, base_moment, moment_max, volume_from_moment, volume_shift) =
-                if heel < 0. {
-                    moments.iter().min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-                } else {
-                    moments.iter().max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-                }
-                .unwrap_or(&(0., 0., 0., 0., (0., 0., 0.))); // TODO err
-                println!("adasd heel:{heel} {} {} {} {} {};", base_moment, moment_max, delta_moment, volume_from_moment, volume_shift.1);
-                if heel == 0. { println!("{heel} {};", delta_moment); }
-            //       moments.iter().for_each(|v| println!("{:.3} {:.3} {:.3} ({:.3} {:.3} {:.3})", v.0, v.1, v.2, v.3.0, v.3.1, v.3.2));
-            // Каждому крену соответсвует максимальный момент и соответствующий ему объем
-            current_vec.iter_mut().for_each(|v| {
-                v[9] = *volume_from_moment;
-                v[10] = volume_shift.0;
-                v[11] = volume_shift.1;
-                v[12] = volume_shift.2;
-            });
-            //       }
-        }
-        */
         (vec_results, errors)
     }
 }
