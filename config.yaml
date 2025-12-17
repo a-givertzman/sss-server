@@ -19,4 +19,4 @@ server:
     connection:
         timeout: 100 ms
 calculus:
-    max-time: 3 c
+    max-time: 10 s

@@ -47,7 +47,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     let project_id = "NULL";
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
-    let model_center_coord = Position::new(65.250, 0., 0.);
+    let model_x = 65.25;
     let tp = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
     let model_cached = model_cached::ModelCached::new(
         &dbg,
@@ -55,7 +55,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             model_dir,
             cache_dir,
             model_scale: 1000.,
-            model_center_coord,
+            model_x,
             hull_heel_steps: vec![
                 -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
                 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
@@ -71,11 +71,12 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 -40., -10., -5., 0., 5., 10., 40.,
             ],
             ship_length_lbp: 130.5,
+            draught_min: 2.001,
             hull_draught_min: 0.5,
             hull_draught_max: 14.,
             hull_draught_step: 0.5,
             bounds_level_step: 0.1,
-            compartment_level_step: 1.
+            compartment_level_step_qnt: 10,
         },
         Arc::clone(&tp),
     )
@@ -106,24 +107,22 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
-*/
-    
+*/    
     let api_client = Arc::new(ApiClient::new(
         &dbg,
         conf.api.address.database.clone(),
         conf.api.address.host.clone(),
         conf.api.address.port.clone(),
     ));
-
     let mut ship_model = ShipModel::new(
         &dbg,
         ship_id,
         project_id.to_owned(),
+        bounds.clone(),
         model_cached,
-        Arc::clone(&api_client),
+        api_client.clone(),
     );
     ship_model.init().unwrap();
-    ship_model.init_cache_bounded(&bounds).unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
 
     log::debug!("main | Calculations...");
@@ -194,7 +193,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                 &dbg,
                                                                                                 IcingEval::new(
                                                                                                     &dbg,
-                                                                                                    StrengthAreaEval::new(
+                                                                                                    StaticAreaEval::new(
                                                                                                         &dbg,
                                                                                                         ship_model.clone(),
                                                                                                         IcingTimberEval::new(

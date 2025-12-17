@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(LogLevel::Debug)
         .module("api_tools", LogLevel::Debug)
         .module("sal_sync::thread_pool", LogLevel::Info)
+        .module("ena::unify", LogLevel::Info)
         .init();
     
     let dbg = Dbg::own("main");
@@ -114,8 +115,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::clone(&thread_pool),
     )
     .unwrap();
-
-/*    let res = model_cached.reload_shapes();            dbg!(&res);
+/*
+   let res = model_cached.reload_shapes();            dbg!(&res);
  //   let res = model_cached.rebuild_caches();   dbg!(&res);
     let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
   //  let res = model_cached.init();                     dbg!(&res);

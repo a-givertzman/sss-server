@@ -119,7 +119,7 @@ impl LocalCache for BowAreaCache {
                 let thread_name = format!("BowAreaCache calculate {draught} {trim}");
                 let voxels = Arc::clone(&voxels);
                 log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-                println!("Starting thread {thread_name}");
+             //   println!("Starting thread {thread_name}");
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
                         let area = bow_area(voxels, voxel_scale, draught, trim);
