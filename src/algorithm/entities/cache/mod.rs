@@ -153,8 +153,9 @@ impl Cache<f64> {
                     log::error!(
                         "{}: {}",
                         self.dbg,
-                        format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
+                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?}", keys)
                     );
+                    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?}", &self.dbg, keys));
                     *key = keys.first().unwrap();
                     return vec![*key];
                 } else if keys.last().unwrap() < key {
@@ -162,8 +163,9 @@ impl Cache<f64> {
                     log::error!(
                         "{}: {}",
                         self.dbg,
-                        format!("{} i:{key_i} key:{key} key is out of range!", self.dbg)
+                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?}", keys)
                     );
+                    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?}", &self.dbg, keys));
                     *key = keys.last().unwrap();
                     return vec![*key];
                 }

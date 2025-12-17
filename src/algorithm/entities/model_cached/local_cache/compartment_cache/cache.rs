@@ -253,15 +253,16 @@ impl CompartmentCache {
         let mut last_delta_signum = 1.;
         for i in 0..=50 {
             let query = [&heel, &0., &level];
+            println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
             let result = cache.get(&query);
             assert!(result.len() >= 6);
             let delta = result
                 .first()
                 .ok_or(error.pass("no result from cache.get(&query)"))?
                 - volume_;
-            //    println!("compartment_cashe {} get heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+            //      println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
             if delta.abs() <= epsilon || i >= 50 {
-            //    println!("compartment_cashe {} get heel:{heel} level:{level} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+                //           println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,
