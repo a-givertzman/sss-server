@@ -54,7 +54,6 @@ impl Eval<Zg, EvalResult> for WindageEval {
                 let midship = *ship_parameters
                     .get("X midship from Fr0")
                     .ok_or(error.err("midship: no data!"))?;
-                let stability_area: StaticAreaCtx = ctx.read();
                 let icing_stab: IcingStabCtx = ctx.read();
                 let draught = ctx.read_params(ParameterID::DraughtMid);
                 let UnitAreaCtx {
@@ -63,15 +62,14 @@ impl Eval<Zg, EvalResult> for WindageEval {
                     mv_z_dc,
                 } = ctx.read();
                 let StabilityArea {
-                    av_cs_dmin,
-                    mv_x_cs_dmin,
-                    mv_z_cs_dmin,
+                    av_cs_dmin1,
+                    mv_x_cs_dmin1,
+                    mv_z_cs_dmin1,
                     delta_av,
                     delta_mv_x,
                     delta_mv_z,
                     area_volume_z,
-                    area_horisontal,
-                    area_horisontal_z,
+                    ..
                 } = match self.model.read().stability_area(draught) {
                     Ok(data) => data,
                     Err(err) => {
@@ -79,16 +77,21 @@ impl Eval<Zg, EvalResult> for WindageEval {
                     }
                 };
                 // Площадь парусности сплошных поверхностей для осадки dmin
-                let av_dmin = av_cs_dmin + av_dc; 
-                //статический момент площади парусности сплошных поверхностей для осадки dmin
-                let mv_x_dmin = mv_x_cs_dmin + mv_x_dc;                 
-                let mv_z_dmin = mv_z_cs_dmin + mv_z_dc;
-                //Парусность несплошных поверхностей
+                let av_cs_dmin = av_cs_dmin1 + av_dc;
+                // Cтатический момент площади парусности сплошных поверхностей для осадки dmin
+                let mv_x_cs_dmin = mv_x_cs_dmin1 + mv_x_dc;
+                let mv_z_cs_dmin = mv_z_cs_dmin1 + mv_z_dc;
+                // Парусность несплошных поверхностей
                 let av_ds = av_cs_dmin * icing_stab.coef_v_area;                 
                 // Центр площади парусности несплошных поверхностей по длине принимается на миделе
                 let mv_x_ds = av_cs_dmin * midship; 
                 // статический момент площади парусности несплошных поверхностей
                 let mv_z_ds = mv_z_cs_dmin * icing_stab.coef_v_moment; 
+                // Площадь парусности судна для осадки dmin
+                let av_dmin = av_cs_dmin + av_ds;
+                // статические моменты площади парусности судна для осадки dmin
+                let mv_x_dmin = mv_x_cs_dmin + mv_x_ds;                 
+                let mv_z_dmin = mv_z_cs_dmin + mv_z_ds;
                 // Площадь парусности судна для текущей осадки
                 let av = av_dmin - delta_av; 
                 // Разница в статических моментах для текущей осадки и

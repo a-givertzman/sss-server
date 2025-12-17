@@ -249,9 +249,9 @@ impl ShipModel {
                 windage_area.iter().for_each(|v| print!(" {:.3}", v));
         */
         Ok(StabilityArea {
-            av_cs_dmin,
-            mv_x_cs_dmin,
-            mv_z_cs_dmin,
+            av_cs_dmin1: av_cs_dmin,
+            mv_x_cs_dmin1: mv_x_cs_dmin,
+            mv_z_cs_dmin1: mv_z_cs_dmin,
             delta_av,
             delta_mv_x,
             delta_mv_z,
