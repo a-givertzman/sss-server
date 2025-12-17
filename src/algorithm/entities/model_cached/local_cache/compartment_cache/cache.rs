@@ -234,7 +234,7 @@ impl CompartmentCache {
         //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
     }
-    /// Получение значения из кэша для заданных условий для расчета равнвесного положения
+    /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
     pub fn get(
         &self,
@@ -244,30 +244,55 @@ impl CompartmentCache {
         epsilon: f64,
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
+        println!("{} get start, heel:{heel} trim:{trim} volume:{volume}", self.dbg);
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let volume_ = volume / coeff;
-        let level_max = cache.disp(2).1;
+        let (level_min, level_max) = cache.disp(2);  
+        let (volume_min, volume_max) = cache.disp(3);
+        if volume_ <= volume_min || volume_ >= volume_max {
+            let query = [Some(heel), Some(trim), Some(level_max)];            
+            let result = cache.values_disp(&query);
+            let str = format!("{} error: no result! heel:{heel} trim:{trim} level_max:{level_max} trg_volume:{volume_} coeff:{coeff} result:{:?}", self.dbg, &result);
+            let result = result.first().expect(&str).to_vec();
+            println!("compartment_cashe {} result get volume_ heel:{heel} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_}", self.dbg, result[0]);
+                return Ok(CompartmentCacheResult {
+                    heel,
+                    trim,
+                    level: level_max,
+                    volume: result[0] * coeff,
+                    volume_center: Position::new(result[1], result[2], result[3]),
+                    inertia_trans_x: result[4] * coeff,
+                    inertia_long_y: result[5] * coeff,
+                    max_inertia_trans_x: result[6] * coeff,
+                    abs_moment: result[7] * coeff,
+                });
+        }     
         let mut level = level_max / 2.;
         let mut step = level_max / 4.;
         let mut last_delta_signum = 1.;
         for i in 0..=50 {
-            let query = [&heel, &0., &level];
-            println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
+            let query = [&heel, &trim, &level];
+        //    println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
             let result = cache.get(&query);
             assert!(result.len() >= 6);
-            let delta = result
+            let delta = volume_ - result
                 .first()
-                .ok_or(error.pass("no result from cache.get(&query)"))?
-                - volume_;
-            //      println!("compartment_cashe {} get_for_floating heel:{heel} level:{level} volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
-            if delta.abs() <= epsilon || i >= 50 {
-                //           println!("compartment_cashe {} get_for_floating heel:{heel} volume:{volume} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[2]);
+                .ok_or(error.pass("no result from cache.get(&query)"))?;
+            if last_delta_signum != delta.signum() {
+                step = step * 0.3;
+                last_delta_signum = delta.signum();
+            }
+            let next_level = level + step * delta.signum();
+            level = next_level.min(level_max).max(level_min);          
+       //       println!("compartment_cashe {} get i:{i} heel:{heel} level:{level} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+            if delta.abs() <= epsilon || i >= 50 || level == next_level {
+        //                   println!("compartment_cashe {} result get i:{i} heel:{heel} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
                 return Ok(CompartmentCacheResult {
                     heel,
                     trim,
                     level,
-                    volume: volume_ * coeff,
+                    volume: result[0] * coeff,
                     volume_center: Position::new(result[1], result[2], result[3]),
                     inertia_trans_x: result[4] * coeff,
                     inertia_long_y: result[5] * coeff,
@@ -275,11 +300,6 @@ impl CompartmentCache {
                     abs_moment: result[7] * coeff,
                 });
             }
-            if last_delta_signum != delta.signum() {
-                step = step * 0.3;
-                last_delta_signum = delta.signum();
-            }
-            level -= step * delta.signum();
         }
         Err(error.pass(format!("no result for epsilon:{epsilon}")))
     }

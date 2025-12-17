@@ -129,7 +129,8 @@ impl Cache<f64> {
     /// value is out of range
     /// value index is out of key index range - TODO описать подробнее
     pub fn get(&self, query: &[&f64]) -> Vec<f64> {
-        let mut query = Vec::from(query);
+        let query = Vec::from(query);
+        println!("{} get start, query:{:?}", self.dbg, query);
         let data = self
             .table
             .get()
@@ -140,7 +141,7 @@ impl Cache<f64> {
             .unwrap_or_else(|| panic!("{}.{} | Error: no keys!", self.dbg, "get"));
         // пары значений для каждого индекса, между которыми попадает ключ
         let pairs: Vec<_> = query
-            .iter_mut()
+            .iter()
             .enumerate()
             .map(|(key_i, key)| {
                 let keys = &keys[key_i];
@@ -153,9 +154,9 @@ impl Cache<f64> {
                     log::error!(
                         "{}: {}",
                         self.dbg,
-                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?}", keys)
+                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );
-                    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?}", &self.dbg, keys));
+                    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
                     *key = keys.first().unwrap();
                     return vec![*key];
                 } else if keys.last().unwrap() < key {
@@ -163,9 +164,9 @@ impl Cache<f64> {
                     log::error!(
                         "{}: {}",
                         self.dbg,
-                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?}", keys)
+                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );
-                    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?}", &self.dbg, keys));
+                    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
                     *key = keys.last().unwrap();
                     return vec![*key];
                 }
@@ -298,6 +299,7 @@ impl Cache<f64> {
             let query: Vec<_> = query
                 .iter()
                 .map(|q| {
+      //              dbg!(q, i);
                     if q.len() <= i+1 {
                         q.last().unwrap()
                     } else {
@@ -306,11 +308,11 @@ impl Cache<f64> {
                     }
                 })
                 .collect();
-       //     dbg!(i, is_cancel, &query);
+        //    dbg!(i, is_cancel, &query);
+            res.push(self.get(&query));
             if is_cancel {
                 break;
-            }
-            res.push(self.get(&query));
+            }            
             i += 1;
         }
     //    dbg!(&res);
