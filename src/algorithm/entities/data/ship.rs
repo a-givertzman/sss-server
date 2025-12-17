@@ -15,7 +15,7 @@ pub struct Ship {
     /// Район плавания судна
     pub navigation_area: String,
     /// Предполагаемое давление ветра
-    pub pv: f64,
+    pub p_v: f64,
     /// Добавка на порывистость ветра
     pub m: f64,
     /// Тип надводного борта судна
@@ -32,7 +32,7 @@ impl std::fmt::Display for Ship {
             self.name,
             self.ship_type,
             self.navigation_area,
-            self.pv,
+            self.p_v,
             self.m,
             self.freeboard_type,
         )
@@ -43,7 +43,7 @@ impl Ship {
     pub fn navigation_area(&self) -> Result<NavigationAreaData, Error> {
         Ok(NavigationAreaData {
             area: NavigationArea::from_str(&self.navigation_area)?,
-            p_v: self.pv,
+            p_v: self.p_v,
             m: self.m,
         })
     }
