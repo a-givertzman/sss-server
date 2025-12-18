@@ -159,8 +159,8 @@ impl BuildDisplacementCache {
         for task in tasks {
             let string =
                 format!("{}.build | join thread {}", &self.dbg, task.name());
-            println!("{string}");
-            log::info!("{string}");
+         //   println!("{string}");
+            log::trace!("{string}");
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

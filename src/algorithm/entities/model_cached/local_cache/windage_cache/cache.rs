@@ -159,7 +159,7 @@ impl LocalCache for AreaCache {
             };
         }
         for task in tasks {
-            log::info!("{}.build | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

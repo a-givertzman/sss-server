@@ -97,7 +97,7 @@ impl Eval<(), EvalResult> for ZgEval {
                 }
                 // получаем массив рассчитанных критериев для разных zg
                 for task in tasks {
-                    log::info!("{}.eval | join thread {}", &self.dbg, task.name());
+                    log::trace!("{}.eval | join thread {}", &self.dbg, task.name());
                     if let Err(err) = task.join() {
                         pass("task join", err);
                     }

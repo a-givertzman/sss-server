@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     DebugSession::new()
         .filter(LogLevel::Info)
-        .module("api_tools", LogLevel::Debug)
+        .module("api_tools", LogLevel::Warn)
         .module("sal_sync::thread_pool", LogLevel::Info)
         .module("ena::unify", LogLevel::Info)
         .init();

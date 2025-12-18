@@ -342,7 +342,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::info!("{}.reload_shapes | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.reload_shapes | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1500,7 +1500,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::info!("{}.balance | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.balance | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1614,7 +1614,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1736,7 +1736,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1837,7 +1837,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::info!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.moment_liquid | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1924,7 +1924,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::info!(
+            log::trace!(
                 "{}.calc_damaged_compartments | join thread {}",
                 &self.dbg,
                 task.name()

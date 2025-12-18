@@ -130,7 +130,7 @@ impl Cache<f64> {
     /// value index is out of key index range - TODO описать подробнее
     pub fn get(&self, query: &[&f64]) -> Vec<f64> {
         let query = Vec::from(query);
-        println!("{} get start, query:{:?}", self.dbg, query);
+    //    println!("{} get start, query:{:?}", self.dbg, query);
         let data = self
             .table
             .get()
@@ -156,9 +156,8 @@ impl Cache<f64> {
                         self.dbg,
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );
-                    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
-                    *key = keys.first().unwrap();
-                    return vec![*key];
+                //    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
+                    return vec![keys.first().unwrap()];
                 } else if keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
                     log::error!(
@@ -166,9 +165,8 @@ impl Cache<f64> {
                         self.dbg,
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );
-                    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
-                    *key = keys.last().unwrap();
-                    return vec![*key];
+                //    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
+                    return vec![keys.last().unwrap()];
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);
