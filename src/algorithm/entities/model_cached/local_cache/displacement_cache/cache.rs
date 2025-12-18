@@ -2,7 +2,9 @@ use crate::{
     algorithm::entities::{
         Position,
         cache::Cache,
-        model_cached::{DisplacementCacheResult, DisplacementShape, get_volume, local_cache::LocalCache, save},
+        model_cached::{
+            DisplacementCacheResult, DisplacementShape, get_volume, local_cache::LocalCache, save,
+        },
     },
     kernel::types::{Arc, RwLock},
 };
@@ -111,10 +113,22 @@ impl DisplacementCache {
             "{} get start, heel:{heel} trim:{trim} volume:{volume}",
             self.dbg
         );*/
+        if heel < self.heel_min || heel > self.heel_max {
+            return Err(error.err(format!(
+                "heel < min_heel || heel > max_heel, heel:{heel} min_heel:{} max_heel:{}",
+                self.heel_min, self.heel_max
+            )));
+        }
+        if trim < self.trim_min || trim > self.trim_max {
+            return Err(error.err(format!(
+                "trim < min_trim || trim > max_trim, trim:{trim} min_trim:{} max_trim:{}",
+                self.trim_min, self.trim_max
+            )));
+        }
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let (draught, result) =
-            get_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
-                .map_err(|err| error.pass(err))?;
+        let (draught, result) = get_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
+            .map_err(|err| error.pass(err))?;
+        dbg!(heel, trim, volume, draught, &result );
         Ok(DisplacementCacheResult {
             heel,
             trim,

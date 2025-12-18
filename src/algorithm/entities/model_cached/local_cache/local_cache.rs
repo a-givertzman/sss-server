@@ -135,19 +135,21 @@ pub fn get_volume(
             //    println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
             result = cache.get(&query);
             assert!(result.len() >= volume_index);
-            let delta = volume - result[volume_index];
+            let delta = volume - result[volume_index - query.len()];
             if last_delta_signum != delta.signum() {
                 step = step * 0.3;
                 last_delta_signum = delta.signum();
             }
             let next_level = level + step * delta.signum();
             level = next_level.min(level_max).max(level_min);
-            //       println!("compartment_cashe {} get i:{i} heel:{heel} level:{level} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+        //           println!("compartment_cashe {} get i:{i} heel:{heel} level:{level} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
             if delta.abs() <= epsilon || i >= 50 || level == next_level {
-                //                   println!("compartment_cashe {} result get i:{i} heel:{heel} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+                dbg!(delta, epsilon, i, level, next_level);
+                                   //println!("local_cashe {} get_volume result i:{i} {:?} trg_volume:{volume} res:{:?} ", parent, &query, &result);
                 break 'volume_loop;
             }
         }
+        println!("local_cashe {} get_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
     Ok((level, result))

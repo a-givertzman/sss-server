@@ -233,6 +233,8 @@ impl CompartmentCache {
         //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
     }
+
+    
     /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
     pub fn get(
@@ -270,7 +272,7 @@ impl CompartmentCache {
         })
     }
 
-    /*
+  /*  
     /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
     pub fn get(
@@ -281,26 +283,32 @@ impl CompartmentCache {
         epsilon: f64,
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
-        println!(
+    /*    println!(
             "{} get start, heel:{heel} trim:{trim} volume:{volume}",
             self.dbg
-        );
+        );*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let volume_ = volume / coeff;
         let (level_min, level_max) = cache.disp(2);
         let (volume_min, volume_max) = cache.disp(3);
-        let result = if volume_ <= volume_min || volume_ >= volume_max {
+        let mut level = volume_min;
+        let result = if volume_ <= volume_min {
             // если объем полный или нулевой сразу берем значение
+            level = level_min;
+            cache.values_disp(&[Some(heel), Some(trim), Some(level_min)]).first().ok_or(error.err(format!("no result! heel:{heel} trim:{trim} level_max:{level_max} trg_volume:{volume_} coeff:{coeff}")))?.to_vec()
+        } else if volume_ >= volume_max {
+            // если объем полный или нулевой сразу берем значение
+            level = level_max;
             cache.values_disp(&[Some(heel), Some(trim), Some(level_max)]).first().ok_or(error.err(format!("no result! heel:{heel} trim:{trim} level_max:{level_max} trg_volume:{volume_} coeff:{coeff}")))?.to_vec()
         } else {
             // ищем значение постепенно приближая объем перебирая уровни заполнения
-            let mut level = level_max / 2.;
+            let mut current_level = level_max / 2.;
             let mut step = level_max / 4.;
             let mut last_delta_signum = 1.;
             let mut result = Vec::new();
             'volume_loop: for i in 0..=50 {
-                let query = [&heel, &trim, &level];
+                let query = [&heel, &trim, &current_level];
                 //    println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
                 result = cache.get(&query);
                 assert!(result.len() >= 6);
@@ -312,11 +320,12 @@ impl CompartmentCache {
                     step = step * 0.3;
                     last_delta_signum = delta.signum();
                 }
-                let next_level = level + step * delta.signum();
-                level = next_level.min(level_max).max(level_min);
+                let next_level = current_level + step * delta.signum();
+                current_level = next_level.min(level_max).max(level_min);
                 //       println!("compartment_cashe {} get i:{i} heel:{heel} level:{level} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
-                if delta.abs() <= epsilon || i >= 50 || level == next_level {
+                if delta.abs() <= epsilon || i >= 50 || current_level == next_level {
                     //                   println!("compartment_cashe {} result get i:{i} heel:{heel} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
+                    level = current_level;
                     break 'volume_loop;
                 }
             }
@@ -325,7 +334,7 @@ impl CompartmentCache {
         Ok(CompartmentCacheResult {
             heel,
             trim,
-            level: level_max,
+            level,
             volume: result[0] * coeff,
             volume_center: Position::new(result[1], result[2], result[3]),
             inertia_trans_x: result[4] * coeff,
@@ -335,7 +344,7 @@ impl CompartmentCache {
         })
     }
 */
-    /*   /// Получение значения из кэша для заданных условий для расчета равновесного положения
+ /*      /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
     pub fn get(
         &self,
