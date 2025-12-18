@@ -127,7 +127,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
 
     log::debug!("main | Calculations...");
     let ctx = 
-  /*  
     CriterionStabilityEval::new(
         &dbg,
         MetacentricHeightSubdivisionEval::new(
@@ -162,49 +161,56 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                     &dbg,
                                                                     WindageEval::new(
                                                                         &dbg,
+                                                                        ship_model.clone(),
                                                                         LeverDiagramEval::new(
                                                                             &dbg,
                                                                             //   link,
                                                                             MetacentricHeightEval::new(
                                                                                 &dbg,
                                                                                 // Before ZG
-                                                                                StabilityAreaEval::new(
+                                                                                UnitAreaEval::new(
                                                                                     &dbg,
-                                                                                    ship_model.clone(),
-                                                                                    */
-
-                                                                BendingMomentEval::new(
-                                                                    &dbg,
-                                                                    ShearForceEval::new(
-                                                                        &dbg,
-                                                                        TotalForceEval::new(
-                                                                            &dbg,                                                                                
-                                                                            DynamicMassEval::new(
-                                                                                &dbg,
-                                                                                StrengthBalanceEval::new(
-                                                                                    &dbg,
-                                                                                    ship_model.clone(),
-                                                                                    StabilityBalanceEval::new(
+                                                                                    StaticAreaEval::new(
                                                                                         &dbg,
                                                                                         ship_model.clone(),
-                                                                                        StaticMassEval::new(
+                                                                                        BendingMomentEval::new(
                                                                                             &dbg,
-                                                                                            WettingEval::new(
+                                                                                            ShearForceEval::new(
                                                                                                 &dbg,
-                                                                                                IcingEval::new(
-                                                                                                    &dbg,
-                                                                                                    StaticAreaEval::new(
+                                                                                                TotalForceEval::new(
+                                                                                                    &dbg,          
+                                                                                                    DynamicMassEval::new(
                                                                                                         &dbg,
-                                                                                                        ship_model.clone(),
-                                                                                                        IcingTimberEval::new(
+                                                                                                        StrengthBalanceEval::new(
                                                                                                             &dbg,
-                                                                                                            IcingStabEval::new(
+                                                                                                            ship_model.clone(),
+                                                                                                            StabilityBalanceEval::new(
                                                                                                                 &dbg,
-                                                                                                                Initial::new(
+                                                                                                                ship_model.clone(),
+                                                                                                                StaticMassEval::new(
                                                                                                                     &dbg,
-                                                                                                                    ship_model.clone(),
-                                                                                                                    Arc::clone(&api_client),
-                                                                                                                    Context::new(InitialCtx::new(ship_id, project_id, bounds)),
+                                                                                                                    WettingEval::new(
+                                                                                                                        &dbg,
+                                                                                                                        IcingEval::new(
+                                                                                                                            &dbg,
+                                                                                                                            StaticAreaEval::new(
+                                                                                                                                &dbg,
+                                                                                                                                ship_model.clone(),
+                                                                                                                                IcingTimberEval::new(
+                                                                                                                                    &dbg,
+                                                                                                                                    IcingStabEval::new(
+                                                                                                                                        &dbg,
+                                                                                                                                        Initial::new(
+                                                                                                                                            &dbg,
+                                                                                                                                            ship_model.clone(),
+                                                                                                                                            Arc::clone(&api_client),
+                                                                                                                                            Context::new(InitialCtx::new(ship_id, project_id, bounds)),
+                                                                                                                                        ),
+                                                                                                                                    ),
+                                                                                                                                ),
+                                                                                                                            ),
+                                                                                                                        ),
+                                                                                                                    ),
                                                                                                                 ),
                                                                                                             ),
                                                                                                         ),
@@ -214,11 +220,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                                         ),
                                                                                     ),
                                                                                 ),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                ).eval(())
-    /*                                                                             ),
                                                                             ),
                                                                         ),
                                                                     ),
@@ -237,8 +238,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    )
-    */
+    ).eval(Zg::empty())
+    
     ;
 
 /*    

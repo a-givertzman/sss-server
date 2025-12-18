@@ -55,8 +55,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
         //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
         let bounds = Bounds::from_array(&Self::PHYSICAL_FRAMES, 0.).unwrap();
         log::debug!("{dbg}.eval | Calculations...");
-        let ctx = 
-        /*  
+        let ctx =           
         CriterionStabilityEval::new(
             &dbg,
             MetacentricHeightSubdivisionEval::new(
@@ -91,53 +90,60 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                         &dbg,
                                                                         WindageEval::new(
                                                                             &dbg,
+                                                                            self.ship_model.clone(),
                                                                             LeverDiagramEval::new(
                                                                                 &dbg,
                                                                                 //   link,
                                                                                 MetacentricHeightEval::new(
                                                                                     &dbg,
                                                                                     // Before ZG
-                                                                                    StabilityAreaEval::new(
+                                                                                    UnitAreaEval::new(
                                                                                         &dbg,
-                                                                                        ship_model.clone(),
-                                                                                        */
-
-                                                                    BendingMomentEval::new(
-                                                                        &dbg,
-                                                                        ShearForceEval::new(
-                                                                            &dbg,
-                                                                            TotalForceEval::new(
-                                                                                &dbg,                                                                                
-                                                                                DynamicMassEval::new(
-                                                                                    &dbg,
-                                                                                    StrengthBalanceEval::new(
-                                                                                        &dbg,
-                                                                                        self.ship_model.clone(),
-                                                                                        StabilityBalanceEval::new(
+                                                                                        StaticAreaEval::new(
                                                                                             &dbg,
-                                                                                            self.ship_model.clone(),
-                                                                                            StaticMassEval::new(
+                                                                                            self.ship_model.clone(),                                                                                    
+                                                                                            BendingMomentEval::new(
                                                                                                 &dbg,
-                                                                                                WettingEval::new(
+                                                                                                ShearForceEval::new(
                                                                                                     &dbg,
-                                                                                                    IcingEval::new(
-                                                                                                        &dbg,
-                                                                                                        StaticAreaEval::new(
+                                                                                                    TotalForceEval::new(
+                                                                                                        &dbg,                                                                                
+                                                                                                        DynamicMassEval::new(
                                                                                                             &dbg,
-                                                                                                            self.ship_model.clone(),
-                                                                                                            IcingTimberEval::new(
+                                                                                                            StrengthBalanceEval::new(
                                                                                                                 &dbg,
-                                                                                                                IcingStabEval::new(
+                                                                                                                self.ship_model.clone(),
+                                                                                                                StabilityBalanceEval::new(
                                                                                                                     &dbg,
-                                                                                                                    Initial::new(
+                                                                                                                    self.ship_model.clone(),
+                                                                                                                    StaticMassEval::new(
                                                                                                                         &dbg,
-                                                                                                                        self.ship_model.clone(),
-                                                                                                                        self.api_client.clone(),
-                                                                                                                        Context::new(InitialCtx::new(
-                                                                                                                            query.ship_id,
-                                                                                                                            &query.project_id,
-                                                                                                                            bounds,
-                                                                                                                        )),
+                                                                                                                        WettingEval::new(
+                                                                                                                            &dbg,
+                                                                                                                            IcingEval::new(
+                                                                                                                                &dbg,
+                                                                                                                                StaticAreaEval::new(
+                                                                                                                                    &dbg,
+                                                                                                                                    self.ship_model.clone(),
+                                                                                                                                    IcingTimberEval::new(
+                                                                                                                                        &dbg,
+                                                                                                                                        IcingStabEval::new(
+                                                                                                                                            &dbg,
+                                                                                                                                            Initial::new(
+                                                                                                                                                &dbg,
+                                                                                                                                                self.ship_model.clone(),
+                                                                                                                                                self.api_client.clone(),
+                                                                                                                                                Context::new(InitialCtx::new(
+                                                                                                                                                    query.ship_id,
+                                                                                                                                                    &query.project_id,
+                                                                                                                                                    bounds,
+                                                                                                                                                )),
+                                                                                                                                            ),
+                                                                                                                                        ),
+                                                                                                                                    ),
+                                                                                                                                ),
+                                                                                                                            ),
+                                                                                                                        ),
                                                                                                                     ),
                                                                                                                 ),
                                                                                                             ),
@@ -146,12 +152,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                                                 ),
                                                                                             ),
                                                                                         ),
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                    ).eval(());
-        /*                                                                             ),
+                                                                                     ),
                                                                                 ),
                                                                             ),
                                                                         ),
@@ -170,8 +171,8 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                     ),
                 ),
             ),
-        )
-        */
+        ).eval(Zg::empty());
+        
 
         /*    
         let _result = DraftMarkEval::new(
