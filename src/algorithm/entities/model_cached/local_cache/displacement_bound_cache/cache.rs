@@ -63,7 +63,7 @@ impl DisplacementBoundCache {
     }
     /// Return volume in bounds
     /// cause panic if caches not initialized
-    pub fn get(&self, draught_mid: f64, trim: f64) -> Result<Vec<f64>, Error> {
+    pub fn get(&self, trim: f64, draught_mid: f64) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "get");
         let caches = self.caches.get().ok_or(error.pass("no caches"))?;
         //    let delta_draught = trim.to_radians().sin()*self.length_lbp;

@@ -21,7 +21,7 @@ use std::path::PathBuf;
 //use prelude::*;
 use crate::algorithm::entities::{
     Bounds,
-    model_cached::{self, DisplacementCache},
+    model_cached::{self, BowAreaCache, DisplacementCache},
 };
 use crate::{
     algorithm::{
@@ -67,39 +67,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
 
-    /*
+ /*
     let cache_dir: PathBuf = "src/assets/cache/sofia".into();
-    let model_dir: PathBuf = "src/assets/model/sofia".into();
-    let model_x = 65.250;
-    let mut displacement_shape =DisplacementShape::new_uninit(
+    let mut bow_area = BowAreaCache::new(
         &dbg,
-        model_dir.join(PathBuf::from("hull.stl")),
-        Some(model_x),
-        1000.,
-    );
-    dbg!(displacement_shape.init());
-    let mut displacement = DisplacementCache::new(
-        &dbg,
-        Arc::new(RwLock::new(displacement_shape)),
-        cache_dir.clone(),
-        vec![
-            -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5., 10.,
-            15., 20., 25., 30., 35., 40., 45., 50., 60.,
-        ],
-        vec![
-            -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2., 3.,
-            5., 7.5, 10., 12.5, 20., 25., 30., 40.,
-        ],
-        0.5,
-        14.,
-        0.5,
+        None,
+        None,
+        &cache_dir,
         Arc::clone(&thread_pool),
     );
-    dbg!(displacement.init());
-    let res = displacement.get(40., -0.6, 13600., 0.000001);
-    dbg!(res);
+    dbg!(bow_area.init());
+    dbg!(bow_area.get(-0.64, 8.05));
     return Ok(());
 */
+
+    /*
+        let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+        let model_dir: PathBuf = "src/assets/model/sofia".into();
+        let model_x = 65.250;
+        let mut displacement_shape =DisplacementShape::new_uninit(
+            &dbg,
+            model_dir.join(PathBuf::from("hull.stl")),
+            Some(model_x),
+            1000.,
+        );
+        dbg!(displacement_shape.init());
+        let mut displacement = DisplacementCache::new(
+            &dbg,
+            Arc::new(RwLock::new(displacement_shape)),
+            cache_dir.clone(),
+            vec![
+                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5., 10.,
+                15., 20., 25., 30., 35., 40., 45., 50., 60.,
+            ],
+            vec![
+                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2., 3.,
+                5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+            ],
+            0.5,
+            14.,
+            0.5,
+            Arc::clone(&thread_pool),
+        );
+        dbg!(displacement.init());
+        let res = displacement.get(40., -0.6, 13600., 0.000001);
+        dbg!(res);
+        return Ok(());
+    */
     /*
       let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
       let model_dir: PathBuf = "src/assets/model/sofia/compartments/306.stl".into();
@@ -232,9 +246,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::clone(&thread_pool),
     )
     .unwrap();
-    /*
-       let res = model_cached.reload_shapes();            dbg!(&res);
-        let res = model_cached.rebuild_caches();   dbg!(&res);
+    
+  /*     let res = model_cached.reload_shapes();            dbg!(&res);
+    //    let res = model_cached.rebuild_caches();   dbg!(&res);
         let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
       //  let res = model_cached.init();                     dbg!(&res);
       //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);

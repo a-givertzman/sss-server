@@ -116,14 +116,14 @@ impl LocalCache for BowAreaCache {
                 }
                 //  let dbg_ = self.dbg.clone();
                 let results = results.clone();
-                let thread_name = format!("BowAreaCache calculate {draught} {trim}");
+                let thread_name = format!("BowAreaCache calculate {trim} {draught}");
                 let voxels = Arc::clone(&voxels);
                 log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
              //   println!("Starting thread {thread_name}");
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
-                        let area = bow_area(voxels, voxel_scale, draught, trim);
-                        results.push((draught, trim, area));
+                        let area = bow_area(voxels, voxel_scale, trim, draught);
+                        results.push((trim, draught, area));
                         Ok(())
                     })
                     .map_err(|err| {
@@ -144,8 +144,8 @@ impl LocalCache for BowAreaCache {
         }
         let mut vec_results = Vec::new();
         while !results.is_empty() {
-            if let Some((draught, trim, area)) = results.pop() {
-                vec_results.push(vec![draught, trim, area]);
+            if let Some((trim, draught, area)) = results.pop() {
+                vec_results.push(vec![trim, draught, area]);
             }
         }
         let cache = if let Some(cache) = self.cache.take() {
@@ -192,7 +192,7 @@ impl LocalCache for BowAreaCache {
 /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
 /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
 /// Возвращает повернутое и смещенное разбиение [dx, area]
-fn bow_area(voxels: Arc::<Vec<(f64, Vec<(f64, f64)>)>>, voxel_scale: f64, draught: f64, trim: f64) -> f64 {
+fn bow_area(voxels: Arc::<Vec<(f64, Vec<(f64, f64)>)>>, voxel_scale: f64, trim: f64, draught: f64) -> f64 {
     let sin_trim = trim.to_radians().sin();
     voxels
         .iter()
