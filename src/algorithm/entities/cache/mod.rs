@@ -128,7 +128,7 @@ impl Cache<f64> {
     /// qnt_keys >= vals len
     /// value is out of range
     /// value index is out of key index range - TODO описать подробнее
-    pub fn get(&self, query: &[&f64]) -> Vec<f64> {
+    pub fn get(&self, query: &[f64]) -> Vec<f64> {
         let query = Vec::from(query);
     //    println!("{} get start, query:{:?}", self.dbg, query);
         let data = self
@@ -157,7 +157,7 @@ impl Cache<f64> {
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );
                 //    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
-                    return vec![keys.first().unwrap()];
+                    return vec![*keys.first().unwrap()];
                 } else if keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
                     log::error!(
@@ -166,7 +166,7 @@ impl Cache<f64> {
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );
                 //    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
-                    return vec![keys.last().unwrap()];
+                    return vec![*keys.last().unwrap()];
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);
@@ -175,7 +175,7 @@ impl Cache<f64> {
                     "{}",
                     format!("{:?}, low_index:{low_index} key:{key}", keys)
                 );
-                return vec![&keys[low_index - 1], &keys[low_index]];
+                return vec![keys[low_index - 1], keys[low_index]];
             })
             .collect();
         // println!("{:?}", pairs);
@@ -202,7 +202,7 @@ impl Cache<f64> {
                 debug_assert!(data.len() > 0);
                 if data.len() == 1 {
                     debug_assert_eq!(
-                        *key,
+                        key,
                         data[0],
                         "{}",
                         format!("key:{key}, data:{:?} query:{:?}", data, query)
@@ -212,7 +212,7 @@ impl Cache<f64> {
                 } else {
                     debug_assert_eq!(data.len(), 2);
                     debug_assert!(
-                        data[0] < *key && *key < data[1],
+                        data[0] < key && key < data[1],
                         "{}",
                         format!("key:{key}, data:{:?}", data)
                     );
@@ -299,10 +299,10 @@ impl Cache<f64> {
                 .map(|q| {
       //              dbg!(q, i);
                     if q.len() <= i+1 {
-                        q.last().unwrap()
+                        **q.last().unwrap()
                     } else {
                         is_cancel = false;
-                        q[i]                        
+                        *q[i]                      
                     }
                 })
                 .collect();

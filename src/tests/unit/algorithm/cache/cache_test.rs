@@ -46,7 +46,7 @@ fn init_cache() {
     let result = cache.init(data.clone());
     println!("cache.init result={:?}", result);
     for (step, target) in data.into_iter().enumerate() {
-        let vals = [&target[0], &target[1], &target[2]];
+        let vals = [target[0], target[1], target[2]];
         let result = cache.get(&vals);
         println!(
             "step={} vals={:?} target={:?} result={:?}",

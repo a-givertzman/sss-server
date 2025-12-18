@@ -61,10 +61,10 @@ impl AreaCache {
         assert!(draught > 0.);
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let query = [&draught];
+        let query = [draught];
         let result = cache.get(&query); // moment_x, moment_z, area, area_volume_z
         assert!(result.len() == 4);
-        let query = [&self.draught_min];
+        let query = [self.draught_min];
         let result_min = cache.get(&query);
         let av_cs_dmin = result_min[2];
         let mv_x_cs_dmin = result_min[0];

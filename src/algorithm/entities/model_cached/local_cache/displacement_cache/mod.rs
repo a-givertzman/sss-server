@@ -5,6 +5,7 @@ pub(crate) use cache::*;
 use crate::algorithm::entities::Position;
 
 /// Данные из кэша значений по корпусу
+#[derive(Debug)]
 pub struct DisplacementCacheResult {
     pub heel: f64,
     pub trim: f64,    

@@ -61,7 +61,7 @@ impl BowAreaCache {
         assert!(draught > 0.);
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let query = [&trim, &draught];
+        let query = [trim, draught];
         let result = cache.get(&query);
         assert!(result.len() == 1);
         Ok(result[0])

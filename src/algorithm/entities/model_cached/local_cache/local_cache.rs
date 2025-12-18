@@ -55,7 +55,7 @@ pub(crate) trait LocalCache {
     ///
     /// Returns approximated values based on given set.
     // TODO получениеf
-    fn get(&self, approx_vals: &[&f64]) -> Result<Vec<f64>, Error> {
+    fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
         Ok(self
             .cache()
@@ -130,8 +130,8 @@ pub fn get_volume(
         let mut last_delta_signum = 1.;
         let mut result = Vec::new();
         'volume_loop: for i in 0..=50 {
-            let mut query: Vec<_> = query.iter().map(|v| v).collect();
-            query.push(&level);
+            let mut query: Vec<_> = query.to_vec();
+            query.push(level);
             //    println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
             result = cache.get(&query);
             assert!(result.len() >= volume_index);
@@ -140,16 +140,14 @@ pub fn get_volume(
                 step = step * 0.3;
                 last_delta_signum = delta.signum();
             }
-            let next_level = level + step * delta.signum();
-            level = next_level.min(level_max).max(level_min);
-        //           println!("compartment_cashe {} get i:{i} heel:{heel} level:{level} trg_volume:{volume_} res_volume:{} coeff:{coeff} volume_:{volume_} delta:{delta} y:{}", self.dbg, result[0], result[2]);
-            if delta.abs() <= epsilon || i >= 50 || level == next_level {
-                dbg!(delta, epsilon, i, level, next_level);
-                                   //println!("local_cashe {} get_volume result i:{i} {:?} trg_volume:{volume} res:{:?} ", parent, &query, &result);
+            let next_level = (level + step * delta.signum()).min(level_max).max(level_min);
+       //     println!("local_cashe {} get_volume i:{i} heel:{} trim:{} level:{level} res_volume:{} trg_volume:{volume}", parent, query[0], query[1], result[0]);
+            if delta.abs() <= epsilon || i >= 50 || level == next_level {          
                 break 'volume_loop;
             }
+            level = next_level.min(level_max).max(level_min);
         }
-        println!("local_cashe {} get_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
+    //    println!("local_cashe {} get_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
     Ok((level, result))

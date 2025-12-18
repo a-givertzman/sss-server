@@ -67,7 +67,7 @@ impl DamagedCompartmentCache {
     /// Return (volume, center of volume)
     pub fn get(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, Position), Error> {
         let error = Error::new(self.dbg(), "get");
-        let query = [&heel, &trim, &draught];
+        let query = [heel, trim, draught];
         let result = LocalCache::get(self, &query)
             .map_err(|err| error.pass_with(" LocalCache::get(self, &query)", err))?;
         Ok((result[0], Position::new(result[1], result[2], result[3])))

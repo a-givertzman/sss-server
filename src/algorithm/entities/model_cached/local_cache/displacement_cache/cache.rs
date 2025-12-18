@@ -128,7 +128,6 @@ impl DisplacementCache {
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let (draught, result) = get_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
             .map_err(|err| error.pass(err))?;
-        dbg!(heel, trim, volume, draught, &result );
         Ok(DisplacementCacheResult {
             heel,
             trim,

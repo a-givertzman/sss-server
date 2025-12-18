@@ -86,7 +86,7 @@ impl CompartmentBoundCache {
             values = caches
                 .iter()
                 .map(|(center_x, cache)| match cache {
-                    Some(cache) => cache.get(&[&(draugth + center_x * trim_sin)])[0],
+                    Some(cache) => cache.get(&[(draugth + center_x * trim_sin)])[0],
                     None => 0.,
                 })
                 .collect();
