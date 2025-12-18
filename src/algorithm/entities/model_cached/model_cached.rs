@@ -914,7 +914,6 @@ impl ModelCached {
                 deck_angle_point,
             )
             .map_err(|err| error.pass(err))?;
-        dbg!(trim_degree, draught_mid);
         let bow_area = self
             .windage_area
             .bow_area(trim_degree, draught_mid)

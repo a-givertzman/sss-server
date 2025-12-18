@@ -232,9 +232,7 @@ impl CompartmentCache {
         }
         //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
-    }
-
-    
+    }    
     /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
     pub fn get(
