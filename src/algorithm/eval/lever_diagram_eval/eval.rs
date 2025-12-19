@@ -43,7 +43,8 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: StabilityBalanceCtx = ctx.read();
                 let mut dso = balance.dso; 
-             /*   let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
+             /* TODO добавить перерасчет с использованием z_g_fix
+                let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
                 let y_g = ctx.read_params(ParameterID::CenterMassY);
                 let y_c = ctx.read_params(ParameterID::CenterVolumeY);
                 let delta_y = y_g - y_c;
