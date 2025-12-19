@@ -1,19 +1,27 @@
-use crate::algorithm::eval::LeverDiagramCtx;
+use crate::algorithm::entities::Position;
+use crate::algorithm::entities::model_cached::DsoResult;
+use crate::algorithm::entities::ship_model::BalanceStabilityQuery;
+use crate::algorithm::entities::ship_model::ship_model::ShipModel;
+use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::{LeverDiagramCtx, StaticMassCtx};
 use crate::kernel::Eval;
+use crate::kernel::types::Arc;
+use crate::prelude::{ContextParamsWrite, ContextReadRef, InitialCtx};
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextRead},
+        context::context_access::ContextRead,
         entities::math::curve::*,
-        eval::{parameters::ParameterID, zg_eval::Zg, StabilityBalanceCtx},
+        eval::{zg_eval::Zg, StabilityBalanceCtx},
     }, kernel::{types::eval_result::EvalResult}, prelude::ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::sync::RwLock;
 
 ///
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct LeverDiagramEval {
     dbg: Dbg,
-  //  model: Link,
+    model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
@@ -22,13 +30,13 @@ impl LeverDiagramEval {
     ///
     pub fn new(
         parent: impl Into<String>,
-  //      model: Link,
+        model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
         Self {
             dbg,
-    //        model,
+            model,
             ctx: Box::new(ctx), 
         }
     }
@@ -38,11 +46,35 @@ impl LeverDiagramEval {
 impl Eval<Zg, EvalResult> for LeverDiagramEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(z_g_fix) {
-            Ok(ctx) => {
-        //        let ctx = self.ctx.take().unwrap();
-                let balance: StabilityBalanceCtx = ctx.read();
-                let dso = balance.dso; 
+        match self.ctx.eval(z_g_fix.clone()) {
+            Ok(mut ctx) => {
+                let initial: &InitialCtx = ctx.read_ref();
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let static_mass: StaticMassCtx = ctx.read();
+                let stability_result: StabilityBalanceCtx = ctx.read();
+                // Расчет баланса для остойчивости в модели
+                let query = BalanceStabilityQuery {
+                    water_density: voyage.density,
+                    mass_const: static_mass.mass_const,
+                    moment_const: static_mass.moment_const,
+                    bulk: static_mass.bulk.clone(),
+                    liquid: static_mass.liquid.clone(),
+                    grain_bulkhead: static_mass.grain_bulkhead,
+                    damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
+                };
+                let cg = if let Zg(Some(z_g_fix)) = z_g_fix {
+                    Position::new(stability_result.mass_center.x(), stability_result.mass_center.y(), z_g_fix)
+                } else {
+                    stability_result.mass_center
+                };
+                let DsoResult{ heel, dso, entry_angle, flooding_angle } = self
+                    .model
+                    .read()
+                    .compute_dso(stability_result.heel, stability_result.trim, stability_result.draught_mid, cg, query)
+                    .map_err(|err| error.pass_with("model.compute_dso", err))?;
                 let dso_curve = Curve::new_linear(&dso).map_err(|e| error.pass_with("calculate curve", e))?;
                 // нахождение максимума диаграммы
                 let mut tmp_dso: Vec<&(f64, f64)> = dso.iter().filter(|(a, _)| *a >= 0.).collect();
@@ -50,35 +82,10 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     v2.partial_cmp(v1)
                         .expect("LeverDiagram calculate error: sort dso!")
                 });                
-                let (theta_max, max_value) = tmp_dso
+                let (theta_max, _max_value) = tmp_dso
                     .first()
                     .expect("LeverDiagram calculate error, no dso values!");
                 let theta_max = *theta_max;
-              /*  let mut theta_max = angle;
-                let mut value = dso_curve.value(angle).map_err(|e| error.pass_with("calculate value", e))?;
-                let mut max_value = value;
-                let mut delta_angle = 1.;
-                for _i in 0..10 {
-                    let delta_angle_l = angle - delta_angle;
-                    let value_l = dso_curve.value(delta_angle_l).map_err(|e| error.pass_with("calculate value_l", e))?;
-                    let delta_angle_r = angle + delta_angle;
-                    let value_r = dso_curve.value(delta_angle_r).map_err(|e| error.pass_with("calculate value_r", e))?;
-                    if value_l >= value_r {
-                        value = value_l;
-                        angle -= delta_angle;
-                    } else {
-                        value = value_r;
-                        angle += delta_angle;
-                    }
-                    if value >= max_value {
-                        max_value = value;
-                        theta_max = angle;
-                    } else {
-                        angle = theta_max;
-                    }
-                    delta_angle *= 0.5;
-                    log::trace!("{}", format!("LeverDiagram calculate max_angle: value:{value} angle:{angle} max_value:{max_value} theta_max:{theta_max} delta_angle:{delta_angle} i:{_i} "));
-                }*/
            //     log::trace!( "{}", format!("LeverDiagram calculate max_angle:{theta_max} max_value:{max_value}"));
                 // нахождение углов максимумов и угла пересечения с 0
                 let mut max_angles: Vec<(f64, f64)> = Vec::new();
@@ -133,7 +140,10 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                 log::trace!("LeverDiagram calculate diagram: [angle dso ddo]:");
                 for &(angle, dso, ddo) in diagram.iter() {
                     log::trace!("{angle} {dso} {ddo};");
-                }           
+                }   
+                ctx.write_params(ParameterID::Roll, heel); 
+                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, entry_angle);
+                ctx.write_params(ParameterID::AngleOfDownFlooding, flooding_angle);      
                 let result = LeverDiagramCtx {
                     dso,
                     dso_curve,
@@ -141,6 +151,8 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     diagram,
                     theta_max,
                     max_angles,
+                    entry_angle,
+                    flooding_angle,
                 };
                 ctx.write(result)
             }

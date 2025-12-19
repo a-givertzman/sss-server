@@ -1,12 +1,20 @@
 use bincode::{Decode, Encode};
 
-use crate::algorithm::entities::ship_model::stability_result::{BulkResult, LiquidResult};
+use crate::algorithm::entities::{Position, ship_model::stability_result::{BulkResult, LiquidResult}};
 
 
 
 ///
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct StabilityBalanceCtx {
+    /// Крен, градусы
+    pub heel: f64,
+    /// Дифферент, градусы
+    pub trim: f64,
+    /// осадка на миделе
+    pub draught_mid: f64,
+    /// Смещение центра массы, м
+    pub mass_center: Position,
     /// Объемное водоизмещение, м^3
     pub displacement: f64,
     /// Сыпучий груз для которого центр массы и распределение зависит от 
@@ -23,10 +31,6 @@ pub struct StabilityBalanceCtx {
     pub length_wl: f64,
     ///  Ширина по ватерлинии при текущей осадке, м
     pub breadth_wl: f64,
-    ///  Угол входа в воду кромки палубы, градусы
-    pub entry_angle: f64,
-    ///  Угол заливания отверстий, градусы
-    pub flooding_angle: f64,
     /// Суммарная площадь проекции на диаметральную плоскость, в пределах  
     /// 0,15 LBP в корму от носового перпендикуляра, части корпуса судна  
     /// между ватерлинией и линией палубы у борта и закрытой надстройки, м^2
@@ -38,6 +42,4 @@ pub struct StabilityBalanceCtx {
  //   pub rad_long: f64,
   //  /// Поперечный метацентрические радиус, м
   //  pub rad_trans: f64,
-    /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы
-    pub dso: Vec<(f64, f64)>,
 }

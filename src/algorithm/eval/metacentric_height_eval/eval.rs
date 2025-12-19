@@ -31,7 +31,7 @@ impl MetacentricHeightEval {
     }
     ///
     /// 
-    fn calc(&self, mut ctx: Context, z_g_fix: Option<f64>) -> EvalResult {
+    fn calc(&self, mut ctx: Context, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "calc");
         // суммарная масса судна
         let mass = ctx.read_params(ParameterID::Displacement);
@@ -86,7 +86,7 @@ impl MetacentricHeightEval {
         let z_m = center_draught_shift_z + rad_trans; //
         // Поперечная метацентрическая высота без учета влияния
         // поправки на влияние свободной поверхности (9)
-        let (h_trans_0, h_trans_fix, z_g_fix) =  if let Some(z_g_fix) = z_g_fix {
+        let (h_trans_0, h_trans_fix, z_g_fix) =  if let Some(z_g_fix) = z_g_fix.0 {
             let h_trans_fix = z_m - z_g_fix;
             let h_trans_0 = h_trans_fix + delta_m_h.trans();
             (h_trans_0, h_trans_fix, z_g_fix)
@@ -150,11 +150,11 @@ impl Eval<Zg, EvalResult> for MetacentricHeightEval {
         let error = Error::new(&self.dbg, "eval");
         let tmp_context = self.context.read().clone();
         match tmp_context {
-            Some(ctx) => self.calc(ctx, Some(z_g_fix.0)),
+            Some(ctx) => self.calc(ctx, z_g_fix),
             None => match self.ctx.eval(()) {
                 Ok(ctx) => {
                     *self.context.write() = Some(ctx.clone());
-                    self.calc(ctx, None)
+                    self.calc(ctx, Zg(None))
                 }
                 Err(err) => Err(error.pass_with("Read context error", err)),
             }

@@ -112,6 +112,18 @@ impl Display for FloatingPositionResult {
         )
     }
 }
+/// Результат расчета DSO
+#[derive(Debug)]
+pub(crate) struct DsoResult {
+    /// Крен с учетом DSO
+    pub heel: f64,
+    /// DSO
+    pub dso: Vec<(f64, f64)>,
+    /// Угол входа в воду палубы    
+    pub entry_angle: f64,
+    /// Угол входа в воду открытых отверстий             
+    pub flooding_angle: f64,
+}
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
 pub struct ModelCached {
@@ -836,27 +848,12 @@ impl ModelCached {
     pub fn balance_stability(
         &self,
         query: BalanceStabilityQuery,
-        opening: &[Position],
-        deck_angle_point: &[Position],
         epsilon: f64,
     ) -> Result<BalanceStabilityResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "balance_stability");
-
-        /*      let liquids = query.liquid.clone();
-                let mass_const = query.mass_const;
-                let moment_const = query.moment_const;
-                let mass_before_sum = query.mass_const
-                    + query
-                        .liquid
-                        .iter()
-                        .map(|v: &LiquidData| v.mass)
-                        .sum::<f64>()
-                    + query.bulk.iter().map(|v| v.mass).sum::<f64>();
-                dbg!(mass_before_sum);
-        */
         let FloatingPositionResult {
-            mut heel,
+            heel,
             trim,
             draught_mid,
             precision,
@@ -901,100 +898,12 @@ impl ModelCached {
         let bulk = self
             .process_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass(err))?;
-        // TODO добавить перерасчет с использованием z_g_fix
-        let epsilon = 0.001f64.max(epsilon);
-        let (mut dso, mut entry_angle, mut flooding_angle) = self
-            .dso_surface_moment(
-                query,
-                heel,
-                trim_degree,
-                draught_mid,
-                epsilon,
-                mass_center,
-                &self.dso_angles,
-                opening,
-                deck_angle_point,
-            )
-            .map_err(|err| error.pass(err))?;
-        // плечо для нулевого угла
-        let lever_zero = dso
-            .iter()
-            .find(|(a, _)| *a == 0.)
-            .ok_or(error.err("calculate lever_zero error!"))?
-            .1;
-        // знак статического угла крена
-        // если крен на левый борт то переворачиваем диаграммы
-        if lever_zero > 0. {
-            let reverse = |mut v: Vec<(f64, f64)>| -> Vec<(f64, f64)> {
-                v = v.into_iter().map(|(a, v)| (-a, -v)).collect();
-                v.sort_by(|(a1, _), (a2, _)| {
-                    a1.partial_cmp(a2)
-                        .expect("LeverDiagram calculate error: sort!")
-                });
-                v
-            };
-            dso = reverse(dso);
-            entry_angle = reverse(entry_angle);
-            flooding_angle = reverse(flooding_angle);
-            heel = -heel; // сохраняем знак угла
-        }
-        // Поиск входа в воду отверстий и палубы как пересечения с 0
-        let find_zero_angle = |v: Vec<(f64, f64)>| -> Result<f64, Error> {
-            let v: Vec<_> = v
-                .into_iter()
-                .filter(|&(a, _v)| a >= 0.)
-                .map(|(a, v)| (v, a))
-                .collect();
-            Curve::new_linear(&v)
-                .map_err(|err| error.pass(err))?
-                .value(0.)
-                .map_err(|err| error.pass(err))
-        };
-        let entry_angle = find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
-        let flooding_angle = find_zero_angle(flooding_angle).map_err(|err| error.pass_with("flooding_angle", err))?;
         let bow_area = self
             .windage_area
             .bow_area(trim_degree, draught_mid)
             .map_err(|err| error.pass(err))?;
-        /*       let (mass_liquid, moment_liquid) =
-                    liquid
-                        .iter()
-                        .fold((0., Moment::zero()), |(mass, moment), v| {
-                            (
-                                mass + v.mass,
-                                moment + Moment::from_pos(v.mass_shift, v.mass),
-                            )
-                        });
-                let (mass_bulk, moment_bulk) =
-                    bulk.iter().fold((0., Moment::zero()), |(mass, moment), v| {
-                        (
-                            mass + v.mass,
-                            moment + Moment::from_pos(v.mass_shift, v.mass),
-                        )
-                    });
-
-                //    let center_liquid = moment_liquid.to_pos(mass_liquid);
-                //    let center_bulk = moment_bulk.to_pos(mass_bulk);
-                let _moment_liquid = self
-                    .moment_liquid_floating(&liquids, heel, trim, epsilon)
-                    .unwrap();
-                let mass_sum = mass_const + mass_liquid + mass_bulk;
-                let moment_sum = moment_const + moment_liquid + moment_bulk;
-                let center_mass_sum = moment_sum.to_pos(mass_sum);
-                dbg!(
-                    heel,
-                    trim,
-                    epsilon,
-                    moment_const + moment_bulk,
-                    mass_liquid,
-                    _moment_liquid,
-                    moment_liquid,
-                    mass_sum,
-                    center_mass_sum
-                );
-        */
         Ok(BalanceStabilityResult {
-            roll: heel,
+            heel,
             trim_degree,
             trim_meter,
             draught_mid,
@@ -1012,9 +921,6 @@ impl ModelCached {
             rad_long,
             rad_trans,
             mass_center,
-            dso,
-            entry_angle,
-            flooding_angle,
             bow_area,
         })
     }
@@ -1116,6 +1022,73 @@ impl ModelCached {
             draught = new_draught;
         }
         Err(error.err(format!("query:{:?} error: no result", query)))
+    }
+    /// Расчет dso
+    pub fn dso(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught_mid: f64,
+        cg: Position,
+        query: BalanceStabilityQuery,
+        opening: &[Position],
+        deck_angle_point: &[Position],
+        epsilon: f64,
+    ) -> Result<DsoResult, Error> {
+        //   let time = std::time::Instant::now();
+        let error = Error::new(&self.dbg, "dso");
+        let (mut dso, mut entry_angle, mut flooding_angle) = self
+            .dso_surface_moment(
+                query,
+                heel,
+                trim,
+                draught_mid,
+                epsilon,
+                cg,
+                &self.dso_angles,
+                opening,
+                deck_angle_point,
+            )
+            .map_err(|err| error.pass(err))?;
+        // плечо для нулевого угла
+        let lever_zero = dso
+            .iter()
+            .find(|(a, _)| *a == 0.)
+            .ok_or(error.err("calculate lever_zero error!"))?
+            .1;
+        // знак статического угла крена
+        // если крен на левый борт то переворачиваем диаграммы
+        let heel = if lever_zero > 0. {
+            let reverse = |mut v: Vec<(f64, f64)>| -> Vec<(f64, f64)> {
+                v = v.into_iter().map(|(a, v)| (-a, -v)).collect();
+                v.sort_by(|(a1, _), (a2, _)| {
+                    a1.partial_cmp(a2)
+                        .expect("LeverDiagram calculate error: sort!")
+                });
+                v
+            };
+            dso = reverse(dso);
+            entry_angle = reverse(entry_angle);
+            flooding_angle = reverse(flooding_angle);
+            -heel
+        } else {
+            heel
+        };
+        // Поиск входа в воду отверстий и палубы как пересечения с 0
+        let find_zero_angle = |v: Vec<(f64, f64)>| -> Result<f64, Error> {
+            let v: Vec<_> = v
+                .into_iter()
+                .filter(|&(a, _v)| a >= 0.)
+                .map(|(a, v)| (v, a))
+                .collect();
+            Curve::new_linear(&v)
+                .map_err(|err| error.pass(err))?
+                .value(0.)
+                .map_err(|err| error.pass(err))
+        };
+        let entry_angle = find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
+        let flooding_angle = find_zero_angle(flooding_angle).map_err(|err| error.pass_with("flooding_angle", err))?;
+        Ok(DsoResult{dso, entry_angle, flooding_angle, heel})
     }
     /// Расчет диаграммы статической остойчивости
     /// на основе фактического кренящего момента.

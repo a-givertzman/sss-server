@@ -37,7 +37,9 @@ impl Eval<(), EvalResult> for StaticMassEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            Ok(ctx) => {
+            Ok(ctx) => {                
+                let icing: IcingCtx = ctx.read();
+                let wetting: WettingCtx = ctx.read();
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = initial
                     .bounds
@@ -66,7 +68,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     .into_iter()
                     .map(|v| (v.mass, Bound::Value(v.bound_x1, v.bound_x2)))
                     .unzip();
-                let mass_const = lightship_values.iter().sum();
+                let mass_const: f64 = lightship_values.iter().sum();
             //    dbg!(mass_const, shift_const);
                 let lightship_bounds = Bounds::new(lightship_bounds)
                     .map_err(|err| error.pass_with("Bounds::new", err))?;
@@ -183,13 +185,21 @@ impl Eval<(), EvalResult> for StaticMassEval {
                 distr_static
                     .add_vec(&distr_unit)
                     .map_err(|err| error.pass_with("distr_static.add_vec(distr_wetting)", err))?;
+                // Сумарный момент за вычетом смещяемых и насыпных груов
+                let moment_const = Moment::from_pos(shift_const, mass_const)
+                    + Moment::from_pos(shift_unit, mass_unit)
+                    + Moment::from_pos(shift_gaseous, mass_gaseous)
+                    + Moment::from_pos(icing.mass_shift, icing.mass)
+                    + Moment::from_pos(wetting.mass_shift, wetting.mass);
+                // Суммарная масса корпуса, обледенения с намоканием и грузов за вычетом смещяемых и насыпных грузов
+                let mass_const = mass_const
+                    + mass_unit
+                    + mass_gaseous
+                    + icing.mass
+                    + wetting.mass;                   
                 let result = StaticMassCtx {
                     mass_const,
-                    mass_unit,
-                    mass_gaseous,
-                    shift_const,
-                    shift_unit,
-                    shift_gaseous,
+                    moment_const,
                     distr_static,
                     bulk,
                     liquid,

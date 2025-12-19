@@ -93,7 +93,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                             self.ship_model.clone(),
                                                                             LeverDiagramEval::new(
                                                                                 &dbg,
-                                                                                //   link,
+                                                                                self.ship_model.clone(), 
                                                                                 MetacentricHeightEval::new(
                                                                                     &dbg,
                                                                                     // Before ZG

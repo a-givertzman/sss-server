@@ -37,7 +37,7 @@ impl Eval<Zg, EvalResult> for WheatherEval {
             Ok(mut ctx) => {
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: StabilityBalanceCtx = ctx.read();
+                let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding); 
                 let rolling_amplitude: RollingAmplitudeCtx = ctx.read();
                 let l_w1 = wind.arm_wind_static;
                 let l_w2 = wind.arm_wind_dynamic;
@@ -54,7 +54,7 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                     .unwrap_or(&90.)
                     .clone();
                 let theta_w2: f64 = 50.;
-                let theta_f = balance.flooding_angle;
+                let theta_f = flooding_angle;
                 let l_w2_angles = lever_diagram
                     .angle(l_w2)
                     .map_err(|e| error.pass_with("l_w2_angles", e))?;

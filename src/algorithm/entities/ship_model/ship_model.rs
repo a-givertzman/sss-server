@@ -8,6 +8,7 @@ use crate::algorithm::entities::data::stability::horizontal_area::HStabAreaArray
 use crate::algorithm::entities::data::strength::horizontal_area::HStrArea;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrAreaArray;
 use crate::algorithm::entities::model_cached::AreaResult;
+use crate::algorithm::entities::model_cached::DsoResult;
 use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
@@ -267,14 +268,9 @@ impl ShipModel {
         query: BalanceStabilityQuery,
     ) -> Result<BalanceStabilityResult, Error> {
         let error = Error::new(&self.dbg, "compute_balance");
-        let opening = self.opening.as_ref().ok_or(error.err("opening"))?;
-        let deck_angle_point = self
-            .deck_angle_point
-            .as_ref()
-            .ok_or(error.err("deck_angle_point"))?;
         let mut result = self
             .model_cached
-            .balance_stability(query, opening, deck_angle_point, 0.000001)
+            .balance_stability(query, 0.000001)
             .map_err(|err| error.pass(err))?;
         let grain_moment = self
             .grain_moment
@@ -305,6 +301,28 @@ impl ShipModel {
         self.model_cached
             .balance_strength(query)
             .map_err(|err| Error::new(&self.dbg, "compute_strength").pass(err))
+    }
+    ///
+    /// TODO: Doc
+    pub fn compute_dso(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught_mid: f64,
+        cg: Position,
+        query: BalanceStabilityQuery,
+    ) -> Result<DsoResult, Error> {
+        let error = Error::new(&self.dbg, "compute_balance");
+        let opening = self.opening.as_ref().ok_or(error.err("opening"))?;
+        let deck_angle_point = self
+            .deck_angle_point
+            .as_ref()
+            .ok_or(error.err("deck_angle_point"))?;
+        let result = self
+            .model_cached
+            .dso(heel, trim, draught_mid, cg, query, opening, deck_angle_point, 0.001)
+            .map_err(|err| error.pass(err))?;
+        Ok(result)
     }
 }
 //

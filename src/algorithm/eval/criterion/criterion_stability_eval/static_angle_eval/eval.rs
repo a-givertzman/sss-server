@@ -46,8 +46,7 @@ impl Eval<Zg, EvalResult> for StaticAngleEval {
                     .any(|v| v.cargo_type == UnitCargoType::Container);
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: StabilityBalanceCtx = ctx.read();
-                let flooding_angle = balance.flooding_angle;
+                let flooding_angle = lever_diagram.flooding_angle;
                 // Для всех судов (кроме района плавания R3):
                 // статического угла крена θ𝑤1, вызванного постоянным ветром
                 let wind_lever = wind.arm_wind_static;

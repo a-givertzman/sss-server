@@ -1,6 +1,5 @@
 #[cfg(test)]
 
-use crate::algorithm::entities::Position;
 use crate::algorithm::eval::*;
 use crate::app::app::App;
 use crate::conf::Conf;
@@ -11,7 +10,7 @@ use crate::kernel::{
     types::{Arc, RwLock},
 };
 use sal_core::dbg::Dbg;
-use sal_sync::thread_pool::ThreadPool;
+use sal_sync::thread_pool::{self, ThreadPool};
 use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
 use crate::algorithm::entities::{
     Bounds, model_cached::{self},
@@ -50,7 +49,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
     let model_x = 65.25;
-    let tp = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));  
+    let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));  
     let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
     dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
     dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
@@ -86,7 +85,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             compartment_level_step_qnt: 10,
             dso_angles,
         },
-        Arc::clone(&tp),
+        Arc::clone(&thread_pool),
     )
     .unwrap();
     let physical_frames = [
@@ -172,6 +171,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                         ship_model.clone(),
                                                                         LeverDiagramEval::new(
                                                                             &dbg,
+                                                                            ship_model.clone(),
                                                                             //   link,
                                                                             MetacentricHeightEval::new(
                                                                                 &dbg,
@@ -246,26 +246,25 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    ).eval(Zg::empty())
-    
+    )//.eval(Zg::empty())    
     ;
 
-/*    
-    let _result = DraftMarkEval::new(
-        &tmp_dbg,
+    
+    let result = DraftMarkEval::new(
+        &dbg,
         CriterionDraughtEval::new(
-            &tmp_dbg,
+            &dbg,
             ReserveBuoyncyEval::new(
-                &tmp_dbg,
+                &dbg,
                 ScrewEval::new(
-                    &tmp_dbg,
+                    &dbg,
                     BowBoardEval::new(
-                        &tmp_dbg,
+                        &dbg,
                         LoadLineEval::new(
-                            &tmp_dbg,
+                            &dbg,
                             ZgEval::new(
-                                    thread_pool.scheduler(),
-                                    &tmp_dbg,
+                                    thread_pool,
+                                    &dbg,
                               //      &ship_model,
                                     ctx,
                             ),
@@ -275,10 +274,10 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     )
-    .eval(());*/
+    .eval(());
 
    // let initial: &InitialCtx = ctx.as_ref();
-    ctx.unwrap();
+    result.unwrap();
     
     Ok(())
 }

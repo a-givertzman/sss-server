@@ -7,7 +7,7 @@ use crate::algorithm::entities::{Position, data::loads::AssignmentType};
 #[derive(Debug, Clone)]
 pub struct BalanceStabilityResult {
     /// Крен, градусы
-    pub roll: f64,
+    pub heel: f64,
     /// Дифферент, градусы
     pub trim_degree: f64,
     /// Дифферент, метры
@@ -49,12 +49,6 @@ pub struct BalanceStabilityResult {
     pub bulk: Vec<BulkResult>,
     /// Данные жидких грузов
     pub liquid: Vec<LiquidResult>,
-    /// Массив значений плечей от крена для текущих значений дифферента и осадки, м/градусы
-    pub dso: Vec<(f64, f64)>,
-    ///  Угол входа в воду кромки палубы, градусы
-    pub entry_angle: f64,
-    ///  Угол заливания отверстий, градусы
-    pub flooding_angle: f64,
 }
 ///
 /// TODO: Type doc here

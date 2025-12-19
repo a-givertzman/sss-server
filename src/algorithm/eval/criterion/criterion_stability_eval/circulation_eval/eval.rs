@@ -46,7 +46,8 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 let d = ctx.read_params(ParameterID::DraughtMean);
                 let l_wl = balance.length_wl;
                 let moment_shift_z = ctx.read_params(ParameterID::CenterMassZ);
-                let entry_angle = balance.entry_angle;
+                let lever: LeverDiagramCtx = ctx.read();
+                let entry_angle = lever.entry_angle;
                 // суммарная масса судна
                 let mass = ctx.read_params(ParameterID::Displacement);
                 // Плечо кренящего момента на циркуляции при скорости v, m/s

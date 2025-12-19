@@ -40,7 +40,7 @@ impl Eval<Zg, EvalResult> for GrainEval {
                 let balance: StabilityBalanceCtx = ctx.read();
                 let m_grain = balance.bulk.iter().map(|v| v.moment).sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
-                let flooding_angle = balance.flooding_angle;
+                let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding); 
                 let mut results = Vec::new();
                 let lambda_0 = m_grain / mass;
                 // Первая точка апроксимирующей прямой

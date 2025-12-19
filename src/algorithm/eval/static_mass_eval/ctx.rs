@@ -1,18 +1,14 @@
-use crate::algorithm::entities::{Position, ship_model::{BulkData, GaseousData, LiquidData}};
+use crate::algorithm::entities::{Moment, ship_model::{BulkData, GaseousData, LiquidData}};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
 #[derive(Debug, Clone)]
 pub struct StaticMassCtx {
-    /// Масса 
+    // Суммарная масса корпуса, обледенения с намоканием и грузов за вычетом смещяемых и насыпных грузов
     pub mass_const: f64,
-    pub mass_unit: f64,
-    pub mass_gaseous: f64,
-    /// Смещение центра масс
-    pub shift_const: Position,
-    pub shift_unit: Position,
-    pub shift_gaseous: Position,
+    // Сумарный момент за вычетом смещяемых и насыпных груов
+    pub moment_const: Moment,
     /// Суммарное распределение статической массы и генеральных грузов: масса корпуса и механизмов, 
     /// намокания, обледенения и генерального грузов 
     /// отсутствует жидкий, газообразный и сыпучий груз, их распределение считается по модели отсеков

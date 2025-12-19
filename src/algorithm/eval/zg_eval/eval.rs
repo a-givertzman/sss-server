@@ -83,7 +83,7 @@ impl Eval<(), EvalResult> for ZgEval {
                     //  println!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
-                            let ctx = self_ctx.eval(Zg(z_g_fix))?;
+                            let ctx = self_ctx.eval(Zg(Some(z_g_fix)))?;
                             // let criterion = Arc::new(Mutex::new(Option::<CriterionStabilityCtx>::None));
                             let criterion: CriterionStabilityCtx = ctx.read();
                             results_.push((z_g_fix, criterion));

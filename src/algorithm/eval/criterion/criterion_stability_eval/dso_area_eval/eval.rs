@@ -38,8 +38,7 @@ impl Eval<Zg, EvalResult> for DSOAreaEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_type = initial.ship_type.unwrap();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let balance: StabilityBalanceCtx = ctx.read();
-                let flooding_angle = balance.flooding_angle;
+                let flooding_angle = lever_diagram.flooding_angle;
                 let mut data = Vec::new();
                 let theta = lever_diagram.angle(0.).unwrap_or(vec![0., 0.]);
                 let theta_0 = *theta.first().unwrap_or(&0.);

@@ -20,6 +20,10 @@ pub struct LeverDiagramCtx {
     pub theta_max: f64,
     /// Углы максимумов диаграммы плеч статической остойчивости
     pub max_angles: Vec<(f64, f64)>,
+    ///  Угол входа в воду кромки палубы, градусы
+    pub entry_angle: f64,
+    ///  Угол заливания отверстий, градусы
+    pub flooding_angle: f64,
 }
 //
 impl LeverDiagramCtx {
