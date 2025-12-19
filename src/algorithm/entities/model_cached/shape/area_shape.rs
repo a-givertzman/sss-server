@@ -189,9 +189,12 @@ impl Shape for AreaShape {
                         .map(|p| load_stl(&p))
                         .partition(|r: &Result<_, Error>| r.is_ok());
                     meshes.into_iter().for_each(|m| mesh.append(&m.unwrap()));
-                    let (indices, vertices) = (mesh.indices().to_vec(), mesh.vertices().to_vec());
-                    let mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all())
-                        .map_err(|err| error.pass_with("TriMesh::with_flags", err.to_string()))?;
+                    if let Err(error) = mesh
+                        .set_flags(TriMeshFlags::all())
+                        .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
+                    {
+                        log::error!("{}", error);
+                    }
                     write_stl(&path_fixed, &mesh)
                         .map_err(|err| error.pass_with("write_stl", err.to_string()))?;
                     mesh

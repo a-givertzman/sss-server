@@ -51,10 +51,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     .start();
 
     DebugSession::new()
-        .filter(LogLevel::Info)
-        .module("api_tools", LogLevel::Warn)
-        .module("sal_sync::thread_pool", LogLevel::Info)
-        .module("ena::unify", LogLevel::Info)
+        .filter(LogLevel::Trace)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
         .init();
 
     let dbg = Dbg::own("main");

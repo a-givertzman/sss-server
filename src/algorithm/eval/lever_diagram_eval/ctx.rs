@@ -139,7 +139,7 @@ pub(crate) fn angle(
     };
     let angle1: f64 = angle(max_angle, -1., 0.00001)?;
     let angle2 = angle(max_angle, 1., 0.00001)?;
-    //     log::trace!("{}", format!("LeverDiagram angle: lever_moment:{lever_moment} max_angle:{max_angle} angle1:{angle1} angle2:{angle2}"));
+  //  log::trace!("{}", format!("LeverDiagram angle: lever_moment:{lever_moment} max_angle:{max_angle} angle1:{angle1} angle2:{angle2}"));
     Ok(vec![angle1, angle2])
 }
 

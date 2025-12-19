@@ -76,7 +76,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                         log::trace!(
                             "Circulation velocity src_angle:{target_angle} current_vel:{current_vel} delta_vel:{delta_vel} delta_angle:{delta_angle}"
                         );
-                        current_vel = delta_vel * delta_angle.signum();
+                        current_vel += delta_vel * delta_angle.signum();
                         delta_vel /= 2.;
                     }
                     Ok(current_vel)
@@ -84,18 +84,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 // Угла крена на циркуляции при скорости v_0, m/s
                 let angle = match lever_diagram.angle(heel_lever(v_0)) {
                     Ok(angles) => angles.first().copied(),
-                    Err(err) => {
-                        let error = error.pass_with("angles", err);
-                        log::error!("{error}");
-                        let result = CirculationCtx {
-                            data: CriterionData::new_error(
-                                CriterionID::HeelTurning,
-                                "Ошибка вычисления крена на циркуляции: ".to_owned()
-                                    + &error.to_string(),
-                            ),
-                        };
-                        return ctx.write(result);
-                    }
+                    Err(_) => None,
                 };
                 let target = 16.0f64.min(entry_angle / 2.);
                 let result = if let Some(angle) = angle {

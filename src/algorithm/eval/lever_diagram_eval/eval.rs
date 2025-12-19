@@ -43,18 +43,18 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: StabilityBalanceCtx = ctx.read();
                 let dso = balance.dso; 
+                let dso_curve = Curve::new_linear(&dso).map_err(|e| error.pass_with("calculate curve", e))?;
                 // нахождение максимума диаграммы
                 let mut tmp_dso: Vec<&(f64, f64)> = dso.iter().filter(|(a, _)| *a >= 0.).collect();
                 tmp_dso.sort_by(|(_, v1), (_, v2)| {
                     v2.partial_cmp(v1)
                         .expect("LeverDiagram calculate error: sort dso!")
-                });
-                let dso_curve = Curve::new_linear(&dso).map_err(|e| error.pass_with("calculate curve", e))?;
-                let mut angle = tmp_dso
+                });                
+                let (theta_max, max_value) = tmp_dso
                     .first()
-                    .expect("LeverDiagram calculate error, no dso values!")
-                    .0;
-                let mut theta_max = angle;
+                    .expect("LeverDiagram calculate error, no dso values!");
+                let theta_max = *theta_max;
+              /*  let mut theta_max = angle;
                 let mut value = dso_curve.value(angle).map_err(|e| error.pass_with("calculate value", e))?;
                 let mut max_value = value;
                 let mut delta_angle = 1.;
@@ -77,12 +77,9 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         angle = theta_max;
                     }
                     delta_angle *= 0.5;
-                    //    log::info!("{}", format!("LeverDiagram calculate max_angle: value:{value} angle:{angle} max_value:{max_value} max_angle:{max_angle} delta_angle:{delta_angle} i:{_i} "));
-                }
-                log::trace!(
-                    "{}",
-                    format!("LeverDiagram calculate max_angle:{theta_max}")
-                );
+                    log::trace!("{}", format!("LeverDiagram calculate max_angle: value:{value} angle:{angle} max_value:{max_value} theta_max:{theta_max} delta_angle:{delta_angle} i:{_i} "));
+                }*/
+           //     log::trace!( "{}", format!("LeverDiagram calculate max_angle:{theta_max} max_value:{max_value}"));
                 // нахождение углов максимумов и угла пересечения с 0
                 let mut max_angles: Vec<(f64, f64)> = Vec::new();
                 let mut last_value = dso_curve.value(0.).map_err(|e| error.pass_with("calculate last_value", e))?;
@@ -133,10 +130,6 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     .zip(ddo.iter())
                     .map(|((a1, v1), (_, v2))| (*a1, *v1, *v2))
                     .collect::<Vec<_>>();
-                /*   log::trace!(
-                    "LeverDiagram calculate z_g_fix:{z_g_fix} angle_zero:{}",
-                    angle_zero * angle_zero_signum,
-                );*/
                 log::trace!("LeverDiagram calculate diagram: [angle dso ddo]:");
                 for &(angle, dso, ddo) in diagram.iter() {
                     log::trace!("{angle} {dso} {ddo};");

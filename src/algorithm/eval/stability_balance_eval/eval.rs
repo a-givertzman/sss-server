@@ -112,7 +112,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 let bulk_cargo_shift = moment_bulk_cargo.to_pos(mass_bulk_cargo);     
                 dbg!(mass_bulk_cargo, bulk_cargo_shift); 
 */
-                dbg!(result.roll, result.trim_degree, result.draught_mean, result.mass_center ); 
+                dbg!(result.roll, result.trim_degree, result.draught_mean, result.mass_center, result.entry_angle, result.flooding_angle ); 
         //        dbg!(&result);
            //     result.liquid.iter().for_each(|v| println!("'{}' {} {};", liquid_data.get(&v.assignment_id).unwrap().space_name, v.long_moment_of_inertia, v.trans_moment_of_inertia));
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);

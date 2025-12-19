@@ -1379,14 +1379,14 @@ impl ModelCached {
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
-        println!("\nmodel_cached entry_angle: ");
+   /*     println!("\nmodel_cached entry_angle: ");
         for &(angle, value) in entry_angle.iter() {
             println!("{angle} {value};");
         }
         println!("\nmodel_cached flooding_angle: ");
         for &(angle, value) in flooding_angle.iter() {
             println!("{angle} {value};");
-        }
+        }*/
         Ok((dso, entry_angle, flooding_angle))
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы
