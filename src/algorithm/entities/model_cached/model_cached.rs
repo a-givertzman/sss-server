@@ -2,7 +2,7 @@ use super::{LocalCache, ModelCachedConf};
 use crate::{
     algorithm::{
         entities::{
-            AddVec, Bounds, Moment, Position,
+            AddVec, Bounds, Curve, ICurve, Moment, Position,
             model_cached::{
                 AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
@@ -128,6 +128,8 @@ pub struct ModelCached {
     bounds_level_step: f64,
     /// Directory containing [super::ModelCached] caches.
     cache_dir: PathBuf,
+    /// Angles for DSO
+    dso_angles: Vec<f64>,
     /// Privides access to structure of the 3D element
     displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>>,
     windage_shape: Arc<RwLock<AreaShape>>,
@@ -281,6 +283,7 @@ impl ModelCached {
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
+            dso_angles: conf.dso_angles.clone(),
             displacement_shapes,
             windage_shape,
             displacement: DisplacementCache::new(
@@ -853,7 +856,7 @@ impl ModelCached {
                 dbg!(mass_before_sum);
         */
         let FloatingPositionResult {
-            heel,
+            mut heel,
             trim,
             draught_mid,
             precision,
@@ -898,13 +901,9 @@ impl ModelCached {
         let bulk = self
             .process_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass(err))?;
+        // TODO добавить перерасчет с использованием z_g_fix
         let epsilon = 0.001f64.max(epsilon);
-        let mut angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
-        angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
-        angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
-        angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
-        angles.dedup();
-        let (dso, entry_angle, flooding_angle) = self
+        let (mut dso, mut entry_angle, mut flooding_angle) = self
             .dso_surface_moment(
                 query,
                 heel,
@@ -912,11 +911,47 @@ impl ModelCached {
                 draught_mid,
                 epsilon,
                 mass_center,
-                &angles,
+                &self.dso_angles,
                 opening,
                 deck_angle_point,
             )
             .map_err(|err| error.pass(err))?;
+        // плечо для нулевого угла
+        let lever_zero = dso
+            .iter()
+            .find(|(a, _)| *a == 0.)
+            .ok_or(error.err("calculate lever_zero error!"))?
+            .1;
+        // знак статического угла крена
+        // если крен на левый борт то переворачиваем диаграммы
+        if lever_zero > 0. {
+            let reverse = |mut v: Vec<(f64, f64)>| -> Vec<(f64, f64)> {
+                v = v.into_iter().map(|(a, v)| (-a, -v)).collect();
+                v.sort_by(|(a1, _), (a2, _)| {
+                    a1.partial_cmp(a2)
+                        .expect("LeverDiagram calculate error: sort!")
+                });
+                v
+            };
+            dso = reverse(dso);
+            entry_angle = reverse(entry_angle);
+            flooding_angle = reverse(flooding_angle);
+            heel = -heel; // сохраняем знак угла
+        }
+        // Поиск входа в воду отверстий и палубы как пересечения с 0
+        let find_zero_angle = |v: Vec<(f64, f64)>| -> Result<f64, Error> {
+            let v: Vec<_> = v
+                .into_iter()
+                .filter(|&(a, _v)| a >= 0.)
+                .map(|(a, v)| (v, a))
+                .collect();
+            Curve::new_linear(&v)
+                .map_err(|err| error.pass(err))?
+                .value(0.)
+                .map_err(|err| error.pass(err))
+        };
+        let entry_angle = find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
+        let flooding_angle = find_zero_angle(flooding_angle).map_err(|err| error.pass_with("flooding_angle", err))?;
         let bow_area = self
             .windage_area
             .bow_area(trim_degree, draught_mid)
@@ -1179,13 +1214,12 @@ impl ModelCached {
                             l
                         };
                         dso.push((heel, l));
+                        let tg_t = trim.to_radians().tan();
+                        let tg_h = heel.to_radians().tan();
+                        let cos_h = heel.to_radians().cos();
                         let current_draught = |p: &Position| {
-                            let tg_t = trim.to_radians().tan();
-                            let tg_h = heel.to_radians().tan();
-                            let cos_h = heel.to_radians().cos();
-                            let draught =
-                                draught + p.z() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
-                            draught - p.z()
+                            let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                            p.z() - draught - d_zi
                         };
                         let min_angle = |angles: &[Position]| {
                             let mut angles: Vec<_> =
@@ -1318,7 +1352,7 @@ impl ModelCached {
                         let cos_h = heel.to_radians().cos();
                         let current_draught = |p: &Position| {
                             let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
-                            p.z() - draught + d_zi
+                            p.z() - draught - d_zi
                         };
                         let min_angle = |angles: &[Position]| {
                             let mut angles: Vec<_> =

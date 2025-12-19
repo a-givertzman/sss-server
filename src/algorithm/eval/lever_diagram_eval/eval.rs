@@ -42,44 +42,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
             Ok(ctx) => {
         //        let ctx = self.ctx.take().unwrap();
                 let balance: StabilityBalanceCtx = ctx.read();
-                let mut dso = balance.dso; 
-             /* TODO добавить перерасчет с использованием z_g_fix
-                let z_g_fix = ctx.read_params(ParameterID::CenterMassZFix);
-                let y_g = ctx.read_params(ParameterID::CenterMassY);
-                let y_c = ctx.read_params(ParameterID::CenterVolumeY);
-                let delta_y = y_g - y_c;
-                log::info!(
-                    "LeverDiagram calculate z_g_fix:{z_g_fix} y_g:{y_g} y_c:{y_c} delta_y:{delta_y}"
-                );
-                let mut dso = pantocaren
-                    .iter()
-                    .filter_map(|&(angle_deg, lever)| {
-                        let angle_rad: f64 = angle_deg.to_radians();
-                        let v1 = lever;
-                        let v2 = z_g_fix * angle_rad.sin();
-                        let v3 = delta_y * angle_rad.cos();
-                        let value = v1 - v2 - v3;
-                        //    if angle_deg.fract() == 0. {
-                        //        log::info!("{}", format!("LeverDiagram calculate расчет диаграммы: theta deg:{angle_deg}, l_k:{v1}, z_g_fix*sin(theta):{v2}, (y_g - y_c)*cos(theta):{v3}, l:{value}"));
-                        //    }
-                        Some((angle_deg, value))
-                    })
-                    .collect::<Vec<(f64, f64)>>();*/
-                // плечо для нулевого угла
-                let lever_zero = dso
-                    .iter()
-                    .find(|(a, _)| *a == 0.)
-                    .ok_or(error.err("calculate lever_zero error!"))?.1;
-                // знак статического угла крена
-               // let mut angle_zero_signum = 1.; // если крен на левый борт то переворачиваем диаграмму
-                if lever_zero > 0. {
-                    dso = dso.into_iter().map(|(a, v)| (-a, -v)).collect();
-                    dso.sort_by(|(a1, _), (a2, _)| {
-                        a1.partial_cmp(a2)
-                            .expect("LeverDiagram calculate error: sort dso!")
-                    });
-              //      angle_zero_signum = -1.; // сохраняем знак угла
-                }
+                let dso = balance.dso; 
                 // нахождение максимума диаграммы
                 let mut tmp_dso: Vec<&(f64, f64)> = dso.iter().filter(|(a, _)| *a >= 0.).collect();
                 tmp_dso.sort_by(|(_, v1), (_, v2)| {

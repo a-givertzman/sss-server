@@ -67,19 +67,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
 
- /*
-    let cache_dir: PathBuf = "src/assets/cache/sofia".into();
-    let mut bow_area = BowAreaCache::new(
-        &dbg,
-        None,
-        None,
-        &cache_dir,
-        Arc::clone(&thread_pool),
-    );
-    dbg!(bow_area.init());
-    dbg!(bow_area.get(-0.64, 8.05));
-    return Ok(());
-*/
+    /*
+        let cache_dir: PathBuf = "src/assets/cache/sofia".into();
+        let mut bow_area = BowAreaCache::new(
+            &dbg,
+            None,
+            None,
+            &cache_dir,
+            Arc::clone(&thread_pool),
+        );
+        dbg!(bow_area.init());
+        dbg!(bow_area.get(-0.64, 8.05));
+        return Ok(());
+    */
 
     /*
         let cache_dir: PathBuf = "src/assets/cache/sofia".into();
@@ -211,6 +211,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
+    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
+    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
+    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
+    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+    dso_angles.dedup();
     let mut model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
@@ -242,12 +247,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             hull_draught_step: 0.5,
             bounds_level_step: 0.1,
             compartment_level_step_qnt: 20,
+            dso_angles,
         },
         Arc::clone(&thread_pool),
     )
     .unwrap();
-    
-  /*     let res = model_cached.reload_shapes();            dbg!(&res);
+    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
+    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
+    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
+    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+    dso_angles.dedup();
+    /*     let res = model_cached.reload_shapes();            dbg!(&res);
     //    let res = model_cached.rebuild_caches();   dbg!(&res);
         let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
       //  let res = model_cached.init();                     dbg!(&res);

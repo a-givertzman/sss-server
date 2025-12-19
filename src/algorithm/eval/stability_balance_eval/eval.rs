@@ -5,7 +5,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::{
-            Curve, ICurve, Moment, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
+            Moment, ship_model::{BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult}
         },
         eval::{IcingCtx, StaticMassCtx, WettingCtx, parameters::ParameterID},
     },
@@ -137,24 +137,16 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 let liquid = result
                     .liquid
                     .clone();
-                let entry_angle = Curve::new_linear(&result.entry_angle)
-                    .map_err(|err| error.pass_with("entry_angle curve", err))?
-                    .value(0.)
-                    .map_err(|err| error.pass_with("entry_angle value", err))?;
-                let flooding_angle = Curve::new_linear(&result.flooding_angle)
-                    .map_err(|err| error.pass_with("flooding_angle curve", err))?
-                    .value(0.)
-                    .map_err(|err| error.pass_with("flooding_angle value", err))?;
-                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, entry_angle);
-                ctx.write_params(ParameterID::AngleOfDownFlooding, flooding_angle);
+                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, result.entry_angle);
+                ctx.write_params(ParameterID::AngleOfDownFlooding, result.flooding_angle);
                 let result = StabilityBalanceCtx {
                     displacement: result.displacement,
                     bulk,
                     liquid,
                     length_wl: result.length_wl,
                     breadth_wl: result.breadth_wl,                    
-                    entry_angle,
-                    flooding_angle,
+                    entry_angle: result.entry_angle,
+                    flooding_angle: result.flooding_angle,
                     bow_area: result.bow_area,
                     dso: result.dso,
                 };
