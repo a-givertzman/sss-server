@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufWriter;
 use std::io::Write;
+use std::path::PathBuf;
 use std::thread::current;
 use nalgebra::Const;
 use nalgebra::OPoint;
@@ -22,6 +23,44 @@ use crate::{
     },
     prelude::ContextWrite,
 };
+
+///
+/// Write data to .stl file
+pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
+    let error = Error::new("Shape", "write_stl");
+    let (result, empty_normals): (Vec<_>, Vec<_>) = mesh
+        .triangles()
+        .map(|t| (t.normal(), t))
+        .partition(|(n, _)| n.is_some());
+    if !empty_normals.is_empty() {
+        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
+    }
+    let triangles: Vec<_> = result
+        .into_iter()
+        .map(|(n, t)| {
+            let n = n.unwrap();
+            let normal = stl_io::Vector([n[0] as f32, n[1] as f32, n[2] as f32]);
+            let vertices = [
+                stl_io::Vector([t.a[0] as f32, t.a[1] as f32, t.a[2] as f32]),
+                stl_io::Vector([t.b[0] as f32, t.b[1] as f32, t.b[2] as f32]),
+                stl_io::Vector([t.c[0] as f32, t.c[1] as f32, t.c[2] as f32]),
+            ];
+            stl_io::Triangle { normal, vertices }
+        })
+        .collect();
+    let mut binary_stl = Vec::<u8>::new();
+    stl_io::write_stl(&mut binary_stl, triangles.iter())
+        .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
+    let mut buffer = std::fs::File::create(&path).map_err(|err| {
+        error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
+    })?;
+    buffer.write_all(&binary_stl).map_err(|err| {
+        error.pass_with(
+            format!("buffer.write_all, path:{:?}", path),
+            err.to_string(),
+        )
+    })
+}
 ///
 /// Преобразование координат 3D модели в тип данных TriMesh
 pub struct ConvertModelToTrimeshEval {
@@ -185,6 +224,15 @@ impl ConvertModelToTrimeshEval {
         });
         let count = points.len() as f64;
         Point::new(sum.x / count, sum.y / count, sum.z / count)
+
+    }
+    ///
+    /// Сохранение точки
+    fn save_point_to_txt(point: &Point<f64>, path: &str) -> std::io::Result<()> {
+        let file = File::create(path)?;
+        let mut writer = BufWriter::new(file);
+        writeln!(writer, "{:.6} {:.6} {:.6}", point.x, point.y, point.z)?;
+        Ok(())
     }
     ///
     /// Сохранение точек
@@ -196,14 +244,22 @@ impl ConvertModelToTrimeshEval {
         }
         Ok(())
     }
+    ///
+    /// Соединение шпангоутов
     pub fn get_vertices_indeces(&self, frames: Vec<(f64, Vec<Point<f64>>)>, nasal_block: Option<TriMesh>, main_decks_indices: Vec<usize>) -> (Vec<Point<f64>>, Vec<[u32; 3]>, Vec<TriMesh>) {
-        let result: Vec<TriMesh> = Vec::new();
+        let mut result: Vec<TriMesh> = Vec::new();
         let mut vertices: Vec<Point<f64>> = Vec::new();
         let mut indices: Vec<[u32; 3]> = Vec::new();
         let mut start_trimesh: Option<usize> = None;
         for i in 0..frames.len() - 1 {
             if start_trimesh.is_none() { start_trimesh = Some(i); }
             if &frames[i].0 == &frames[i + 1].0 {
+                // let mut previous = frames[start_trimesh.unwrap()].1.clone();
+                // let mut current = frames[start_trimesh.unwrap()].1.clone();
+                // vertices = Vec::new();
+                // indices = Vec::new();
+                // start_trimesh = None;
+
             } else {
                 let mut previous = Vec::new();
                 let mut current = Vec::new();
@@ -240,6 +296,42 @@ impl ConvertModelToTrimeshEval {
                         j_prev += 1;
                         j_curr += 1;
                     }
+                    let previous_reverse: Vec<Point<f64>> = previous.iter().map(| point | {
+                        OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+                    }).collect();
+                    let current_reverse: Vec<Point<f64>> = current.iter().map(| point | {
+                        OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+                    }).collect();
+                    j_prev = 0;
+                    j_curr = 0;
+                    while j_prev < previous_reverse.len()-1 && j_curr < current_reverse.len()-1 {
+                        let p1: OPoint<f64, Const<3>> = previous_reverse[j_prev];
+                        let p2 = previous_reverse[j_prev+1];
+                        let c1 = current_reverse[j_curr];
+                        let c2 = current_reverse[j_curr+1];
+                        let global_base = vertices.len() as u32;
+                        let mut local_vertices = Vec::new();
+                        let mut local_indices = Vec::new();
+                        local_vertices.push(p1);
+                        local_vertices.push(p2);
+                        local_vertices.push(c1);
+                        local_vertices.push(c2);
+                        local_indices.push([0, 1, 2]);
+                        local_indices.push([1, 3, 2]);
+                        // переносим их в глобальные
+                        for v in local_vertices.clone() {
+                            vertices.push(v);
+                        }
+                        for [a,b,c] in local_indices.clone() {
+                            indices.push([
+                                a + global_base,
+                                b + global_base,
+                                c + global_base
+                            ]);
+                        }
+                        j_prev += 1;
+                        j_curr += 1;
+                    }
                 } else if !main_decks_indices.contains(&i) && main_decks_indices.contains(&(i + 1)) { 
                     previous = frames[i].1.clone();
                     current = frames[i + 1].1.clone();
@@ -251,16 +343,18 @@ impl ConvertModelToTrimeshEval {
                     }
                     let y_mid = y_sum / current.len() as f64;
                     // Разделяем на две части
-                    let mut lower: Vec<Point<f64>> = Vec::new();
                     let mut upper: Vec<Point<f64>> = Vec::new();
                     for p in current {
                         if p.y <= y_mid {
-                            lower.push(p);
+                            continue;
                         } else {
                             upper.push(p);
                         }
                     }
                     upper = self.resample_line(&upper, 600);
+                    let mut lower: Vec<Point<f64>> = upper.iter().map(| point | {
+                        OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+                    }).collect();
                     // Сортируем upper по координате X так же, как previous
                     upper.sort_by(|a, b| {
                         let a_index = previous.iter().position(|p| (p.x - a.x).abs() < 1e-8).unwrap_or(0);
@@ -269,6 +363,7 @@ impl ConvertModelToTrimeshEval {
                     });
                     let mut j_prev = 0;
                     let mut j_curr = 0;
+                    // первая половина
                     while j_prev < previous.len() - 1 && j_curr < upper.len() - 1 {
                         let p1: OPoint<f64, Const<3>> = previous[j_prev];
                         let p2 = previous[j_prev + 1];
@@ -288,16 +383,188 @@ impl ConvertModelToTrimeshEval {
                         j_prev += 1;
                         j_curr += 1;
                     }
-                    if let Err(e) = Self::save_points_to_txt(&lower, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\lower.txt") {
-                        log::error!("Failed to save points: {}", e);
+                    // вторая половина
+                    let mut previous_reverse: Vec<Point<f64>> = previous.iter().map(| point | {
+                        OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+                    }).collect();
+                    previous_reverse.sort_by(|a , b| a.x.partial_cmp(&b.x).unwrap());
+                    // Сортируем upper по координате X так же, как previous_reverse
+                    lower.sort_by(|a, b| {
+                        let a_index = previous_reverse.iter().position(|p| (p.x - a.x).abs() < 1e-8).unwrap_or(0);
+                        let b_index = previous_reverse.iter().position(|p| (p.x - b.x).abs() < 1e-8).unwrap_or(0);
+                        a_index.cmp(&b_index)
+                    });
+                    let mut j_prev = 0;
+                    let mut j_curr = 0;
+                    // первая половина
+                    while j_prev < previous_reverse.len() - 1 && j_curr < lower.len() - 1 {
+                        let p1: OPoint<f64, Const<3>> = previous_reverse[j_prev];
+                        let p2 = previous_reverse[j_prev + 1];
+                        let c1 = lower[j_curr];
+                        let c2 = lower[j_curr + 1];
+                        let global_base = vertices.len() as u32;
+                        let local_vertices = vec![p1, p2, c1, c2];
+                        let local_indices = vec![[0, 1, 2], [1, 3, 2]];
+                        // переносим в глобальные
+                        for v in local_vertices.clone() {
+                            vertices.push(v);
+                        }
+                        for [a, b, c] in local_indices {
+                            indices.push([a + global_base, b + global_base, c + global_base]);
+                        }
+                        j_prev += 1;
+                        j_curr += 1;
                     }
-                    if let Err(e) = Self::save_points_to_txt(&upper, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\upper.txt") {
-                        log::error!("Failed to save points: {}", e);
+                } else if main_decks_indices.contains(&i) && !main_decks_indices.contains(&(i + 1)) {
+                    previous = frames[i].1.clone();
+                    current = frames[i + 1].1.clone();
+                    // --- Делим current пополам по оси Y ---
+                    // Находим среднее значение Y
+                    let mut y_sum = 0.0;
+                    for p in &previous {
+                        y_sum += p.y;
                     }
-                    if let Err(e) = Self::save_points_to_txt(&frames[i].1.clone(), "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\previous.txt") {
-                        log::error!("Failed to save points: {}", e);
+                    let y_mid = y_sum / previous.len() as f64;
+                    // Разделяем на две части
+                    let mut upper: Vec<Point<f64>> = Vec::new();
+                    for p in previous {
+                        if p.y <= y_mid {
+                            continue;
+                        } else {
+                            upper.push(p);
+                        }
+                    }
+                    upper = self.resample_line(&upper, 600);
+                    let mut lower: Vec<Point<f64>> = upper.iter().map(| point | {
+                        OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+                    }).collect();
+                    // Сортируем upper по координате X так же, как previous
+                    upper.sort_by(|a, b| {
+                        let a_index = current.iter().position(|p| (p.x - a.x).abs() < 1e-8).unwrap_or(0);
+                        let b_index = current.iter().position(|p| (p.x - b.x).abs() < 1e-8).unwrap_or(0);
+                        a_index.cmp(&b_index)
+                    });
+                    let mut j_prev = 0;
+                    let mut j_curr = 0;
+                    // первая половина
+                    while j_prev < current.len() - 1 && j_curr < upper.len() - 1 {
+                        let p1: OPoint<f64, Const<3>> = current[j_prev];
+                        let p2 = current[j_prev + 1];
+                        let c1 = upper[j_curr];
+                        let c2 = upper[j_curr + 1];
+                        let global_base = vertices.len() as u32;
+                        let local_vertices = vec![p1, p2, c1, c2];
+                        let local_indices = vec![[0, 1, 2], [1, 3, 2]];
+                        // переносим в глобальные
+                        for v in local_vertices.clone() {
+                            vertices.push(v);
+                        }
+                        for [a, b, c] in local_indices {
+                            indices.push([a + global_base, b + global_base, c + global_base]);
+                        }
+
+                        j_prev += 1;
+                        j_curr += 1;
+                    }
+                    // вторая половина
+                    let mut current_reverse: Vec<Point<f64>> = current.iter().map(| point | {
+                        OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+                    }).collect();
+                    current_reverse.sort_by(|a , b| a.x.partial_cmp(&b.x).unwrap());
+                    // Сортируем upper по координате X так же, как current_reverse
+                    lower.sort_by(|a, b| {
+                        let a_index = current_reverse.iter().position(|p| (p.x - a.x).abs() < 1e-8).unwrap_or(0);
+                        let b_index: usize = current_reverse.iter().position(|p| (p.x - b.x).abs() < 1e-8).unwrap_or(0);
+                        a_index.cmp(&b_index)
+                    });
+                    let mut j_prev = 0;
+                    let mut j_curr = 0;
+                    // первая половина
+                    while j_prev < current_reverse.len() - 1 && j_curr < lower.len() - 1 {
+                        let p1: OPoint<f64, Const<3>> = current_reverse[j_prev];
+                        let p2 = current_reverse[j_prev + 1];
+                        let c1 = lower[j_curr];
+                        let c2 = lower[j_curr + 1];
+                        let global_base = vertices.len() as u32;
+                        let local_vertices = vec![p1, p2, c1, c2];
+                        let local_indices = vec![[0, 1, 2], [1, 3, 2]];
+                        // переносим в глобальные
+                        for v in local_vertices.clone() {
+                            vertices.push(v);
+                        }
+                        for [a, b, c] in local_indices {
+                            indices.push([a + global_base, b + global_base, c + global_base]);
+                        }
+                        j_prev += 1;
+                        j_curr += 1;
+                    }
+                } else if main_decks_indices.contains(&i) && main_decks_indices.contains(&(i + 1)) {
+                    previous = frames[i].1.clone();
+                    current = frames[i + 1].1.clone();
+                    let mut j_prev = 0;
+                    let mut j_curr = 0;
+                    // первая половина
+                    while j_prev < previous.len() - 1 && j_curr < current.len() - 1 {
+                        let p1: OPoint<f64, Const<3>> = previous[j_prev];
+                        let p2 = previous[j_prev + 1];
+                        let c1 = current[j_curr];
+                        let c2 = current[j_curr + 1];
+                        let global_base = vertices.len() as u32;
+                        let local_vertices = vec![p1, p2, c1, c2];
+                        let local_indices = vec![[0, 1, 2], [1, 3, 2]];
+                        // переносим в глобальные
+                        for v in local_vertices.clone() {
+                            vertices.push(v);
+                        }
+                        for [a, b, c] in local_indices {
+                            indices.push([a + global_base, b + global_base, c + global_base]);
+                        }
+                        j_prev += 1;
+                        j_curr += 1;
                     }
                 }
+            }
+        }
+        let mut start_frame = frames[start_trimesh.unwrap()].1.clone();
+        let mut end_frame = frames.last().unwrap().1.clone();
+        if !main_decks_indices.contains(&start_trimesh.unwrap()) {
+            let start_frame_reverse: Vec<Point<f64>> = start_frame.iter().map(| point | {
+                OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+            }).collect();
+            start_frame.extend(start_frame_reverse);
+        }
+        if !main_decks_indices.contains(&(frames.len() - 1)) {
+            let end_frame_reverse: Vec<Point<f64>> = end_frame.iter().map(| point | {
+                OPoint::<f64, Const<3>>::new(point.x, -point.y, point.z)
+            }).collect();
+            end_frame.extend(end_frame_reverse);
+        }
+        let start_wall = self.close_frame_end(&start_frame, Some(self.calculate_centroid(&start_frame)));
+        let end_wall = self.close_frame_end(&end_frame, Some(self.calculate_centroid(&end_frame)));
+        // match TriMesh::new(start_wall.0.clone(), start_wall.1.clone()) {
+        //     Ok(_trimesh) => {
+        //         vertices.extend(start_wall.0);
+        //         indices.extend(start_wall.1);
+        //     }
+        //     Err(err) => {
+        //         log::error!("Failed to create TriMesh: {}", err);
+        //     }
+        // }
+        // match TriMesh::new(end_wall.0.clone(), end_wall.1.clone()) {
+        //     Ok(_trimesh) => {
+        //         vertices.extend(end_wall.0);
+        //         indices.extend(end_wall.1);
+        //     }
+        //     Err(err) => {
+        //         log::error!("Failed to create TriMesh: {}", err);
+        //     }
+        // }
+        match TriMesh::new(vertices.clone(), indices.clone()) {
+            Ok(_trimesh) => {
+                result.push(_trimesh);
+            }
+            Err(err) => {
+                log::error!("Failed to create TriMesh: {}", err);
             }
         }
         (vertices, indices, result)
@@ -319,23 +586,19 @@ impl ConvertModelToTrimeshEval {
             frames.push((frame, points));
         }
         frames.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        let all_points: Vec<Point<f64>> = frames.iter().flat_map(|(_, v)| v.clone()).collect();
-        if let Err(e) = Self::save_points_to_txt(&all_points, "src\\tests\\unit\\algorithm\\dialog_static\\output_files\\sampled_points.txt") {
-            log::error!("Failed to save points: {}", e);
-        }
         for (_, verts) in frames.iter_mut() {
             *verts = self.resample_line(verts, target_points);
         }
         let (vertices, indices, res) = self.get_vertices_indeces(frames, nasal_block, surface.main_deck);
         result = res;
         match TriMesh::new(vertices.clone(), indices.clone()) {
-            Ok(_trimesh) => {
-                result.push(_trimesh);
+            Ok(trimesh) => {
+                result.push(trimesh);
                 Some(result)
             }
             Err(err) => {
                 log::error!("Failed to create TriMesh: {}", err);
-                None
+                Some(result)
             }
         }
     }
