@@ -4,7 +4,9 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache, DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache, DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea
+                AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache,
+                DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
+                DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
             },
             ship_model::{
                 stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
@@ -477,28 +479,29 @@ impl ModelCached {
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-  /*      let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-        let mut displacement_bound = DisplacementBoundCache::new(
-            &self.dbg,
-            displacement_shape.clone(),
-            self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
-            self.model_x,
-            bounds.clone(),
-            Arc::clone(&self.thread_pool),
-        );
-        displacement_bound
-            .rebuild()
-            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
-        self.displacement_bounded
-            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-  */      self.windage_area
+        /*      let displacement_shape = self
+                  .displacement_shapes
+                  .get("hull")
+                  .ok_or(error.err("no displacement_shape"))?;
+              let mut displacement_bound = DisplacementBoundCache::new(
+                  &self.dbg,
+                  displacement_shape.clone(),
+                  self.cache_dir.clone().join("disp_bounded"),
+                  self.bounds_level_step,
+                  self.model_x,
+                  bounds.clone(),
+                  Arc::clone(&self.thread_pool),
+              );
+              displacement_bound
+                  .rebuild()
+                  .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+              self.displacement_bounded
+                  .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+        */
+        self.windage_area
             .rebuild(bounds, self.ship_length_lbp)
             .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
-   /*     let mut cache_map = IndexMap::new();
+        /*     let mut cache_map = IndexMap::new();
         for (compartment_id, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{compartment_id}");
             let mut compartment_bounded = compartment
@@ -1310,13 +1313,12 @@ impl ModelCached {
                             l
                         };
                         dso.push((heel, l));
+                        let tg_t = trim.to_radians().tan();
+                        let tg_h = heel.to_radians().tan();
+                        let cos_h = heel.to_radians().cos();
                         let current_draught = |p: &Position| {
-                            let tg_t = trim.to_radians().tan();
-                            let tg_h = heel.to_radians().tan();
-                            let cos_h = heel.to_radians().cos();
-                            let draught =
-                                draught + p.z() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
-                            draught - p.z()
+                            let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                            p.z() - draught + d_zi
                         };
                         let min_angle = |angles: &[Position]| {
                             let mut angles: Vec<_> =
@@ -1324,8 +1326,8 @@ impl ModelCached {
                             angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
                             angles.first().unwrap_or(max_heel).to_owned()
                         };
-                        entry_angle.push((heel, min_angle(opening)));
-                        flooding_angle.push((heel, min_angle(deck_angle_point)));
+                        flooding_angle.push((heel, min_angle(opening)));
+                        entry_angle.push((heel, min_angle(deck_angle_point)));
                         break;
                     }
                 }
@@ -1343,14 +1345,14 @@ impl ModelCached {
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
-        /*       println!("\nmodel_cached entry_angle: ");
+        println!("\nmodel_cached entry_angle: ");
         for &(angle, value) in entry_angle.iter() {
             println!("{angle} {value};");
         }
         println!("\nmodel_cached flooding_angle: ");
         for &(angle, value) in flooding_angle.iter() {
             println!("{angle} {value};");
-        }*/
+        }
         Ok((dso, entry_angle, flooding_angle))
     }
     /// Расчет итерации в расчете равновесного положения и диаграммы

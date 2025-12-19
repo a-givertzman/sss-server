@@ -79,6 +79,13 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                     .lever_moment(b_angle_second)
                     .map_err(|e| error.pass_with("b_lever_second", e))?;
                 let b_delta_angle = b_angle_second - b_angle_first;
+
+                println!("\t l_w1:{l_w1} l_w2:{l_w2} theta_w1:{theta_w1}  theta_w2:{theta_w2} theta_c:{theta_c} theta_f:{theta_f}
+                    a_angle1:{a_angle_first} a_angle2:{l_w2_angle_first} a_s1:{a_s1} a_s2:{a_s2} a:{a} 
+                    b_angle1:{l_w2_angle_first} b_angle2:{b_angle_second}");
+
+
+
                 let b_s1 = lever_diagram
                     .dso_area(b_angle_first, b_angle_second)
                     .map_err(|e| error.pass_with("b_s1", e))?;
