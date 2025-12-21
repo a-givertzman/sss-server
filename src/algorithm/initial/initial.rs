@@ -30,7 +30,6 @@ use sal_core::{dbg::Dbg, error::Error};
 /// для расчетов.
 pub struct Initial {
     dbg: Dbg,
-    model: Arc<RwLock<ShipModel>>,
     api_client: Arc<ApiClient>,
     ctx: Context,
 }
@@ -41,14 +40,12 @@ impl Initial {
     /// - 'api_client' - access to the database
     pub fn new(
         parent: impl Into<String>,
-        model: Arc<RwLock<ShipModel>>,
         api_client: Arc<ApiClient>,
         ctx: Context,
     ) -> Self {
         let dbg = Dbg::new(parent, "Initial");
         Self {
             dbg,
-            model,
             api_client,
             ctx,
         }

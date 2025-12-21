@@ -5,6 +5,7 @@ use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabArea;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabAreaArray;
+use crate::algorithm::entities::data::strength::PhysicalFrameArray;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrArea;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrAreaArray;
 use crate::algorithm::entities::model_cached::AreaResult;
@@ -30,7 +31,7 @@ pub struct ShipModel {
     ship_id: usize,
     //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
-    bounds: Bounds,
+    bounds: Option<Bounds>,
     horisontal_area_str: Option<Vec<HStrArea>>,
     horisontal_area_stab: Option<Vec<HStabArea>>,
     grain_moment: Option<HashMap<String, Curve<f64>>>,
@@ -56,7 +57,6 @@ impl ShipModel {
         ship_id: usize,
         //    ship_file_name: String,
         project_id: String,
-        bounds: Bounds,
         model_cached: ModelCached,
         api_client: Arc<ApiClient>,
     ) -> Self {
@@ -69,7 +69,7 @@ impl ShipModel {
             ship_id,
             //      ship_file_name,
             project_id,
-            bounds,
+            bounds: None,
             horisontal_area_str: None,
             horisontal_area_stab: None,
             grain_moment: None,
@@ -81,7 +81,9 @@ impl ShipModel {
         }
     }
     /// TODO - Doc
-    pub fn init(&mut self) -> Result<(), Error> {
+    /// TODO - сделать что-то с Bounds, они нужны в модели и в контексте
+    /// ПО идее их должен читать контекст, но модель инициализируется первее
+    pub fn init(&mut self) -> Result<Bounds, Error> {
         let error = Error::new(&self.dbg, "init");
         self.horisontal_area_str = Some(
             horisontal_area_str(
@@ -131,9 +133,17 @@ impl ShipModel {
             &self.api_client.clone(),
         )
         .map_err(|err| error.pass_with("max_compartment_volume", err))?;
+        let bounds = get_physical_bounds(
+            self.ship_id,
+            self.project_id.clone(),
+            &self.api_client.clone(),
+        )
+        .map_err(|err| error.pass_with("bounds", err))?;
+        self.bounds = Some(bounds.clone());
         self.model_cached
-            .init(max_compartment_volume, &self.bounds)
-            .map_err(|err| Error::new(&self.dbg, "init").pass(err))
+            .init(max_compartment_volume, &bounds)
+            .map_err(|err| Error::new(&self.dbg, "init").pass(err))?;
+        Ok(bounds)
     }
     ///
     /// TODO: Doc
@@ -168,7 +178,7 @@ impl ShipModel {
     /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
     pub fn strength_area(&self) -> Result<StrengthArea, Error> {
         let error = Error::new(&self.dbg, "strength_area");
-        let bounds = &self.bounds;
+        let bounds = self.bounds.as_ref().ok_or(error.err("no bounds"))?;
         let windage_area = self
             .model_cached
             .bounded_windage_area()
@@ -320,7 +330,16 @@ impl ShipModel {
             .ok_or(error.err("deck_angle_point"))?;
         let result = self
             .model_cached
-            .dso(heel, trim, draught_mid, cg, query, opening, deck_angle_point, 0.001)
+            .dso(
+                heel,
+                trim,
+                draught_mid,
+                cg,
+                query,
+                opening,
+                deck_angle_point,
+                0.001,
+            )
             .map_err(|err| error.pass(err))?;
         Ok(result)
     }
@@ -340,6 +359,27 @@ impl Debug for ShipModel {
             //   .field("exit", &self.exit)
             .finish()
     }
+}
+///
+/// Получение шпаций из физических фреймов
+fn get_physical_bounds(
+    ship_id: usize,
+    project_id: String,
+    api_client: &ApiClient,
+) -> Result<Bounds, Error> {
+    let error = Error::new("ShipModel", "get_physical_bounds");
+    let data = api_client.fetch(&format!(
+                "SELECT pos_x, frame_index as index FROM physical_frame WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
+            )).map_err(|err| error.pass(err))?;
+    let mut physical_frames: Vec<_> = PhysicalFrameArray::parse(&data)
+        .map_err(|err| error.pass(err))?
+        .data()
+        .into_iter()
+        .map(|(_, x)| x)
+        .collect();
+    physical_frames.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+    let bounds = Bounds::from_array(&physical_frames, 0.).map_err(|err| error.pass(err))?;
+    Ok(bounds)
 }
 // временные функции пока непонятно как работать с базой при изменении данных
 // TODO - перенести все в контекст
