@@ -1245,11 +1245,11 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-        println!("\nmodel_cached dso: ");
+   /*       println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
-        /*       println!("\nmodel_cached entry_angle: ");
+             println!("\nmodel_cached entry_angle: ");
         for &(angle, value) in entry_angle.iter() {
             println!("{angle} {value};");
         }
@@ -1378,11 +1378,11 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-        println!("\nmodel_cached dso: ");
+     /*     println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
-        /*     println!("\nmodel_cached entry_angle: ");
+           println!("\nmodel_cached entry_angle: ");
         for &(angle, value) in entry_angle.iter() {
             println!("{angle} {value};");
         }
