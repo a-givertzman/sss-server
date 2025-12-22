@@ -31,11 +31,11 @@ impl IcingTimberType {
 #[derive(Debug, Clone)]
 pub struct IcingTimberCtx {
     /// Ширина корпуса судна  
-    width: f64,
+    pub width: f64,
     /// Длинна корпуса судна  
-    length: f64,
+    pub length: f64,
     /// Тип обледенения  
-    icing_timber_stab: IcingTimberType,
+    pub icing_timber_stab: IcingTimberType,
 }
 //
 impl IcingTimberCtx {

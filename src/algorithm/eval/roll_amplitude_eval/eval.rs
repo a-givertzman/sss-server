@@ -1,14 +1,16 @@
-use crate::algorithm::eval::RollingAmplitudeCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::entities::math::curve::*;
+use crate::algorithm::eval::RollingAmplitudeCtx;
 use crate::algorithm::eval::zg_eval::Zg;
 use crate::{
     algorithm::{
         context::context_access::{ContextParamsWrite, ContextRead, ContextReadRef},
-        eval::{StabilityBalanceCtx, MetacentricHeightCtx, RollingPeriodCtx, parameters::ParameterID},
+        eval::{
+            MetacentricHeightCtx, RollingPeriodCtx, StabilityBalanceCtx, parameters::ParameterID,
+        },
     },
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{InitialCtx, ContextWrite}
+    prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -21,7 +23,10 @@ pub struct RollingAmplitudeEval {
 //
 impl RollingAmplitudeEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "RollingAmplitudeEval");
         Self {
             dbg,
@@ -50,7 +55,8 @@ impl Eval<Zg, EvalResult> for RollingAmplitudeEval {
                     .as_ref()
                     .ok_or(error.err("no ship_parameter"))?;
                 let keel_area = ship_parameters.get("Keel area");
-                let width = ship_parameters.get("MouldedBreadth")
+                let width = ship_parameters
+                    .get("MouldedBreadth")
                     .ok_or(error.err("No MouldedBreadth in ship_parameters"))?;
                 let coefficient_k = Curve::new_linear(
                     &initial
@@ -95,12 +101,17 @@ impl Eval<Zg, EvalResult> for RollingAmplitudeEval {
                 let t = rolling_period.roll_period;
                 let s = multipler_s.value(t)?;
                 let amplitude = 109. * k * x_1 * x_2 * (r * s).sqrt();
+                let amplitude = amplitude.round();
+                let result = RollingAmplitudeCtx { amplitude };
+                log::info!(
+                    "RollingAmplitude amplitude:{:.3} period:{:.3}",
+                    amplitude,
+                    t,
+                );
                 log::trace!(
                     "\t RollingAmplitude volume:{volume} l_wl:{length_wl} b:{width} b_wl:{breadth_wl} d:{mean_draught} z_g_fix:{} c_b:{c_b} k:{k} x_1:{x_1} x_2:{x_2} r:{r} t:{t} s:{s} a:{amplitude}",
                     metacentric_height.z_g_fix
                 );
-                let amplitude = amplitude.round();
-                let result = RollingAmplitudeCtx { amplitude };
                 ctx.write_params(ParameterID::RollAmplitude, amplitude);
                 ctx.write_params(ParameterID::RollPeriod, t);
                 ctx.write(result)

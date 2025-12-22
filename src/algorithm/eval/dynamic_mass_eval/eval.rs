@@ -281,6 +281,24 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                     data.insert("value_mass_icing".to_owned(), vec_icing);
                     data.insert("value_mass_wetting".to_owned(), vec_wetting);
                     data.insert("value_mass_sum".to_owned(), mass_values.clone());
+                    log::info!(
+                        "DynamicMass qnt:{} result:{}\n",
+                        data.len(),
+                        data.iter().fold(String::new(), |s, v| s + &format!(
+                            "\n{}: {:.3}",
+                            v.0,
+                            v.1.iter().sum::<f64>()
+                        ))
+                    );
+                    log::debug!(
+                        "DynamicMass values:{}\n",
+                        data.iter().fold(String::new(), |s, v| s + &format!(
+                            "\n{}: {}",
+                            v.0,
+                            v.1.iter().fold(String::new(), |s, v| s + &format!(
+                            "{:.3} ", v)
+                        )))
+                    );                    
                     DynamicMassCtx::new(mass_values, data)
                 };
                 ctx.write(result)

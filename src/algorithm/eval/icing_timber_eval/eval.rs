@@ -53,6 +53,12 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                     .get("MouldedBreadth")
                     .ok_or(error.err("width error: no data!"))?;
                 let result = IcingTimberCtx::new(width, length_loa, icing_timber_stab);
+                log::info!(
+                    "IcingTimber width:{:.3} length:{:.3} icing_timber_stab:{:?})",
+                    result.width,
+                    result.length,
+                    result.icing_timber_stab,
+                );                
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

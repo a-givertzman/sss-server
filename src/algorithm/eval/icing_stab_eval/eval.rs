@@ -1,10 +1,10 @@
-use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::eval::IcingStabCtx;
 use crate::{
     algorithm::{context::context_access::ContextReadRef, entities::icing_stab::IcingStabType},
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{InitialCtx, ContextWrite},
+    prelude::{ContextWrite, InitialCtx},
 };
+use sal_core::{dbg::Dbg, error::Error};
 
 ///
 /// Коэффициенты для расчета обледенения судна
@@ -16,7 +16,10 @@ pub struct IcingStabEval {
 //
 impl IcingStabEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "IcingStabEval");
         Self {
             dbg,
@@ -32,21 +35,50 @@ impl Eval<(), EvalResult> for IcingStabEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let voyage = initial.voyage.as_ref().ok_or(error.err("voyage error: no data!"))?; 
-                let icing = initial.icing.clone().ok_or(error.err("icing error: no data!"))?.data(); 
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let icing = initial
+                    .icing
+                    .clone()
+                    .ok_or(error.err("icing error: no data!"))?
+                    .data();
                 let icing_stab = IcingStabType::from_str(&voyage.icing_type)
                     .map_err(|err| error.pass_with("icing_stab", err))?;
-                let icing_m_timber = *icing.get("icing_m_timber").ok_or(error.err("icing_m_timber error: no data!"))?; 
-                let icing_m_v_full = *icing.get("icing_m_v_full").ok_or(error.err("icing_m_v_full error: no data!"))?; 
-                let icing_m_v_half = *icing.get("icing_m_v_half").ok_or(error.err("icing_m_v_half error: no data!"))?;
-                let icing_m_h_full = *icing.get("icing_m_h_full").ok_or(error.err("icing_m_h_full error: no data!"))?;
-                let icing_m_h_half = *icing.get("icing_m_h_half").ok_or(error.err("icing_m_h_half error: no data!"))?;
-                let icing_coef_v_area_full = *icing.get("icing_coef_v_area_full").ok_or(error.err("icing_coef_v_area_full error: no data!"))?;
-                let icing_coef_v_area_half = *icing.get("icing_coef_v_area_half").ok_or(error.err("icing_coef_v_area_half error: no data!"))?;
-                let icing_coef_v_area_zero = *icing.get("icing_coef_v_area_zero").ok_or(error.err("icing_coef_v_area_zero error: no data!"))?;
-                let icing_coef_v_moment_full = *icing.get("icing_coef_v_moment_full").ok_or(error.err("icing_coef_v_moment_full error: no data!"))?;
-                let icing_coef_v_moment_half = *icing.get("icing_coef_v_moment_half").ok_or(error.err("icing_coef_v_moment_half error: no data!"))?;
-                let icing_coef_v_moment_zero = *icing.get("icing_coef_v_moment_zero").ok_or(error.err("icing_coef_v_moment_zero error: no data!"))?;
+                let icing_m_timber = *icing
+                    .get("icing_m_timber")
+                    .ok_or(error.err("icing_m_timber error: no data!"))?;
+                let icing_m_v_full = *icing
+                    .get("icing_m_v_full")
+                    .ok_or(error.err("icing_m_v_full error: no data!"))?;
+                let icing_m_v_half = *icing
+                    .get("icing_m_v_half")
+                    .ok_or(error.err("icing_m_v_half error: no data!"))?;
+                let icing_m_h_full = *icing
+                    .get("icing_m_h_full")
+                    .ok_or(error.err("icing_m_h_full error: no data!"))?;
+                let icing_m_h_half = *icing
+                    .get("icing_m_h_half")
+                    .ok_or(error.err("icing_m_h_half error: no data!"))?;
+                let icing_coef_v_area_full = *icing
+                    .get("icing_coef_v_area_full")
+                    .ok_or(error.err("icing_coef_v_area_full error: no data!"))?;
+                let icing_coef_v_area_half = *icing
+                    .get("icing_coef_v_area_half")
+                    .ok_or(error.err("icing_coef_v_area_half error: no data!"))?;
+                let icing_coef_v_area_zero = *icing
+                    .get("icing_coef_v_area_zero")
+                    .ok_or(error.err("icing_coef_v_area_zero error: no data!"))?;
+                let icing_coef_v_moment_full = *icing
+                    .get("icing_coef_v_moment_full")
+                    .ok_or(error.err("icing_coef_v_moment_full error: no data!"))?;
+                let icing_coef_v_moment_half = *icing
+                    .get("icing_coef_v_moment_half")
+                    .ok_or(error.err("icing_coef_v_moment_half error: no data!"))?;
+                let icing_coef_v_moment_zero = *icing
+                    .get("icing_coef_v_moment_zero")
+                    .ok_or(error.err("icing_coef_v_moment_zero error: no data!"))?;
                 let mass_desc_h = match icing_stab {
                     IcingStabType::Full => icing_m_h_full,
                     IcingStabType::Half => icing_m_h_half,
@@ -72,8 +104,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
                     IcingStabType::Half => icing_coef_v_moment_half,
                     _ => icing_coef_v_moment_zero,
                 };
-                let is_some =
-                    matches!(icing_stab, IcingStabType::Full | IcingStabType::Half);
+                let is_some = matches!(icing_stab, IcingStabType::Full | IcingStabType::Half);
                 let result = IcingStabCtx {
                     mass_desc_h,
                     mass_timber_h,
@@ -83,6 +114,16 @@ impl Eval<(), EvalResult> for IcingStabEval {
                     coef_v_moment,
                     is_some,
                 };
+                log::info!(
+                    "IcingStab mass_desc_h:{:.3} mass_timber_h:{:.3} mass_v:{:.3} coef_v_area:{:.3} coef_v_ds_area:{:.3} coef_v_moment:{:.3} is_some:{})",
+                    result.mass_desc_h,
+                    result.mass_timber_h,
+                    result.mass_v,
+                    result.coef_v_area,
+                    result.coef_v_ds_area,
+                    result.coef_v_moment,
+                    result.is_some,
+                );
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

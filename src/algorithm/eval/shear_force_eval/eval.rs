@@ -39,8 +39,13 @@ impl Eval<(), EvalResult> for ShearForceEval {
             Ok(ctx) => {                
                 let total_force: TotalForceCtx = ctx.read();
                 let result = total_force.values.sum_above();
-                log::trace!("\t ShearForce result:{:?}", result); 
-           //     println!("\n\n ShearForce qnt:{} result\n", result.len());   result.iter().for_each(|b| print!("{:.3} ", b));
+                log::info!(
+                    "ShearForce qnt:{} result:{}\n",
+                    result.len(),
+                    result
+                        .iter()
+                        .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
+                );
                 ctx.write(ShearForceCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

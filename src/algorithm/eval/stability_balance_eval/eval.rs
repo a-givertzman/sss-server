@@ -67,12 +67,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .read()
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
-                dbg!(
-                    result.heel,
-                    result.trim_degree,
-                    result.draught_mean,
-                    result.mass_center
-                );
                 //        dbg!(&result);
                 //     result.liquid.iter().for_each(|v| println!("'{}' {} {};", liquid_data.get(&v.assignment_id).unwrap().space_name, v.long_moment_of_inertia, v.trans_moment_of_inertia));
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
@@ -93,6 +87,27 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
                 let bulk = result.bulk.clone();
                 let liquid = result.liquid.clone();
+                log::info!(
+                    "StabilityBalance heel:{:.3} trim_degree:{:.3} trim_meter:{:.3} draught_mid:{:.3} displacement:{:.3} 
+                    length_wl:{:.3} breadth_wl:{:.3} bow_area:{:.3} rad_trans:{:.3} rad_long:{:.3}
+                    mass_center({:.3} {:.3} {:.3}) displacement_center({:.3} {:.3} {:.3})\n",
+                    result.heel,
+                    result.trim_degree,
+                    result.trim_meter,
+                    result.draught_mid,
+                    result.displacement,
+                    result.length_wl,
+                    result.breadth_wl,
+                    result.bow_area,
+                    result.rad_trans,
+                    result.rad_long,
+                    result.mass_center.x(),
+                    result.mass_center.y(),
+                    result.mass_center.z(),
+                    result.displacement_center.x(),
+                    result.displacement_center.y(),
+                    result.displacement_center.z(),
+                );
                 let result = StabilityBalanceCtx {
                     heel: result.heel,
                     trim: result.trim_degree,

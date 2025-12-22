@@ -1,8 +1,6 @@
 use super::ctx::BendingMomentCtx;
 use crate::{
-    algorithm::{
-        context::context_access::ContextReadRef, eval::ShearForceCtx,
-    },
+    algorithm::{context::context_access::ContextReadRef, eval::ShearForceCtx},
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},
 };
@@ -41,16 +39,22 @@ impl Eval<(), EvalResult> for BendingMomentEval {
                     .as_ref()
                     .ok_or(error.err("initial error: no bounds!"))?;
                 let mut delta_x = vec![0.];
-                delta_x.append(&mut bounds.iter().map(|b| b.length().unwrap_or(0.)).collect()); 
+                delta_x.append(&mut bounds.iter().map(|b| b.length().unwrap_or(0.)).collect());
                 let shear_force: ShearForceCtx = ctx.read();
                 let values: Vec<_> = shear_force.values.iter().zip(delta_x.iter()).collect();
                 let mut result = vec![0.];
                 for i in 1..(values.len()) {
                     let (v1, _) = values[i - 1];
                     let (v2, dx) = values[i];
-                    result.push(result[i - 1] + (v1 + v2)*dx/2.);
+                    result.push(result[i - 1] + (v1 + v2) * dx / 2.);
                 }
-            //    println!("\n\n BendingMoment qnt:{} result\n", result.len());  result.iter().for_each(|b| print!("{:.3} ", b));
+                log::info!(
+                    "BendingMoment qnt:{} result:{}\n",
+                    result.len(),
+                    result
+                        .iter()
+                        .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
+                );
                 ctx.write(BendingMomentCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

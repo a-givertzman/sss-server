@@ -1,12 +1,18 @@
+use crate::algorithm::entities::math::liquid::*;
 use crate::algorithm::eval::MetacentricHeightCtx;
 use crate::kernel::Eval;
 use crate::{
     algorithm::{
-        context::context_access::{ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef}, entities::data::loads::AssignmentType, eval::{StabilityBalanceCtx, Zg, parameters::ParameterID}
-    }, kernel::{types::{Arc, RwLock, eval_result::EvalResult}}, prelude::{Context, ContextWrite, InitialCtx},
+        context::context_access::{
+            ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef,
+        },
+        entities::data::loads::AssignmentType,
+        eval::{StabilityBalanceCtx, Zg, parameters::ParameterID},
+    },
+    kernel::types::{Arc, RwLock, eval_result::EvalResult},
+    prelude::{Context, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use crate::algorithm::entities::math::liquid::*;
 ///
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct MetacentricHeightEval {
@@ -30,7 +36,7 @@ impl MetacentricHeightEval {
         }
     }
     ///
-    /// 
+    ///
     fn calc(&self, mut ctx: Context, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "calc");
         // суммарная масса судна
@@ -38,31 +44,30 @@ impl MetacentricHeightEval {
         // Смещение центра массы по оси Z
         let mass_shift_z = ctx.read_params(ParameterID::CenterMassZ);
         let initial: &InitialCtx = ctx.read_ref();
-        let ship_parameters = initial
-            .ship_parameters
-            .as_ref()
-            .unwrap();
+        let ship_parameters = initial.ship_parameters.as_ref().unwrap();
         let ship_length_lbp = *ship_parameters
             .get("LBP")
             .ok_or(error.err("No LBP in ship_parameters"))?;
         let balance: StabilityBalanceCtx = ctx.read();
         // Продольный метацентрический радиус
-        let rad_long = ctx.read_params(ParameterID::MetacentricLongRad);  
+        let rad_long = ctx.read_params(ParameterID::MetacentricLongRad);
         // Поперечный метацентрические радиус
-        let rad_trans = ctx.read_params(ParameterID::MetacentricTransRad);  
-        // Отстояние центра величины погруженной части судна    
-        let center_draught_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);  
+        let rad_trans = ctx.read_params(ParameterID::MetacentricTransRad);
+        // Отстояние центра величины погруженной части судна
+        let center_draught_shift_z = ctx.read_params(ParameterID::CenterVolumeZ);
         // Все жидкие грузы судна
         let liquid = &balance.liquid;
         // Аппликата продольного метацентра (2)
-        let Z_m = center_draught_shift_z + rad_long;
+        let z_m_long = center_draught_shift_z + rad_long;
         // Поправка к продольной метацентрической высоте на влияние
         // свободной поверхности жидкости в цистернах балласта и запасов (2)
         let delta_m_h_ballast: DeltaMH = DeltaMH::from_moment(
             liquid
                 .iter()
                 .filter(|v| v.assigment_type == AssignmentType::Ballast)
-                .map(|c| FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia) )
+                .map(|c| {
+                    FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia)
+                })
                 .sum::<FreeSurfaceMoment>(),
             mass,
         );
@@ -70,56 +75,48 @@ impl MetacentricHeightEval {
             liquid
                 .iter()
                 .filter(|v| v.assigment_type != AssignmentType::Ballast)
-                .map(|c| FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia) )
+                .map(|c| {
+                    FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia)
+                })
                 .sum::<FreeSurfaceMoment>(),
             mass,
         );
         let delta_m_h = delta_m_h_ballast + delta_m_h_store;
         // Продольная метацентрическая высота без учета влияния
         // поправки на влияние свободной поверхности (3)
-        let h_long_0 = Z_m - mass_shift_z;
+        let h_long_0 = z_m_long - mass_shift_z;
         // Продольная исправленная метацентрическая высота (3)
         let h_long_fix = h_long_0 - delta_m_h.long();
         // Момент дифферентующий на 1 см осадки (4)
         let trim_moment = (mass * h_long_fix) / (100. * ship_length_lbp);
         // Аппликата поперечного метацентра (8)
-        let z_m = center_draught_shift_z + rad_trans; //
+        let z_m_trans = center_draught_shift_z + rad_trans; //
         // Поперечная метацентрическая высота без учета влияния
         // поправки на влияние свободной поверхности (9)
-        let (h_trans_0, h_trans_fix, z_g_fix) =  if let Some(z_g_fix) = z_g_fix.0 {
-            let h_trans_fix = z_m - z_g_fix;
+        let (h_trans_0, h_trans_fix, z_g_fix) = if let Some(z_g_fix) = z_g_fix.0 {
+            let h_trans_fix = z_m_trans - z_g_fix;
             let h_trans_0 = h_trans_fix + delta_m_h.trans();
             (h_trans_0, h_trans_fix, z_g_fix)
         } else {
-            let h_trans_0 = z_m - mass_shift_z;
+            let h_trans_0 = z_m_trans - mass_shift_z;
             // Поперечная исправленная метацентрическая высота (9)
             let h_trans_fix = h_trans_0 - delta_m_h.trans();
             // Исправленное отстояние центра масс судна по высоте (10)
             let z_g_fix: f64 = mass_shift_z + delta_m_h.trans();
             (h_trans_0, h_trans_fix, z_g_fix)
         };
-/*          let h_trans_0 = z_m - mass_shift_z;
-        // Поперечная исправленная метацентрическая высота (9)
-        let h_trans_fix = h_trans_0 - delta_m_h.trans();
-        // Исправленное отстояние центра масс судна по высоте (10)
-        let z_g_fix: f64 = mass_shift_z + delta_m_h.trans();*/
-//             log::info!("\t MetacentricHeight mass:{} shift_z:{} center_draught:{} rad_trans:{} rad_long:{} delta_m_h_ballast:{} delta_m_h_store:{} Z_m:{Z_m} H_0:{h_long_0} H:{h_long_fix} z_m:{z_m} h_0:{h_trans_0} h:{h_trans_fix} z_g_fix:{z_g_fix}", 
-//                 self.mass.sum()?, self.moment.shift()?.z(), self.center_draught_shift, self.rad_trans, self.rad_long, delta_m_h_ballast.trans, delta_m_h_store.trans() );
         ctx.write_params(ParameterID::CenterMassZFix, z_g_fix);
-        ctx.write_params(ParameterID::MetacentricLongRadZ, Z_m);
-        ctx.write_params(ParameterID::MetacentricTransRadZ, z_m);
+        ctx.write_params(ParameterID::MetacentricLongRadZ, z_m_long);
+        ctx.write_params(ParameterID::MetacentricTransRadZ, z_m_trans);
         ctx.write_params(
-                ParameterID::MetacentricTransBallast,
-                delta_m_h_ballast.trans(),
-            );
+            ParameterID::MetacentricTransBallast,
+            delta_m_h_ballast.trans(),
+        );
+        ctx.write_params(ParameterID::MetacentricTransSum, delta_m_h.trans());
         ctx.write_params(
-                ParameterID::MetacentricTransSum,
-                delta_m_h.trans(),
-            );
-        ctx.write_params(
-                ParameterID::MetacentricLongBallast,
-                delta_m_h_ballast.long(),
-            );
+            ParameterID::MetacentricLongBallast,
+            delta_m_h_ballast.long(),
+        );
         ctx.write_params(ParameterID::MetacentricTransStore, delta_m_h_store.trans());
         ctx.write_params(ParameterID::MetacentricLongStore, delta_m_h_store.long());
         ctx.write_params(ParameterID::MetacentricTransRad, rad_trans);
@@ -140,6 +137,14 @@ impl MetacentricHeightEval {
             z_g_fix,
             delta_m_h,
         };
+        log::info!(
+            "\t MetacentricHeight delta_m_h:{:.3} h_long_fix:{:.3} h_trans_0:{:.3} h_trans_fix:{:.3} z_g_fix:{:.3}",
+            result.delta_m_h,
+            result.h_long_fix,
+            result.h_trans_0,
+            result.h_trans_fix,
+            result.z_g_fix
+        );
         ctx.write(result)
     }
 }
@@ -157,7 +162,7 @@ impl Eval<Zg, EvalResult> for MetacentricHeightEval {
                     self.calc(ctx, Zg(None))
                 }
                 Err(err) => Err(error.pass_with("Read context error", err)),
-            }
+            },
         }
     }
 }
