@@ -74,12 +74,12 @@ impl Eval<(), EvalResult> for ZgEval {
                 let delta = 0.1;
                 let max_index = (overall_height / delta).floor() as i32;
                 let scheduler = self.thread_pool.scheduler();
-                for index in 0..max_index {
+                for index in 0..=max_index {
                     let z_g_fix = index as f64 * delta;
                     let results_ = results.clone();
                     let self_ctx = self.ctx.clone();
                     let thread_name = format!("ZgEval z_g_fix {:.3}", z_g_fix);
-                    log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                    log::trace!("{}.build | Starting thread {thread_name}", &self.dbg);
                     //  println!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
@@ -115,14 +115,8 @@ impl Eval<(), EvalResult> for ZgEval {
                     let tmp: Vec<(usize, Option<(f64, f64)>)> = criterion
                         .data
                         .iter()
-                        .map(|v| {
-                            let delta = if v.error_message.is_none() {
-                                Some((v.result, v.target))
-                            } else {
-                                None
-                            };
-                            (v.criterion_id, delta)
-                        })
+                        .filter(|v| v.error_message.is_none())
+                        .map(|v| (v.criterion_id, Some((v.result, v.target))))
                         .collect();
                     vec_results.push((z_g_fix, tmp));
                 }
