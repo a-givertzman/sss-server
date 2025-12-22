@@ -371,13 +371,9 @@ fn get_physical_bounds(
     let data = api_client.fetch(&format!(
                 "SELECT pos_x, frame_index as index FROM physical_frame WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
             )).map_err(|err| error.pass(err))?;
-    let mut physical_frames: Vec<_> = PhysicalFrameArray::parse(&data)
+    let physical_frames: Vec<_> = PhysicalFrameArray::parse(&data)
         .map_err(|err| error.pass(err))?
-        .data()
-        .into_iter()
-        .map(|(_, x)| x)
-        .collect();
-    physical_frames.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        .data();
     let bounds = Bounds::from_array(&physical_frames, 0.).map_err(|err| error.pass(err))?;
     Ok(bounds)
 }

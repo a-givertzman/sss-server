@@ -1509,7 +1509,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::trace!("{}.balance | join thread {}", &self.dbg, task.name());
+            log::trace!("{}.process_bulk | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
