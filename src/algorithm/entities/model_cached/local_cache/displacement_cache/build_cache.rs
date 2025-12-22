@@ -93,11 +93,10 @@ impl BuildDisplacementCache {
                 let aabb_results = aabb_results.clone();
                 let shape = shape.clone();
                 let thread_name =
-                    format!("BuildDisplacementCache aabb {draught}");
-                log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-                //  println!("Starting thread {thread_name}");
+                    format!("{}.build aabb {draught}", &self.dbg);
+                log::info!("thread_name Starting thread");
                 let handle = scheduler
-                    .spawn(move || {
+                    .spawn_named(thread_name, move || {
                         let guard = shape.read();
                         aabb_results.push((draught, guard.waterline_size(draught)));
                         Ok(())

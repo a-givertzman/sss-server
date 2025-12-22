@@ -329,8 +329,10 @@ impl ModelCached {
         for (name, shape) in &self.displacement_shapes {
             let shape = shape.clone();
             let task_results = task_results.clone();
+            let thread_name = format!("{}.reload_shapes displacement_shape {name}", &self.dbg);
+            log::trace!("Starting thread {thread_name}");
             let handle = scheduler
-                .spawn(move || {
+                .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
                     task_results.push(guard.init());
                     Ok(())
@@ -346,8 +348,10 @@ impl ModelCached {
         {
             let shape = self.windage_shape.clone();
             let task_results = task_results.clone();
+            let thread_name = format!("{}.reload_shapes windage_shape", &self.dbg);
+            log::trace!("Starting thread {thread_name}");
             let handle = scheduler
-                .spawn(move || {
+                .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
                     task_results.push(guard.init());
                     Ok(())
@@ -593,8 +597,13 @@ impl ModelCached {
             let error_ = error.err(format!("compartment_{space_id} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
+            let thread_name = format!(
+                "{}.balance_strength gaseous space_id:{}",
+                &self.dbg, cargo.space_id
+            );
+            log::trace!("Starting thread {thread_name}");
             let handle = scheduler
-                .spawn(move || {
+                .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
                         .get(&space_id)
                         .ok_or(
@@ -633,8 +642,13 @@ impl ModelCached {
             let volume = cargo.volume;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
+            let thread_name = format!(
+                "{}.balance_strength bulk space_id:{}",
+                &self.dbg, cargo.space_id
+            );
+            log::trace!("Starting thread {thread_name}");
             let handle = scheduler
-                .spawn(move || {
+                .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
                         .get(&space_id)
                         .ok_or(
@@ -723,8 +737,13 @@ impl ModelCached {
                     let volume = cargo.volume;
                     let epsilon = volume * epsilon_mass / mass_sum;
                     let results_ = liquid_results.clone();
+                    let thread_name = format!(
+                        "{}.balance_strength liquid space_id:{}",
+                        &self.dbg, cargo.space_id
+                    );
+                    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
-                        .spawn(move || {
+                        .spawn_named(thread_name, move || {
                             let volume_bounded = compartment_bounded
                                 .read()
                                 .get(volume, trim, epsilon)
@@ -754,8 +773,10 @@ impl ModelCached {
                 let hull_results = Arc::new(Stack::new());
                 let results_ = hull_results.clone();
                 let displacement_bounded = displacement_bounded.clone();
+                let thread_name = format!("{}.balance_strength displacement_bounded", &self.dbg);
+                log::trace!("Starting thread {thread_name}");
                 let handle = scheduler
-                    .spawn(move || {
+                    .spawn_named(thread_name, move || {
                         results_.push(displacement_bounded.read().get(trim, draught));
                         Ok(())
                     })
@@ -1086,9 +1107,16 @@ impl ModelCached {
                 .value(0.)
                 .map_err(|err| error.pass(err))
         };
-        let entry_angle = find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
-        let flooding_angle = find_zero_angle(flooding_angle).map_err(|err| error.pass_with("flooding_angle", err))?;
-        Ok(DsoResult{dso, entry_angle, flooding_angle, heel})
+        let entry_angle =
+            find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
+        let flooding_angle = find_zero_angle(flooding_angle)
+            .map_err(|err| error.pass_with("flooding_angle", err))?;
+        Ok(DsoResult {
+            dso,
+            entry_angle,
+            flooding_angle,
+            heel,
+        })
     }
     /// Расчет диаграммы статической остойчивости
     /// на основе фактического кренящего момента.
@@ -1352,7 +1380,7 @@ impl ModelCached {
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
-   /*     println!("\nmodel_cached entry_angle: ");
+        /*     println!("\nmodel_cached entry_angle: ");
         for &(angle, value) in entry_angle.iter() {
             println!("{angle} {value};");
         }
@@ -1480,15 +1508,16 @@ impl ModelCached {
                 .get(&space_id)
                 .ok_or(error.err(format!("no compartment:{space_id}")))?
                 .clone();
-            let volume = cargo.volume;
             let cargo = cargo.clone();
             let epsilon = epsilon;
             let results_ = task_results.clone();
+            let thread_name = format!("{}.process_bulk space_id:{space_id}", &self.dbg);
+            log::trace!("Starting thread {thread_name}");
             let handle = scheduler
-                .spawn(move || {
+                .spawn_named(thread_name, move || {
                     let compartment_result = compartment
                         .read()
-                        .get(0., 0., volume, epsilon)
+                        .get(0., 0., cargo.volume, epsilon)
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
@@ -1569,14 +1598,14 @@ impl ModelCached {
                 Some(compartment) => {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
-                    let space_id_ = cargo.space_id.clone();
+                    let space_id = cargo.space_id.clone();
                     let cargo = cargo.clone();
                     let error_ = error.clone();
                     let compartment = compartment.clone();
-                    let use_max_moment = cargo.use_max_moment;
-                    let is_cargo_tank = cargo.is_cargo_tank;
+                    let thread_name = format!("{}.process_liquid space_id:{}", &self.dbg, space_id);
+                    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
-                        .spawn(move || {
+                        .spawn_named(thread_name, move || {
                             let res = compartment
                                 .read()
                                 .get_for_stability(
@@ -1584,14 +1613,13 @@ impl ModelCached {
                                     trim,
                                     cargo.volume,
                                     epsilon,
-                                    use_max_moment,
-                                    is_cargo_tank,
+                                    cargo.use_max_moment,
+                                    cargo.is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
                             task_results.push((
-                                space_id_.clone(),
+                                space_id.clone(),
                                 stability_result::LiquidResult::new(
-                                    //     cargo_id,
                                     cargo.assignment_id,
                                     cargo.assigment_type,
                                     cargo.mass,
@@ -1699,27 +1727,26 @@ impl ModelCached {
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
                     let space_id = cargo.space_id.clone();
-                    let density = cargo.density;
-                    let volume = cargo.volume;
-                    let use_max_moment = cargo.use_max_moment;
-                    let is_cargo_tank = cargo.is_cargo_tank;
+                    let cargo = cargo.clone();
                     let compartment = compartment.clone();
+                    let thread_name = format!("{}.moment_liquid_dso_abs_moment space_id:{}", &self.dbg, space_id);
+                    log::trace!("Starting thread {thread_name}");                    
                     let handle = scheduler
-                        .spawn(move || {
+                        .spawn_named(thread_name, move || {
                             let res = compartment
                                 .read()
                                 .get_for_dso_abs_moment(
                                     current_heel,
                                     current_trim,
-                                    volume,
+                                    cargo.volume,
                                     balanced_heel,
                                     balanced_trim,
                                     epsilon,
-                                    use_max_moment,
-                                    is_cargo_tank,
+                                    cargo.use_max_moment,
+                                    cargo.is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            task_results.push((space_id, density, res));
+                            task_results.push((space_id, cargo.density, res));
                             Ok(())
                         })
                         .map_err(|err| {
@@ -1804,23 +1831,22 @@ impl ModelCached {
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
                     let space_id = cargo.space_id.clone();
-                    let density = cargo.density;
-                    let volume = cargo.volume;
-                    let use_max_moment = cargo.use_max_moment;
-                    let is_cargo_tank = cargo.is_cargo_tank;
+                    let cargo = cargo.clone();
                     let compartment = compartment.clone();
+                    let thread_name = format!("{}.moment_liquid_dso_surface_moment space_id:{}", &self.dbg, space_id);
+                    log::trace!("Starting thread {thread_name}");                         
                     let handle = scheduler
-                        .spawn(move || {
+                        .spawn_named(thread_name, move || {
                             let res = compartment
                                 .read()
                                 .get_for_dso_surface_moment(
-                                    volume,
+                                    cargo.volume,
                                     epsilon,
-                                    use_max_moment,
-                                    is_cargo_tank,
+                                    cargo.use_max_moment,
+                                    cargo.is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            task_results.push((space_id, density, res));
+                            task_results.push((space_id, cargo.density, res));
                             Ok(())
                         })
                         .map_err(|err| {
@@ -1856,13 +1882,6 @@ impl ModelCached {
         }
         while !task_results.is_empty() {
             if let Some((_space_id, density, moment)) = task_results.pop() {
-                //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
-                // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
-                /*          println!(
-                    "moment_liquid_dso heel:{current_heel} space_id:{} {};",
-                    _space_id,
-                    moment
-                );*/
                 values.push(moment * density);
             }
         }
@@ -1903,8 +1922,10 @@ impl ModelCached {
                     let space_id = damaged_compartment.clone();
                     let compartment = compartment.clone();
                     let _error = error.clone();
+                    let thread_name = format!("{}.calc_damaged_compartments space_id:{}", &self.dbg, space_id);
+                    log::trace!("Starting thread {thread_name}");                      
                     let handle = scheduler
-                        .spawn(move || {
+                        .spawn_named(thread_name, move || {
                             task_results
                                 .push((space_id, compartment.read().get(heel, trim, draught)));
                             Ok(())

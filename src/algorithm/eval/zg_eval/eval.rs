@@ -78,9 +78,8 @@ impl Eval<(), EvalResult> for ZgEval {
                     let z_g_fix = index as f64 * delta;
                     let results_ = results.clone();
                     let self_ctx = self.ctx.clone();
-                    let thread_name = format!("ZgEval z_g_fix {:.3}", z_g_fix);
-                    log::trace!("{}.build | Starting thread {thread_name}", &self.dbg);
-                    //  println!("Starting thread {thread_name}");
+                    let thread_name = format!("{} {:.3}", &self.dbg, z_g_fix);
+                    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let ctx = self_ctx.eval(Zg(Some(z_g_fix)))?;
