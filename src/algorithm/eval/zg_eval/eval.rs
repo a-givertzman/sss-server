@@ -53,7 +53,7 @@ impl Eval<(), EvalResult> for ZgEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(Zg::empty()) {
             Ok(ctx) => {
-                let initial: &InitialCtx = ctx.read_ref();
+       /* TODO - fix                  let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
@@ -148,6 +148,9 @@ impl Eval<(), EvalResult> for ZgEval {
                     result.insert(id, closest_value.0);
                 }
                 let result = ZgCtx { zg: result };
+                ctx.write(result)
+                */
+                let result = ZgCtx { zg: HashMap::new() };
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("self.ctx.eval error", err)),

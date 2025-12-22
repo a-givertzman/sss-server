@@ -1,12 +1,7 @@
-use std::sync::Arc;
-use sal_core::{dbg::Dbg, error::Error};
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
-        entities::ship_model::{
-                BalanceStrengthQuery,
-                ship_model::ShipModel,
-            },
+        entities::ship_model::{BalanceStrengthQuery, ship_model::ShipModel},
         eval::{StaticMassCtx, parameters::ParameterID},
     },
     kernel::{
@@ -15,6 +10,8 @@ use crate::{
     },
     prelude::{ContextParamsRead, ContextWrite, InitialCtx},
 };
+use sal_core::{dbg::Dbg, error::Error};
+use std::sync::Arc;
 
 ///
 /// Расчет равновесного положения судна
@@ -57,8 +54,8 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .ok_or(error.err("initial error: no bounds!"))?;
                 let static_mass: StaticMassCtx = ctx.read();
                 let trim = ctx.read_params(ParameterID::TrimDeg);
-                let draught = ctx.read_params(ParameterID::DraughtMid);    
-               // dbg!(&static_mass);            
+                let draught = ctx.read_params(ParameterID::DraughtMid);
+                // dbg!(&static_mass);
                 // Расчет баланса для прочности в модели
                 let strength_query = BalanceStrengthQuery {
                     trim,
@@ -80,6 +77,17 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .compute_strength(strength_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
                 //   println!("\n\n Balance displacement mass_sum: {} result\n", result.displacement_distr.iter().sum::<f64>()*1.025);  result.displacement_distr.iter().for_each(|b| print!("{:.3} ", b));
+                log::info!(
+                    "StrengthBalance mass_displacement_sum:{:.3}",
+                    result.displacement_distr.iter().sum::<f64>() * voyage.density
+                );
+                log::trace!(
+                    "StrengthBalance mass_displacement_distr:{}",
+                    result
+                        .displacement_distr
+                        .iter()
+                        .fold(String::new(), |s, v| s + &format!("{:.3} ", v * voyage.density))
+                );
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

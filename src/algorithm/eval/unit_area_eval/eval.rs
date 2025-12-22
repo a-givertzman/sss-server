@@ -118,6 +118,10 @@ impl Eval<(), EvalResult> for UnitAreaEval {
                     mvx_dc += current_moment_x;
                     mvz_dc += current_moment_z;
                 }
+                log::info!(
+                    "UnitArea av_dc:{:.3} mvx_dc:{:.3} mvz_dc:{:.3}",
+                    av_dc, mvx_dc, mvz_dc
+                );
                 let result = UnitAreaCtx {
                     av_dc,
                     mv_x_dc: mvx_dc,

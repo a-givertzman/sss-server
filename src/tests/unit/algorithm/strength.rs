@@ -224,10 +224,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    );
-
-  /*  
-    let result = DraftMarkEval::new(
+    );    
+    let ctx = DraftMarkEval::new(
         &dbg,
         CriterionDraughtEval::new(
             &dbg,
@@ -242,7 +240,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                 ZgEval::new(
                                     thread_pool,
                                     &dbg,
-                              //      &ship_model,
                                     ctx,
                             ),
                         ),
@@ -250,11 +247,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    )
-    .eval(());*/
-
-   // let initial: &InitialCtx = ctx.as_ref();
-    ctx.eval(Zg::empty()).unwrap();
-    
+    );
+    ctx.eval(()).unwrap();    
     Ok(())
 }

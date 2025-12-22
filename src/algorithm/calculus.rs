@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::thread_pool::ThreadPool;
 use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, eval::*}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, EvalEx, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::CalculusQuery};
 
 ///
@@ -9,6 +10,7 @@ pub struct Calculus {
     conf: Conf,
     api_client: Arc<ApiClient>,
     ship_model: Arc<RwLock<ShipModel>>,
+    thread_pool: Arc<ThreadPool>,
 }
 //
 //
@@ -20,12 +22,14 @@ impl Calculus {
         conf: Conf,
         api_client: Arc<ApiClient>,
         ship_model: Arc<RwLock<ShipModel>>,
+        thread_pool: Arc<ThreadPool>,
     ) -> Self {
         Self {
             dbg: Dbg::new(parent, "Algorithm"),
             conf,
             api_client,
             ship_model,
+            thread_pool,
         }
     }
 }
@@ -153,26 +157,22 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                     ),
                 ),
             ),
-        ).eval(Zg::empty());
-        
-
-        /*    
-        let _result = DraftMarkEval::new(
-            &tmp_dbg,
+        );//.eval(Zg::empty());
+        let ctx = DraftMarkEval::new(
+            &dbg,
             CriterionDraughtEval::new(
-                &tmp_dbg,
+                &dbg,
                 ReserveBuoyncyEval::new(
-                    &tmp_dbg,
+                    &dbg,
                     ScrewEval::new(
-                        &tmp_dbg,
+                        &dbg,
                         BowBoardEval::new(
-                            &tmp_dbg,
+                            &dbg,
                             LoadLineEval::new(
-                                &tmp_dbg,
-                                ZgEval::new(
-                                        thread_pool.scheduler(),
-                                        &tmp_dbg,
-                                //      &self.ship_model,
+                                &dbg,
+                                    ZgEval::new(
+                                        Arc::clone(&self.thread_pool),
+                                        &dbg,
                                         ctx,
                                 ),
                             ),
@@ -180,10 +180,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                     ),
                 ),
             ),
-        )
-        .eval(());*/
-
-        // let initial: &InitialCtx = ctx.as_ref();
+        ).eval(());
         ctx.map_err(|err| error.pass(err))
     }
     //

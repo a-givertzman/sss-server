@@ -172,6 +172,18 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     .iter()
                     .map(|b| unit.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)))
                     .collect();
+                log::info!(
+                    "StaticMass mass_const:{:.3} shift_const:{}
+                    mass_unit:{:.3} shift_unit:{}
+                    mass_gaseous:{:.3} shift_gaseous:{}
+                    icing.mass:{:.3} shift_icing:{}
+                    wetting.mass:{:.3} shift_wetting:{}",
+                    mass_const, shift_const.print(),
+                    mass_unit, shift_unit.print(),
+                    mass_gaseous, shift_gaseous.print(),
+                    icing.mass, icing.mass_shift.print(),
+                    wetting.mass, wetting.mass_shift.print()
+                );           
                 let mut distr_static = distr_hull;
                 distr_static
                     .add_vec(&distr_equipment)

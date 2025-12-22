@@ -333,6 +333,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 conf.clone(),
                                                 api_client.clone(),
                                                 ship_model.clone(),
+                                                Arc::clone(&thread_pool),
                                             ),
                                         )),
                                     ),

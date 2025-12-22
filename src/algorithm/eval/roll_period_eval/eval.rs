@@ -1,23 +1,12 @@
 use crate::algorithm::eval::RollingPeriodCtx;
 use crate::{
-    algorithm::{
-        eval::{
-            parameters::ParameterID, 
-            zg_eval::Zg, 
-            StabilityBalanceCtx, 
-            MetacentricHeightCtx
-        },
-    }, 
-    kernel::{
-        Eval, 
-        types::eval_result::EvalResult
-    }, 
+    algorithm::eval::{
+        MetacentricHeightCtx, StabilityBalanceCtx, parameters::ParameterID, zg_eval::Zg,
+    },
+    kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
 };
-use sal_core::{
-    dbg::Dbg, 
-    error::Error
-};
+use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет периода собственных бортовых колебаний судна  
 pub struct RollingPeriodEval {
@@ -58,17 +47,20 @@ impl Eval<Zg, EvalResult> for RollingPeriodEval {
                     let h_sqrt = metacentric_height.h_trans_fix.sqrt();
                     let res = 2. * c * breadth_wl / h_sqrt;
                     log::trace!(
-                        "\t RollingPeriod calculate length_wl:{length_wl} breadth_wl:{breadth_wl} mean_draught:{mean_draught} c:{c} h_sqrt: {h_sqrt} T:{res}",
+                        "\t RollingPeriod calculate length_wl:{:.3} breadth_wl:{:.3} mean_draught:{:.3} c:{:.3} h_sqrt:{:.3} T:{:.3}",
+                        length_wl,
+                        breadth_wl,
+                        mean_draught,
+                        c,
+                        h_sqrt,
+                        res
                     );
                     res
                 } else {
                     log::trace!("\t RollingPeriod calculate error: h_trans_fix is negative!");
                     0.
                 };
-                let result = RollingPeriodCtx {
-                    c,
-                    roll_period,
-                }; 
+                let result = RollingPeriodCtx { c, roll_period };
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

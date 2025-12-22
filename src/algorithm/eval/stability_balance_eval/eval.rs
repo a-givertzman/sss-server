@@ -90,7 +90,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 log::info!(
                     "StabilityBalance heel:{:.3} trim_degree:{:.3} trim_meter:{:.3} draught_mid:{:.3} displacement:{:.3} 
                     length_wl:{:.3} breadth_wl:{:.3} bow_area:{:.3} rad_trans:{:.3} rad_long:{:.3}
-                    mass_center({:.3} {:.3} {:.3}) displacement_center({:.3} {:.3} {:.3})\n",
+                    mass_center:{} displacement_center:{}\n",
                     result.heel,
                     result.trim_degree,
                     result.trim_meter,
@@ -101,12 +101,8 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     result.bow_area,
                     result.rad_trans,
                     result.rad_long,
-                    result.mass_center.x(),
-                    result.mass_center.y(),
-                    result.mass_center.z(),
-                    result.displacement_center.x(),
-                    result.displacement_center.y(),
-                    result.displacement_center.z(),
+                    result.mass_center.print(),
+                    result.displacement_center.print(),
                 );
                 let result = StabilityBalanceCtx {
                     heel: result.heel,

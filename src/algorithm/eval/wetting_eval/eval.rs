@@ -102,6 +102,10 @@ impl Eval<(), EvalResult> for WettingEval {
                     mass_shift,
                     mass_values: mass_array,
                 };
+                log::info!(
+                    "Wetting mass:{:.3} mass_shift:{}",
+                    mass, mass_shift.print()
+                );
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

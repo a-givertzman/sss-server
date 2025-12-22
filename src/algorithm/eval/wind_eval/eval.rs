@@ -43,7 +43,11 @@ impl Eval<Zg, EvalResult> for WindEval {
                 let zv = windage.zv;
                 let mass = ctx.read_params(ParameterID::Displacement);
                 let arm_wind_static = (pv * av * zv) / (1000. * gravity_g * mass);
-                let arm_wind_dynamic = (1. + m) * arm_wind_static;          
+                let arm_wind_dynamic = (1. + m) * arm_wind_static;      
+                log::info!(
+                    "Wind arm_wind_static:{:.3} arm_wind_dynamic:{}",
+                    arm_wind_static, arm_wind_dynamic
+                );    
                 log::trace!("\t Wind arm_wind_static mass_sum:{mass} pv:{pv} av:{av} zv:{zv} arm_wind_static:{arm_wind_static} arm_wind_dynamic:{arm_wind_dynamic}");
                 ctx.write_params(ParameterID::DynamicWindageHeelingLever, arm_wind_dynamic);
                 ctx.write_params(ParameterID::WindPressure, pv);

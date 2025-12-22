@@ -60,15 +60,16 @@ impl Eval<(), EvalResult> for TotalForceEval {
             //    println!("\n\n volume qnt:{} sum: {}\n", volume_values.len(), volume_values.iter().sum::<f64>());  volume_values.iter().for_each(|b| print!("{:.3} ", b));
                 result.sub_vec(&volume_values)?;
                 result.mul_single(gravity_g);
-                log::trace!(
-                    "\t TotalForce mass:{:?} volume:{:?} result:{:?}, mass_sum:{}, volume_mass_sum:{}",
-                    mass_values,
-                    volume_values,
-                    result,
-                    mass_values.iter().sum::<f64>(),
-                    volume_values.iter().sum::<f64>()
+                log::info!(
+                    "TotalForce result_sum:{:.3}",
+                    result.iter().sum::<f64>()
                 );
-        //        println!("\n\n TotalForce qnt:{} result\n", result.len());   result.iter().for_each(|b| print!("{:.3} ", b)); 
+                log::trace!(
+                    "TotalForce result_distr:{}",
+                    result
+                        .iter()
+                        .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
+                );
                 ctx.write(TotalForceCtx::new(result))
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
