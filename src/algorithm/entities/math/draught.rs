@@ -23,12 +23,15 @@ impl Draught {
         let midel_x = *ship_parameters
             .get("X midship from Fr0")
             .ok_or(error.err("Nomidship in ship_parameters"))?;
-        let heel = ctx.read_params(ParameterID::Roll).to_radians();
-        let trim = ctx.read_params(ParameterID::TrimDeg).to_radians();
+        let heel = ctx.read_params(ParameterID::Roll);
+        let trim = ctx.read_params(ParameterID::TrimDeg);
         let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-        let tg_t = trim.tan();
-        let tg_h = heel.tan();
-        let cos_h = heel.cos();
+        let heel_r = heel.to_radians();
+        let trim_r = trim.to_radians();        
+        let tg_t = trim_r.tan();
+        let tg_h = heel_r.tan();
+        let cos_h = heel_r.cos();
+        //println!("midel_x:{midel_x} heel:{heel} trim:{trim} heel_r:{heel_r} trim_r:{trim_r} draught_mid:{draught_mid} tg_h:{tg_h} tg_t:{tg_t} cos_h:{cos_h}");
         Ok(Self {
             midel_x,
             draught_mid,
@@ -40,6 +43,8 @@ impl Draught {
     //
     pub fn value(&self, p: &Position) -> f64 {
         let d_zi = p.y() * self.tg_h + (p.x() - self.midel_x) * self.tg_t / self.cos_h;
-        self.draught_mid - d_zi
+        let z_fix = self.draught_mid - d_zi;
+      //  println!("p:{} d_zi:{d_zi} z_fix:{z_fix}", p.print());
+        z_fix
     }
 }
