@@ -48,6 +48,11 @@ impl Eval<Zg, EvalResult> for DSOTimberMaxEval {
                         )
                     }
                 };
+                log::info!(
+                    "Criterion DSOTimberMax result:{:.3} target:{:.3} ",
+                    data.result,
+                    data.target
+                ); 
                 let result = DSOTimberMaxCtx { data };
                 ctx.write(result)
             }

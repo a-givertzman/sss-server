@@ -93,6 +93,10 @@ impl Eval<Zg, EvalResult> for AccelerationEval {
                 let result = AccelerationCtx {
                     data: CriterionData::new_result(CriterionID::Acceleration, k, 1.),
                 };
+                log::info!(
+                    "Criterion Acceleration c:{:.3} theta_1_r:{:.3} a:{:.3} k:{:.3}",
+                    c, theta_1_r, a, k
+                ); 
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

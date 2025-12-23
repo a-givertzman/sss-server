@@ -1,3 +1,4 @@
+use crate::algorithm::entities::Position;
 use crate::algorithm::eval::LoadLineCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::parameters::ParameterID;
@@ -38,24 +39,29 @@ impl Eval<(), EvalResult> for LoadLineEval {
                     .ship_parameters
                     .as_ref()
                     .unwrap();
-                let ship_length = *ship_parameters
-                    .get("LBP")
-                    .ok_or(error.err("No LBP in ship_parameters"))?;
-                let roll = ctx.read_params(ParameterID::Roll).to_degrees();  
-                let draught_bow = ctx.read_params(ParameterID::DraughtBow);    
-                let draught_stern = ctx.read_params(ParameterID::DraughtStern);    
+                let midel_x = *ship_parameters
+                    .get("X midship from Fr0")
+                    .ok_or(error.err("Nomidship in ship_parameters"))?;
+                let heel = ctx.read_params(ParameterID::Roll).to_degrees();
+                let trim = ctx.read_params(ParameterID::TrimDeg).to_radians();
                 let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-                let delta_draught = (draught_bow - draught_stern) / ship_length;
-                let mut result = Vec::new();
-                let draught_value = |pos_x: f64| -> f64 {
-                    draught_mid
-                    + delta_draught 
-                    * pos_x
-                };                
+                let tg_t = trim.to_radians().tan();
+                let tg_h = heel.to_radians().tan();
+                let cos_h = heel.to_radians().cos();
+                let current_draught = |p: &Position| {
+                    let d_zi = p.y() * tg_h + (p.x() - midel_x) * tg_t / cos_h;
+                    p.z() - draught_mid - d_zi
+                };
+                let mut result = Vec::new();            
                 for v in data.iter() {
-                    let z_fix = draught_value(v.pos.x()) + v.pos.y() * roll.sin();
+                    let z_fix = current_draught(&v.pos);
                     let z_target = v.pos.z();
-
+                    log::info!(
+                        "Criterion LoadLine point:{} z_fix:{:.3} z_target:{:.3}",
+                        v.pos.print(),
+                        z_fix,
+                        z_target
+                    );
                     match CriterionID::from(v.criterion_id) {
                         Ok(criterion_id) => {
                             result.push(CriterionData::new_result(criterion_id, z_fix, z_target))

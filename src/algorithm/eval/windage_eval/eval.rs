@@ -1,6 +1,6 @@
 use crate::algorithm::entities::ship_model::StabilityArea;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
-use crate::algorithm::eval::{StaticAreaCtx, UnitAreaCtx, WindageCtx};
+use crate::algorithm::eval::{UnitAreaCtx, WindageCtx};
 use crate::kernel::Eval;
 use crate::kernel::types::Arc;
 use crate::prelude::{ContextParamsRead, ContextReadRef, InitialCtx};

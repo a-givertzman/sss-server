@@ -1,7 +1,8 @@
 use crate::algorithm::eval::WheatherCtx;
 use crate::{
     algorithm::eval::{
-        CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, StabilityBalanceCtx, WindCtx, parameters::ParameterID, zg_eval::Zg
+        CriterionData, CriterionID, LeverDiagramCtx, RollingAmplitudeCtx, WindCtx,
+        parameters::ParameterID, zg_eval::Zg,
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
@@ -37,7 +38,7 @@ impl Eval<Zg, EvalResult> for WheatherEval {
             Ok(mut ctx) => {
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
-                let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding); 
+                let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding);
                 let rolling_amplitude: RollingAmplitudeCtx = ctx.read();
                 let l_w1 = wind.arm_wind_static;
                 let l_w2 = wind.arm_wind_dynamic;
@@ -79,20 +80,13 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                     .lever_moment(b_angle_second)
                     .map_err(|e| error.pass_with("b_lever_second", e))?;
                 let b_delta_angle = b_angle_second - b_angle_first;
-
-                println!("\t l_w1:{l_w1} l_w2:{l_w2} theta_w1:{theta_w1}  theta_w2:{theta_w2} theta_c:{theta_c} theta_f:{theta_f}
-                    a_angle1:{a_angle_first} a_angle2:{l_w2_angle_first} a_s1:{a_s1} a_s2:{a_s2} a:{a} 
-                    b_angle1:{l_w2_angle_first} b_angle2:{b_angle_second}");
-
-
-
                 let b_s1 = lever_diagram
                     .dso_area(b_angle_first, b_angle_second)
                     .map_err(|e| error.pass_with("b_s1", e))?;
                 let b_s2 = b_delta_angle * l_w2.to_radians();
                 let b = b_s1 - b_s2;
                 let k = if a > 0. { Some(b / a) } else { None };
-                log::trace!("\t l_w1:{l_w1} l_w2:{l_w2} theta_w1:{theta_w1}  theta_w2:{theta_w2} theta_c:{theta_c} theta_f:{theta_f}
+                log::info!("Criterion Wheather l_w1:{l_w1} l_w2:{l_w2} theta_w1:{theta_w1}  theta_w2:{theta_w2} theta_c:{theta_c} theta_f:{theta_f}
                     a_angle1:{a_angle_first} a_angle2:{l_w2_angle_first} a_s1:{a_s1} a_s2:{a_s2} a:{a} 
                     b_angle1:{l_w2_angle_first} b_angle2:{b_angle_second} b_s1:{b_s1} b_s2:{b_s2} b:{b} k:{:?}", k);
                 ctx.write_params(ParameterID::StaticWindageHeelingAngle, theta_w1);
@@ -117,7 +111,6 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                     a_lever_first,
                 );
                 ctx.write_params(ParameterID::RollToTheWindwardSide, a_angle_first);
-
                 let data = match k {
                     Some(k) => CriterionData::new_result(CriterionID::Wheather, k, 1.),
                     None => {

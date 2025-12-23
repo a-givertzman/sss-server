@@ -71,6 +71,11 @@ impl Eval<Zg, EvalResult> for DSOMaxEval {
                         )
                     }
                 };
+                log::info!(
+                    "Criterion DSOMax result:{:.3} target:{:.3} ",
+                    data.result,
+                    data.target
+                ); 
                 let result = DSOMaxCtx { data };
                 ctx.write(result)
             }

@@ -1,10 +1,10 @@
-use crate::algorithm::eval::ReserveBuoyncyCtx;
 use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
-use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID};
+use crate::algorithm::eval::ReserveBuoyncyCtx;
+use crate::algorithm::eval::{CriterionData, CriterionID, StabilityBalanceCtx};
 use crate::prelude::InitialCtx;
 use crate::{
-    prelude::*,
     kernel::{Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -17,7 +17,10 @@ pub struct ReserveBuoyncyEval {
 //
 impl ReserveBuoyncyEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "ReserveBuoyncyEval");
         Self {
             dbg,
@@ -33,11 +36,16 @@ impl Eval<(), EvalResult> for ReserveBuoyncyEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let balance: StabilityBalanceCtx = ctx.read();               
+                let balance: StabilityBalanceCtx = ctx.read();
                 let ship_parameters = initial.ship_parameters.as_ref().unwrap();
                 let bow_area_min = *ship_parameters
                     .get("Calculated minimum bow area")
                     .ok_or(error.err("No bow_area_min"))?;
+                log::info!(
+                    "Criterion ReserveBuoyncyInBow bow_area:{:.3} bow_area_min:{:.3}",
+                    balance.bow_area,
+                    bow_area_min
+                );
                 let result = ReserveBuoyncyCtx {
                     data: CriterionData::new_result(
                         CriterionID::ReserveBuoyncyInBow,

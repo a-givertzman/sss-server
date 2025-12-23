@@ -1,11 +1,12 @@
-use crate::algorithm::eval::BowBoardCtx;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextReadRef};
+use crate::algorithm::entities::Position;
+use crate::algorithm::eval::BowBoardCtx;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
-    prelude::*,
     kernel::{Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -18,7 +19,10 @@ pub struct BowBoardEval {
 //
 impl BowBoardEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "BowBoardEval");
         Self {
             dbg,
@@ -34,31 +38,33 @@ impl Eval<(), EvalResult> for BowBoardEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let data = initial.bow_board.as_ref().unwrap();   
-                let ship_parameters = initial
-                    .ship_parameters
-                    .as_ref()
-                    .unwrap();          
-                let ship_length_lbp = *ship_parameters
-                    .get("LBP")
-                    .ok_or(error.err("No LBP in ship_parameters"))?;
+                let data = initial.bow_board.as_ref().unwrap();
+                let ship_parameters = initial.ship_parameters.as_ref().unwrap();
+                let midel_x = *ship_parameters
+                    .get("X midship from Fr0")
+                    .ok_or(error.err("Nomidship in ship_parameters"))?;
                 let bow_h_min = *ship_parameters
                     .get("Calculated minimum bow height")
                     .ok_or(error.err("No bow_h_min in ship_parameters"))?;
-                let roll = ctx.read_params(ParameterID::Roll).to_degrees();  
+                let heel = ctx.read_params(ParameterID::Roll).to_degrees();
                 let trim = ctx.read_params(ParameterID::TrimDeg).to_radians();
-                let draught_bow = ctx.read_params(ParameterID::DraughtBow);    
-                let draught_stern = ctx.read_params(ParameterID::DraughtStern);    
                 let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-                let delta_draught = (draught_bow - draught_stern) / ship_length_lbp;
+                let tg_t = trim.to_radians().tan();
+                let tg_h = heel.to_radians().tan();
+                let cos_h = heel.to_radians().cos();
+                let current_draught = |p: &Position| {
+                    let d_zi = p.y() * tg_h + (p.x() - midel_x) * tg_t / cos_h;
+                    p.z() - draught_mid - d_zi
+                };
                 let mut result = Vec::new();
-                let draught_value = |pos_x: f64| -> f64 {
-                    draught_mid
-                    + delta_draught 
-                    * pos_x
-                };  
                 for v in data {
-                    let delta_h = (v.pos.z() - v.pos.y() * roll.sin() - draught_value(v.pos.x()))*trim.cos();
+                    let delta_h = current_draught(&v.pos);
+                    log::info!(
+                        "Criterion DepthAtForwardPerpendicular point:{} delta_h:{:.3} bow_h_min:{:.3}",
+                        v.pos.print(),
+                        delta_h,
+                        bow_h_min
+                    );
                     result.push(if v.pos.y() <= 0. {
                         CriterionData::new_result(
                             CriterionID::DepthAtForwardPerpendicularPS,
@@ -73,9 +79,7 @@ impl Eval<(), EvalResult> for BowBoardEval {
                         )
                     });
                 }
-                let result = BowBoardCtx {
-                    data: result,
-                };
+                let result = BowBoardCtx { data: result };
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

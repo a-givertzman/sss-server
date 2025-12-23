@@ -77,6 +77,11 @@ impl Eval<Zg, EvalResult> for MinMetacentricHeightEval {
                         target,
                     ),
                 };
+                log::info!(
+                    "Criterion MinMetacentricHight result:{:.3} target:{:.3} ",
+                    result.data.result,
+                    result.data.target
+                ); 
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

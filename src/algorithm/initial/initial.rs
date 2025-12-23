@@ -2,9 +2,7 @@ use std::sync::Arc;
 
 use super::initial_ctx::InitialCtx;
 use crate::algorithm::entities::data::stability::ship_type::ShipType;
-use crate::algorithm::entities::data::stability::{BowBoardDataArray, DraftMarkDataArray, IcingArray, LoadLineDataArray, NavigationArea, ScrewDataArray, ship_type};
-use crate::algorithm::entities::model_cached::ModelCached;
-use crate::algorithm::entities::Bounds;
+use crate::algorithm::entities::data::stability::{BowBoardDataArray, DraftMarkDataArray, IcingArray, LoadLineDataArray, NavigationArea, ScrewDataArray};
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::{
     CoefficientKArray, CoefficientKThetaArray, 
@@ -12,8 +10,6 @@ use crate::algorithm::entities::data::{
     loads::*, MetacentricHeightSubdivisionArray,
 };
 use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
-use crate::algorithm::entities::ship_model::ship_model::ShipModel;
-use crate::kernel::types::RwLock;
 use crate::kernel::types::eval_result::EvalResult;
 use crate::{
     algorithm::context::{

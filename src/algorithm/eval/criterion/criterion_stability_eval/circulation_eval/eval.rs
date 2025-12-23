@@ -1,12 +1,12 @@
-use crate::algorithm::eval::CirculationCtx;
 use crate::algorithm::context::context_access::ContextParamsRead;
+use crate::algorithm::eval::CirculationCtx;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID, LeverDiagramCtx};
+use crate::algorithm::eval::{CriterionData, CriterionID, LeverDiagramCtx, StabilityBalanceCtx};
 use crate::{
-    prelude::*,
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::InitialCtx,
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -19,7 +19,10 @@ pub struct CirculationEval {
 //
 impl CirculationEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "CirculationEval");
         Self {
             dbg,
@@ -89,16 +92,27 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 };
                 let target = 16.0f64.min(entry_angle / 2.);
                 let result = if let Some(angle) = angle {
+                    log::info!(
+                        "Criterion Circulation ok, angle:{:.3} target:{:.3}",
+                        angle,
+                        target,
+                    );
                     CriterionData::new_result(CriterionID::HeelTurning, angle, target)
                 } else {
                     match calculate_velocity(target) {
-                        Ok(velocity) => CriterionData::new_error(
-                            CriterionID::HeelTurning,
-                            format!(
-                                "Крен {target} градусов, рекомендуемая скорость {} m/s');",
-                                velocity,
-                            ),
-                        ),
+                        Ok(velocity) => {                    
+                            log::info!(
+                                "Criterion Circulation no angle, target:{:.3} calculated velocity:{:.3}",
+                                target, velocity,
+                            ); 
+                            CriterionData::new_error(
+                                CriterionID::HeelTurning,
+                                format!(
+                                    "Крен {target} градусов, рекомендуемая скорость {} m/s');",
+                                    velocity,
+                                ),
+                            )
+                        },
                         Err(err) => {
                             let error = error.pass_with("calculate_velocity", err);
                             log::error!("{error}");

@@ -51,6 +51,11 @@ impl Eval<Zg, EvalResult> for MetacentricHeightSubdivisionEval {
                         h_subdivision,
                     ),
                 };
+                log::info!(
+                    "Criterion MinMetacentricHeightSubdivIndex result:{:.3} target:{:.3} ",
+                    result.data.result,
+                    result.data.target
+                ); 
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

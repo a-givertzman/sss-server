@@ -48,6 +48,11 @@ impl Eval<Zg, EvalResult> for DSOIcingMaxEval {
                         )
                     }
                 };
+                log::info!(
+                    "Criterion DSOIcingMax result:{:.3} target:{:.3} ",
+                    data.result,
+                    data.target
+                ); 
                 let result = DSOIcingMaxCtx { data };
                 ctx.write(result)
             }

@@ -120,11 +120,12 @@ impl Eval<Zg, EvalResult> for GrainEval {
                 let theta_grain40 = lever_diagram
                     .lever_moment(second_angle)
                     .map_err(|err| error.pass_with("theta_grain40", err))?;
-                log::trace!("\t Grain area m_grain:{m_grain} lambda_0:{lambda_0} 
-                    first_point_ab:{:?} second_point_ab:{:?}
+                log::info!("Criterion DSOTimberMax area m_grain:{m_grain} lambda_0:{lambda_0} 
+                    first_point_ab:({:.3} {:.3}) second_point_ab:({:.3} {:.3})
                     first_angle:{theta_grain_angle} angle_delta_max:{angle_delta_max} second_angle:{second_angle} 
                     delta_ab:{delta_ab} dso_area:{dso_area} first_grain_lever:{first_grain_lever} second_grain_lever:{second_grain_lever}
-                    grain_area:{grain_area} result_area:{result_area}", first_point_ab, second_point_ab);
+                    grain_area:{grain_area} result_area:{result_area}", 
+                    first_point_ab.0, first_point_ab.1, second_point_ab.0, second_point_ab.1);
                 ctx.write_params(
                     ParameterID::HeelingMomentDueToTheTransverseShiftOfGrain,
                     m_grain,

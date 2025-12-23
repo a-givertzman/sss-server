@@ -2,7 +2,7 @@ use crate::algorithm::eval::StaticAngleCtx;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::data::stability::ship_type::*;
 use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{StabilityBalanceCtx, CriterionData, CriterionID};
+use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
     prelude::*,
     algorithm::eval::{LeverDiagramCtx, WindCtx},
@@ -73,8 +73,16 @@ impl Eval<Zg, EvalResult> for StaticAngleEval {
                     16.0f64.min(0.8 * flooding_angle)
                 };
                 let data = if let Some(angle) = angle {
+                    log::info!(
+                        "Criterion WindStaticHeel result:{:.3} target:{:.3} ",
+                        angle,
+                        target_value
+                    ); 
                     CriterionData::new_result(CriterionID::WindStaticHeel, *angle, target_value)
                 } else {
+                    log::error!(
+                        "Criterion WindStaticHeel: Нет угла крена судна для текущих погодных условий"
+                    ); 
                     CriterionData::new_error(
                         CriterionID::WindStaticHeel,
                         "Нет угла крена судна для текущих погодных условий".to_owned(),

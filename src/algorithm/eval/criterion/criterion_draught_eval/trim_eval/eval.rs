@@ -19,7 +19,10 @@ pub struct TrimEval {
 //
 impl TrimEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "TrimEval");
         Self {
             dbg,
@@ -34,14 +37,25 @@ impl Eval<(), EvalResult> for TrimEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let draught_bow = ctx.read_params(ParameterID::DraughtBow);    
-                let draught_stern = ctx.read_params(ParameterID::DraughtStern);  
+                let draught_bow = ctx.read_params(ParameterID::DraughtBow);
+                let draught_stern = ctx.read_params(ParameterID::DraughtStern);
                 let forward_trim = CriterionData::new_result(
-                        CriterionID::MaximumForwardTrim,
-                        draught_bow,
-                        self.forward_trim,
-                    );
-                let aft_trim = CriterionData::new_result(CriterionID::MaximumAftTrim, draught_stern, self.aft_trim);
+                    CriterionID::MaximumForwardTrim,
+                    draught_bow,
+                    self.forward_trim,
+                );
+                let aft_trim = CriterionData::new_result(
+                    CriterionID::MaximumAftTrim,
+                    draught_stern,
+                    self.aft_trim,
+                );
+                log::info!(
+                    "Criterion Trim draught_bow:{:.3} forward_trim:{:.3} draught_stern:{:.3} aft_trim:{:.3}",
+                    draught_bow,
+                    self.forward_trim,
+                    draught_stern,
+                    self.aft_trim,
+                );
                 let result = TrimCtx {
                     data: vec![aft_trim, forward_trim],
                 };
@@ -55,8 +69,6 @@ impl Eval<(), EvalResult> for TrimEval {
 //
 impl std::fmt::Debug for TrimEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TrimEval")
-            .field("dbg", &self.dbg)
-            .finish()
+        f.debug_struct("TrimEval").field("dbg", &self.dbg).finish()
     }
 }

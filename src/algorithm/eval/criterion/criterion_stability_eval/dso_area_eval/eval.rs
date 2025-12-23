@@ -1,7 +1,8 @@
 use crate::algorithm::eval::DSOAreaCtx;
 use crate::{
     algorithm::{
-        entities::data::stability::ship_type::ShipType, eval::{CriterionData, CriterionID, LeverDiagramCtx, StabilityBalanceCtx, zg_eval::Zg}
+        entities::data::stability::ship_type::ShipType,
+        eval::{CriterionData, CriterionID, LeverDiagramCtx, zg_eval::Zg},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
@@ -96,7 +97,17 @@ impl Eval<Zg, EvalResult> for DSOAreaEval {
                     }
                 };
                 //    log::info!("Criterion dso: zg:{} theta_0:{theta_0} theta_max:{theta_max} first_angle_30:{first_angle_30} second_angle_30:{second_angle_30} second_angle_40:{second_angle_40}", self.metacentric_height.z_g_fix().unwrap_or(-1.));
-                let result = DSOAreaCtx { data };
+                log::info!(
+                    "Criterion DSOArea theta_0:{:.3} theta_max:{:.3} first_angle_30:{:.3} second_angle_30:{:.3} second_angle_40:{:.3} result:{:.3} target:{:.3} ",
+                    theta_0,
+                    theta_max,
+                    first_angle_30,
+                    second_angle_30,
+                    second_angle_40,
+                    data[0].result,
+                    data[0].target
+                );                  
+                let result = DSOAreaCtx { data };             
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

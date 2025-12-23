@@ -94,6 +94,10 @@ impl Eval<Zg, EvalResult> for DSOAngleMaxEval {
                         angle.0,
                         target,
                     ));
+                    log::info!(
+                        "Criterion DSOAngleMax breadth:{:.3} moulded_depth:{:.3} b_div_d:{:.3} angle:{:.3} target:{:.3}",
+                        breadth, moulded_depth, b_div_d, results[0].result, results[0].target
+                    );
                 } else {
                     let error = error.err("no angle for first maximum lever of DSO!");
                     log::error!("{error}");
