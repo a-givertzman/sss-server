@@ -30,10 +30,10 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
 
 
     DebugSession::new()
-        .filter(LogLevel::Info)
-        .module("api_tools", LogLevel::Info)
-        .module("sal_sync", LogLevel::Info)
-        .module("ena", LogLevel::Info)
+        .filter(LogLevel::Debug)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
         .init();
     
     let dbg = Dbg::own("main");
