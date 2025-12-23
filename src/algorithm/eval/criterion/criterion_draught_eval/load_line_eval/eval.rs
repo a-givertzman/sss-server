@@ -48,13 +48,13 @@ impl Eval<(), EvalResult> for LoadLineEval {
                 let tg_t = trim.to_radians().tan();
                 let tg_h = heel.to_radians().tan();
                 let cos_h = heel.to_radians().cos();
-                let current_draught = |p: &Position| {
+                let draught = |p: &Position| {
                     let d_zi = p.y() * tg_h + (p.x() - midel_x) * tg_t / cos_h;
-                    p.z() - draught_mid - d_zi
+                    draught_mid - d_zi
                 };
                 let mut result = Vec::new();            
                 for v in data.iter() {
-                    let z_fix = current_draught(&v.pos);
+                    let z_fix = draught(&v.pos);
                     let z_target = v.pos.z();
                     log::info!(
                         "Criterion LoadLine point:{} z_fix:{:.3} z_target:{:.3}",

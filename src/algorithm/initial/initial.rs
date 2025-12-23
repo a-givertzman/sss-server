@@ -322,17 +322,17 @@ impl Eval<(), EvalResult> for Initial {
         )
         .map_err(|err| error.pass_with("coefficient_k_theta parse", err))?;
         let load_line = LoadLineDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, title as name, x, y, z FROM load_line_view WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+            "SELECT criterion_id, title as name, x, y, z FROM load_line_view WHERE language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("load_line fetch", err))?
         ).map_err(|err| error.pass_with("load_line parse", err))?;
         let bow_board = BowBoardDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, title as name, x, y, z FROM bow_board_view WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+            "SELECT criterion_id, title as name, x, y, z FROM bow_board_view WHERE language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("bow_board fetch", err))?
         ).map_err(|err| error.pass_with("bow_board parse", err))?;
         let screw = ScrewDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, x, y, z, d FROM screw_view WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+            "SELECT criterion_id, x, y, z, d FROM screw_view WHERE language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
             initial_ctx.ship_id, initial_ctx.project_id
         )).map_err(|err| error.pass_with("screw fetch", err))?
         ).map_err(|err| error.pass_with("screw parse", err))?;

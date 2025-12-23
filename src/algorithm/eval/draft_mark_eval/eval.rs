@@ -121,10 +121,6 @@ impl Eval<(), EvalResult> for DraftMarkEval {
                     ctx.write_params(ParameterID::from(p.criterion_id)?, fix_z);
                 }
                 log::info!(
-                    "DraftMark qnt:{}",
-                    result.len(),
-                );
-                log::debug!(
                     "DraftMark result:{}\n",
                     result.iter().fold(String::new(), |s, v| s + &format!(
                         "\n{} {} ({:.3} {:.3} {:.3})",
