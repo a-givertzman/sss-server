@@ -1,6 +1,6 @@
 use super::DraftMarkResult;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
-use crate::algorithm::entities::{Curve, ICurve};
+use crate::algorithm::entities::{Curve, Draught, ICurve};
 use crate::algorithm::eval::{DraftMarkCtx, parameters::ParameterID};
 use crate::{
     algorithm::context::context_access::ContextReadRef,
@@ -39,17 +39,8 @@ impl Eval<(), EvalResult> for DraftMarkEval {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let data = initial.draft_mark.clone().unwrap();
-                let ship_parameters = initial.ship_parameters.as_ref().unwrap();
-                let ship_length = *ship_parameters
-                    .get("LBP")
-                    .ok_or(error.err("No LBP in ship_parameters"))?;
-                let roll = ctx.read_params(ParameterID::Roll).to_degrees();
-                let draught_bow = ctx.read_params(ParameterID::DraughtBow);
-                let draught_stern = ctx.read_params(ParameterID::DraughtStern);
-                let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-                let delta_draught = (draught_bow - draught_stern) / ship_length;
                 let mut result = Vec::new();
-                let draught_value = |pos_x: f64| -> f64 { draught_mid + delta_draught * pos_x };
+                let draught = Draught::new(&self.dbg, &ctx).map_err(|err| error.pass(err))?;
                 for p in data.iter() {
                     if p.data.len() <= 2 {
                         log::error!("DraftMark eval error: p.data.len() <= 2, {}", p.name);
@@ -61,7 +52,7 @@ impl Eval<(), EvalResult> for DraftMarkEval {
                             v.x(),
                             v.y(),
                             v.z(),
-                            v.z() - v.y() * roll.sin() - draught_value(v.x()),
+                            v.z() - draught.value(&v),
                         ));
                     }
                     z_fix.sort_by(|a, b| {

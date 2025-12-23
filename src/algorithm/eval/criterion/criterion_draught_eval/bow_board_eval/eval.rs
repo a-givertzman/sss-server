@@ -1,7 +1,6 @@
-use crate::algorithm::context::context_access::{ContextParamsRead, ContextReadRef};
-use crate::algorithm::entities::Position;
+use crate::algorithm::context::context_access::ContextReadRef;
+use crate::algorithm::entities::Draught;
 use crate::algorithm::eval::BowBoardCtx;
-use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::prelude::InitialCtx;
 use crate::{
@@ -40,25 +39,13 @@ impl Eval<(), EvalResult> for BowBoardEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let data = initial.bow_board.as_ref().unwrap();
                 let ship_parameters = initial.ship_parameters.as_ref().unwrap();
-                let midel_x = *ship_parameters
-                    .get("X midship from Fr0")
-                    .ok_or(error.err("Nomidship in ship_parameters"))?;
                 let bow_h_min = *ship_parameters
                     .get("Calculated minimum bow height")
                     .ok_or(error.err("No bow_h_min in ship_parameters"))?;
-                let heel = ctx.read_params(ParameterID::Roll).to_degrees();
-                let trim = ctx.read_params(ParameterID::TrimDeg).to_radians();
-                let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-                let tg_t = trim.to_radians().tan();
-                let tg_h = heel.to_radians().tan();
-                let cos_h = heel.to_radians().cos();
-                let current_draught = |p: &Position| {
-                    let d_zi = p.y() * tg_h + (p.x() - midel_x) * tg_t / cos_h;
-                    p.z() - draught_mid - d_zi
-                };
                 let mut result = Vec::new();
+                let draught = Draught::new(&self.dbg, &ctx).map_err(|err| error.pass(err))?;
                 for v in data {
-                    let delta_h = current_draught(&v.pos);
+                    let delta_h = v.pos.z() - draught.value(&v.pos);
                     log::info!(
                         "Criterion DepthAtForwardPerpendicular point:{} delta_h:{:.3} bow_h_min:{:.3}",
                         v.pos.print(),

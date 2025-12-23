@@ -1,11 +1,9 @@
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::Draught;
 use crate::algorithm::eval::LoadLineCtx;
-use crate::algorithm::context::context_access::ContextParamsRead;
-use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{CriterionData, CriterionID};
 use crate::{
-    prelude::*,
     kernel::{Eval, types::eval_result::EvalResult},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -18,7 +16,10 @@ pub struct LoadLineEval {
 //
 impl LoadLineEval {
     ///
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "LoadLineEval");
         Self {
             dbg,
@@ -35,26 +36,10 @@ impl Eval<(), EvalResult> for LoadLineEval {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let data = initial.load_line.as_ref().unwrap();
-                let ship_parameters = initial
-                    .ship_parameters
-                    .as_ref()
-                    .unwrap();
-                let midel_x = *ship_parameters
-                    .get("X midship from Fr0")
-                    .ok_or(error.err("Nomidship in ship_parameters"))?;
-                let heel = ctx.read_params(ParameterID::Roll).to_degrees();
-                let trim = ctx.read_params(ParameterID::TrimDeg).to_radians();
-                let draught_mid = ctx.read_params(ParameterID::DraughtMid);
-                let tg_t = trim.to_radians().tan();
-                let tg_h = heel.to_radians().tan();
-                let cos_h = heel.to_radians().cos();
-                let draught = |p: &Position| {
-                    let d_zi = p.y() * tg_h + (p.x() - midel_x) * tg_t / cos_h;
-                    draught_mid - d_zi
-                };
-                let mut result = Vec::new();            
+                let mut result = Vec::new();
+                let draught = Draught::new(&self.dbg, &ctx).map_err(|err| error.pass(err))?;
                 for v in data.iter() {
-                    let z_fix = draught(&v.pos);
+                    let z_fix = draught.value(&v.pos);
                     let z_target = v.pos.z();
                     log::info!(
                         "Criterion LoadLine point:{} z_fix:{:.3} z_target:{:.3}",
@@ -71,9 +56,7 @@ impl Eval<(), EvalResult> for LoadLineEval {
                         }
                     }
                 }
-                let result = LoadLineCtx {
-                    data: result,
-                };
+                let result = LoadLineCtx { data: result };
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
