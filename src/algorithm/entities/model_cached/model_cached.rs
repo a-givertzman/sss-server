@@ -1004,7 +1004,25 @@ impl ModelCached {
             if query.epsilon >= epsilon {
                 let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
                 if precision < query.epsilon {
-                    //                    dbg!(heel, trim, epsilon, mass_center, disp_result.volume_center);
+                    log::trace!(
+                        "ModelCached floating position heel:{:.3} trim:{} draught_mid:{:.3} 
+                        displacement:{:.3} displacement_center:{}
+                        mass_sum:{:.3} mass_center:{}
+                        mass_bulk:{:.3} bulk_center:{}
+                        mass_liquid:{:.3} liquid_center:{}
+                        area_wl:{:.3} area_wl_center:{}
+                        length_wl:{:.3} breadth_wl:{:.3}
+                        rad_long:{:.3} rad_trans:{:.3}",
+                        heel, trim, new_draught, 
+                        displacement, disp_result.volume_center.print(),
+                        mass_sum, mass_center.print(),
+                        mass_bulk, moment_bulk.to_pos(mass_bulk).print(),
+                        mass_liquid, moment_liquid.to_pos(mass_liquid).print(),
+                        disp_result.area_wl, disp_result.area_wl_center.print(),
+                        disp_result.length_wl, disp_result.breadth_wl,
+                        disp_result.inertia_long_y / displacement,
+                        disp_result.inertia_trans_x / displacement,
+                    );  
                     let result = FloatingPositionResult {
                         heel,
                         trim,
