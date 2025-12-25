@@ -992,7 +992,7 @@ impl ModelCached {
         let mut step_heel = 1.0_f64;
         let mut d_v: Option<f64> = None;
         let mut d_m: Option<f64> = None;
-        for _i in 1..=1000 {
+        for _i in 0..100 {
             let epsilon = (step_trim.max(step_heel)) / 10.;
             // учет смещения жидкости
             let moment_liquid = self
@@ -1015,8 +1015,8 @@ impl ModelCached {
                 let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
                 if precision < query.epsilon {
                     log::debug!(
-                        "ModelCached floating position heel:{:.3} trim:{} draught_mid:{:.3} 
-                        displacement:{:.3} displacement_center:{}
+                        "ModelCached floating position heel:{} trim:{} draught_mid:{} 
+                        displacement:{} displacement_center:{}
                         mass_sum:{:.3} mass_center:{}
                         mass_bulk:{:.3} bulk_center:{}
                         mass_liquid:{:.3} liquid_center:{}
@@ -1077,8 +1077,8 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
-            //     println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
-            //     epsilon, heel, trim, draught, new_d_v, new_d_m);
+         //   println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
+         //        epsilon, heel, trim, draught, new_d_v, new_d_m);
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1482,6 +1482,7 @@ impl ModelCached {
             let moment_sum = moment_sum + moment_liquid + moment_damaged_compartment;
             moment_sum.to_pos(mass_sum)
         };
+        let cg = Position::new(cg.x(), 0., cg.z());
         //    dbg!(cg);
         // Определение невязки
         let cg_h = {
@@ -1490,8 +1491,8 @@ impl ModelCached {
             let cg_local = cg - cb;
             let cg_local = rotation.transform_point(&cg_local.into());
             let cg_h_local = my_plane.project_local_point(&cg_local.into(), false).point;
-            let cg_h_local = rotation.inverse_transform_point(&cg_h_local.into());
-            let cg_h = cb + cg_h_local.into();
+            let cg_h = rotation.inverse_transform_point(&cg_h_local.into());
+            let cg_h = cb + cg_h.into();
             cg_h
         };
         // Определение посадки судна для следующего шага
@@ -1530,6 +1531,11 @@ impl ModelCached {
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
+
+     //   println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
+     //           heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
+     //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
+      //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
     }
     // Считаем сыпучие грузы.

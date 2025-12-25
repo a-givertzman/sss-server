@@ -138,12 +138,17 @@ impl MetacentricHeightEval {
             delta_m_h,
         };
         log::info!(
-            "\t MetacentricHeight delta_m_h:{:.3} h_long_fix:{:.3} h_trans_0:{:.3} h_trans_fix:{:.3} z_g_fix:{:.3}",
+            "\t MetacentricHeight {:.3} rad_trans:{:.3} rad_long:{:.3} z_m_trans:{:.3} z_m_long:{:.3} h_trans_0:{:.3} h_long_0:{:.3} h_trans_fix:{:.3} h_long_fix:{:.3} z_g_fix:{:.3}",
             result.delta_m_h,
-            result.h_long_fix,
-            result.h_trans_0,
-            result.h_trans_fix,
-            result.z_g_fix
+            rad_trans,
+            rad_long,
+            z_m_trans,
+            z_m_long,
+            h_trans_0,
+            h_long_0,
+            h_trans_fix,
+            h_long_fix,
+            z_g_fix,
         );
         ctx.write(result)
     }
