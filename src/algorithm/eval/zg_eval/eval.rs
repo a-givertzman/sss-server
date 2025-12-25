@@ -63,6 +63,82 @@ impl Eval<(), EvalResult> for ZgEval {
                     .ok_or(error.err("No LBP in ship_parameters"))?;
                 // базовый контекст
                 // перебор значений z_g_fix, вычисление контекста для zg
+                let mut zg_criterion: Vec<(f64, _)> = vec![];
+                let delta = 0.1;
+                let max_index = (overall_height / delta).floor() as i32;
+                for index in 0..=max_index {
+                    let z_g_fix = index as f64 * delta;
+                    let self_ctx = self.ctx.clone();
+                    let ctx = self_ctx.eval(Zg(Some(z_g_fix)))?;
+                    let criterion: CriterionStabilityCtx = ctx.read();
+                    zg_criterion.push((z_g_fix, criterion));
+                }
+                let mut vec_results = Vec::new();
+                for (z_g_fix, criterion) in zg_criterion {
+                    // отбрасываем ошибки, оставляем только значения, считаем дельту с целевым значением
+                    //    let criterion = unsafe { &*criterion.assume_init() };
+                    let tmp: Vec<(usize, Option<(f64, f64)>)> = criterion
+                        .data
+                        .iter()
+                        .filter(|v| v.error_message.is_none())
+                        .map(|v| (v.criterion_id, Some((v.result, v.target))))
+                        .collect();
+                    vec_results.push((z_g_fix, tmp));
+                }
+                // создаем коллекцию векторов, сортируем значения по id
+                #[allow(clippy::type_complexity)]
+                let mut values: HashMap<usize, Vec<(f64, (f64, f64))>> = HashMap::new();
+                for (z_g_fix, tmp) in vec_results.into_iter() {
+                    tmp.into_iter()
+                        .filter(|(_, value)| value.is_some())
+                        .for_each(|(id, value)| {
+                            values
+                                .entry(id)
+                                .and_modify(|v| v.push((z_g_fix, value.unwrap())))
+                                .or_insert(vec![(z_g_fix, value.unwrap())]);
+                        });
+                }
+                let mut result = HashMap::new();
+                for (id, mut values) in values.into_iter() {
+                    // сортируем значения по увеличению дельты с целевым
+                    values.sort_by(|&(_, v1), &(_, v2)| {
+                        (v1.0 - v1.1)
+                            .abs()
+                            .partial_cmp(&(v2.0 - v2.1).abs())
+                            .expect("ZgEval eval values error: sort values!")
+                    });
+                    // берем первое значение как ближайшее значение к целевому
+                    let closest_value = values
+                        .first()
+                        .expect("ZgEval eval closest_value error, no values!");
+                    result.insert(id, closest_value.0);
+                }
+                let result = ZgCtx { zg: result };
+                ctx.write(result)
+          //      let result = ZgCtx { zg: HashMap::new() };
+          //      ctx.write(result)
+            }
+            Err(err) => Err(error.pass_with("self.ctx.eval error", err)),
+        }
+    }
+}
+/*
+//
+impl Eval<(), EvalResult> for ZgEval {
+    fn eval(&self, _: ()) -> EvalResult {
+        let error = Error::new(&self.dbg, "eval");
+        match self.ctx.eval(Zg::empty()) {
+            Ok(ctx) => {
+            let initial: &InitialCtx = ctx.read_ref();
+                let ship_parameters = initial
+                    .ship_parameters
+                    .as_ref()
+                    .expect("ZgEval eval error: no ship_parameters");
+                let overall_height = *ship_parameters
+                    .get("Overall height up to non-removable parts")
+                    .ok_or(error.err("No LBP in ship_parameters"))?;
+                // базовый контекст
+                // перебор значений z_g_fix, вычисление контекста для zg
                 let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
                 let mut errors = Vec::new();
                 let mut pass = |message: &str, err: Error| {
@@ -156,6 +232,7 @@ impl Eval<(), EvalResult> for ZgEval {
         }
     }
 }
+*/
 //
 //
 impl std::fmt::Debug for ZgEval {
