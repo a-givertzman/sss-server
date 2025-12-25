@@ -135,8 +135,8 @@ impl ShipModel {
         .map_err(|err| error.pass_with("max_compartment_volume", err))?;
         let bounds = get_physical_bounds(
             self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
+            &self.project_id,
+            &self.api_client,
         )
         .map_err(|err| error.pass_with("bounds", err))?;
         self.bounds = Some(bounds.clone());
@@ -364,7 +364,7 @@ impl Debug for ShipModel {
 /// Получение шпаций из физических фреймов
 fn get_physical_bounds(
     ship_id: usize,
-    project_id: String,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<Bounds, Error> {
     let error = Error::new("ShipModel", "get_physical_bounds");
