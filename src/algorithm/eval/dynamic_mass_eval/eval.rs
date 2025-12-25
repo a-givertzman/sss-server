@@ -282,7 +282,7 @@ impl Eval<(), EvalResult> for DynamicMassEval {
                     data.insert("value_mass_wetting".to_owned(), vec_wetting);
                     data.insert("value_mass_sum".to_owned(), mass_values.clone());
                     log::info!(
-                        "DynamicMass qnt:{} result:{}\n",
+                        "DynamicMass distr qnt:{} result:{}\n",
                         data.len(),
                         data.iter().fold(String::new(), |s, v| s + &format!(
                             "\n{}: {:.3}",

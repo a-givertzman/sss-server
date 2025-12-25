@@ -1004,7 +1004,7 @@ impl ModelCached {
             if query.epsilon >= epsilon {
                 let precision = (new_d_v.powi(2) + new_d_m.powi(2)).sqrt();
                 if precision < query.epsilon {
-                    log::trace!(
+                    log::debug!(
                         "ModelCached floating position heel:{:.3} trim:{} draught_mid:{:.3} 
                         displacement:{:.3} displacement_center:{}
                         mass_sum:{:.3} mass_center:{}
