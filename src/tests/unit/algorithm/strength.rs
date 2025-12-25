@@ -30,7 +30,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
 
 
     DebugSession::new()
-        .filter(LogLevel::Debug)
+    //    .filter(LogLevel::Debug)
+        .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)
