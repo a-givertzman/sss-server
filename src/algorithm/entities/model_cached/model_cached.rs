@@ -925,6 +925,17 @@ impl ModelCached {
             .windage_area
             .bow_area(trim_degree, draught_mid)
             .map_err(|err| error.pass(err))?;
+      /*  log::debug!(
+            "ModelCached balance_stability bow_area:{bow_area}\nliquid:\n{}\nbulk:\n{}\n",
+            liquid.iter().fold(String::new(), |s, v| s + &format!(
+                "assignment_id:{} trans_moment_of_inertia:{:.3}\n",
+                v.assignment_id, v.trans_moment_of_inertia
+            )),
+            bulk.iter().fold(String::new(), |s, v| s + &format!(
+                "{} {}\n",
+                v.assignment_id, v.mass_shift.print()
+            )),            
+        );*/
         Ok(BalanceStabilityResult {
             heel,
             trim_degree,
@@ -1012,17 +1023,28 @@ impl ModelCached {
                         mass_liquid:{:.3} liquid_center:{}
                         area_wl:{:.3} area_wl_center:{}
                         length_wl:{:.3} breadth_wl:{:.3}
+                        inertia_long_y:{:.3}, inertia_trans_x:{:.3},
                         rad_long:{:.3} rad_trans:{:.3}",
-                        heel, trim, new_draught, 
-                        displacement, disp_result.volume_center.print(),
-                        mass_sum, mass_center.print(),
-                        mass_bulk, moment_bulk.to_pos(mass_bulk).print(),
-                        mass_liquid, moment_liquid.to_pos(mass_liquid).print(),
-                        disp_result.area_wl, disp_result.area_wl_center.print(),
-                        disp_result.length_wl, disp_result.breadth_wl,
+                        heel,
+                        trim,
+                        new_draught,
+                        displacement,
+                        disp_result.volume_center.print(),
+                        mass_sum,
+                        mass_center.print(),
+                        mass_bulk,
+                        moment_bulk.to_pos(mass_bulk).print(),
+                        mass_liquid,
+                        moment_liquid.to_pos(mass_liquid).print(),
+                        disp_result.area_wl,
+                        disp_result.area_wl_center.print(),
+                        disp_result.length_wl,
+                        disp_result.breadth_wl,
+                        disp_result.inertia_long_y,
+                        disp_result.inertia_trans_x,
                         disp_result.inertia_long_y / displacement,
                         disp_result.inertia_trans_x / displacement,
-                    );  
+                    );
                     let result = FloatingPositionResult {
                         heel,
                         trim,
@@ -1263,7 +1285,7 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-   /*       println!("\nmodel_cached dso: ");
+        /*       println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
@@ -1396,7 +1418,7 @@ impl ModelCached {
                 draught = new_draught;
             }
         }
-     /*     println!("\nmodel_cached dso: ");
+        /*     println!("\nmodel_cached dso: ");
         for &(angle, value) in dso.iter() {
             println!("{angle} {value};");
         }
@@ -1749,8 +1771,11 @@ impl ModelCached {
                     let space_id = cargo.space_id.clone();
                     let cargo = cargo.clone();
                     let compartment = compartment.clone();
-                    let thread_name = format!("{}.moment_liquid_dso_abs_moment space_id:{}", &self.dbg, space_id);
-                    log::trace!("Starting thread {thread_name}");                    
+                    let thread_name = format!(
+                        "{}.moment_liquid_dso_abs_moment space_id:{}",
+                        &self.dbg, space_id
+                    );
+                    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1853,8 +1878,11 @@ impl ModelCached {
                     let space_id = cargo.space_id.clone();
                     let cargo = cargo.clone();
                     let compartment = compartment.clone();
-                    let thread_name = format!("{}.moment_liquid_dso_surface_moment space_id:{}", &self.dbg, space_id);
-                    log::trace!("Starting thread {thread_name}");                         
+                    let thread_name = format!(
+                        "{}.moment_liquid_dso_surface_moment space_id:{}",
+                        &self.dbg, space_id
+                    );
+                    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1942,8 +1970,11 @@ impl ModelCached {
                     let space_id = damaged_compartment.clone();
                     let compartment = compartment.clone();
                     let _error = error.clone();
-                    let thread_name = format!("{}.calc_damaged_compartments space_id:{}", &self.dbg, space_id);
-                    log::trace!("Starting thread {thread_name}");                      
+                    let thread_name = format!(
+                        "{}.calc_damaged_compartments space_id:{}",
+                        &self.dbg, space_id
+                    );
+                    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             task_results

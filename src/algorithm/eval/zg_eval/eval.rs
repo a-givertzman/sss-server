@@ -64,6 +64,11 @@ impl Eval<(), EvalResult> for ZgEval {
                 // базовый контекст
                 // перебор значений z_g_fix, вычисление контекста для zg
                 let mut zg_criterion: Vec<(f64, _)> = vec![];
+
+
+                let self_ctx = self.ctx.clone();
+                let ctx = self_ctx.eval(Zg(Some(7.1)))?;
+
                 let delta = 0.1;
                 let max_index = (overall_height / delta).floor() as i32;
                 for index in 0..=max_index {

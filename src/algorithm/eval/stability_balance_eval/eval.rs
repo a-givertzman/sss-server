@@ -14,6 +14,7 @@ use crate::{
     prelude::{ContextParamsWrite, ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 ///
@@ -68,7 +69,15 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
                 //        dbg!(&result);
-                //     result.liquid.iter().for_each(|v| println!("'{}' {} {};", liquid_data.get(&v.assignment_id).unwrap().space_name, v.long_moment_of_inertia, v.trans_moment_of_inertia));
+            /*    let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .liquid
+                        .as_ref()
+                        .ok_or(error.err("Read liquid error: no data!"))?
+                        .iter()
+                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                        .collect();             
+                result.liquid.iter().for_each(|v| println!("'{}' {};", liquid_data.get(&v.assignment_id).unwrap(), v.trans_moment_of_inertia));
+            */
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
                 ctx.write_params(ParameterID::DraughtStern, result.draught_stern);

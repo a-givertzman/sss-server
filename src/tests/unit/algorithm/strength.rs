@@ -30,8 +30,9 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
 
 
     DebugSession::new()
-    //    .filter(LogLevel::Debug)
-        .filter(LogLevel::Trace)
+      //  .filter(LogLevel::Info)
+        .filter(LogLevel::Debug)
+     //   .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)
@@ -226,7 +227,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );    
-    let ctx = DraftMarkEval::new(
+    ctx.eval(Zg(None)).unwrap();
+  /*  let ctx = DraftMarkEval::new(
         &dbg,
         CriterionDraughtEval::new(
             &dbg,
@@ -249,6 +251,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
-    ctx.eval(()).unwrap();    
+    ctx.eval(()).unwrap();   */ 
     Ok(())
 }
