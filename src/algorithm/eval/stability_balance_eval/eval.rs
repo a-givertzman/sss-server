@@ -68,16 +68,33 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .read()
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
-                //        dbg!(&result);
-            /*    let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+/*
+                let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .liquid
                         .as_ref()
                         .ok_or(error.err("Read liquid error: no data!"))?
                         .iter()
                         .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
                         .collect();             
-                result.liquid.iter().for_each(|v| println!("'{}' {};", liquid_data.get(&v.assignment_id).unwrap(), v.trans_moment_of_inertia));
-            */
+                result.liquid.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", liquid_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
+ 
+                let bulk_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .bulk
+                        .as_ref()
+                        .ok_or(error.err("Read bulk error: no data!"))?
+                        .iter()
+                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                        .collect();             
+                result.bulk.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", bulk_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
+
+                <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                        .unit
+                        .as_ref()
+                        .ok_or(error.err("Read unit error: no data!"))?
+                        .iter()
+                        .map(|v| (v.space_id.clone(), v.mass, v.mass_shift()))
+                        .for_each(|v| println!("'{}' mass:{:.3} shift:{};", v.0, v.1, v.2.unwrap()));   
+*/
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
                 ctx.write_params(ParameterID::DraughtStern, result.draught_stern);

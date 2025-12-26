@@ -114,9 +114,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dbg!(res);
         return Ok(());
     */
-    /*
+    
       let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
-      let model_dir: PathBuf = "src/assets/model/sofia/compartments/306.stl".into();
+      let model_dir: PathBuf = "src/assets/model/sofia/compartments/201.stl".into();
       let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
           &dbg, model_dir, None, 1000.,
       )));
@@ -126,7 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
           &dbg,
           shape.clone(),
           cache_dir,
-          "306".to_owned(),
+          "201".to_owned(),
           //     (-60..=60).map(|v| v as f64).collect(),
           //   vec![-5., 0., 5.,],
           //   vec![-40., -20., -10., 0., 10., 20., 40.,],
@@ -147,12 +147,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       //  cache.calc_coeff(221.692).unwrap(); //205
       //    cache.calc_coeff(19.034).unwrap(); // 501
       //    cache.calc_coeff(35.146).unwrap(); // 402
-      cache.calc_coeff(104.765).unwrap();
+      cache.calc_coeff(168.4).unwrap();
       //    cache.calc_coeff(99.7776).unwrap();
 
       //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
 
-      dbg!(cache.get(-0.6, -1.85, 102.68041237113401, 0.000001));
+      dbg!(cache.get(-20.0, 3., 135., 0.000001));
       /*
       let calc = |heel: f64| {
           let result = cache.get(heel, 0., 2., 0.000001).unwrap();
@@ -185,7 +185,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       calc(70.);
       calc(80.);*/
       return Ok(());
-      */
+      
 
     let ship_id = 2;
     let project_id = "NULL";

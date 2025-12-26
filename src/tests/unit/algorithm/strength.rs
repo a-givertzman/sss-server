@@ -227,8 +227,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );    
-    ctx.eval(Zg(None)).unwrap();
-  /*  let ctx = DraftMarkEval::new(
+  //  ctx.eval(Zg(None)).unwrap();
+    let ctx = DraftMarkEval::new(
         &dbg,
         CriterionDraughtEval::new(
             &dbg,
@@ -251,6 +251,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ),
     );
-    ctx.eval(()).unwrap();   */ 
+    ctx.eval(()).unwrap();   
     Ok(())
 }

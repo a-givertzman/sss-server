@@ -151,20 +151,20 @@ impl Cache<f64> {
                 }
                 if keys.first().unwrap() > key {
                     // ключ вышел за пределы значений
-                    log::error!(
+                /*    log::error!(
                         "{}: {}",
                         self.dbg,
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
-                    );
+                    );*/
                 //    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
                     return vec![*keys.first().unwrap()];
                 } else if keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
-                    log::error!(
+                /*    log::error!(
                         "{}: {}",
                         self.dbg,
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
-                    );
+                    );*/
                 //    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
                     return vec![*keys.last().unwrap()];
                 }

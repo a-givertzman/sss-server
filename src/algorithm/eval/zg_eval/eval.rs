@@ -53,7 +53,7 @@ impl Eval<(), EvalResult> for ZgEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(Zg::empty()) {
             Ok(ctx) => {
-            let initial: &InitialCtx = ctx.read_ref();
+   /*         let initial: &InitialCtx = ctx.read_ref();
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
@@ -64,11 +64,6 @@ impl Eval<(), EvalResult> for ZgEval {
                 // базовый контекст
                 // перебор значений z_g_fix, вычисление контекста для zg
                 let mut zg_criterion: Vec<(f64, _)> = vec![];
-
-
-                let self_ctx = self.ctx.clone();
-                let ctx = self_ctx.eval(Zg(Some(7.1)))?;
-
                 let delta = 0.1;
                 let max_index = (overall_height / delta).floor() as i32;
                 for index in 0..=max_index {
@@ -119,9 +114,9 @@ impl Eval<(), EvalResult> for ZgEval {
                     result.insert(id, closest_value.0);
                 }
                 let result = ZgCtx { zg: result };
+                ctx.write(result)*/
+                let result = ZgCtx { zg: HashMap::new() };
                 ctx.write(result)
-          //      let result = ZgCtx { zg: HashMap::new() };
-          //      ctx.write(result)
             }
             Err(err) => Err(error.pass_with("self.ctx.eval error", err)),
         }

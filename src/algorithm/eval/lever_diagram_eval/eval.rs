@@ -175,14 +175,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     flooding_angle,
                 };
                 log::info!(
-                    "LeverDiagram diagram [angle dso ddo]:{}\n theta_max:{}\n max_angles [angle l]:{}\n entry_angle:{}\n flooding_angle:{}\n",
-                    result
-                        .diagram
-                        .iter()
-                        .fold(String::new(), |s, v| s + &format!(
-                            "\n{:.3} {:.3} {:.3}",
-                            v.0, v.1, v.2
-                        )),
+                    "LeverDiagram theta_max:{}\n max_angles [angle l]:{}\n entry_angle:{}\n flooding_angle:{}\n diagram [angle dso ddo]:{}\n",
                     result.theta_max,
                     result
                         .max_angles
@@ -193,6 +186,13 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         )),
                     result.entry_angle,
                     result.flooding_angle,
+                    result
+                        .diagram
+                        .iter()
+                        .fold(String::new(), |s, v| s + &format!(
+                            "\n{:.3} {:.3} {:.3}",
+                            v.0, v.1, v.2
+                        )),
                 );
                 ctx.write(result)
             }
