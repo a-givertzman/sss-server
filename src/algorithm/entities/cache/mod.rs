@@ -130,7 +130,7 @@ impl Cache<f64> {
     /// value index is out of key index range - TODO описать подробнее
     pub fn get(&self, query: &[f64]) -> Vec<f64> {
         let query = Vec::from(query);
-    //    println!("{} get start, query:{:?}", self.dbg, query);
+   //     println!("{} get start, query:{:?}", self.dbg, query);
         let data = self
             .table
             .get()
@@ -156,7 +156,7 @@ impl Cache<f64> {
                         self.dbg,
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );*/
-                //    panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
+        //            panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
                     return vec![*keys.first().unwrap()];
                 } else if keys.last().unwrap() < key {
                     // ключ вышел за пределы значений
@@ -165,7 +165,7 @@ impl Cache<f64> {
                         self.dbg,
                         format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
                     );*/
-                //    panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
+        //            panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
                     return vec![*keys.last().unwrap()];
                 }
                 // пара значений, между которыми попадает ключ
@@ -178,7 +178,7 @@ impl Cache<f64> {
                 return vec![keys[low_index - 1], keys[low_index]];
             })
             .collect();
-        // println!("{:?}", pairs);
+    //    println!("pairs: {:?}", pairs);
         // фильтруем данные, оставляя только те строки, которые содержат какое-либо значение из пар
         let data: Vec<_> = data
             .iter()
@@ -191,6 +191,7 @@ impl Cache<f64> {
                 true
             })
             .collect();
+     //   println!("data: {:?}", data);        
         // расчитываем дельту для каждого индекса
         let keys_and_delta: Vec<_> = query
             .iter()
@@ -220,6 +221,7 @@ impl Cache<f64> {
                 }
             })
             .collect();
+     //   println!("keys_and_delta: {:?}", keys_and_delta); 
         // для каждой строки считаем коэффициенты и перемножаем их на значения
         let result = data
             .iter()
@@ -231,8 +233,8 @@ impl Cache<f64> {
                     .filter(|(k, _)| k.is_some())
                     .fold(1., |acc, (k, data)| {
                         let (key, delta) = k.unwrap();
-                        //        let k = ((key - data) as f64).abs() / delta;
-                        //     dbg!(key, delta, data, k);
+         //                 let k = ((key - data) as f64).abs() / delta;
+         //                println!("multipler key:{:?} delta:{:?} data:{:?} k:{:?}", key, delta, data, k);  
                         acc * (1. - ((key - data) as f64).abs() / delta)
                     });
                 // перемножаем каждое значение в строке на коэффициент строки, это будет
@@ -244,7 +246,7 @@ impl Cache<f64> {
         let result = (query.len()..result[0].len())
             .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
             .collect::<Vec<_>>();
-        //    dbg!(query, &result);
+  //      dbg!(query, &result);
         result
     }
     /*  /// Максимальное значение по индексу

@@ -114,78 +114,79 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dbg!(res);
         return Ok(());
     */
-    
-      let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
-      let model_dir: PathBuf = "src/assets/model/sofia/compartments/201.stl".into();
-      let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-          &dbg, model_dir, None, 1000.,
-      )));
-      shape.write().init().unwrap();
-      //  shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
-      let mut cache = model_cached::CompartmentCache::new(
-          &dbg,
-          shape.clone(),
-          cache_dir,
-          "201".to_owned(),
-          //     (-60..=60).map(|v| v as f64).collect(),
-          //   vec![-5., 0., 5.,],
-          //   vec![-40., -20., -10., 0., 10., 20., 40.,],
-          //   40,
-          vec![
-              -80., -70., -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20.,
-              30., 40., 60., 70., 80.,
-          ],
-          //    vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
-          //    vec![-2., -1., 0., 1., 2.,],
-          //    vec![-0.01, 0., 0.01,],
-          vec![-40., -20., -10., 0., 10., 20., 40.],
-          20,
-          Arc::clone(&thread_pool),
-      );
-    // cache.rebuild().unwrap();
-      cache.init().unwrap();
-      //  cache.calc_coeff(221.692).unwrap(); //205
-      //    cache.calc_coeff(19.034).unwrap(); // 501
-      //    cache.calc_coeff(35.146).unwrap(); // 402
-      cache.calc_coeff(168.4).unwrap();
-      //    cache.calc_coeff(99.7776).unwrap();
 
-      //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
+    /*
+       let cache_dir: PathBuf = "src/assets/cache/sofia/compartments".into();
+       let model_dir: PathBuf = "src/assets/model/sofia/compartments/201.stl".into();
+       let mut shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
+           &dbg, model_dir, None, 1000.,
+       )));
+       shape.write().init().unwrap();
+       //  shape.write().inertia(-40., 0., 1.5158751543224378).unwrap();
+       let mut cache = model_cached::CompartmentCache::new(
+           &dbg,
+           shape.clone(),
+           cache_dir,
+           "201".to_owned(),
+           //     (-60..=60).map(|v| v as f64).collect(),
+           //   vec![-5., 0., 5.,],
+           //   vec![-40., -20., -10., 0., 10., 20., 40.,],
+           //   40,
+           vec![
+               -80., -70., -60., -40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20.,
+               30., 40., 60., 70., 80.,
+           ],
+           //    vec![-40., -30., -20., -15., -10., -5., -2., 0., 2., 5., 10., 15., 20., 30., 40.,],
+           //    vec![-2., -1., 0., 1., 2.,],
+           //    vec![-0.01, 0., 0.01,],
+           vec![-40., -20., -10., 0., 10., 20., 40.],
+           20,
+           Arc::clone(&thread_pool),
+       );
+     // cache.rebuild().unwrap();
+       cache.init().unwrap();
+       //  cache.calc_coeff(221.692).unwrap(); //205
+       //    cache.calc_coeff(19.034).unwrap(); // 501
+       //    cache.calc_coeff(35.146).unwrap(); // 402
+       cache.calc_coeff(168.4).unwrap();
+       //    cache.calc_coeff(99.7776).unwrap();
 
-      dbg!(cache.get(-20.0, 3., 135., 0.000001));
-      /*
-      let calc = |heel: f64| {
-          let result = cache.get(heel, 0., 2., 0.000001).unwrap();
-          //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
-          let fix_moment = (result.volume_center.y() * heel.to_radians().cos()
-              + result.volume_center.z() * heel.to_radians().sin())
-              * result.volume
-              * 1.025;
-          println!(
-              "{:.1} {:.6} {:.6} {:.6} {:.6} {:.6};",
-              heel,
-              result.volume,
-              result.volume_center.y(),
-              result.volume_center.z(),
-              result.abs_moment * 1.025,
-              fix_moment
-          ); //result.inertia_trans_x*1.025);
-      };
+       //  cache.get_for_dso(-10., 0., 0., 0.000001, true, false).unwrap();
 
-      calc(0.);
-      calc(5.);
-      calc(10.);
-      calc(15.);
-      calc(20.);
-      calc(25.);
-      calc(30.);
-      calc(40.);
-      calc(50.);
-      calc(60.);
-      calc(70.);
-      calc(80.);*/
-      return Ok(());
-      
+       dbg!(cache.get(-15.0, 3., 135., 0.000001));
+       /*
+       let calc = |heel: f64| {
+           let result = cache.get(heel, 0., 2., 0.000001).unwrap();
+           //     println!("{:.1} {:.3} {:.3} {:.3} {:.3};", heel, result.inertia_trans_x, result.max_inertia_trans_x, result.abs_moment, result.max_abs_moment);
+           let fix_moment = (result.volume_center.y() * heel.to_radians().cos()
+               + result.volume_center.z() * heel.to_radians().sin())
+               * result.volume
+               * 1.025;
+           println!(
+               "{:.1} {:.6} {:.6} {:.6} {:.6} {:.6};",
+               heel,
+               result.volume,
+               result.volume_center.y(),
+               result.volume_center.z(),
+               result.abs_moment * 1.025,
+               fix_moment
+           ); //result.inertia_trans_x*1.025);
+       };
+
+       calc(0.);
+       calc(5.);
+       calc(10.);
+       calc(15.);
+       calc(20.);
+       calc(25.);
+       calc(30.);
+       calc(40.);
+       calc(50.);
+       calc(60.);
+       calc(70.);
+       calc(80.);*/
+       return Ok(());
+    */
 
     let ship_id = 2;
     let project_id = "NULL";
@@ -205,19 +206,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             model_scale: 1000.,
             model_x,
             hull_heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1. -0.5, -0.2, 0., 
-                0.2, 0.5, 1., 2., 5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
+                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1., -0.5,
+                -0.2, 0., 0.2, 0.5, 1., 2., 5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
             ],
             hull_trim_steps: vec![
-                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., -0.5, -0.2, 0., 
-                0.2, 0.5, 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., -0.5, -0.2,
+                0., 0.2, 0.5, 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
             ],
             compartment_heel_steps: vec![
-                -60., -30., -15., -10. -5., -2., 0., 2., 5., 10., 15., 30., 60.,
+                -60., -30., -15., -10., -5., -2., 0., 2., 5., 10., 15., 30., 60.,
             ],
-            compartment_trim_steps: vec![
-                -40., -20., -10., -5., -2., 0., 2., 5., 10., 20., 40.,
-            ],
+            compartment_trim_steps: vec![-40., -20., -10., -5., -2., 0., 2., 5., 10., 20., 40.],
             //    compartment_heel_steps: (-60..=60).filter(|v| v%5 == 0).map(|v| v as f64).collect(),
             //    compartment_trim_steps: vec![0., 1.,],
             ship_length_lbp: 130.5,
@@ -256,21 +255,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
         128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
     ];
-    let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();*/
-    let res = model_cached.reload_shapes();    dbg!(&res);
-    let res = model_cached.rebuild_caches();   dbg!(&res);
- //   let res = model_cached.rebuild_bounds(&bounds);    dbg!(&res);
-      //  let res = model_cached.init();                     dbg!(&res);
-      //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
-    return Ok(()); 
-
-
+    let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
+    let res = model_cached.reload_shapes();
+    dbg!(&res);
+    let res = model_cached.rebuild_caches();
+    dbg!(&res);
+    let res = model_cached.rebuild_bounds(&bounds);
+    dbg!(&res);
+    //  let res = model_cached.init();                     dbg!(&res);
+    //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
+    return Ok(());
+*/
     let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
     dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
     dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
     dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
     dso_angles.dedup();
-
 
     let mut ship_model = ShipModel::new(
         &dbg,

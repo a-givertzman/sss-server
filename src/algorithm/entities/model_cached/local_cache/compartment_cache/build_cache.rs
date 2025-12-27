@@ -118,7 +118,7 @@ impl BuildCompartmentCache {
                     let results = results.clone();
                     let shape = Arc::clone(&shape);
                     let thread_name =
-                        format!("BuildCompartmentCache displacement {draught} {heel} {trim}");
+                        format!("BuildCompartmentCache displacement {heel} {trim} {draught}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
                  //   println!("{}.build | Starting thread {thread_name}", &self.dbg);
                     let handle = scheduler
@@ -234,20 +234,6 @@ impl BuildCompartmentCache {
                     v[10] = (v[5] * cos_theta + v[6] * sin_theta) * v[3]; // абсолютный момент жидкости            
                 }
             );
-         
- /*            current_vec.iter_mut().for_each(|v| 
-                    v[10] = (v[5] * cos_theta + v[6] * sin_theta) * v[3] // абсолютный момент жидкости            
-            );
-            let max_abs_moment = current_vec
-                .iter()
-                .map(|v| v[10])
-                .max_by(|a, b| (a*heel.signum()).partial_cmp(&(b*heel.signum())).unwrap())
-                .unwrap();            
-      //      println!("adasd heel:{heel} {sin_theta} {cos_theta} {max_abs_moment} {max_inertia_trans_x}");  
-            current_vec.iter_mut().for_each(|v| {
-                v[9] = max_inertia_trans_x;
-                v[11] = max_abs_moment;
-            });*/
         }
         (vec_results, errors)
     }

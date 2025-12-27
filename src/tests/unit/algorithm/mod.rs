@@ -15,3 +15,5 @@ mod bound;
 mod bounds;
 mod draught;
 mod strength;
+
+mod cache_single;
