@@ -30,8 +30,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
 
 
     DebugSession::new()
-      //  .filter(LogLevel::Info)
-        .filter(LogLevel::Debug)
+        .filter(LogLevel::Info)
+     //   .filter(LogLevel::Debug)
      //   .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
@@ -65,7 +65,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             model_scale: 1000.,
             model_x,
             hull_heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1. -0.5, -0.2, 0., 
+                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1., -0.5, -0.2, 0., 
                 0.2, 0.5, 1., 2., 5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
             ],
             hull_trim_steps: vec![
@@ -73,7 +73,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 0.2, 0.5, 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
             ],
             compartment_heel_steps: vec![
-                -60., -30., -15., -10. -5., -2., 0., 2., 5., 10., 15., 30., 60.,
+                -60., -30., -15., -10., -5., -2., 0., 2., 5., 10., 15., 30., 60.,
             ],
             compartment_trim_steps: vec![
                 -40., -20., -10., -5., -2., 0., 2., 5., 10., 20., 40.,

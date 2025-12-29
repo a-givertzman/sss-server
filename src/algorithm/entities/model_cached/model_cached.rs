@@ -1340,8 +1340,8 @@ impl ModelCached {
             self // момент инерции площади ватерлинии жидкости
                 .moment_liquid_dso_surface_moment(&query.liquid, epsilon)
                 .map_err(|err| error.pass_with("self.moment_liquid", err))?;
-        log::debug!("ModelCached dso_surface_moment mass_bulk:{:.3} moment_bulk:{} mass_liquid:{:.3} mass_sum:{:.3} moment_liquid_surface:{:.3}",
-            mass_bulk, moment_bulk.to_pos(mass_bulk).print(), mass_liquid, mass_sum, moment_liquid_surface);
+       // println!("model_cached dso_surface_moment mass_bulk:{:.3} moment_bulk:{} mass_liquid:{:.3} mass_sum:{:.3} moment_liquid_surface:{:.3}",
+       //     mass_bulk, moment_bulk.to_pos(mass_bulk).print(), mass_liquid, mass_sum, moment_liquid_surface);
         // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
         //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
         for &heel in angles {
@@ -1387,8 +1387,7 @@ impl ModelCached {
                             let ld = tcg * cos_theta + vcg * sin_theta;
                             let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
                             let l = lv - ld - delta_l;
-                            log::debug!("heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
-
+                         //   println!("model_cached "heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
                             //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
                             //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
                             l
@@ -1535,9 +1534,8 @@ impl ModelCached {
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
-
-        println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
-                heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
+       // println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
+        //        heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
      //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
       //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
@@ -1720,7 +1718,7 @@ impl ModelCached {
         let mut values = Vec::new();
         while !task_results.is_empty() {
             if let Some((_space_id, result)) = task_results.pop() {
-                if heel == -20. && trim < 3. { println!("heel:{heel} trim:{trim} {} {} {};", _space_id, result.mass, result.mass_shift.print());  }
+        //        if heel == -20. && trim < 3. { println!("heel:{heel} trim:{trim} {} {} {};", _space_id, result.mass, result.mass_shift.print());  }
                 values.push(result);
             }
         }
