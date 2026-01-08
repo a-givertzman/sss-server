@@ -5,9 +5,9 @@ use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabArea;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabAreaArray;
-use crate::algorithm::entities::data::strength::PhysicalFrameArray;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrArea;
 use crate::algorithm::entities::data::strength::horizontal_area::HStrAreaArray;
+use crate::algorithm::entities::data::strength::physical_frame::PhysicalFrameArray;
 use crate::algorithm::entities::model_cached::AreaResult;
 use crate::algorithm::entities::model_cached::DsoResult;
 use crate::algorithm::entities::model_cached::ModelCached;
@@ -16,7 +16,7 @@ use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityRe
 use crate::algorithm::entities::ship_model::volume_max::VolumeDataArray;
 use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::{Bound, Bounds};
-use crate::algorithm::eval::StrengthBalanceCtx;
+use crate::algorithm::eval::strength::StrengthBalanceCtx;
 use crate::infrostructure::ApiClient;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
@@ -32,8 +32,11 @@ pub struct ShipModel {
     //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
     bounds: Option<Bounds>,
-    horisontal_area_str: Option<Vec<HStrArea>>,
-    horisontal_area_stab: Option<Vec<HStabArea>>,
+    horisontal_area_str: Option<Vec<f64>>,
+    horisontal_area_stab: Option<f64>,
+    horisontal_area_shift: Option<Position>,
+    windage_area_stab: Option<f64>,
+    windage_area_moment: Option<Moment>,
     grain_moment: Option<HashMap<String, Curve<f64>>>,
     opening: Option<Vec<Position>>,
     deck_angle_point: Option<Vec<Position>>,
@@ -72,6 +75,9 @@ impl ShipModel {
             bounds: None,
             horisontal_area_str: None,
             horisontal_area_stab: None,
+            horisontal_area_shift: None,
+            windage_area_stab: None,
+            windage_area_moment: None,
             grain_moment: None,
             opening: None,
             deck_angle_point: None,
@@ -85,22 +91,6 @@ impl ShipModel {
     /// ПО идее их должен читать контекст, но модель инициализируется первее
     pub fn init(&mut self) -> Result<Bounds, Error> {
         let error = Error::new(&self.dbg, "init");
-        self.horisontal_area_str = Some(
-            horisontal_area_str(
-                self.ship_id,
-                self.project_id.clone(),
-                &self.api_client.clone(),
-            )
-            .map_err(|err| error.pass(err))?,
-        );
-        self.horisontal_area_stab = Some(
-            horisontal_area_stab(
-                self.ship_id,
-                self.project_id.clone(),
-                &self.api_client.clone(),
-            )
-            .map_err(|err| error.pass(err))?,
-        );
         self.grain_moment = Some(
             grain_moment(
                 self.ship_id,
@@ -133,16 +123,83 @@ impl ShipModel {
             &self.api_client.clone(),
         )
         .map_err(|err| error.pass_with("max_compartment_volume", err))?;
-        let bounds = get_physical_bounds(
-            self.ship_id,
-            &self.project_id,
-            &self.api_client,
-        )
-        .map_err(|err| error.pass_with("bounds", err))?;
+        let bounds = get_physical_bounds(self.ship_id, &self.project_id, &self.api_client)
+            .map_err(|err| error.pass_with("bounds", err))?;
+        self.horisontal_area_str = {
+            let horisontal_area = horisontal_area_str(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?;
+            let (horisontal_area, errors): (Vec<_>, Vec<_>) = horisontal_area
+                .into_iter()
+                .map(|v| {
+                    let bound = match Bound::new(v.bound_x1, v.bound_x2) {
+                        Ok(bound) => bound,
+                        Err(err) => {
+                            return Err(
+                                error.pass_with(format!("Bound::new, name:{}", v.name), err)
+                            );
+                        }
+                    };
+                    Ok((v.value, bound))
+                })
+                .partition(|v| v.is_ok());
+            if !errors.is_empty() {
+                return Err(error.pass_with(
+                    "horisontal_area_str",
+                    errors.iter().fold(String::new(), |acc, err| {
+                        format!("{acc}\n\t error: {:?}", err)
+                    }),
+                ));
+            }
+            let mut horisontal_area_values = vec![0.; bounds.len_qnt()];
+            for current in horisontal_area.into_iter() {
+                match current {
+                    Ok((area, src_bound)) => {
+                        bounds.iter().enumerate().for_each(|(i, &trg_bound)| {
+                            horisontal_area_values[i] +=
+                                area * src_bound.part_ratio(&trg_bound).unwrap_or(0.)
+                        });
+                    }
+                    Err(err) => return Err(error.pass_with("horisontal_area", err)),
+                }
+            }
+            Some(horisontal_area_values)
+        };
+        let (horisontal_area_stab, horisontal_area_moment) = {
+            let horisontal_area_stab = horisontal_area_stab(
+                self.ship_id,
+                self.project_id.clone(),
+                &self.api_client.clone(),
+            )
+            .map_err(|err| error.pass(err))?;
+            horisontal_area_stab
+                .into_iter()
+                .fold((0., Moment::zero()), |(sum_a, sum_m), v| {
+                    (
+                        sum_a + v.value,
+                        sum_m
+                            + Moment::from_pos(
+                                Position::new(v.shift_x, v.shift_y, v.shift_z),
+                                v.value,
+                            ),
+                    )
+                })
+        };
+        self.horisontal_area_stab = Some(horisontal_area_stab);
+        self.horisontal_area_shift = Some(horisontal_area_moment.to_pos(horisontal_area_stab));
         self.bounds = Some(bounds.clone());
         self.model_cached
             .init(max_compartment_volume, &bounds)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))?;
+        let windage = self
+            .model_cached
+            .windage_area_min()
+            .map_err(|err| Error::new(&self.dbg, "init").pass(err))?;
+        self.windage_area_stab = Some(windage.0);
+        self.windage_area_moment = Some(Moment::new(windage.1, 0., windage.2));
         Ok(bounds)
     }
     ///
@@ -178,7 +235,6 @@ impl ShipModel {
     /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности
     pub fn strength_area(&self) -> Result<StrengthArea, Error> {
         let error = Error::new(&self.dbg, "strength_area");
-        let bounds = self.bounds.as_ref().ok_or(error.err("no bounds"))?;
         let windage_area = self
             .model_cached
             .bounded_windage_area()
@@ -187,38 +243,6 @@ impl ShipModel {
             .horisontal_area_str
             .clone()
             .ok_or(error.err("no horisontal_area"))?;
-        let (horisontal_area, errors): (Vec<_>, Vec<_>) = horisontal_area
-            .into_iter()
-            .map(|v| {
-                let bound = match Bound::new(v.bound_x1, v.bound_x2) {
-                    Ok(bound) => bound,
-                    Err(err) => {
-                        return Err(error.pass_with(format!("Bound::new, name:{}", v.name), err));
-                    }
-                };
-                Ok((v.value, bound))
-            })
-            .partition(|v| v.is_ok());
-        if !errors.is_empty() {
-            return Err(error.pass_with(
-                "horisontal_area",
-                errors.iter().fold(String::new(), |acc, err| {
-                    format!("{acc}\n\t error: {:?}", err)
-                }),
-            ));
-        }
-        let mut horisontal_area_values = vec![0.; bounds.len_qnt()];
-        for current in horisontal_area.into_iter() {
-            match current {
-                Ok((area, src_bound)) => {
-                    bounds.iter().enumerate().for_each(|(i, &trg_bound)| {
-                        horisontal_area_values[i] +=
-                            area * src_bound.part_ratio(&trg_bound).unwrap_or(0.)
-                    });
-                }
-                Err(err) => return Err(error.pass_with("horisontal_area", err)),
-            }
-        }
         /*     println!("\nhorisontal_area_values\n");
                 horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
                 println!("\nwindage_area\n");
@@ -226,8 +250,36 @@ impl ShipModel {
         */
         Ok(StrengthArea {
             v: windage_area,
-            h: horisontal_area_values,
+            h: horisontal_area,
         })
+    }
+    /// Площади и моменты площади горизонтальных поверхностей корпус.
+    /// Возвращает площадь поверхностей + момент площади
+    pub fn static_area_h(&self) -> Result<(f64, Position), Error> {
+        let error = Error::new(&self.dbg, "static_area_h");
+        let area = self
+            .horisontal_area_stab
+            .clone()
+            .ok_or(error.err("no horisontal_area_stab"))?;
+        let shift = self
+            .horisontal_area_shift
+            .clone()
+            .ok_or(error.err("no horisontal_area_shift"))?;
+        Ok((area, shift))
+    }
+    /// Площади и моменты поверхности парусности корпуса.
+    /// Возвращает площадь поверхностей + момент площади
+    pub fn static_area_v(&self) -> Result<(f64, Moment), Error> {
+        let error = Error::new(&self.dbg, "static_area_v");
+        let area = self
+            .horisontal_area_stab
+            .clone()
+            .ok_or(error.err("no horisontal_area_stab"))?;
+        let moment = self
+            .horisontal_area_shift
+            .clone()
+            .ok_or(error.err("no horisontal_area_moment"))?;
+        Ok((area, moment))
     }
     ///
     /// Площади и моменты поверхности корпуса для расчета остойчивости
@@ -245,20 +297,6 @@ impl ShipModel {
             .model_cached
             .windage_area(draught_mid)
             .map_err(|err| error.pass_with("model_cached.windage_area", err))?;
-        let area_horisontal = self
-            .horisontal_area_stab
-            .clone()
-            .ok_or(error.err("no horisontal_area"))?;
-        let (area_horisontal, area_horisontal_z) = area_horisontal
-            .into_iter()
-            .fold((0., 0.), |(sum_a, sum_z), v| {
-                (sum_a + v.value, sum_z + v.value * v.shift_z)
-            });
-        /*     println!("\nhorisontal_area_values\n");
-                horisontal_area_values.iter().for_each(|v| print!(" {:.3}", v));
-                println!("\nwindage_area\n");
-                windage_area.iter().for_each(|v| print!(" {:.3}", v));
-        */
         Ok(StabilityArea {
             av_cs_dmin1: av_cs_dmin,
             mv_x_cs_dmin1: mv_x_cs_dmin,
@@ -267,8 +305,6 @@ impl ShipModel {
             delta_mv_x,
             delta_mv_z,
             area_volume_z,
-            area_horisontal,
-            area_horisontal_z,
         })
     }
     ///

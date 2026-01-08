@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use super::context::Context;
-use crate::algorithm::{context::testing_ctx::TestingCtx, eval::{parameters::*, *}, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{context::testing_ctx::TestingCtx, eval::{icing_timber_bound_eval::ctx::IcingTimberBoundCtx, icing_timber_eval::ctx::IcingTimberCtx, parameters::*, *}, initial::initial_ctx::InitialCtx};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -70,26 +70,50 @@ impl ContextReadRef<Option<TestingCtx>> for Context {
     }
 }
 //
-impl ContextWrite<StaticAreaCtx> for Context {
-    fn write(mut self, value: StaticAreaCtx) -> Result<Self, Error> {
-        self.static_area = Some(value);
+impl ContextWrite<StrAreaCtx> for Context {
+    fn write(mut self, value: StrAreaCtx) -> Result<Self, Error> {
+        self.str_area = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<StaticAreaCtx> for Context {
-    fn read(&self) -> StaticAreaCtx {
-        self.static_area.clone().unwrap()
+impl ContextRead<StrAreaCtx> for Context {
+    fn read(&self) -> StrAreaCtx {
+        self.str_area.clone().unwrap()
     }
 }
 //
-impl ContextWrite<IcingStabCtx> for Context {
-    fn write(mut self, value: IcingStabCtx) -> Result<Self, Error> {
+impl ContextWrite<FloatingAreaCtx> for Context {
+    fn write(mut self, value: FloatingAreaCtx) -> Result<Self, Error> {
+        self.floating_area = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<FloatingAreaCtx> for Context {
+    fn read(&self) -> FloatingAreaCtx {
+        self.floating_area.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<StabAreaCtx> for Context {
+    fn write(mut self, value: StabAreaCtx) -> Result<Self, Error> {
+        self.stab_area = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<StabAreaCtx> for Context {
+    fn read(&self) -> StabAreaCtx {
+        self.stab_area.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<IcingCoeffCtx> for Context {
+    fn write(mut self, value: IcingCoeffCtx) -> Result<Self, Error> {
         self.icing_stab = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<IcingStabCtx> for Context {
-    fn read(&self) -> IcingStabCtx {
+impl ContextRead<IcingCoeffCtx> for Context {
+    fn read(&self) -> IcingCoeffCtx {
         self.icing_stab.clone().unwrap()
     }
 }
@@ -127,6 +151,18 @@ impl ContextWrite<StaticMassCtx> for Context {
 impl ContextRead<StaticMassCtx> for Context {
     fn read(&self) -> StaticMassCtx {
         self.static_mass.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<IcingTimberBoundCtx> for Context {
+    fn write(mut self, value: IcingTimberBoundCtx) -> Result<Self, Error> {
+        self.icing_timber_bound = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<IcingTimberBoundCtx> for Context {
+    fn read(&self) -> IcingTimberBoundCtx {
+        self.icing_timber_bound.clone().unwrap()
     }
 }
 //

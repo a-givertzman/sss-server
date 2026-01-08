@@ -33,7 +33,6 @@ pub struct LoadGaseousData {
 impl LoadGaseousData {
     pub fn data(&self) -> GaseousData {
         GaseousData {
-            assignment_id:  self.assignment_id,
             assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
             space_id: self.space_id.clone(),

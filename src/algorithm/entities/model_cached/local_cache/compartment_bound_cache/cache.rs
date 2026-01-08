@@ -1,6 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Bounds, DivideSingle, DivideVec, MultipleSingle,
+        Bounds, MultipleSingle,
         cache::Cache,
         model_cached::{DisplacementShape, read, save},
     },

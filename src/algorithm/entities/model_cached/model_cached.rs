@@ -13,7 +13,7 @@ use crate::{
                 *,
             },
         },
-        eval::{StrengthBalanceCtx, strength_balance_eval},
+        eval::strength::{StrengthBalanceCtx, balance},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -563,6 +563,12 @@ impl ModelCached {
             Error::new(&self.dbg, "windage_area").pass_with("self.windage_area.windage_area", err)
         })
     }
+    /// Расчет параметров поверхности для минимальной осадки
+    pub fn windage_area_min(&self) -> Result<(f64, f64, f64), Error> {
+        self.windage_area.windage_area_min().map_err(|err| {
+            Error::new(&self.dbg, "windage_area_min").pass_with("self.windage_area.windage_area_min", err)
+        })
+    }
     /// Расчет равновесного положения для прочности
     pub fn balance_strength(
         &self,
@@ -615,7 +621,7 @@ impl ModelCached {
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
-                    results_.push(strength_balance_eval::gaseous_result::GaseousResult::new(
+                    results_.push(balance::gaseous_result::GaseousResult::new(
                         space_id,
                         assigment_type,
                         volume_bounded.into_iter().map(|v| v * density).collect(),
@@ -664,7 +670,7 @@ impl ModelCached {
                                 )
                             })?;
                     //    println!("model_cached balance_strength bulk space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
-                    results_.push(strength_balance_eval::bulk_result::BulkResult::new(
+                    results_.push(balance::bulk_result::BulkResult::new(
                         space_id,
                         assigment_type,
                         volume_bounded.into_iter().map(|v| v * density).collect(),
@@ -754,7 +760,7 @@ impl ModelCached {
                                     )
                                 })?;
                             //         println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
-                            results_.push(strength_balance_eval::liquid_result::LiquidResult::new(
+                            results_.push(balance::liquid_result::LiquidResult::new(
                                 space_id,
                                 assigment_type,
                                 cargo_type,

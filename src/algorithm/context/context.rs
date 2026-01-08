@@ -1,6 +1,6 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
-    eval::{parameters::Parameters, *},
+    eval::{icing_timber_bound::ctx::IcingTimberBoundCtx, icing_timber::ctx::IcingTimberCtx, parameters::Parameters, *},
     initial::initial_ctx::InitialCtx,
 };
 ///
@@ -15,13 +15,19 @@ pub struct Context {
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub(super) parameters: Parameters,
     /// Распределение площади для расчета прочности
-    pub(super) static_area: Option<StaticAreaCtx>,
+    pub(super) str_area: Option<AreaStrCtx>,
+    /// Распределение площади для расчета равновесного положения
+    pub(super) floating_area: Option<FloatingAreaCtx>,
     /// Коэффициенты для расчета обледенения судна
-    pub(super) icing_stab: Option<IcingStabCtx>,
+    pub(super) icing_stab: Option<IcingCoeffCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
+    pub(super) icing_timber_bound: Option<IcingTimberBoundCtx>,
+    /// Площади обледенения горизонтальных поверхностей палубного лесного груза
     pub(super) icing_timber: Option<IcingTimberCtx>,
+
+
     /// Учет обледенения судна и  груза
-    pub(super) icing: Option<IcingCtx>,
+    pub(super) icing: Option<IcingStabCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
     /// Расчет массы корпуса и статических грузов судна

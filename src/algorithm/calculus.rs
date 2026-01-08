@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use crate::{algorithm::{entities::{ship_model::ship_model::ShipModel}, eval::*}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, EvalEx, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::CalculusQuery};
+use crate::{algorithm::{entities::ship_model::ship_model::ShipModel, eval::{icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, strength::{area::eval::AreaStrEval, icing::eval::IcingStrEval}, unit_area::eval::UnitAreaEval, *}}, conf::Conf, infrostructure::ApiClient, kernel::{Eval, EvalEx, types::{RwLock, eval_result::EvalResult}}, prelude::{Context, Initial, InitialCtx}, server::CalculusQuery};
 
 ///
 /// Evaluates entair ship calculations
@@ -84,9 +84,8 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                                 MetacentricHeightEval::new(
                                                                                     &dbg,
                                                                                     // Before ZG
-                                                                                    UnitAreaEval::new(
-                                                                                        &dbg,
-                                                                                        StaticAreaEval::new(
+
+                                                                                        StabAreaEval::new(
                                                                                             &dbg,
                                                                                             self.ship_model.clone(),                                                                                    
                                                                                             BendingMomentEval::new(
@@ -107,14 +106,20 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                                                                         &dbg,
                                                                                                                         WettingEval::new(
                                                                                                                             &dbg,
-                                                                                                                            IcingEval::new(
+
+
+                                                                                                                    IcingStrEval::new(
+                                                                                                                        &dbg,                                                                                                                           
+                                                                                                                        AreaStrEval::new(
+                                                                                                                            &dbg,
+                                                                                                                            self.ship_model.clone(),
+                                                                                                                            UnitAreaEval::new(
                                                                                                                                 &dbg,
-                                                                                                                                StaticAreaEval::new(
+                                                                                                                                IcingTimberEval::new(
                                                                                                                                     &dbg,
-                                                                                                                                    self.ship_model.clone(),
-                                                                                                                                    IcingTimberEval::new(
+                                                                                                                                    IcingTimberBoundEval::new(
                                                                                                                                         &dbg,
-                                                                                                                                        IcingStabEval::new(
+                                                                                                                                        IcingCoeffEval::new(
                                                                                                                                             &dbg,
                                                                                                                                             Initial::new(
                                                                                                                                                 &dbg,
@@ -142,6 +147,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                                                 ),
                                                                             ),
                                                                         ),
+                                                                    ),
                                                                     ),
                                                                 ),
                                                             ),

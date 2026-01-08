@@ -42,33 +42,6 @@ impl std::fmt::Display for AssignmentType {
         )
     }
 }
-/// Тип груза судна
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum CargoType {
-    #[serde(alias = "bulk")]
-    Bulk,
-    #[serde(alias = "unit")]
-    Unit,
-    #[serde(alias = "gaseous")]
-    Gaseous,
-    #[serde(alias = "liquid")]
-    Liquid,
-}
-//
-impl std::fmt::Display for CargoType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CargoType::Bulk => "Bulk",
-                CargoType::Unit => "Unit",
-                CargoType::Gaseous => "Gaseous",                
-                CargoType::Liquid => "Liquid",
-            },
-        )
-    }
-}
 /// Тип сыпучего груза судна
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BulkCargoType {

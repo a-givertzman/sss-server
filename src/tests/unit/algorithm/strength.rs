@@ -1,3 +1,5 @@
+use crate::algorithm::eval::icing_timber_bound_eval::eval::IcingTimberBoundEval;
+use crate::algorithm::eval::icing_timber_eval::eval::IcingTimberEval;
 #[cfg(test)]
 
 use crate::algorithm::eval::*;
@@ -158,8 +160,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                             MetacentricHeightEval::new(
                                                                                 &dbg,
                                                                                 // Before ZG
-                                                                                UnitAreaEval::new(
-                                                                                    &dbg,
                                                                                     StaticAreaEval::new(
                                                                                         &dbg,
                                                                                         ship_model.clone(),
@@ -186,7 +186,12 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                                             StaticAreaEval::new(
                                                                                                                                 &dbg,
                                                                                                                                 ship_model.clone(),
-                                                                                                                                IcingTimberEval::new(
+
+                                                                                                                        UnitAreaEval::new(
+                                                                                                                            &dbg,
+                                                                                                                               IcingTimberEval::new(
+                                                                                                                            &dbg,
+                                                                                                                                IcingTimberBoundEval::new(
                                                                                                                                     &dbg,
                                                                                                                                     IcingStabEval::new(
                                                                                                                                         &dbg,
@@ -204,6 +209,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                                                                         ),
                                                                                                     ),
                                                                                                 ),
+                                                                                                 ),
                                                                                             ),
                                                                                         ),
                                                                                     ),

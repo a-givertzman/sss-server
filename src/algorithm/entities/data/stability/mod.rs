@@ -7,28 +7,17 @@ pub mod icing;
 pub mod load_line;
 pub mod multipler_s;
 pub mod navigation_area;
-pub mod navigation_area_data;
-mod pantocaren;
 pub mod point;
 pub mod screw;
 pub mod ship_type;
-pub mod vertical_area;
-pub mod center_draught;
-pub mod criterion;
 
 pub use bow_board::*;
 pub use draft_mark::*;
-//pub use horizontal_area::*;
-//pub use vertical_area::*;
 pub use icing::*;
 pub use load_line::*;
 pub use navigation_area::*;
-pub use navigation_area_data::*;
-//pub use pantocaren::*;
 pub use point::*;
 pub use screw::*;
-//pub use center_draught::*;
-//pub use criterion::*;
 use super::{DataArray, Pair};
 //
 /// Безразмерный множитель Х_1 Табл. 2.1.5.1-1

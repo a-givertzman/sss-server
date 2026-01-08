@@ -7,7 +7,6 @@
 //! - reload the stored dataset for the current cache,
 //! - calculate and get rows for given approximated values.
 //
-mod cache_conf;
 mod file_io;
 mod local_cache;
 mod displacement_bound_cache;

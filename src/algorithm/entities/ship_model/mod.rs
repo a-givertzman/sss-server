@@ -89,7 +89,6 @@ pub struct LiquidData {
 /// считаем распределение по отсеку при максимальном объеме отсека
 #[derive(Debug, Clone)]
 pub struct GaseousData {
-    pub assignment_id: usize, // ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
     pub space_id: String, // ID помещения
     pub mass: f64,
@@ -118,8 +117,4 @@ pub struct StabilityArea {
     /// Отстояние по вертикали центра площади проекции подводной части корпуса на диаметральную плоскость 
     /// в прямом положении судна (при нулевом крене) на спокойной воде для текущей осадки [м]
     pub area_volume_z: f64,    
-    /// Площадь горизонтальных поверхностей судна
-    pub area_horisontal: f64,
-    /// Положение центра площади горизонтальных поверхностей по оси Z относительно опорной плоскости 
-    pub area_horisontal_z: f64,
 }

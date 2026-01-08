@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use crate::algorithm::entities::{Bounds, Position};
 ///
 /// [super::ModelCached] configuration.
 ///
