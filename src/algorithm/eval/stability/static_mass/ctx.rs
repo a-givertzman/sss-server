@@ -4,7 +4,7 @@ use crate::algorithm::entities::{Moment, ship_model::{BulkData, GaseousData, Liq
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.
 #[derive(Debug, Clone)]
-pub struct StaticMassCtx {
+pub struct StaticMassStabCtx {
     // Суммарная масса корпуса, обледенения с намоканием и грузов за вычетом смещяемых и насыпных грузов
     pub mass_const: f64,
     // Сумарный момент за вычетом смещяемых и насыпных груов

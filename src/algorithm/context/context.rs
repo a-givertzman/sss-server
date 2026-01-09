@@ -1,6 +1,13 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
-    eval::{icing_timber_bound::ctx::IcingTimberBoundCtx, icing_timber::ctx::IcingTimberCtx, parameters::Parameters, *},
+    eval::{        
+        icing_timber::ctx::IcingTimberCtx,
+        icing_timber_bound::ctx::IcingTimberBoundCtx, parameters::Parameters, 
+        stability::*,
+        strength::*, 
+        criterion::*, 
+        *,
+    },
     initial::initial_ctx::InitialCtx,
 };
 ///
@@ -14,38 +21,38 @@ pub struct Context {
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub(super) parameters: Parameters,
-    /// Распределение площади для расчета прочности
-    pub(super) str_area: Option<AreaStrCtx>,
-    /// Распределение площади для расчета равновесного положения
-    pub(super) floating_area: Option<FloatingAreaCtx>,
+    /// Площади парусности палубных грузов для расчета остойчивости
+    pub(super) unit_area: Option<UnitAreaCtx>,    
     /// Коэффициенты для расчета обледенения судна
-    pub(super) icing_stab: Option<IcingCoeffCtx>,
+    pub(super) icing_coeff: Option<IcingCoeffCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
     pub(super) icing_timber_bound: Option<IcingTimberBoundCtx>,
     /// Площади обледенения горизонтальных поверхностей палубного лесного груза
     pub(super) icing_timber: Option<IcingTimberCtx>,
-
-
-    /// Учет обледенения судна и  груза
-    pub(super) icing: Option<IcingStabCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
-    /// Расчет массы корпуса и статических грузов судна
-    pub(super) static_mass: Option<StaticMassCtx>,
-    /// Расчет распределения смещаемых грузов судна
-    pub(super) dynamic_mass: Option<DynamicMassCtx>,
-    /// Расчет равновесного положения судна для остойчивости
-    pub(super) stability_balance: Option<StabilityBalanceCtx>,
+    /// Распределение площади для расчета прочности
+    pub(super) area_str: Option<AreaStrCtx>,
+    /// Учет обледенения судна и груза для прочности
+    pub(super) icing_str: Option<IcingStrCtx>,
+    /// Расчет массы корпуса и статических грузов судна для прочности
+    pub(super) static_mass_str: Option<StaticMassStrCtx>,
     /// Расчет равновесного положения судна для прочности
     pub(super) strength_balance: Option<StrengthBalanceCtx>,
+    /// Распределение массы смещаемых грузов судна для прочности
+    pub(super) dynamic_mass: Option<DynamicMassCtx>,
     /// Результирующая нагрузка на шпацию
     pub(super) total_force: Option<TotalForceCtx>,
     /// Срезающая сила, действующая на корпус судна
     pub(super) shear_force: Option<ShearForceCtx>,
     /// Изгибающий момент
-    pub(super) bending_moment: Option<BendingMomentCtx>,  
-    /// Площади парусности палубных грузов для расчета остойчивости
-    pub(super) unit_area: Option<UnitAreaCtx>,
+    pub(super) bending_moment: Option<BendingMomentCtx>,
+    /// Учет обледенения судна и груза для остойчивости
+    pub(super) icing_stab: Option<IcingStabCtx>,
+    /// Расчет массы корпуса и статических грузов судна
+    pub(super) static_mass_stab: Option<StaticMassStabCtx>,
+    /// Расчет равновесного положения судна для остойчивости
+    pub(super) stability_balance: Option<StabilityBalanceCtx>,
     /// Исправленная метацентрическая высота
     pub(super) metacentric_height: Option<MetacentricHeightCtx>,
     /// Диаграмма плеч статической и динамической остойчивости
@@ -54,10 +61,10 @@ pub struct Context {
     pub(super) wind: Option<WindCtx>,
     /// Парусность судна
     pub(super) windage: Option<WindageCtx>,
-    /// Период собственных бортовых колебаний судна 
+    /// Период собственных бортовых колебаний судна
     pub(super) roll_period: Option<RollingPeriodCtx>,
     /// Амплитуда качки судна  
-    pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,  
+    pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
     /// Критерий погоды К
     pub(super) wheather: Option<WheatherCtx>,
     /// Статический угол крена от действия постоянного ветра

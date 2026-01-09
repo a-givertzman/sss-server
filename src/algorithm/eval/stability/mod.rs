@@ -10,7 +10,7 @@ pub mod roll_period;
 pub mod roll_amplitude;
 
 pub use icing::ctx::IcingStabCtx;
-pub use static_mass::ctx::StaticMassCtx;
+pub use static_mass::ctx::StaticMassStabCtx;
 pub use balance::ctx::StabilityBalanceCtx;
 pub use metacentric_height::ctx::MetacentricHeightCtx;
 pub use lever_diagram::ctx::LeverDiagramCtx;

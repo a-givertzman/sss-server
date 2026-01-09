@@ -1,8 +1,53 @@
-use crate::algorithm::eval::icing_timber_bound_eval::eval::IcingTimberBoundEval;
-use crate::algorithm::eval::icing_timber_eval::eval::IcingTimberEval;
-#[cfg(test)]
-
-use crate::algorithm::eval::*;
+use crate::algorithm::eval::{
+        unit_area::eval::UnitAreaEval, 
+        wetting::eval::WettingEval, 
+        zg::eval::ZgEval, 
+        draft_mark::eval::DraftMarkEval, 
+        icing_coeff::eval::IcingCoeffEval, 
+        icing_timber::eval::IcingTimberEval, 
+        icing_timber_bound::eval::IcingTimberBoundEval, 
+        strength::{
+            area::eval::AreaStrEval, 
+            balance::eval::StrengthBalanceEval, 
+            bending_moment::eval::BendingMomentEval, 
+            dynamic_mass::eval::DynamicMassEval, 
+            icing::eval::IcingStrEval, 
+            shear_force::eval::ShearForceEval, 
+            static_mass::eval::StaticMassStrEval, 
+            total_force::eval::TotalForceEval
+        },         
+        stability::{
+            balance::eval::StabilityBalanceEval, 
+            icing::eval::IcingStabEval, 
+            lever_diagram::eval::LeverDiagramEval, 
+            metacentric_height::eval::MetacentricHeightEval, 
+            roll_amplitude::eval::RollingAmplitudeEval, 
+            roll_period::eval::RollingPeriodEval, 
+            static_mass::eval::StaticMassStabEval, 
+            wind::eval::WindEval, 
+            windage::eval::WindageEval
+        }, 
+        criterion::{
+            acceleration::eval::AccelerationEval, 
+            bow_board::eval::BowBoardEval, 
+            circulation::eval::CirculationEval, 
+            dso_angle_max::eval::DSOAngleMaxEval, 
+            dso_area::eval::DSOAreaEval, 
+            dso_icing_max::eval::DSOIcingMaxEval, 
+            dso_max::eval::DSOMaxEval, 
+            dso_timber_max::eval::DSOTimberMaxEval, 
+            grain::eval::GrainEval, 
+            load_line::eval::LoadLineEval, 
+            metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, 
+            min_metacentric_height::eval::MinMetacentricHeightEval, 
+            reserve_buoyncy::eval::ReserveBuoyncyEval, 
+            screw::eval::ScrewEval, 
+            static_angle::eval::StaticAngleEval, 
+            wheather::eval::WheatherEval, 
+            CriterionStabilityEval, 
+            CriterionDraughtEval,
+        },        
+    };
 use crate::app::app::App;
 use crate::conf::Conf;
 use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -12,7 +57,7 @@ use crate::kernel::{
     types::{Arc, RwLock},
 };
 use sal_core::dbg::Dbg;
-use sal_sync::thread_pool::{self, ThreadPool};
+use sal_sync::thread_pool::ThreadPool;
 use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
 use crate::algorithm::entities::{
     Bounds, model_cached::{self},
@@ -117,112 +162,106 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     let ship_model = Arc::new(RwLock::new(ship_model));
 
     log::debug!("main | Calculations...");
-    let ctx = 
-    CriterionStabilityEval::new(
-        &dbg,
-        MetacentricHeightSubdivisionEval::new(
+        let ctx =        
+        // criterion   
+        CriterionStabilityEval::new(
             &dbg,
-            GrainEval::new(
+            MetacentricHeightSubdivisionEval::new(
                 &dbg,
-                CirculationEval::new(
+                GrainEval::new(
                     &dbg,
-                    AccelerationEval::new(
+                    CirculationEval::new(
                         &dbg,
-                        MinMetacentricHeightEval::new(
+                        AccelerationEval::new(
                             &dbg,
-                            DSOAngleMaxEval::new(
+                            MinMetacentricHeightEval::new(
                                 &dbg,
-                                DSOTimberMaxEval::new(
+                                DSOAngleMaxEval::new(
                                     &dbg,
-                                    DSOIcingMaxEval::new(
+                                    DSOTimberMaxEval::new(
                                         &dbg,
-                                        DSOMaxEval::new(
+                                        DSOIcingMaxEval::new(
                                             &dbg,
-                                            DSOAreaEval::new(
+                                            DSOMaxEval::new(
                                                 &dbg,
-                                                StaticAngleEval::new(
+                                                DSOAreaEval::new(
                                                     &dbg,
-                                                    WheatherEval::new(
+                                                    StaticAngleEval::new(
                                                         &dbg,
-                                                        RollingAmplitudeEval::new(
+                                                        WheatherEval::new(
                                                             &dbg,
-                                                            RollingPeriodEval::new(
-                                                                &dbg,
-                                                                WindEval::new(
-                                                                    &dbg,
-                                                                    WindageEval::new(
-                                                                        &dbg,
-                                                                        ship_model.clone(),
-                                                                        LeverDiagramEval::new(
-                                                                            &dbg,
-                                                                            ship_model.clone(),
-                                                                            //   link,
-                                                                            MetacentricHeightEval::new(
-                                                                                &dbg,
-                                                                                // Before ZG
-                                                                                    StaticAreaEval::new(
-                                                                                        &dbg,
-                                                                                        ship_model.clone(),
-                                                                                        BendingMomentEval::new(
-                                                                                            &dbg,
-                                                                                            ShearForceEval::new(
-                                                                                                &dbg,
-                                                                                                TotalForceEval::new(
-                                                                                                    &dbg,          
-                                                                                                    DynamicMassEval::new(
-                                                                                                        &dbg,
-                                                                                                        StrengthBalanceEval::new(
-                                                                                                            &dbg,
-                                                                                                            ship_model.clone(),
-                                                                                                            StabilityBalanceEval::new(
-                                                                                                                &dbg,
-                                                                                                                ship_model.clone(),
-                                                                                                                StaticMassEval::new(
-                                                                                                                    &dbg,
-                                                                                                                    WettingEval::new(
-                                                                                                                        &dbg,
-                                                                                                                        IcingEval::new(
-                                                                                                                            &dbg,
-                                                                                                                            StaticAreaEval::new(
-                                                                                                                                &dbg,
-                                                                                                                                ship_model.clone(),
-
-                                                                                                                        UnitAreaEval::new(
-                                                                                                                            &dbg,
-                                                                                                                               IcingTimberEval::new(
-                                                                                                                            &dbg,
-                                                                                                                                IcingTimberBoundEval::new(
-                                                                                                                                    &dbg,
-                                                                                                                                    IcingStabEval::new(
-                                                                                                                                        &dbg,
-                                                                                                                                        Initial::new(
-                                                                                                                                            &dbg,                                                                                                                                            Arc::clone(&api_client),
-                                                                                                                                            Context::new(InitialCtx::new(ship_id, project_id, bounds)),
-                                                                                                                                        ),
-                                                                                                                                    ),
-                                                                                                                                ),
-                                                                                                                            ),
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ),
-                                                                                                            ),
-                                                                                                        ),
-                                                                                                    ),
-                                                                                                ),
-                                                                                                 ),
-                                                                                            ),
-                                                                                        ),
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
+        // stability
+        RollingAmplitudeEval::new(
+            &dbg,
+            RollingPeriodEval::new(
+                &dbg,
+                WindEval::new(
+                    &dbg,
+                    WindageEval::new(
+                        &dbg,
+                        Arc::clone(&ship_model),
+                        LeverDiagramEval::new(
+                            &dbg,
+                           Arc::clone(&ship_model),
+                            MetacentricHeightEval::new(
+                                &dbg,
+                                // Before ZG
+                                StabilityBalanceEval::new(
+                                    &dbg,
+                                    Arc::clone(&ship_model),
+                                    StaticMassStabEval::new(
+                                        &dbg,
+                                        IcingStabEval::new(
+                                            &dbg,
+                                            Arc::clone(&ship_model),
+        // strength
+        BendingMomentEval::new(
+            &dbg,
+            ShearForceEval::new(
+                &dbg,
+                TotalForceEval::new(
+                    &dbg,                                                        
+                    DynamicMassEval::new(
+                        &dbg,
+                        StrengthBalanceEval::new(
+                            &dbg,
+                            ship_model.clone(),                                
+                            StaticMassStrEval::new(
+                                &dbg,                                   
+                                IcingStrEval::new(
+                                    &dbg, 
+                                    ship_model.clone(),                                      
+                                    AreaStrEval::new(
+                                        &dbg,
+                                        ship_model.clone(),
+        WettingEval::new(
+            &dbg,
+            IcingTimberEval::new(
+                &dbg,
+                IcingTimberBoundEval::new(
+                    &dbg,
+                    IcingCoeffEval::new(
+                        &dbg,
+                        UnitAreaEval::new(
+                            &dbg,
+                            Initial::new(
+                                &dbg,
+                                Arc::clone(&api_client),
+                                Context::new(InitialCtx::new(ship_id, project_id, bounds)),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
                                         ),
                                     ),
                                 ),
@@ -232,31 +271,42 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
-    );    
-  //  ctx.eval(Zg(None)).unwrap();
-    let ctx = DraftMarkEval::new(
-        &dbg,
-        CriterionDraughtEval::new(
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+        );//.eval(Zg::empty());
+        let ctx = DraftMarkEval::new(
             &dbg,
-            ReserveBuoyncyEval::new(
+            CriterionDraughtEval::new(
                 &dbg,
-                ScrewEval::new(
+                ReserveBuoyncyEval::new(
                     &dbg,
-                    BowBoardEval::new(
+                    ScrewEval::new(
                         &dbg,
-                        LoadLineEval::new(
+                        BowBoardEval::new(
                             &dbg,
-                                ZgEval::new(
-                                    thread_pool,
-                                    &dbg,
-                                    ctx,
+                            LoadLineEval::new(
+                                &dbg,
+                                    ZgEval::new(
+                                        Arc::clone(&thread_pool),
+                                        &dbg,
+                                        ctx,
+                                ),
                             ),
                         ),
                     ),
                 ),
             ),
-        ),
-    );
+        );  
     ctx.eval(()).unwrap();   
     Ok(())
 }

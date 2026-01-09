@@ -11,7 +11,7 @@ use crate::{
 use sal_core::{dbg::Dbg, error::Error};
 
 ///
-/// Учет обледенения судна для расмчета прочности
+/// Учет обледенения судна для расчета прочности
 pub struct IcingStrEval {
     dbg: Dbg,
     model: Arc<RwLock<ShipModel>>,
@@ -77,7 +77,7 @@ impl Eval<(), EvalResult> for IcingStrEval {
                 };
                 log::info!(
                     "IcingStrCtx mass:{:.3}",
-                    result.mass_values.iter().sum(),
+                    result.mass_values.iter().sum::<f64>(),
                 );
                 ctx.write(result)
             }

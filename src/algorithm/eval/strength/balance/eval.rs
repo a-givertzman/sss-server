@@ -2,7 +2,7 @@ use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
         entities::ship_model::{BalanceStrengthQuery, ship_model::ShipModel},
-        eval::{parameters::ParameterID, strength::StaticMassCtx},
+        eval::{parameters::ParameterID, strength::StaticMassStrCtx},
     },
     kernel::{
         Eval,
@@ -52,7 +52,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     .bounds
                     .as_ref()
                     .ok_or(error.err("initial error: no bounds!"))?;
-                let static_mass: StaticMassCtx = ctx.read();
+                let static_mass: StaticMassStrCtx = ctx.read();
                 let trim = ctx.read_params(ParameterID::TrimDeg);
                 let draught = ctx.read_params(ParameterID::DraughtMid);
                 // dbg!(&static_mass);

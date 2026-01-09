@@ -3,7 +3,7 @@ use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{AddVec, Bound, Bounds};
 use crate::algorithm::eval::WettingCtx;
 use crate::algorithm::eval::strength::IcingStrCtx;
-use crate::algorithm::eval::strength::static_mass::ctx::StaticMassCtx;
+use crate::algorithm::eval::strength::static_mass::ctx::StaticMassStrCtx;
 use crate::prelude::ContextRead;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
@@ -13,13 +13,13 @@ use sal_core::{dbg::Dbg, error::Error};
 
 ///
 /// Расчет положения массы корпуса и грузов судна
-pub struct StaticMassEval {
+pub struct StaticMassStrEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
-impl StaticMassEval {
+impl StaticMassStrEval {
     ///
     pub fn new(
         parent: impl Into<String>,
@@ -34,7 +34,7 @@ impl StaticMassEval {
     //
     //
 }
-impl Eval<(), EvalResult> for StaticMassEval {
+impl Eval<(), EvalResult> for StaticMassStrEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
@@ -191,7 +191,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
                 distr_static
                     .add_vec(&distr_unit)
                     .map_err(|err| error.pass_with("distr_static.add_vec(distr_wetting)", err))?;
-                let result = StaticMassCtx {
+                let result = StaticMassStrCtx {
                     distr_static,
                     bulk,
                     liquid,
@@ -206,7 +206,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
 }
 //
 //
-impl std::fmt::Debug for StaticMassEval {
+impl std::fmt::Debug for StaticMassStrEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StaticMassEval")
             .field("dbg", &self.dbg)

@@ -10,7 +10,7 @@ pub mod bending_moment;
 
 pub use area::ctx::AreaStrCtx; 
 pub use icing::ctx::IcingStrCtx;
-pub use static_mass::ctx::StaticMassCtx;
+pub use static_mass::ctx::StaticMassStrCtx;
 pub use balance::ctx::StrengthBalanceCtx;
 pub use dynamic_mass::ctx::DynamicMassCtx;
 pub use total_force::ctx::TotalForceCtx;

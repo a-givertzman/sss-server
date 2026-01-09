@@ -8,7 +8,7 @@ use crate::{
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::eval::icing_coeff::ctx::IcingCoeffCtx;
-use crate::algorithm::eval::static_mass::ctx::StaticMassCtx;
+use crate::algorithm::eval::stability::static_mass::ctx::StaticMassStabCtx;
 use crate::algorithm::eval::stability::metacentric_height::ctx::MetacentricHeightCtx;
 use crate::algorithm::eval::criterion::*;
 ///
@@ -57,7 +57,7 @@ impl Eval<Zg, EvalResult> for CriterionStabilityEval {
                     .ok_or(error.err("initial.unit no data"))?
                     .into_iter()
                     .any(|v| v.cargo_type == UnitCargoType::Container);
-                let loads: StaticMassCtx = ctx.read();
+                let loads: StaticMassStabCtx = ctx.read();
                 let have_grain = !loads.bulk.is_empty();
                 let mut data = Vec::new();
                 if navigation_area != NavigationArea::R3Rsn {

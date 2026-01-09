@@ -39,7 +39,7 @@ impl Eval<Zg, EvalResult> for MinMetacentricHeightEval {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let metacentric_height: MetacentricHeightCtx = ctx.read();
-                let loads: StaticMassCtx = ctx.read();
+                let loads: StaticMassStabCtx = ctx.read();
                 let ship_type = initial.ship_type.unwrap();
                 let have_grain = !loads.bulk.is_empty();
                 let unit: Vec<_> = match initial.unit.as_ref() {

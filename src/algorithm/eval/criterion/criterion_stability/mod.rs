@@ -1,6 +1,6 @@
 //! Критерии проверки остойчивости судна
 pub mod ctx;
-pub mod eval;
+mod eval;
 pub mod wheather;
 pub mod static_angle;
 pub mod dso_area;
@@ -26,6 +26,7 @@ pub use metacentric_height_subdivision::ctx::MetacentricHeightSubdivisionCtx;
 pub use acceleration::ctx::AccelerationCtx;
 pub use circulation::ctx::CirculationCtx;
 pub use grain::ctx::GrainCtx;
+pub use eval::CriterionStabilityEval as CriterionStabilityEval;
 
 
 

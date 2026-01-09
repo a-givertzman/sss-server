@@ -1,5 +1,5 @@
 use crate::algorithm::eval::stability::IcingStabCtx;
-use crate::algorithm::eval::stability::static_mass::ctx::StaticMassCtx;
+use crate::algorithm::eval::stability::static_mass::ctx::StaticMassStabCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{Moment, Position};
@@ -13,19 +13,19 @@ use sal_core::{dbg::Dbg, error::Error};
 
 ///
 /// Расчет положения массы корпуса и грузов судна
-pub struct StaticMassEval {
+pub struct StaticMassStabEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
-impl StaticMassEval {
+impl StaticMassStabEval {
     ///
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
-        let dbg = Dbg::new(parent, "StaticMassEval");
+        let dbg = Dbg::new(parent, "StaticMassStabEval");
         Self {
             dbg,
             ctx: Box::new(ctx),
@@ -34,7 +34,7 @@ impl StaticMassEval {
     //
     //
 }
-impl Eval<(), EvalResult> for StaticMassEval {
+impl Eval<(), EvalResult> for StaticMassStabEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
@@ -42,10 +42,6 @@ impl Eval<(), EvalResult> for StaticMassEval {
                 let icing: IcingStabCtx = ctx.read();
                 let wetting: WettingCtx = ctx.read();
                 let initial: &InitialCtx = ctx.read_ref();
-                let bounds = initial
-                    .bounds
-                    .clone()
-                    .ok_or(error.err("initial error: no bounds!"))?;
                 let ship_parameters = initial.ship_parameters.as_ref().ok_or(error.err("initial error: no ship_parameters!"))?;
                 let shift_const = {
                     let const_mass_shift_x = ship_parameters
@@ -176,7 +172,7 @@ impl Eval<(), EvalResult> for StaticMassEval {
                     + mass_gaseous
                     + icing.p_ice
                     + wetting.mass;                   
-                let result = StaticMassCtx {
+                let result = StaticMassStabCtx {
                     mass_const,
                     moment_const,
                     bulk,
@@ -192,9 +188,9 @@ impl Eval<(), EvalResult> for StaticMassEval {
 }
 //
 //
-impl std::fmt::Debug for StaticMassEval {
+impl std::fmt::Debug for StaticMassStabEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StaticMassEval")
+        f.debug_struct("StaticMassStabEval")
             .field("dbg", &self.dbg)
             .finish()
     }

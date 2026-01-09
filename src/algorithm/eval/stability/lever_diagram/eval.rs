@@ -3,7 +3,7 @@ use crate::algorithm::entities::model_cached::DsoResult;
 use crate::algorithm::entities::ship_model::BalanceStabilityQuery;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::eval::parameters::ParameterID;
-use crate::algorithm::eval::stability::{LeverDiagramCtx, StabilityBalanceCtx, StaticMassCtx};
+use crate::algorithm::eval::stability::{LeverDiagramCtx, StabilityBalanceCtx, StaticMassStabCtx};
 use crate::kernel::Eval;
 use crate::kernel::types::Arc;
 use crate::prelude::{ContextParamsWrite, ContextReadRef, InitialCtx};
@@ -55,7 +55,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     .voyage
                     .as_ref()
                     .ok_or(error.err("voyage error: no data!"))?;
-                let static_mass: StaticMassCtx = ctx.read();
+                let static_mass: StaticMassStabCtx = ctx.read();
                 let stability_result: StabilityBalanceCtx = ctx.read();
                 // Расчет баланса для остойчивости в модели
                 let query = BalanceStabilityQuery {

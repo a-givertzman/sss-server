@@ -1,4 +1,4 @@
-use crate::algorithm::eval::stability::{StabilityBalanceCtx, StaticMassCtx};
+use crate::algorithm::eval::stability::{StabilityBalanceCtx, StaticMassStabCtx};
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
@@ -51,7 +51,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .voyage
                     .as_ref()
                     .ok_or(error.err("voyage error: no data!"))?;
-                let static_mass: StaticMassCtx = ctx.read();
+                let static_mass: StaticMassStabCtx = ctx.read();
                 // Расчет баланса для остойчивости в модели
                 let stability_query = BalanceStabilityQuery {
                     water_density: voyage.density,
