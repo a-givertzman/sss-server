@@ -190,7 +190,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                                         &dbg,
                                                         WheatherEval::new(
                                                             &dbg,
-        // stability
+        // stability after ZG
         RollingAmplitudeEval::new(
             &dbg,
             RollingPeriodEval::new(
@@ -205,15 +205,6 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                            Arc::clone(&ship_model),
                             MetacentricHeightEval::new(
                                 &dbg,
-                                // Before ZG
-                                StabilityBalanceEval::new(
-                                    &dbg,
-                                    Arc::clone(&ship_model),
-                                    StaticMassStabEval::new(
-                                        &dbg,
-                                        IcingStabEval::new(
-                                            &dbg,
-                                            Arc::clone(&ship_model),
         // strength
         BendingMomentEval::new(
             &dbg,
@@ -234,6 +225,15 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                                     AreaStrEval::new(
                                         &dbg,
                                         ship_model.clone(),
+        // stability before ZG
+        StabilityBalanceEval::new(
+            &dbg,
+            Arc::clone(&ship_model),
+            StaticMassStabEval::new(
+                &dbg,
+                IcingStabEval::new(
+                    &dbg,
+                    Arc::clone(&ship_model),                                        
         WettingEval::new(
             &dbg,
             IcingTimberEval::new(

@@ -130,7 +130,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                                         &dbg,
                                                         WheatherEval::new(
                                                             &dbg,
-        // stability
+        // stability after ZG
         RollingAmplitudeEval::new(
             &dbg,
             RollingPeriodEval::new(
@@ -145,15 +145,6 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                            Arc::clone(&self.ship_model),
                             MetacentricHeightEval::new(
                                 &dbg,
-                                // Before ZG
-                                StabilityBalanceEval::new(
-                                    &dbg,
-                                    Arc::clone(&self.ship_model),
-                                    StaticMassStabEval::new(
-                                        &dbg,
-                                        IcingStabEval::new(
-                                            &dbg,
-                                            Arc::clone(&self.ship_model),
         // strength
         BendingMomentEval::new(
             &dbg,
@@ -174,6 +165,15 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                     AreaStrEval::new(
                                         &dbg,
                                         self.ship_model.clone(),
+        // stability before ZG
+        StabilityBalanceEval::new(
+            &dbg,
+            Arc::clone(&self.ship_model),
+            StaticMassStabEval::new(
+                &dbg,
+                IcingStabEval::new(
+                    &dbg,
+                    Arc::clone(&self.ship_model),                
         WettingEval::new(
             &dbg,
             IcingTimberEval::new(
@@ -215,18 +215,18 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                 ),
             ),
         ),
-                                        ),
-                                    ),
-                                ),
                             ),
                         ),
                     ),
-                                    ),
+                ),
+            ),
+        ),
                                 ),
                             ),
                         ),
                     ),
                 ),
+            ),
         );//.eval(Zg::empty());
         let ctx = DraftMarkEval::new(
             &dbg,
