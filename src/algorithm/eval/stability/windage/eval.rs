@@ -55,13 +55,12 @@ impl Eval<Zg, EvalResult> for WindageEval {
                 let midship = *ship_parameters
                     .get("X midship from Fr0")
                     .ok_or(error.err("midship: no data!"))?;
-                let icing_stab: IcingCoeffCtx = ctx.read();
+                let icing_coeff: IcingCoeffCtx = ctx.read();
                 let draught = ctx.read_params(ParameterID::DraughtMid);
                 let UnitAreaCtx {
                     av_dc,
                     mv_dc,
-                    delta_moment_h,
-                    distr_v,
+                    ..
                 } = ctx.read();
                 let StabilityArea {
                     av_cs_dmin1,
@@ -84,11 +83,11 @@ impl Eval<Zg, EvalResult> for WindageEval {
                 let mv_x_cs_dmin = mv_x_cs_dmin1 + mv_dc.x();
                 let mv_z_cs_dmin = mv_z_cs_dmin1 + mv_dc.z();
                 // Парусность несплошных поверхностей
-                let av_ds = av_cs_dmin * icing_stab.coef_v_area;                 
+                let av_ds = av_cs_dmin * icing_coeff.coef_v_area;                 
                 // Центр площади парусности несплошных поверхностей по длине принимается на миделе
                 let mv_x_ds = av_cs_dmin * midship; 
                 // статический момент площади парусности несплошных поверхностей
-                let mv_z_ds = mv_z_cs_dmin * icing_stab.coef_v_moment; 
+                let mv_z_ds = mv_z_cs_dmin * icing_coeff.coef_v_moment; 
                 // Площадь парусности судна для осадки dmin
                 let av_dmin = av_cs_dmin + av_ds;
                 // статические моменты площади парусности судна для осадки dmin

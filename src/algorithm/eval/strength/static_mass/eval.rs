@@ -39,8 +39,6 @@ impl Eval<(), EvalResult> for StaticMassStrEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let icing: IcingStrCtx = ctx.read();
-                let wetting: WettingCtx = ctx.read();
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = initial
                     .bounds

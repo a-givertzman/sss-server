@@ -130,15 +130,6 @@ pub struct Parameters {
     data: HashMap<ParameterID, f64>,
 }
 //
-impl Parameters {
-    /// Главный конструктор
-    pub fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-        }
-    }
-}
-//
 impl IParameters for Parameters {
     /// Добавление нового параметра
     fn add(&mut self, id: ParameterID, value: f64) {

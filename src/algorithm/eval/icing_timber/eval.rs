@@ -99,7 +99,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                                 .unwrap_or(Bound::None),
                             &icing_timber_bound_y,
                         ) {
-                            Ok((area, moment, delta_moment)) => {
+                            Ok((area, _, _)) => {
                                 icing_current_area += area;
                             }
                             Err(err) => {
@@ -107,7 +107,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                             }
                         };
                         match u.icing_area(&bound_x, &Bound::Full) {
-                            Ok((area, moment, delta_moment)) => {
+                            Ok((area, _, _)) => {
                                 full_current_area += area;
                             }
                             Err(err) => {

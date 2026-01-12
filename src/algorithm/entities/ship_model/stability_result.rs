@@ -26,13 +26,13 @@ pub struct BalanceStabilityResult {
     pub displacement_center: Position,
     /// Смещение центра массы, м
     pub mass_center: Position,
-    /// Площадь ватерлинии, м^2
-    pub area_wl: f64,
-    /// Смещение центра тяжести ватеринии, м
-    pub area_wl_center: Position,
+   // /// Площадь ватерлинии, м^2
+   // pub area_wl: f64,
+  //  /// Смещение центра тяжести ватеринии, м
+  //  pub area_wl_center: Position,
     /// Длинна по ватерлинии при текущей осадке, м
     pub length_wl: f64,
-    ///  Ширина по ватерлинии при текущей осадке, м
+    /// Ширина по ватерлинии при текущей осадке, м
     pub breadth_wl: f64,
     /// Продольный метацентрический радиус, м
     pub rad_long: f64,

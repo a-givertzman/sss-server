@@ -47,7 +47,6 @@ impl Eval<(), EvalResult> for IcingStrEval {
                     Some(data) => data,
                     None => return Err(error.err("Read bounds error: no data!")),
                 };
-                let icing_coeff: IcingCoeffCtx = ctx.read();
                 let unit_area: UnitAreaCtx = ctx.read();
                 let icing_timber: IcingTimberCtx = ctx.read();  
                 let (model_area_v, model_area_h) = match self.model.read().strength_area() {
