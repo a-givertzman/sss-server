@@ -158,9 +158,9 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
         model_cached,
         api_client.clone(),
     );
-    let bounds = ship_model.init().unwrap();
+    ship_model.init().unwrap();
+    let bounds = ship_model.bounds().unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
-
     log::debug!("main | Calculations...");
         let ctx =        
         // criterion   

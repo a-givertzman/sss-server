@@ -1,26 +1,11 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use crate::{algorithm::{entities::ship_model::ship_model::ShipModel, 
+use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, 
     eval::{
-        unit_area::eval::UnitAreaEval, 
-        wetting::eval::WettingEval, 
-        zg::eval::ZgEval, 
-        draft_mark::eval::DraftMarkEval, 
-        icing_coeff::eval::IcingCoeffEval, 
-        icing_timber::eval::IcingTimberEval, 
-        icing_timber_bound::eval::IcingTimberBoundEval, 
-        strength::{
-            area::eval::AreaStrEval, 
-            balance::eval::StrengthBalanceEval, 
-            bending_moment::eval::BendingMomentEval, 
-            dynamic_mass::eval::DynamicMassEval, 
-            icing::eval::IcingStrEval, 
-            shear_force::eval::ShearForceEval, 
-            static_mass::eval::StaticMassStrEval, 
-            total_force::eval::TotalForceEval
-        },         
-        stability::{
+        criterion::{
+            CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
+        }, draft_mark::eval::DraftMarkEval, icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, stability::{
             balance::eval::StabilityBalanceEval, 
             icing::eval::IcingStabEval, 
             lever_diagram::eval::LeverDiagramEval, 
@@ -30,27 +15,16 @@ use crate::{algorithm::{entities::ship_model::ship_model::ShipModel,
             static_mass::eval::StaticMassStabEval, 
             wind::eval::WindEval, 
             windage::eval::WindageEval
-        }, 
-        criterion::{
-            acceleration::eval::AccelerationEval, 
-            bow_board::eval::BowBoardEval, 
-            circulation::eval::CirculationEval, 
-            dso_angle_max::eval::DSOAngleMaxEval, 
-            dso_area::eval::DSOAreaEval, 
-            dso_icing_max::eval::DSOIcingMaxEval, 
-            dso_max::eval::DSOMaxEval, 
-            dso_timber_max::eval::DSOTimberMaxEval, 
-            grain::eval::GrainEval, 
-            load_line::eval::LoadLineEval, 
-            metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, 
-            min_metacentric_height::eval::MinMetacentricHeightEval, 
-            reserve_buoyncy::eval::ReserveBuoyncyEval, 
-            screw::eval::ScrewEval, 
-            static_angle::eval::StaticAngleEval, 
-            wheather::eval::WheatherEval, 
-            CriterionStabilityEval, 
-            CriterionDraughtEval,
-        },        
+        }, strength::{
+            area::eval::AreaStrEval, 
+            balance::eval::StrengthBalanceEval, 
+            bending_moment::eval::BendingMomentEval, 
+            dynamic_mass::eval::DynamicMassEval, 
+            icing::eval::IcingStrEval, 
+            shear_force::eval::ShearForceEval, 
+            static_mass::eval::StaticMassStrEval, 
+            total_force::eval::TotalForceEval
+        }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     }}, 
     conf::Conf, 
     infrostructure::ApiClient, 
@@ -79,7 +53,7 @@ impl Calculus {
     /// Returns [Algorithm] new instance
     pub fn new(
         parent: impl Into<String>,
-        conf: Conf,
+        conf: Conf,    
         api_client: Arc<ApiClient>,
         ship_model: Arc<RwLock<ShipModel>>,
         thread_pool: Arc<ThreadPool>,
@@ -99,9 +73,8 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
     fn eval(&self, query: CalculusQuery) -> EvalResult {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "eval");
-        //  let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
-        let bounds = self.ship_model.write().init().unwrap();
         log::debug!("{dbg}.eval | Calculations...");
+        let bounds = self.ship_model.read().bounds().map_err(|err| error.pass(err))?;
         let ctx =        
         // criterion   
         CriterionStabilityEval::new(

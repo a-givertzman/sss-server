@@ -271,16 +271,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
     dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
     dso_angles.dedup();
-
-    let mut ship_model = ShipModel::new(
+    let ship_model = ShipModel::new(
         &dbg,
         ship_id,
         project_id.to_owned(),
         model_cached,
         api_client.clone(),
     );
-    ship_model.init().unwrap();
     let ship_model = Arc::new(RwLock::new(ship_model));
+    ship_model.write().init().unwrap();
     let server = Server::new(
         &dbg,
         conf.clone(),

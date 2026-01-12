@@ -89,7 +89,7 @@ impl ShipModel {
     /// TODO - Doc
     /// TODO - сделать что-то с Bounds, они нужны в модели и в контексте
     /// ПО идее их должен читать контекст, но модель инициализируется первее
-    pub fn init(&mut self) -> Result<Bounds, Error> {
+    pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
         self.grain_moment = Some(
             grain_moment(
@@ -200,13 +200,15 @@ impl ShipModel {
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))?;
         self.windage_area_stab = Some(windage.0);
         self.windage_area_moment = Some(Moment::new(windage.1, 0., windage.2));
-        Ok(bounds)
+        self.bounds = Some(bounds);
+        Ok(())
     }
     ///
     /// TODO: Doc
-    /*    pub fn bounds(&mut self, qnt_bounds: usize) -> Result<Bounds, Error> {
-           let error = Error::new(&self.dbg, "bounds");
-
+    pub fn bounds(&self) -> Result<Bounds, Error> {
+        self.bounds.clone().ok_or(Error::new(&self.dbg, "bounds"))
+    }
+    /*
          match &self.bounds {
                Some(bounds) => Ok(bounds.clone()),
                None => match get_bounds(
