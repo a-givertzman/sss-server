@@ -105,6 +105,8 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
+ //   /// Результаты расчета по прочности
+  //  pub(super) result_str: Option<ResultStrCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

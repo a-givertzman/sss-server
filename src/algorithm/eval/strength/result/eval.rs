@@ -1,0 +1,172 @@
+use crate::algorithm::entities::{Curve, ICurve, SumAbove};
+use crate::algorithm::eval::strength::result::{IResults, Results};
+use crate::algorithm::eval::strength::{DynamicMassCtx, ResultStrCtx, StrengthBalanceCtx};
+use crate::{
+    algorithm::{
+        context::context_access::ContextReadRef,
+        entities::{MultipleSingle, SubVec},
+    },
+    kernel::{Eval, types::eval_result::EvalResult},
+    prelude::{ContextRead, ContextWrite, InitialCtx},
+};
+use sal_core::{dbg::Dbg, error::Error};
+
+///
+/// Результаты расчета по прочности
+pub struct ResultStrEval {
+    dbg: Dbg,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
+}
+//
+//
+impl ResultStrEval {
+    ///
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
+        let dbg = Dbg::new(parent, "ResultStrEval");
+        Self {
+            dbg,
+            ctx: Box::new(ctx),
+        }
+    }
+    //
+    //
+}
+impl Eval<(), EvalResult> for ResultStrEval {
+    fn eval(&self, _: ()) -> EvalResult {
+        let error = Error::new(&self.dbg, "eval");
+        match self.ctx.eval(()) {
+            Ok(ctx) => {
+                let initial: &InitialCtx = ctx.read_ref();
+                let bounds = initial
+                    .bounds
+                    .as_ref()
+                    .ok_or(error.err("initial error: no bounds!"))?;
+                let strength_limits = initial
+                    .strength_limits
+                    .as_ref()
+                    .ok_or(error.err("initial error: no strength_limits!"))?;
+                let mass: DynamicMassCtx = ctx.read();
+                let mass_values = mass.mass_distr;
+                let balance: StrengthBalanceCtx = ctx.read();
+                let volume_values = balance.displacement_distr;
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let water_density = voyage.density;
+                let gravity_g = 9.81;
+                if mass_values.len() != volume_values.len() {
+                    let error = error.err("mass_values.len() != volume_values.len()");
+                    log::error!("{error}");
+                    return Err(error);
+                }
+                let mut total_force = mass_values.clone();
+                let mut displacement_mass = volume_values;
+                displacement_mass.mul_single(water_density);
+                //    println!("\n\n mass qnt:{} sum: {}\n", mass_values.len(), mass_values.iter().sum::<f64>());  mass_values.iter().for_each(|b| print!("{:.3} ", b));
+                //    println!("\n\n volume qnt:{} sum: {}\n", volume_values.len(), volume_values.iter().sum::<f64>());  volume_values.iter().for_each(|b| print!("{:.3} ", b));
+                total_force.sub_vec(&displacement_mass)?;
+                total_force.mul_single(gravity_g);
+                let shear_force = total_force.sum_above();
+                let mut delta_x = vec![0.];
+                delta_x.append(&mut bounds.iter().map(|b| b.length().unwrap_or(0.)).collect());
+                let values: Vec<_> = shear_force.iter().zip(delta_x.iter()).collect();
+                let mut bending_moment = vec![0.];
+                for i in 1..(values.len()) {
+                    let (v1, _) = values[i - 1];
+                    let (v2, dx) = values[i];
+                    bending_moment.push(bending_moment[i - 1] + (v1 + v2) * dx / 2.);
+                }
+                let results = Results::new();
+                results.add_values("value_displacement", &displacement_mass);
+                results.add_values("value_total_force", &total_force);
+                results.add_results("value_shear_force", &shear_force);
+                results.add_results("value_bending_moment", &bending_moment);
+                let (start_x, end_x): (Vec<_>, Vec<_>) = bounds
+                    .iter()
+                    .map(|b| (b.start().unwrap_or(0.), b.end().unwrap_or(0.)))
+                    .unzip();
+                results.add_values("start_x", &start_x);
+                results.add_values("end_x", &end_x);
+                let mut frame_x = start_x;
+                frame_x.push(*end_x.last().unwrap_or(&0.));
+                results.add_results("frame_x", &frame_x);
+                let (sf_min, sf_max, bm_min, bm_max) = strength_limits.data();
+                let compute_percent = |result: f64, limit: f64| -> f64 {
+                    if limit != 0. {
+                        result * 100. / limit
+                    } else {
+                        100.
+                    }
+                };
+                let calculate = |result: &Vec<f64>,
+                                limit_min: Vec<(f64, f64)>,
+                                limit_max: Vec<(f64, f64)>|
+                -> Result<(Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>), Error> {
+                    let limit_min = Curve::new_linear(&limit_min).map_err(|err| error.pass_with("limit_min", err))?;
+                    let limit_min: Vec<_> = frame_x
+                        .iter()
+                        .map(|&x| limit_min.value(x).unwrap_or(0.))
+                        .collect();
+                    let limit_max = Curve::new_linear(&limit_max).map_err(|err| error.pass_with("limit_max", err))?;
+                    let limit_max: Vec<_> = frame_x
+                        .iter()
+                        .map(|&x| limit_max.value(x).unwrap_or(0.))
+                        .collect();
+                    let (percent, status) = result
+                        .iter()
+                        .zip(limit_min.iter())
+                        .zip(limit_max.iter())
+                        .map(|((&result, &limit_min), &limit_max)| {
+                            let percent = if result < 0. {
+                                compute_percent(result, limit_min)
+                            } else {
+                                compute_percent(result, limit_max)
+                            };
+                            let status = if percent < 100. { 1. } else { 0. }; // 1 - true, 0 - false
+                            (percent, status)
+                        })
+                        .unzip();
+                    Ok((limit_min, limit_max, percent, status))
+                };
+                let (sf_min, sf_max, sf_percent, sf_status) =
+                    calculate(&shear_force, sf_min, sf_max)?;
+                let results = Results::new();
+                results.add_results("limit_low_shear_force", &sf_min);
+                results.add_results("limit_high_shear_force", &sf_max);
+                results.add_results("percent_shear_force", &sf_percent);
+                results.add_results("status_shear_force", &sf_status);
+                let (bm_min, bm_max, bm_percent, bm_status) =
+                    calculate(&bending_moment, bm_min, bm_max)?;
+                results.add_results("limit_low_bending_moment", &bm_min);
+                results.add_results("limit_high_bending_moment", &bm_max);
+                results.add_results("percent_bending_moment", &bm_percent);
+                results.add_results("status_bending_moment", &bm_status);
+/* TODO - что тут надо вывести?
+                log::info!("ResultStr shear_force:{:.3}", result.iter().sum::<f64>());
+                log::trace!(
+                    "ResultStr result_distr:{}",
+                    result
+                        .iter()
+                        .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
+                );
+*/
+                // TODO - записать результаты
+                Ok(ctx)
+            }
+            Err(err) => Err(error.pass_with("Read context error", err)),
+        }
+    }
+}
+//
+//
+impl std::fmt::Debug for ResultStrEval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResultStrEval")
+            .field("dbg", &self.dbg)
+            .finish()
+    }
+}

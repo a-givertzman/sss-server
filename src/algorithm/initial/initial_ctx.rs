@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::stability::ship_type::ShipType;
+use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, Ship, Voyage};
 
 ///
@@ -53,6 +54,8 @@ pub struct InitialCtx {
     pub draft_mark: Option<Vec<DraftMarkParsedData>>,
     /// Минимальная допустимая метацентрическая высота деления на отсеки
     pub h_subdivision: Option<Vec<(f64, f64)>>,
+    /// Ограничения на максимальную нагрузку на корпус
+    pub strength_limits: Option<StrengthLimitDataArray>,
 }
 impl InitialCtx {
     ///

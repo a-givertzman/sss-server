@@ -1,22 +1,7 @@
 use crate::algorithm::eval::{
-        unit_area::eval::UnitAreaEval, 
-        wetting::eval::WettingEval, 
-        zg::eval::ZgEval, 
-        draft_mark::eval::DraftMarkEval, 
-        icing_coeff::eval::IcingCoeffEval, 
-        icing_timber::eval::IcingTimberEval, 
-        icing_timber_bound::eval::IcingTimberBoundEval, 
-        strength::{
-            area::eval::AreaStrEval, 
-            balance::eval::StrengthBalanceEval, 
-            bending_moment::eval::BendingMomentEval, 
-            dynamic_mass::eval::DynamicMassEval, 
-            icing::eval::IcingStrEval, 
-            shear_force::eval::ShearForceEval, 
-            static_mass::eval::StaticMassStrEval, 
-            total_force::eval::TotalForceEval
-        },         
-        stability::{
+        criterion::{
+            CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
+        }, draft_mark::eval::DraftMarkEval, icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, stability::{
             balance::eval::StabilityBalanceEval, 
             icing::eval::IcingStabEval, 
             lever_diagram::eval::LeverDiagramEval, 
@@ -26,27 +11,9 @@ use crate::algorithm::eval::{
             static_mass::eval::StaticMassStabEval, 
             wind::eval::WindEval, 
             windage::eval::WindageEval
-        }, 
-        criterion::{
-            acceleration::eval::AccelerationEval, 
-            bow_board::eval::BowBoardEval, 
-            circulation::eval::CirculationEval, 
-            dso_angle_max::eval::DSOAngleMaxEval, 
-            dso_area::eval::DSOAreaEval, 
-            dso_icing_max::eval::DSOIcingMaxEval, 
-            dso_max::eval::DSOMaxEval, 
-            dso_timber_max::eval::DSOTimberMaxEval, 
-            grain::eval::GrainEval, 
-            load_line::eval::LoadLineEval, 
-            metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, 
-            min_metacentric_height::eval::MinMetacentricHeightEval, 
-            reserve_buoyncy::eval::ReserveBuoyncyEval, 
-            screw::eval::ScrewEval, 
-            static_angle::eval::StaticAngleEval, 
-            wheather::eval::WheatherEval, 
-            CriterionStabilityEval, 
-            CriterionDraughtEval,
-        },        
+        }, strength::{
+            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, bending_moment::eval::BendingMomentEval, dynamic_mass::eval::DynamicMassEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, shear_force::eval::ShearForceEval, static_mass::eval::StaticMassStrEval, total_force::eval::TotalForceEval
+        }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     };
 use crate::app::app::App;
 use crate::conf::Conf;
@@ -206,12 +173,15 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                             MetacentricHeightEval::new(
                                 &dbg,
         // strength
-        BendingMomentEval::new(
+  /*      BendingMomentEval::new(
             &dbg,
             ShearForceEval::new(
                 &dbg,
                 TotalForceEval::new(
                     &dbg,                                                        
+    */                
+                ResultStrEval::new(
+                    &dbg,  
                     DynamicMassEval::new(
                         &dbg,
                         StrengthBalanceEval::new(
@@ -269,8 +239,8 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                         ),
                     ),
                 ),
-            ),
-        ),
+    //        ),
+   //     ),
                                         ),
                                     ),
                                 ),
