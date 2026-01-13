@@ -391,17 +391,17 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("hold_group", err))?,
         )
         .map_err(|err| error.pass_with("hold_group", err))?.data;
-        let hold_part: HashMap<i32, HoldPartData> = hold_group.into_iter().map(|v| 
+        let hold_part: HashMap<i32, Result<HoldPartData, Error>> = hold_group.into_iter().map(|v| 
                 (
                     v, 
                     HoldPartDataArray::parse(&self
                         .api_client
                         .fetch(&format!(
                         "SELECT 
-                            code, \
+                            code AS space_id, \
                             group_index, \
-                            left_bulkhead_code, \
-                            right_bulkhead_code
+                            left_bulkhead_code AS left_space_id, \
+                            right_bulkhead_code AS right_space_id
                         FROM 
                             hold_part
                         WHERE 
@@ -409,14 +409,15 @@ impl Eval<(), EvalResult> for Initial {
                             initial_ctx.ship_id, initial_ctx.project_id
                         ))
                         .map_err(|err| error.pass_with("hold_part", err))?
+                    )
                 )
-            ).map_err(|err| error.pass_with("hold_part", err))?.data()
-        ).collect();
+            ).collect();
         let bulkhead = BulkheadDataArray::parse(&self
                 .api_client
                 .fetch(&format!(
                 "SELECT 
                     b.name_engl AS name, \
+                    b.mass AS mass, \
                     p.space_id AS space_id, \
                     p.hold_group_id as hold_group_id, \
                     p.bound_x1 AS bound_x1, \
