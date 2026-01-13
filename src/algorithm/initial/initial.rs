@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::initial_ctx::InitialCtx;
@@ -9,8 +10,7 @@ use crate::algorithm::entities::data::stability::{
 };
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{
-    CoefficientKArray, CoefficientKThetaArray, MetacentricHeightSubdivisionArray, MultiplerSArray,
-    MultiplerX1Array, MultiplerX2Array, loads::*,
+    CoefficientKArray, CoefficientKThetaArray, DataArray, MetacentricHeightSubdivisionArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, loads::*
 };
 use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::types::eval_result::EvalResult;
@@ -372,9 +372,68 @@ impl Eval<(), EvalResult> for Initial {
                     limit_area='{area}' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
-                .map_err(|err| error.pass_with("get_strength_limit", err))?,
+                .map_err(|err| error.pass_with("strength_limits", err))?,
         )
-        .map_err(|err| error.pass_with("get_strength_limit", err))?;
+        .map_err(|err| error.pass_with("strength_limits", err))?;
+
+        let hold_group = DataArray::<i32>::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                "SELECT 
+                    space_id
+                FROM 
+                    hold_group
+                WHERE 
+                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("hold_group", err))?,
+        )
+        .map_err(|err| error.pass_with("hold_group", err))?.data;
+        let hold_part: HashMap<i32, HoldPartData> = hold_group.into_iter().map(|v| 
+                (
+                    v, 
+                    HoldPartDataArray::parse(&self
+                        .api_client
+                        .fetch(&format!(
+                        "SELECT 
+                            code, \
+                            group_index, \
+                            left_bulkhead_code, \
+                            right_bulkhead_code
+                        FROM 
+                            hold_part
+                        WHERE 
+                            group_space_id={v} AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                            initial_ctx.ship_id, initial_ctx.project_id
+                        ))
+                        .map_err(|err| error.pass_with("hold_part", err))?
+                )
+            ).map_err(|err| error.pass_with("hold_part", err))?.data()
+        ).collect();
+        let bulkhead = BulkheadDataArray::parse(&self
+                .api_client
+                .fetch(&format!(
+                "SELECT 
+                    b.name_engl AS name, \
+                    p.space_id AS space_id, \
+                    p.hold_group_id as hold_group_id, \
+                    p.bound_x1 AS bound_x1, \
+                    p.bound_x2 AS bound_x2, \
+                    p.mass_shift_x AS mass_shift_x, \
+                    p.mass_shift_y AS mass_shift_y, \
+                    p.mass_shift_z AS mass_shift_z                   
+                FROM 
+                    bulkhead AS b
+                INNER JOIN
+                    bulkhead_place AS p ON b.id = p.bulkhead_id
+                WHERE 
+                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("bulkhead", err))?
+            ).map_err(|err| error.pass_with("bulkhead", err))?.data();
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
         initial_ctx.navigation_area = Some(navigation_area);
