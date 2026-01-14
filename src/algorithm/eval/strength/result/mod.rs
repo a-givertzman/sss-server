@@ -1,5 +1,4 @@
 //! Результаты расчета по прочности
-pub mod ctx;
 pub mod eval;
 
 use std::{cell::RefCell, f64};

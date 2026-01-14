@@ -12,7 +12,8 @@ mod criterion_draught;
 pub use criterion_draught::ctx::CriterionDraughtCtx;
 pub use criterion_draught::*;
 
-
+mod result;
+pub use result::*;
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]
 pub enum CriterionID {

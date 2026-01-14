@@ -198,7 +198,7 @@ fn send_values(
     full_sql.push(';');
     full_sql += " END$$;";
     //   println!("{}", &full_sql);
-    api_client.fetch(&full_sql).map_err(|err| error.pass_with("limit_min", err))?;
+    api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_strength_values end");
     Ok(())
 }
@@ -230,7 +230,7 @@ fn send_results(
     full_sql.pop();
     full_sql += ";\nEND$$;";
    // println!("{}", &full_sql);
-    api_client.fetch(&full_sql).map_err(|err| error.pass_with("limit_min", err))?;
+    api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_strength_results end");
     Ok(())
 }

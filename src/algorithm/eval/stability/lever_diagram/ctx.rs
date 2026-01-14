@@ -14,8 +14,6 @@ pub struct LeverDiagramCtx {
     pub dso_curve: Curve<f64>,
     /// Результат расчета - диаграмма плеч динамической остойчивости
     pub ddo: Vec<(f64, f64)>,
-    /// Результат расчета - диаграммы остойчивости, зависимость от угла, градусы
-    pub diagram: Vec<(f64, f64, f64)>,
     /// Угол максимума диаграммы плеч статической остойчивости
     pub theta_max: f64,
     /// Углы максимумов диаграммы плеч статической остойчивости
@@ -87,10 +85,6 @@ impl LeverDiagramCtx {
             ))?
             .1)
     }
-    /// Диаграммы остойчивости, зависимость от угла, градусы
-    pub fn diagram(&self) -> Vec<(f64, f64, f64)> {
-        self.diagram.clone()
-    }
     /// Углы максимумов диаграммы плеч статической остойчивости
     pub fn max_angles(&self) -> Vec<(f64, f64)> {
         self.max_angles.clone()
@@ -146,66 +140,3 @@ pub(crate) fn angle(
   //  log::trace!("{}", format!("LeverDiagram angle: lever_moment:{lever_moment} max_angle:{max_angle} angle1:{angle1} angle2:{angle2}"));
     Ok(vec![angle1, angle2])
 }
-
-/*
-pub(crate) fn angle(
-    max_angle: f64,
-    curve: &Curve<f64>,
-    lever_moment: f64,
-) -> Result<Vec<f64>, Error> {
-    let curve_value = curve
-        .value(max_angle)
-        .map_err(|e| format!("angle curve_value error: {e}"))?;
-    if curve_value < lever_moment {
-        let error = Error::new(
-            "lever_diagram",
-            format!(
-                "angle error: curve.value(max_angle:{max_angle}):{curve_value} < lever_moment:{lever_moment}!"
-            ),
-        );
-        log::error!("{error}");
-        return Err(error);
-    }
-    let mut delta_angle = MAX_LEVER_ANGLE_CALC;
-    let mut angles = vec![
-        (max_angle - delta_angle)
-            .min(MAX_LEVER_ANGLE_CALC)
-            .max(-MAX_LEVER_ANGLE_CALC),
-        (max_angle + delta_angle)
-            .min(MAX_LEVER_ANGLE_CALC)
-            .max(-MAX_LEVER_ANGLE_CALC),
-    ];
-    for _i in 0..30 {
-        let last_delta_value = lever_moment
-            - curve.value(angles[0]).map_err(|e| {
-                Error::new(
-                    "lever_diagram",
-                    format!("angle last_delta_value1 error: {e}"),
-                )
-            })?;
-        //    log::trace!("{}", format!("LeverDiagram angle: target:{lever_moment} angle1:{} last_delta_value:{last_delta_value} i:{_i} delta_angle:{delta_angle} ", angles[0]));
-        if last_delta_value.abs() > 0.00001 {
-            angles[0] = (angles[0] + delta_angle * last_delta_value.signum())
-                .min(MAX_LEVER_ANGLE_CALC)
-                .max(-MAX_LEVER_ANGLE_CALC);
-        }
-        let last_delta_value = lever_moment
-            - curve.value(angles[1]).map_err(|e| {
-                Error::new(
-                    "lever_diagram",
-                    format!("angle last_delta_value2 error: {e}"),
-                )
-            })?;
-        //    log::trace!("{}", format!("LeverDiagram angle: target:{lever_moment} angle2:{} last_delta_value:{last_delta_value} i:{_i} delta_angle:{delta_angle} ", angles[1]));
-        if last_delta_value.abs() > 0.00001 {
-            angles[1] = (angles[1] - delta_angle * last_delta_value.signum())
-                .min(MAX_LEVER_ANGLE_CALC)
-                .max(-MAX_LEVER_ANGLE_CALC);
-        }
-        delta_angle *= 0.5;
-        if delta_angle < 0.0001 {
-            break;
-        }
-    }
-    Ok(angles)
-}*/
