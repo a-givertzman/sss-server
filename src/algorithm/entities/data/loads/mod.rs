@@ -8,6 +8,7 @@ mod unit;
 mod container;
 mod bulkhead;
 mod hold_part;
+mod hold_compartment;
 
 pub use constant::*;
 pub use liquid::*;
@@ -17,6 +18,7 @@ pub use unit::*;
 pub use container::*;
 pub use bulkhead::*;
 pub use hold_part::*;
+pub use hold_compartment::*;
 
 use serde::{Deserialize, Serialize};
 /// Тип назначения груза

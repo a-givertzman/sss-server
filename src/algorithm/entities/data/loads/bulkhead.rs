@@ -7,10 +7,8 @@ use serde::Deserialize;
 pub struct BulkheadData {
     /// Имя перегородки
     pub name: String,    
-    /// ID помещения в котором находится перегородка
-    pub space_id: usize,
-    /// ID группы помещений трюма
-    pub hold_group_id: usize,    
+    /// Помещение в котором находится перегородка
+    pub space_id: String,
     /// масса, т
     pub mass: f64,
     /// Границы груза в связанной с судном системой координат
@@ -29,8 +27,8 @@ impl BulkheadDataArray {
         LoadUnitData{
             cargo_id: 0,
             cargo_name: v.name,
-            space_id: v.space_id.to_string(),
-            space_name: format!("hold_{}", v.space_id),
+            space_id: v.space_id.clone(),
+            space_name: v.space_id.clone(),
             assignment_id: 0,
             assigment_type: AssignmentType::Unspecified,
             cargo_type: UnitCargoType::GrainBulkhead,

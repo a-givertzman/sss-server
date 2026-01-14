@@ -375,51 +375,78 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("strength_limits", err))?,
         )
         .map_err(|err| error.pass_with("strength_limits", err))?;
-
-        let hold_group = DataArray::<i32>::parse(
-            &self
-                .api_client
-                .fetch(&format!(
-                "SELECT 
-                    space_id
-                FROM 
-                    hold_group
-                WHERE 
-                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
-                ))
-                .map_err(|err| error.pass_with("hold_group", err))?,
-        )
-        .map_err(|err| error.pass_with("hold_group", err))?.data;
-        let hold_part: HashMap<i32, Result<HoldPartData, Error>> = hold_group.into_iter().map(|v| 
-                (
-                    v, 
-                    HoldPartDataArray::parse(&self
+        let hold_part = HoldPartDataArray::parse(&self
                         .api_client
                         .fetch(&format!(
                         "SELECT 
                             code AS space_id, \
-                            group_index, \
-                            left_bulkhead_code AS left_space_id, \
-                            right_bulkhead_code AS right_space_id
+                            group_id, \
+                            group_index
                         FROM 
                             hold_part
                         WHERE 
-                            group_space_id={v} AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                            ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                             initial_ctx.ship_id, initial_ctx.project_id
-                        ))
-                        .map_err(|err| error.pass_with("hold_part", err))?
-                    )
-                )
-            ).collect();
-        let bulkhead = BulkheadDataArray::parse(&self
+                        )).map_err(|err| error.pass_with("hold_part", err))?
+                    ).map_err(|err| error.pass_with("hold_part", err))?;
+        let hold_compartment = HoldCompartmentDataArray::parse(&self
+                        .api_client
+                        .fetch(&format!(
+                        "SELECT 
+                            code AS space_id, \
+                            group_space_id, \
+                            group_index
+                        FROM 
+                            hold_compartment
+                        WHERE 
+                            ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                            initial_ctx.ship_id, initial_ctx.project_id
+                        )).map_err(|err| error.pass_with("hold_part", err))?
+                    ).map_err(|err| error.pass_with("hold_part", err))?;
+ccc
+                    /* TODO:
+                        /// Индекс группы (трюма) 
+    pub group_id: usize,
+    /// Индекс помещения в группе
+    pub group_start_index: usize,
+    /// ID ограничивающего помещения слева
+    pub left_bulkhead_space_id: Option<String>,
+    /// ID ограничивающего помещения справа    
+    pub right_bulkhead_space_id: Option<String>,
+    /// ID груза
+    pub cargo_id: usize,
+    /// Имя груза
+    pub cargo_name: String,
+    /// ID помещения
+    pub space_id: String,
+    /// Имя помещения
+    pub space_name: String,
+    /// ID assigned
+    pub assignment_id: usize,
+    /// Тип назначения груза
+    pub assigment_type: AssignmentType,
+    /// Тип сыпучего груза
+    pub cargo_type: BulkCargoType,
+    /// масса, т
+    pub mass: f64,
+    /// Признак смещаемости груза. При его размещении применяются правила перевозки зерна 
+    pub shiftable: bool,
+    /// Средний удельный погрузочный объем, м^3/т
+    pub stowage_factor: Option<f64>,
+    /// Обьем, м^3
+    pub volume: Option<f64>,
+    /// Центр отсека, размещающего груз, м
+    pub mass_shift_x: Option<f64>,
+    pub mass_shift_y: Option<f64>,
+    pub mass_shift_z: Option<f64>,    
+                    */
+        let mut bulkhead = BulkheadDataArray::parse(&self
                 .api_client
                 .fetch(&format!(
                 "SELECT 
                     b.name_engl AS name, \
                     b.mass AS mass, \
-                    p.space_id AS space_id, \
-                    p.hold_group_id as hold_group_id, \
+                    p.code AS space_id, \
                     p.bound_x1 AS bound_x1, \
                     p.bound_x2 AS bound_x2, \
                     p.mass_shift_x AS mass_shift_x, \
@@ -435,6 +462,7 @@ impl Eval<(), EvalResult> for Initial {
                 ))
                 .map_err(|err| error.pass_with("bulkhead", err))?
             ).map_err(|err| error.pass_with("bulkhead", err))?.data();
+        unit_data.append(&mut bulkhead);
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
         initial_ctx.navigation_area = Some(navigation_area);
