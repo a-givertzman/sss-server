@@ -1,13 +1,15 @@
 use crate::algorithm::entities::{Curve, ICurve, SumAbove};
 use crate::algorithm::eval::strength::result::{IResults, Results};
-use crate::algorithm::eval::strength::{DynamicMassCtx, ResultStrCtx, StrengthBalanceCtx};
+use crate::algorithm::eval::strength::{DynamicMassCtx, StrengthBalanceCtx};
+use crate::infrostructure::ApiClient;
+use crate::kernel::types::Arc;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,
         entities::{MultipleSingle, SubVec},
     },
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextRead, ContextWrite, InitialCtx},
+    prelude::{ContextRead, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -15,6 +17,7 @@ use sal_core::{dbg::Dbg, error::Error};
 /// Результаты расчета по прочности
 pub struct ResultStrEval {
     dbg: Dbg,
+    api_client: Arc<ApiClient>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -23,11 +26,13 @@ impl ResultStrEval {
     ///
     pub fn new(
         parent: impl Into<String>,
+        api_client: Arc<ApiClient>, 
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "ResultStrEval");
         Self {
             dbg,
+            api_client,
             ctx: Box::new(ctx),
         }
     }
@@ -40,6 +45,7 @@ impl Eval<(), EvalResult> for ResultStrEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let ship_id = initial.ship_id.clone(); 
                 let bounds = initial
                     .bounds
                     .as_ref()
@@ -153,8 +159,8 @@ impl Eval<(), EvalResult> for ResultStrEval {
                         .iter()
                         .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
                 );
-*/
-                // TODO - записать результаты
+*/              send_values(&self.dbg, &self.api_client, &ship_id, results.take_values()).map_err(|err| error.pass(err))?;
+                send_results(&self.dbg, &self.api_client, &ship_id, results.take_results()).map_err(|err| error.pass(err))?;
                 Ok(ctx)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -169,4 +175,62 @@ impl std::fmt::Debug for ResultStrEval {
             .field("dbg", &self.dbg)
             .finish()
     }
+}
+/// Запись промежуточных данных расчета прочности в БД
+fn send_values(
+    dbg: &Dbg,
+    api_client: &ApiClient,
+    ship_id: &str,
+    data: (Vec<String>, Vec<Vec<f64>>),
+) -> Result<(), Error> {
+    let error = Error::new(dbg, "send_values");
+    log::info!("send_strength_values begin");
+    let (names, values) = data;
+    let mut full_sql = "DO $$ BEGIN ".to_owned();
+    full_sql += &format!("DELETE FROM result_strength_values WHERE ship_id = {ship_id};");
+    full_sql += &names.iter().fold(" INSERT INTO result_strength_values\n (ship_id".to_string(), |s, n| s + ", " + n);
+    full_sql += ")\n VALUES\n";
+    for values in values {
+        full_sql += &values.iter().fold(format!(" ({ship_id}"), |s, n| s + &format!(", {}", n));
+        full_sql += "),\n";
+    }
+    full_sql.pop();
+    full_sql.push(';');
+    full_sql += " END$$;";
+    //   println!("{}", &full_sql);
+    api_client.fetch(&full_sql).map_err(|err| error.pass_with("limit_min", err))?;
+    log::info!("send_strength_values end");
+    Ok(())
+}
+/// Запись результата расчета прочности в БД
+fn send_results(
+    dbg: &Dbg,
+    api_client: &ApiClient,
+    ship_id: &str,
+    data: (Vec<String>, Vec<Vec<f64>>),
+) -> Result<(), Error> {
+    let error = Error::new(dbg, "send_results");
+    log::info!("send_strength_results begin");
+    let (names, values) = data;
+    let mut full_sql = "DO $$ BEGIN ".to_owned();
+    full_sql += &format!("DELETE FROM result_strength_force_and_moment WHERE ship_id={ship_id};");
+    full_sql += &names.iter().fold(" INSERT INTO result_strength_force_and_moment\n (ship_id".to_string(), |s, n| s + ", " + n);
+    full_sql += ")\n VALUES\n";
+    for values in values {
+        full_sql += &values.iter().enumerate().fold(format!(" ({ship_id}"), |s, (i, n)| {
+            if names[i].contains("status") {
+                s+ &format!(", {}", *n == 1.) // 1 -
+            } else {
+                s+ &format!(", {}", n)
+            }
+        });
+        full_sql += "),\n";
+    }
+    full_sql.pop();
+    full_sql.pop();
+    full_sql += ";\nEND$$;";
+   // println!("{}", &full_sql);
+    api_client.fetch(&full_sql).map_err(|err| error.pass_with("limit_min", err))?;
+    log::info!("send_strength_results end");
+    Ok(())
 }

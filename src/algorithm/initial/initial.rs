@@ -52,6 +52,8 @@ impl Eval<(), EvalResult> for Initial {
         let error = Error::new(&self.dbg, "eval");
         let initial_ctx: &InitialCtx = self.ctx.read_ref();
         let mut initial_ctx = initial_ctx.to_owned();
+        let ship_id = initial_ctx.ship_id.clone(); 
+        let project_id = initial_ctx.project_id.clone(); 
         let ship = ShipArray::parse(
             &self
                 .api_client
@@ -64,10 +66,9 @@ impl Eval<(), EvalResult> for Initial {
                     m, \
                     freeboard_type      
                 FROM             
-                    ship_view     
+                    ship_view
                 WHERE  
-                    id = {};",
-                    initial_ctx.ship_id
+                    id = {ship_id};"
                 ))
                 .map_err(|err| error.pass_with("ship fetch", err))?,
         )
@@ -93,8 +94,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM             
                     voyage_view            
                 WHERE  
-                    language = 'en' AND ship_id = {} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};",
                 ))
                 .map_err(|err| error.pass_with("voyage fetch", err))?,
         )
@@ -104,8 +104,7 @@ impl Eval<(), EvalResult> for Initial {
             None => return Err(error.err("Error voyage: no first in data")),
         };
         let ship_parameters = ShipParametersArray::parse(&self.api_client.fetch(&format!(
-                "SELECT key, value FROM \"ship/ship_general_characteristics\" WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                initial_ctx.ship_id, initial_ctx.project_id
+                "SELECT key, value FROM \"ship/ship_general_characteristics\" WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};",
             )).map_err(|err| error.pass_with("ship_parameters fetch", err))?
         ).map_err(|err| error.pass_with("ship_parameters parse", err))?;
         let icing = IcingArray::parse(
@@ -126,8 +125,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     \"ship/ship_structures/load_constant\"
                 WHERE 
-                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("load_constant fetch", err))?,
         )
@@ -153,8 +151,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     bulk_cargo_view
                 WHERE 
-                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("bulk fetch", err))?,
         )
@@ -184,8 +181,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     liquid_cargo_view
                 WHERE 
-                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("liquid fetch", err))?,
         )
@@ -210,8 +206,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     gaseous_cargo_view
                 WHERE 
-                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("gaseous fetch", err))?,
         )
@@ -237,8 +232,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     container_cargo_view AS c
                 WHERE 
-                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("container fetch", err))?,
         )
@@ -278,8 +272,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     unit_cargo_view
                 WHERE 
-                    language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("unit fetch", err))?,
         )
@@ -322,28 +315,23 @@ impl Eval<(), EvalResult> for Initial {
         )
         .map_err(|err| error.pass_with("coefficient_k_theta parse", err))?;
         let load_line = LoadLineDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, title as name, x, y, z FROM load_line_view WHERE language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
+            "SELECT criterion_id, title as name, x, y, z FROM load_line_view WHERE language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("load_line fetch", err))?
         ).map_err(|err| error.pass_with("load_line parse", err))?;
         let bow_board = BowBoardDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, title as name, x, y, z FROM bow_board_view WHERE language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
+            "SELECT criterion_id, title as name, x, y, z FROM bow_board_view WHERE language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("bow_board fetch", err))?
         ).map_err(|err| error.pass_with("bow_board parse", err))?;
         let screw = ScrewDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, x, y, z, d FROM screw_view WHERE language = 'en' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
+            "SELECT criterion_id, x, y, z, d FROM screw_view WHERE language = 'en' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("screw fetch", err))?
         ).map_err(|err| error.pass_with("screw parse", err))?;
         let draft_mark = DraftMarkDataArray::parse(&self.api_client.fetch(&format!(
-            "SELECT criterion_id, name, x, y, z FROM draft_mark WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
+            "SELECT criterion_id, name, x, y, z FROM draft_mark WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("draft_mark fetch", err))?
         ).map_err(|err| error.pass_with("draft_mark parse", err))?;
         let h_subdivision = MetacentricHeightSubdivisionArray::parse(&self.api_client.fetch(&format!(
-            "SELECT key, value FROM min_metacentric_height_subdivision WHERE ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-            initial_ctx.ship_id, initial_ctx.project_id
+            "SELECT key, value FROM min_metacentric_height_subdivision WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("h_subdivision fetch", err))?
         ).map_err(|err| error.pass_with("h_subdivision parse", err))?;
         let area = if voyage
@@ -369,8 +357,7 @@ impl Eval<(), EvalResult> for Initial {
                 FROM 
                     strength_force_limit
                 WHERE 
-                    limit_area='{area}' AND ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                    initial_ctx.ship_id, initial_ctx.project_id
+                    limit_area='{area}' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
                 .map_err(|err| error.pass_with("get_strength_limit", err))?,
         )
