@@ -954,7 +954,7 @@ impl ModelCached {
             bulk,
             liquid,
             area_wl,
-        //    area_wl_center,
+            area_wl_center,
             length_wl,
             breadth_wl,
             rad_long,

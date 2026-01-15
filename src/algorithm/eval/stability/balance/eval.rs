@@ -5,7 +5,7 @@ use crate::{
         entities::ship_model::{
             BalanceStabilityQuery, ship_model::ShipModel, stability_result::BalanceStabilityResult,
         },
-        eval::{parameters::ParameterID},
+        eval::parameters::ParameterID,
     },
     kernel::{
         Eval,
@@ -68,33 +68,33 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .read()
                     .compute_stability(stability_query)
                     .map_err(|err| error.pass_with("model.compute_balance", err))?;
-/*
-                let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
-                        .liquid
-                        .as_ref()
-                        .ok_or(error.err("Read liquid error: no data!"))?
-                        .iter()
-                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
-                        .collect();             
-                result.liquid.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", liquid_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
- 
-                let bulk_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
-                        .bulk
-                        .as_ref()
-                        .ok_or(error.err("Read bulk error: no data!"))?
-                        .iter()
-                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
-                        .collect();             
-                result.bulk.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", bulk_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
+                /*
+                                let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                                        .liquid
+                                        .as_ref()
+                                        .ok_or(error.err("Read liquid error: no data!"))?
+                                        .iter()
+                                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                                        .collect();
+                                result.liquid.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", liquid_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
 
-                <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
-                        .unit
-                        .as_ref()
-                        .ok_or(error.err("Read unit error: no data!"))?
-                        .iter()
-                        .map(|v| (v.space_id.clone(), v.mass, v.mass_shift()))
-                        .for_each(|v| println!("'{}' mass:{:.3} shift:{};", v.0, v.1, v.2.unwrap()));   
-*/
+                                let bulk_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                                        .bulk
+                                        .as_ref()
+                                        .ok_or(error.err("Read bulk error: no data!"))?
+                                        .iter()
+                                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                                        .collect();
+                                result.bulk.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", bulk_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
+
+                                <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
+                                        .unit
+                                        .as_ref()
+                                        .ok_or(error.err("Read unit error: no data!"))?
+                                        .iter()
+                                        .map(|v| (v.space_id.clone(), v.mass, v.mass_shift()))
+                                        .for_each(|v| println!("'{}' mass:{:.3} shift:{};", v.0, v.1, v.2.unwrap()));
+                */
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
                 ctx.write_params(ParameterID::DraughtBow, result.draught_bow);
                 ctx.write_params(ParameterID::DraughtStern, result.draught_stern);
@@ -102,13 +102,21 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::TrimDeg, result.trim_degree);
                 ctx.write_params(ParameterID::TrimMeter, result.trim_meter);
                 ctx.write_params(ParameterID::Roll, result.heel);
-                ctx.write_params(ParameterID::TonesPerCm, 0.01 * result.area_wl * water_density);
+                ctx.write_params(
+                    ParameterID::TonesPerCm,
+                    0.01 * result.area_wl * water_density,
+                );
                 ctx.write_params(ParameterID::MetacentricTransRad, result.rad_trans);
-                ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);         
+                ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);
                 ctx.write_params(
                     ParameterID::CenterVolumeXFromStern,
                     result.displacement_center.x(),
                 );
+                ctx.write_params(
+                    ParameterID::CenterWaterlineAreaXFromStern,
+                    result.area_wl_center.x(),
+                );
+                ctx.write_params(ParameterID::CenterMassXFromStern, result.mass_center.x());
                 ctx.write_params(ParameterID::CenterVolumeY, result.displacement_center.y());
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
                 ctx.write_params(ParameterID::Displacement, result.mass);
