@@ -237,8 +237,8 @@ fn send_values(
         full_sql += "),\n";
     }
     full_sql.pop();
-    full_sql.push(';');
-    full_sql += " END$$;";
+    full_sql.pop();
+    full_sql += ";\nEND$$;";
     //   println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_strength_values end");
