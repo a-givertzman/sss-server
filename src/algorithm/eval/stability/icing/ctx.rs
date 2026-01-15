@@ -4,7 +4,7 @@ use crate::algorithm::entities::Moment;
 #[derive(Debug, Clone, PartialEq)]
 pub struct IcingStabCtx {
     /// Суммарная масса льда
-    pub p_ice: f64,
+    pub mass: f64,
     /// Момент массы льда
-    pub m_ice: Moment,
+    pub moment: Moment,
 }

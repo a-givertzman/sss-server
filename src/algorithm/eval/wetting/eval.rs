@@ -1,7 +1,9 @@
 //! Учет намокания груза
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
+use crate::algorithm::eval::parameters::ParameterID;
 use crate::kernel::Eval;
+use crate::prelude::ContextParamsWrite;
 use crate::{
     kernel::{types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
@@ -39,7 +41,7 @@ impl Eval<(), EvalResult> for WettingEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            Ok(ctx) => {
+            Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let bounds = match initial.bounds.as_ref() {
                     Some(data) => data,
@@ -49,7 +51,7 @@ impl Eval<(), EvalResult> for WettingEval {
                     Some(data) => data,
                     None => return Err(error.err("Read unit error: no data!")),
                 };
-                let (mass, mass_moment) =
+                let (mass, moment) =
                     unit.iter()
                         .fold((0., Moment::zero()), |(res_mass, res_moment), v| {
                             let mass_shift = match v.mass_shift() {
@@ -93,19 +95,24 @@ impl Eval<(), EvalResult> for WettingEval {
                     })
                     .collect();
                 let mass_shift = if mass > 0. {
-                    mass_moment.scale(1. / mass)
+                    moment.scale(1. / mass)
                 } else {
                     Position::zero()
                 };
                 let result = WettingCtx {
                     mass,
-                    mass_shift,
+                    moment,
                     mass_values: mass_array,
                 };
                 log::info!(
                     "Wetting mass:{:.3} mass_shift:{}",
                     mass, mass_shift.print()
                 );
+
+                ctx.write_params(ParameterID::MassWetting, mass);
+                ctx.write_params(ParameterID::MassWettingX, mass_shift.x());
+                ctx.write_params(ParameterID::MassWettingY, mass_shift.y());
+                ctx.write_params(ParameterID::MassWettingZ, mass_shift.z());    
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

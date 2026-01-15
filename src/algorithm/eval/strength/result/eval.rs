@@ -55,7 +55,7 @@ impl Eval<(), EvalResult> for ResultStrEval {
                     .as_ref()
                     .ok_or(error.err("initial error: no strength_limits!"))?;
                 let mass: DynamicMassCtx = ctx.read();
-                let mass_values = mass.mass_distr;
+                let mass_values = mass.values;
                 let balance: StrengthBalanceCtx = ctx.read();
                 let volume_values = balance.displacement_distr;
                 let voyage = initial

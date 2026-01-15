@@ -5,7 +5,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct DynamicMassCtx {
     /// Распределение массы по вектору разбиения
-    pub mass_distr: Vec<f64>,
+    pub values: Vec<f64>,
     /// Набор результатов расчетов - распределение массы по типам
     pub data: HashMap<String, Vec<f64>>,
 }
@@ -13,13 +13,13 @@ pub struct DynamicMassCtx {
 impl DynamicMassCtx {
     /// Основной конструктор
     /// * data - Набор результатов расчетов - распределение массы по типам 
-    /// * mass_distr - Распределение массы по вектору разбиения
+    /// * values - Распределение массы по вектору разбиения
     pub fn new(
-        mass_distr: Vec<f64>,     
+        values: Vec<f64>,     
         data: HashMap<String, Vec<f64>>,
     ) -> Self {
         Self {
-            mass_distr,            
+            values,            
             data,
         }
     }

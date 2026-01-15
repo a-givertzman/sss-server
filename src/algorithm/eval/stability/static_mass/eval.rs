@@ -1,10 +1,11 @@
+use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::stability::IcingStabCtx;
 use crate::algorithm::eval::stability::static_mass::ctx::StaticMassStabCtx;
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{Moment, Position};
 use crate::algorithm::eval::{WettingCtx};
-use crate::prelude::ContextRead;
+use crate::prelude::{ContextParamsWrite, ContextRead};
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
@@ -157,20 +158,20 @@ impl Eval<(), EvalResult> for StaticMassStabEval {
                     mass_const, shift_const.print(),
                     mass_unit, shift_unit.print(),
                     mass_gaseous, shift_gaseous.print(),
-                    icing.p_ice, icing.m_ice.print(),
-                    wetting.mass, wetting.mass_shift.print()
-                );           
+                    icing.mass, icing.moment.to_pos(icing.mass).print(),
+                    wetting.mass, wetting.moment.to_pos(wetting.mass).print()
+                );  
                 // Сумарный момент за вычетом смещяемых и насыпных груов
                 let moment_const = Moment::from_pos(shift_const, *mass_const)
                     + Moment::from_pos(shift_unit, mass_unit)
                     + Moment::from_pos(shift_gaseous, mass_gaseous)
-                    + Moment::from_pos(icing.m_ice, icing.p_ice)
-                    + Moment::from_pos(wetting.mass_shift, wetting.mass);
+                    + icing.moment
+                    + wetting.moment;
                 // Суммарная масса корпуса, обледенения с намоканием и грузов за вычетом смещяемых и насыпных грузов
                 let mass_const = mass_const
                     + mass_unit
                     + mass_gaseous
-                    + icing.p_ice
+                    + icing.mass
                     + wetting.mass;                   
                 let result = StaticMassStabCtx {
                     mass_const,

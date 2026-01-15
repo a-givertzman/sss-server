@@ -39,7 +39,7 @@ impl Eval<(), EvalResult> for TotalForceEval {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let mass: DynamicMassCtx = ctx.read();
-                let mass_values = mass.mass_distr;
+                let mass_values = mass.values;
                 let balance: StrengthBalanceCtx = ctx.read();
                 let mut volume_values = balance.displacement_distr;
                 let voyage = initial

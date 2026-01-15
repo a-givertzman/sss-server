@@ -52,9 +52,10 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .as_ref()
                     .ok_or(error.err("voyage error: no data!"))?;
                 let static_mass: StaticMassStabCtx = ctx.read();
+                let water_density = voyage.density;
                 // Расчет баланса для остойчивости в модели
                 let stability_query = BalanceStabilityQuery {
-                    water_density: voyage.density,
+                    water_density,
                     mass_const: static_mass.mass_const,
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
@@ -101,15 +102,19 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::TrimDeg, result.trim_degree);
                 ctx.write_params(ParameterID::TrimMeter, result.trim_meter);
                 ctx.write_params(ParameterID::Roll, result.heel);
+                ctx.write_params(ParameterID::TonesPerCm, 0.01 * result.area_wl * water_density);
                 ctx.write_params(ParameterID::MetacentricTransRad, result.rad_trans);
-                ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);
-                ctx.write_params(ParameterID::CenterMassZ, result.mass_center.z());
+                ctx.write_params(ParameterID::MetacentricLongRad, result.rad_long);         
                 ctx.write_params(
                     ParameterID::CenterVolumeXFromStern,
                     result.displacement_center.x(),
                 );
                 ctx.write_params(ParameterID::CenterVolumeY, result.displacement_center.y());
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
+                ctx.write_params(ParameterID::Displacement, result.mass);
+                ctx.write_params(ParameterID::CenterMassX, result.mass_center.x());
+                ctx.write_params(ParameterID::CenterMassY, result.mass_center.y());
+                ctx.write_params(ParameterID::CenterMassZ, result.mass_center.z());
                 let bulk = result.bulk.clone();
                 let liquid = result.liquid.clone();
                 log::info!(
