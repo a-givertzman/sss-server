@@ -103,19 +103,14 @@ impl Eval<(), EvalResult> for ResultStrEval {
                 };
                 let (_, errors): (Vec<_>, Vec<_>) =
                     names.into_iter().map(|v| add(v)).partition(Result::is_ok);
-                let errors = errors
+                let err_mess = errors
                     .into_iter()
                     .map(Result::unwrap_err)
                     .fold(String::new(), |acc, err| format!("{acc}\n\t error: {err}"));
-                if !errors.is_empty() {
-                    return Err(error.err(errors));
+                if !err_mess.is_empty() {
+                    log::error!("{}", error.err(&err_mess).to_string());
+                    return Err(error.err(err_mess));
                 }
-                results.add_values(
-                    "value_mass_sum",
-                    mass.data
-                        .get("value_mass_sum")
-                        .ok_or(error.err("value_mass_sum"))?,
-                );
                 results.add_values("value_displacement", &displacement_mass);
                 results.add_values("value_total_force", &total_force);
                 results.add_results("value_shear_force", &shear_force);
@@ -169,7 +164,6 @@ impl Eval<(), EvalResult> for ResultStrEval {
                 };
                 let (sf_min, sf_max, sf_percent, sf_status) =
                     calculate(&shear_force, sf_min, sf_max)?;
-                let results = Results::new();
                 results.add_results("limit_low_shear_force", &sf_min);
                 results.add_results("limit_high_shear_force", &sf_max);
                 results.add_results("percent_shear_force", &sf_percent);
@@ -239,7 +233,7 @@ fn send_values(
     full_sql.pop();
     full_sql.pop();
     full_sql += ";\nEND$$;";
-    //   println!("{}", &full_sql);
+       println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_strength_values end");
     Ok(())
