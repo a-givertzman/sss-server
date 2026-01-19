@@ -113,6 +113,7 @@ impl Import3DModelEval {
                             flag += 1;
                             break;
                         }
+
                         if model_3d[i + 2] == -999.0 {
                             flag += 1;
                             break;
@@ -214,6 +215,7 @@ impl Import3DModelEval {
                         break;
                     }
                     current_frame = model_3d[i + 3];
+
                     current_vertices = Vec::new();
                     i += 3;
                     continue;
