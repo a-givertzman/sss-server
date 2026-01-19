@@ -38,7 +38,7 @@ bincode = "~2.0"
 regex = "~1.11"
 #
 # Collections
-indexmap = "~2.10"
+indexmap = "2.11.4"
 rustc-hash = "~2.1"
 dashmap = "~6.1"
 #
@@ -53,3 +53,4 @@ strum_macros = "~0.27"
 kanal = "~0.1"
 papaya = "~0.2"
 parking_lot = "~0.12"
+multimap = "0.10.1"

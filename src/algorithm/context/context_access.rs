@@ -1,6 +1,30 @@
 use sal_core::error::Error;
 use super::context::Context;
-use crate::algorithm::{eval::{apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::*, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *}, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{
+    eval::{
+        apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
+        impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
+        import_model::{
+            convert_model_to_trimesh_ctx::ConvertModelToTrimeshCtx, 
+            import_3d_model_ctx::Import3DModelCtx
+        }, 
+        import_tanks::{
+            import_3d_tanks_ctx::Import3DTanksCtx,
+            convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx
+        },
+        main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, 
+        main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, 
+        move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, 
+        parameters::*, 
+        parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
+        parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
+        period_excitement::period_excitement_ctx::PeriodExcitementCtx, 
+        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, 
+        vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, 
+        *
+    }, 
+    initial::initial_ctx::InitialCtx
+};
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -597,6 +621,54 @@ impl ContextWrite<DraftMarkCtx> for Context {
 impl ContextRead<DraftMarkCtx> for Context {
     fn read(&self) -> DraftMarkCtx {
         self.draft_mark.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<Import3DModelCtx> for Context {
+    fn write(mut self, value: Import3DModelCtx) -> Result<Self, Error> {
+        self.import_3d_model = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<Import3DModelCtx> for Context {
+    fn read(&self) -> Import3DModelCtx {
+        self.import_3d_model.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ConvertModelToTrimeshCtx> for Context {
+    fn write(mut self, value: ConvertModelToTrimeshCtx) -> Result<Self, Error> {
+        self.converted_3d_model = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ConvertModelToTrimeshCtx> for Context {
+    fn read(&self) -> ConvertModelToTrimeshCtx {
+        self.converted_3d_model.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<Import3DTanksCtx> for Context {
+    fn write(mut self, value: Import3DTanksCtx) -> Result<Self, Error> {
+        self.import_3d_tanks = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<Import3DTanksCtx> for Context {
+    fn read(&self) -> Import3DTanksCtx {
+        self.import_3d_tanks.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ConvertTanksToTrimeshCtx> for Context {
+    fn write(mut self, value: ConvertTanksToTrimeshCtx) -> Result<Self, Error> {
+        self.converted_3d_tanks = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ConvertTanksToTrimeshCtx> for Context {
+    fn read(&self) -> ConvertTanksToTrimeshCtx {
+        self.converted_3d_tanks.clone().unwrap()
     }
 }
 

@@ -58,6 +58,10 @@ pub struct InitialCtx {
     pub draft_mark: Option<Vec<DraftMarkParsedData>>,
     /// Минимальная допустимая метацентрическая высота деления на отсеки
     pub h_subdivision: Option<Vec<(f64, f64)>>,
+    /// Путь к файлу 3D модели из Диалог Статика
+    pub path_3d_model: String,
+    /// Путь к файлу 3D отсекам из Диалог Статика
+    pub path_3d_tanks: String,
 }
 impl InitialCtx {
     ///
