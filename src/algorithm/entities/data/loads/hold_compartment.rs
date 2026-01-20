@@ -3,6 +3,7 @@ use crate::algorithm::entities::data::{DataArray, loads::{AssignmentType, BulkCa
 use serde::Deserialize;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+
 pub struct HoldCompartmentData {
     /// Индекс группы (трюма) 
     pub group_id: usize,
@@ -40,4 +41,4 @@ pub struct HoldCompartmentData {
     pub mass_shift_z: Option<f64>,    
 }
 /// Массив данных отделений трюма
-pub type HoldCompartmentDataArray = DataArray<HoldCompartmentData>;
+pub type HoldCompartmentArray = DataArray<HoldCompartmentData>;

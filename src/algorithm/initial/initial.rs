@@ -389,10 +389,104 @@ impl Eval<(), EvalResult> for Initial {
                             initial_ctx.ship_id, initial_ctx.project_id
                         )).map_err(|err| error.pass_with("hold_part", err))?
                     ).map_err(|err| error.pass_with("hold_part", err))?;
-        let hold_compartment = HoldCompartmentDataArray::parse(&self
+
+
+    let hold_compartments = HoldCompartmentArray::parse(
+        &api_client
+            .fetch(&format!(
+                "SELECT
+            c.name_engl AS name, \
+            c.mass AS mass, \
+            cc.matter_type::TEXT AS matter_type, \
+            cgc.key::TEXT AS general_category, \
+            c.density AS density, \
+            c.volume AS volume, \
+            c.bound_x1 AS bound_x1, \
+            c.bound_x2 AS bound_x2, \
+            c.mass_shift_x AS mass_shift_x, \
+            c.mass_shift_y AS mass_shift_y, \
+            c.mass_shift_z AS mass_shift_z, \
+            c.grain_moment AS grain_moment \
+        FROM
+            hold_compartment c
+        JOIN
+            cargo_category AS cc ON c.category_id = cc.id
+        JOIN
+            cargo_general_category AS cgc ON cc.general_category_id = cgc.id
+        WHERE
+            c.ship_id={ship_id} AND mass>0;"
+            ))
+            .map_err(|e| {
+                Error::FromString(format!("api_client get_data hold_compartments error: {e}"))
+            })?,
+    )
+    .map_err(|e| Error::FromString(format!("api_client get_data hold_compartments error: {e}")))?;
+    let hold_parts = CompartmentArray::parse(
+        &api_client
+            .fetch(&format!(
+                "SELECT 
+            c.code AS name, \
+            c.mass AS mass, \
+            cc.matter_type::TEXT AS matter_type, \
+            cgc.key::TEXT AS general_category, \
+            h.density AS density, \
+            c.volume AS volume, \
+            c.bound_x1 AS bound_x1, \
+            c.bound_x2 AS bound_x2, \
+            c.mass_shift_x AS mass_shift_x, \
+            c.mass_shift_y AS mass_shift_y, \
+            c.mass_shift_z AS mass_shift_z, \
+            c.grain_moment AS grain_moment \
+        FROM 
+            hold_part c
+        JOIN
+            hold_compartment AS h ON c.group_id = h.group_id AND c.ship_id = h.ship_id AND c.group_index >= h.group_start_index AND c.group_index <= h.group_end_index
+        JOIN 
+            cargo_category AS cc ON h.category_id = cc.id
+        JOIN 
+            cargo_general_category AS cgc ON cc.general_category_id = cgc.id
+        WHERE 
+            c.ship_id={ship_id} AND c.mass>0;"
+            ))
+            .map_err(|e| {
+                Error::FromString(format!("api_client get_data hold_compartments error: {e}"))
+            })?,
+    )
+    .map_err(|e| Error::FromString(format!("api_client get_data hold_compartments error: {e}")))?;
+    let bulkhead = BulkheadArray::parse(
+        &api_client
+            .fetch(&format!(
+                "SELECT 
+                h.name_engl AS name, \
+                h.mass AS mass, \
+                cgc.key::TEXT AS general_category, \
+                p.bound_x1 AS bound_x1, \
+                p.bound_x2 AS bound_x2, \
+                p.mass_shift_x AS mass_shift_x, \
+                p.mass_shift_y AS mass_shift_y, \
+                p.mass_shift_z AS mass_shift_z \
+            FROM 
+                bulkhead AS h
+            JOIN 
+                cargo_category AS cc ON h.category_id = cc.id
+            JOIN 
+                cargo_general_category AS cgc ON cc.general_category_id = cgc.id
+            JOIN 
+                bulkhead_place AS p ON h.id = p.bulkhead_id
+            WHERE 
+                h.ship_id={ship_id};"
+            ))
+            .map_err(|e| Error::FromString(format!("api_client get_data bulkhead error: {e}")))?,
+    )
+    .map_err(|e| Error::FromString(format!("api_client get_data bulkhead error: {e}")))?;
+
+
+
+        let hold_compartment = HoldCompartmentArray::parse(&self
                         .api_client
                         .fetch(&format!(
                         "SELECT 
+                            c.name_engl AS name, \
                             code AS space_id, \
                             group_space_id, \
                             group_index
