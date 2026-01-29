@@ -35,10 +35,8 @@ pub struct InitialCtx {
     pub unit: Option<Vec<LoadUnitData>>,
     /// Переменная нагрузка на судно - газообразные грузы
     pub gaseous: Option<HashMap<usize, LoadGaseousData>>,
-    /// Части трюма
-    pub hold_part: Option<HashMap<String, HoldPartData>>,
-    /// Композитные помещения из частей трюма
-    pub hold_compartment: Option<HashMap<String, HoldCompartmentData>>,
+    /// Композитные помещения из частей трюма, [код композитного помещения, [код части трюма]]
+    pub hold_compartment: Option<HashMap<String, Vec<String>>>,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
     pub multipler_x1: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2

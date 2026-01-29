@@ -47,6 +47,10 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let hold_compartment = initial
+                    .hold_compartment
+                    .as_ref()
+                    .ok_or(error.err("hold_compartment error: no data!"))?;
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -59,15 +63,14 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
+                    hold_compartment: hold_compartment.clone(),
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                 };
                 let result: BalanceStabilityResult = self
                     .model
                     .read()
                     .compute_stability(stability_query)
-                    .map_err(|err| error.pass_with("model.compute_balance", err))?;
-/*
+                    .map_err(|err| error.pass_with("model.compute_balance", err))?;/*
                 let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .liquid
                         .as_ref()

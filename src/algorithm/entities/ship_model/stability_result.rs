@@ -49,6 +49,8 @@ pub struct BalanceStabilityResult {
     pub bulk: Vec<BulkResult>,
     /// Данные жидких грузов
     pub liquid: Vec<LiquidResult>,
+
+    pub hold_compartment: Vec<LiquidResult>,
 }
 ///
 /// TODO: Type doc here
@@ -131,6 +133,14 @@ impl BulkResult {
             moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
         }
     }
+}
+/// TODO: Type doc here
+#[derive(Debug, Clone, Decode, Encode)]
+pub struct HoldCompartmentResult {  
+    mass_shift: Position,
+    level: f64,
+    long_moment_of_inertia_max: f64,
+    trans_moment_of_inertia_max: f64,  
 }
 
 

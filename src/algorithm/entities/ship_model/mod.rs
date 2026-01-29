@@ -3,6 +3,8 @@ mod volume_max;
 pub mod ship_model;
 pub mod stability_result;
 
+use std::collections::HashMap;
+
 use crate::algorithm::entities::{Bounds, Moment, data::loads::{AssignmentType, LiquidCargoType}};
 
 ///
@@ -25,8 +27,8 @@ pub struct BalanceStrengthQuery {
     pub liquid: Vec<LiquidData>,
     /// газообразный груз
     pub gaseous: Vec<GaseousData>,
-    /// Положение зерновых перегородок, координата по х
-    pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
+    /// Композитные отсеки трюмов, коды 
+    pub hold_compartment: HashMap<String, Vec<String>>,
     //    /// номера поврежденных помещений, TODO - только для аварийного расчета
     //    pub damaged_compartment: Vec<String>,
     /// точность расчета
@@ -51,9 +53,9 @@ pub struct BalanceStabilityQuery {
     pub bulk: Vec<BulkData>,
     /// жидкий груз
     pub liquid: Vec<LiquidData>,
-    /// Положение зерновых перегородок, координата по х
-    pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
-    /// номера поврежденных помещений, TODO - только для аварийного расчета
+    /// Композитные отсеки трюмов, коды 
+    pub hold_compartment: HashMap<String, Vec<String>>,
+    /// Коды поврежденных помещений, TODO - только для аварийного расчета
     pub damaged_compartment: Vec<String>,
 }
 ///

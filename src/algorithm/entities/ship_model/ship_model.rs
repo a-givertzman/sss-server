@@ -330,13 +330,20 @@ impl ShipModel {
                 v.moment = 0.;
                 return;
             }
-            v.moment = if let Some(curve) = grain_moment.get(&v.code) {
-                curve.value(v.level).unwrap_or(0.)
-            } else {
-                let error = error.err(format!("grain_moment.get(&v.code), {}", v.code));
-                log::error!("{}", error);
-                0.
-            };
+            if let Some(curve) = grain_moment.get(&v.code) {
+                v.moment = curve.value(v.level).unwrap_or(0.);
+                return;
+            } 
+            if let Some(hold_part_codes) = query.hold_compartment.get(&v.code) {
+                v.moment = hold_part_codes.iter()
+                .flat_map(|code| grain_moment.get(code))
+                .flat_map(|curve| curve.value(v.level).unwrap_or(0.))
+                .sum();
+                return;
+            } 
+            let error = error.err(format!("grain_moment.get(&v.code), {}", v.code));
+            log::error!("{}", error);
+            v.moment = 0.;
         });
         Ok(result)
     }

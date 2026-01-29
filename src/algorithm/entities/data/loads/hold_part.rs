@@ -9,7 +9,7 @@ pub struct HoldPartData {
     /// ID помещения из документации
     pub code: String,    
     /// Индекс группы (трюма) 
-    pub group_id: usize,
+    pub group_id: usize,    
     /// Индекс помещения в группе
     pub group_index: usize,
 }
@@ -17,7 +17,7 @@ pub struct HoldPartData {
 pub type HoldPartDataArray = DataArray<HoldPartData>;
 //
 impl HoldPartDataArray {
-    pub fn data(self) -> HashMap<String, HoldPartData> {
-        self.data.into_iter().map(|v| (v.code, v)).collect()
+    pub fn codes(&self, group_id: usize) -> HashMap<usize, String> {
+        self.data.iter().filter(|v| v.group_id == group_id).map(|v| (v.group_index, v)).collect()
     }
 }

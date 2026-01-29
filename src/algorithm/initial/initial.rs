@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::initial_ctx::InitialCtx;
@@ -10,7 +9,7 @@ use crate::algorithm::entities::data::stability::{
 };
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{
-    CoefficientKArray, CoefficientKThetaArray, DataArray, MetacentricHeightSubdivisionArray,
+    CoefficientKArray, CoefficientKThetaArray, MetacentricHeightSubdivisionArray,
     MultiplerSArray, MultiplerX1Array, MultiplerX2Array, loads::*,
 };
 use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
@@ -421,8 +420,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.liquid = Some(liquid.data());
         initial_ctx.unit = Some(unit_data);
         initial_ctx.gaseous = Some(gaseous.data());
-        initial_ctx.hold_part = Some(hold_part.data());
-        initial_ctx.hold_compartment = Some(hold_compartment.data());
+        initial_ctx.hold_compartment = Some(hold_compartment.data(hold_part));
         initial_ctx.multipler_x1 = Some(multipler_x1.data());
         initial_ctx.multipler_x2 = Some(multipler_x2.data());
         initial_ctx.multipler_s = Some(multipler_s);
