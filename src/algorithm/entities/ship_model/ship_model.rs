@@ -330,10 +330,10 @@ impl ShipModel {
                 v.moment = 0.;
                 return;
             }
-            v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
+            v.moment = if let Some(curve) = grain_moment.get(&v.code) {
                 curve.value(v.level).unwrap_or(0.)
             } else {
-                let error = error.err(format!("grain_moment.get(&v.space_id), {}", v.space_id));
+                let error = error.err(format!("grain_moment.get(&v.code), {}", v.code));
                 log::error!("{}", error);
                 0.
             };
@@ -519,13 +519,13 @@ fn grain_moment(
     let error = Error::new("ShipModel", "grain_moment");
     let data = GrainMomentDataArray::parse(
         &api_client.fetch(&format!(
-            "SELECT space_id, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+            "SELECT code, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
         )).map_err(|err| error.pass_with("api_client.fetch", err))?
     ).map_err(|err| error.pass_with("parse", err))?;
     let data: Vec<(String, Result<Curve<f64>, Error>)> = data
         .data()
         .iter()
-        .map(|(space_id, v)| (space_id.clone(), Curve::new_linear(v)))
+        .map(|(code, v)| (code.clone(), Curve::new_linear(v)))
         .collect();
     if let Some(error_data) = data.iter().filter(|v| v.1.is_err()).next() {
         error_data
@@ -547,7 +547,7 @@ fn max_compartment_volume(
         &api_client
             .fetch(&format!(
                 "SELECT
-                s.space_id as space_id, \
+                s.code as code, \
                 c.volume_max as volume_max
             FROM
                 \"space\" AS s 

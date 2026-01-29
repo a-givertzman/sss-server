@@ -5,7 +5,7 @@ use crate::algorithm::entities::data::loads::{AssignmentType, LiquidCargoType};
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct LiquidResult {
     /// ID помещения
-    pub space_id: String, 
+    pub code: String, 
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип жидкого груза
@@ -19,14 +19,14 @@ pub struct LiquidResult {
 impl LiquidResult {
     ///
     pub fn new(
-        space_id: String,
+        code: String,
         assigment_type: AssignmentType,
         cargo_type: LiquidCargoType,
   //      mass_shift: Position,
         mass_values: Vec<f64>,
     ) -> Self {
         Self {
-            space_id,
+            code,
             assigment_type,
             cargo_type,
      //       mass_shift,

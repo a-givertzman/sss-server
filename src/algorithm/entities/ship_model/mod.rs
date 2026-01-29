@@ -64,7 +64,7 @@ pub struct BalanceStabilityQuery {
 pub struct BulkData {    
     pub assignment_id: usize,// ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
-    pub space_id: String, // ID помещения
+    pub code: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
     pub shiftable: bool,
@@ -75,7 +75,7 @@ pub struct BulkData {
 pub struct LiquidData {
     pub assignment_id: usize,// ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
-    pub space_id: String, // ID помещения    
+    pub code: String, // ID помещения    
     pub cargo_type: LiquidCargoType, // Тип жидкого груза
     pub use_max_moment: bool, // Признак использования максимального значения момента свободной поверхности жидкости
     pub is_cargo_tank: bool,
@@ -90,7 +90,7 @@ pub struct LiquidData {
 #[derive(Debug, Clone)]
 pub struct GaseousData {
     pub assigment_type: AssignmentType,  // Тип назначения груза
-    pub space_id: String, // ID помещения
+    pub code: String, // ID помещения
     pub mass: f64,
 }
 /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности

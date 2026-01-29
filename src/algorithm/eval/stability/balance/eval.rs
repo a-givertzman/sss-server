@@ -73,7 +73,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         .as_ref()
                         .ok_or(error.err("Read liquid error: no data!"))?
                         .iter()
-                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                        .map(|(_, v)| (v.assignment_id, v.code.clone()))
                         .collect();             
                 result.liquid.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", liquid_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
  
@@ -82,7 +82,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         .as_ref()
                         .ok_or(error.err("Read bulk error: no data!"))?
                         .iter()
-                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                        .map(|(_, v)| (v.assignment_id, v.code.clone()))
                         .collect();             
                 result.bulk.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", bulk_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
 
@@ -91,7 +91,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         .as_ref()
                         .ok_or(error.err("Read unit error: no data!"))?
                         .iter()
-                        .map(|v| (v.space_id.clone(), v.mass, v.mass_shift()))
+                        .map(|v| (v.code.clone(), v.mass, v.mass_shift()))
                         .for_each(|v| println!("'{}' mass:{:.3} shift:{};", v.0, v.1, v.2.unwrap()));   
 */
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);

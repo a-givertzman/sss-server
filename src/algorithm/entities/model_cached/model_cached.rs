@@ -598,31 +598,31 @@ impl ModelCached {
         for cargo in query.gaseous {
             assert!(cargo.mass > 0.);
             let assigment_type = cargo.assigment_type;
-            let space_id = cargo.space_id.clone();
-            let error_ = error.err(format!("compartment_{space_id} gaseous work"));
+            let code = cargo.code.clone();
+            let error_ = error.err(format!("compartment_{code} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
             let thread_name = format!(
-                "{}.balance_strength gaseous space_id:{}",
-                &self.dbg, cargo.space_id
+                "{}.balance_strength gaseous code:{}",
+                &self.dbg, cargo.code
             );
             log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
-                        .get(&space_id)
+                        .get(&code)
                         .ok_or(
-                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                            error_.err(format!("compartments_bounded.get no code:{code}")),
                         )?
                         .read();
                     let volume_bounded = compartment_bounded.get_max_volume().map_err(|err| {
                         error_
-                            .pass_with(format!("volume_bounded get_max, space_id:{space_id}"), err)
+                            .pass_with(format!("volume_bounded get_max, code:{code}"), err)
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
                     results_.push(balance::gaseous_result::GaseousResult::new(
-                        space_id,
+                        code,
                         assigment_type,
                         volume_bounded.into_iter().map(|v| v * density).collect(),
                     ));
@@ -640,24 +640,24 @@ impl ModelCached {
         for cargo in &query.bulk {
             assert!(cargo.mass > 0.);
             let assigment_type = cargo.assigment_type;
-            let space_id = cargo.space_id.clone();
-            let error_ = error.err(format!("compartment_{space_id} bulk work"));
+            let code = cargo.code.clone();
+            let error_ = error.err(format!("compartment_{code} bulk work"));
             let density = cargo.mass / cargo.volume;
             let compartments_bounded = compartments_bounded.clone();
             let volume = cargo.volume;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
             let thread_name = format!(
-                "{}.balance_strength bulk space_id:{}",
-                &self.dbg, cargo.space_id
+                "{}.balance_strength bulk code:{}",
+                &self.dbg, cargo.code
             );
             log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
-                        .get(&space_id)
+                        .get(&code)
                         .ok_or(
-                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                            error_.err(format!("compartments_bounded.get no code:{code}")),
                         )?
                         .read();
                     let volume_bounded =
@@ -665,13 +665,13 @@ impl ModelCached {
                             .get(volume, 0., epsilon)
                             .map_err(|err| {
                                 error_.pass_with(
-                                    format!("compartment_bounded.get, space_id:{space_id}"),
+                                    format!("compartment_bounded.get, code:{code}"),
                                     err,
                                 )
                             })?;
-                    //    println!("model_cached balance_strength bulk space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                    //    println!("model_cached balance_strength bulk code:{code} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                     results_.push(balance::bulk_result::BulkResult::new(
-                        space_id,
+                        code,
                         assigment_type,
                         volume_bounded.into_iter().map(|v| v * density).collect(),
                     ));
@@ -729,14 +729,14 @@ impl ModelCached {
                         continue;
                     }
                     let assigment_type = cargo.assigment_type;
-                    let space_id = cargo.space_id.clone();
+                    let code = cargo.code.clone();
                     let cargo_type = cargo.cargo_type;
-                    let error_ = error.err(format!("compartment_{space_id} liquid work"));
+                    let error_ = error.err(format!("compartment_{code} liquid work"));
                     let density = cargo.mass / cargo.volume;
                     let compartment_bounded = compartments_bounded
-                        .get(&space_id)
+                        .get(&code)
                         .ok_or(
-                            error_.err(format!("compartments_bounded.get no space_id:{space_id}")),
+                            error_.err(format!("compartments_bounded.get no code:{code}")),
                         )?
                         .clone();
                     let trim = trim;
@@ -744,8 +744,8 @@ impl ModelCached {
                     let epsilon = volume * epsilon_mass / mass_sum;
                     let results_ = liquid_results.clone();
                     let thread_name = format!(
-                        "{}.balance_strength liquid space_id:{}",
-                        &self.dbg, cargo.space_id
+                        "{}.balance_strength liquid code:{}",
+                        &self.dbg, cargo.code
                     );
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
@@ -755,13 +755,13 @@ impl ModelCached {
                                 .get(volume, trim, epsilon)
                                 .map_err(|err| {
                                     error_.pass_with(
-                                        format!("compartment_bounded.get, space_id:{space_id}"),
+                                        format!("compartment_bounded.get, code:{code}"),
                                         err,
                                     )
                                 })?;
-                            //         println!("model_cached space_id:{space_id} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                            //         println!("model_cached code:{code} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                             results_.push(balance::liquid_result::LiquidResult::new(
-                                space_id,
+                                code,
                                 assigment_type,
                                 cargo_type,
                                 volume_bounded.into_iter().map(|v| v * density).collect(),
@@ -1554,17 +1554,17 @@ impl ModelCached {
         let scheduler = self.thread_pool.scheduler();
         for cargo in bulks {
             assert!(cargo.mass > 0.);
-            let space_id = cargo.space_id.clone();
-            let error_ = error.err(format!("compartment_{space_id} bulk work"));
+            let code = cargo.code.clone();
+            let error_ = error.err(format!("compartment_{code} bulk work"));
             let compartment = self
                 .compartments
-                .get(&space_id)
-                .ok_or(error.err(format!("no compartment:{space_id}")))?
+                .get(&code)
+                .ok_or(error.err(format!("no compartment:{code}")))?
                 .clone();
             let cargo = cargo.clone();
             let epsilon = epsilon;
             let results_ = task_results.clone();
-            let thread_name = format!("{}.process_bulk space_id:{space_id}", &self.dbg);
+            let thread_name = format!("{}.process_bulk code:{code}", &self.dbg);
             log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
@@ -1574,7 +1574,7 @@ impl ModelCached {
                         .map_err(|err| error_.pass_with("compartment.get", err))?;
                     results_.push(stability_result::BulkResult::new(
                         //       cargo_id,
-                        space_id,
+                        code,
                         cargo.assignment_id,
                         cargo.assigment_type,
                         cargo.mass,
@@ -1647,15 +1647,15 @@ impl ModelCached {
         let mut errors = Vec::new();
         let scheduler = self.thread_pool.scheduler();
         for cargo in liquids {
-            match self.compartments.get(&cargo.space_id) {
+            match self.compartments.get(&cargo.code) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
-                    let space_id = cargo.space_id.clone();
+                    let code = cargo.code.clone();
                     let cargo = cargo.clone();
                     let error_ = error.clone();
                     let compartment = compartment.clone();
-                    let thread_name = format!("{}.process_liquid space_id:{}", &self.dbg, space_id);
+                    let thread_name = format!("{}.process_liquid code:{}", &self.dbg, code);
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
@@ -1671,7 +1671,7 @@ impl ModelCached {
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
                             task_results.push((
-                                space_id.clone(),
+                                code.clone(),
                                 stability_result::LiquidResult::new(
                                     cargo.assignment_id,
                                     cargo.assigment_type,
@@ -1684,20 +1684,20 @@ impl ModelCached {
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
+                            error.pass_with(format!("spawn for {}", cargo.code), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
                             let error =
-                                error.pass_with(format!("handle for {}", cargo.space_id), err);
+                                error.pass_with(format!("handle for {}", cargo.code), err);
                             log::error!("{}", error);
                             errors.push(error);
                         }
                     };
                 }
                 None => {
-                    let error = error.err(format!("no compartment: {}", cargo.space_id));
+                    let error = error.err(format!("no compartment: {}", cargo.code));
                     log::error!("{}", error);
                     errors.push(error);
                 }
@@ -1721,8 +1721,8 @@ impl ModelCached {
         }
         let mut values = Vec::new();
         while !task_results.is_empty() {
-            if let Some((_space_id, result)) = task_results.pop() {
-        //        if heel == -20. && trim < 3. { println!("heel:{heel} trim:{trim} {} {} {};", _space_id, result.mass, result.mass_shift.print());  }
+            if let Some((_code, result)) = task_results.pop() {
+        //        if heel == -20. && trim < 3. { println!("heel:{heel} trim:{trim} {} {} {};", _code, result.mass, result.mass_shift.print());  }
                 values.push(result);
             }
         }
@@ -1774,17 +1774,17 @@ impl ModelCached {
         let mut values = Vec::new();
         let scheduler = self.thread_pool.scheduler();
         for cargo in liquids {
-            match self.compartments.get(&cargo.space_id) {
+            match self.compartments.get(&cargo.code) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
-                    let space_id = cargo.space_id.clone();
+                    let code = cargo.code.clone();
                     let cargo = cargo.clone();
                     let compartment = compartment.clone();
                     let thread_name = format!(
-                        "{}.moment_liquid_dso_abs_moment space_id:{}",
-                        &self.dbg, space_id
+                        "{}.moment_liquid_dso_abs_moment code:{}",
+                        &self.dbg, code
                     );
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
@@ -1802,17 +1802,17 @@ impl ModelCached {
                                     cargo.is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            task_results.push((space_id, cargo.density, res));
+                            task_results.push((code, cargo.density, res));
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
+                            error.pass_with(format!("spawn for {}", cargo.code), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
                             let error =
-                                error.pass_with(format!("handle for {}", cargo.space_id), err);
+                                error.pass_with(format!("handle for {}", cargo.code), err);
                             log::error!("{}", error);
                             println!("{}", error);
                             errors.push(error);
@@ -1820,7 +1820,7 @@ impl ModelCached {
                     };
                 }
                 None => {
-                    let error = error.err(format!("no compartment: {}", cargo.space_id));
+                    let error = error.err(format!("no compartment: {}", cargo.code));
                     log::error!("{}", error);
                     println!("{}", error);
                     errors.push(error);
@@ -1837,12 +1837,12 @@ impl ModelCached {
             }
         }
         while !task_results.is_empty() {
-            if let Some((_space_id, density, moment)) = task_results.pop() {
-                //      if _space_id == "501" { println!("moment_liquid_dso heel:{heel} space_id:{} {} {} {};", _space_id, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
-                // println!("moment_liquid_dso heel:{heel} space_id:{} {} {};", _space_id, result.volume_center.y(), result.volume);
+            if let Some((_code, density, moment)) = task_results.pop() {
+                //      if _code == "501" { println!("moment_liquid_dso heel:{heel} code:{} {} {} {};", _code, result.volume_center.y(), result.volume, result.volume_center.y() * result.volume * density);  }
+                // println!("moment_liquid_dso heel:{heel} code:{} {} {};", _code, result.volume_center.y(), result.volume);
                 /*          println!(
-                    "moment_liquid_dso heel:{current_heel} space_id:{} {};",
-                    _space_id,
+                    "moment_liquid_dso heel:{current_heel} code:{} {};",
+                    _code,
                     moment
                 );*/
                 values.push(moment * density);
@@ -1881,17 +1881,17 @@ impl ModelCached {
         let mut values = Vec::new();
         let scheduler = self.thread_pool.scheduler();
         for cargo in liquids {
-            match self.compartments.get(&cargo.space_id) {
+            match self.compartments.get(&cargo.code) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
                     let epsilon = epsilon.clone();
                     let error_ = error.clone();
-                    let space_id = cargo.space_id.clone();
+                    let code = cargo.code.clone();
                     let cargo = cargo.clone();
                     let compartment = compartment.clone();
                     let thread_name = format!(
-                        "{}.moment_liquid_dso_surface_moment space_id:{}",
-                        &self.dbg, space_id
+                        "{}.moment_liquid_dso_surface_moment code:{}",
+                        &self.dbg, code
                     );
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
@@ -1905,17 +1905,17 @@ impl ModelCached {
                                     cargo.is_cargo_tank,
                                 )
                                 .map_err(|err| error_.pass_with("compartment.get", err))?;
-                            task_results.push((space_id, cargo.density, res));
+                            task_results.push((code, cargo.density, res));
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", cargo.space_id), err)
+                            error.pass_with(format!("spawn for {}", cargo.code), err)
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
                             let error =
-                                error.pass_with(format!("handle for {}", cargo.space_id), err);
+                                error.pass_with(format!("handle for {}", cargo.code), err);
                             log::error!("{}", error);
                             println!("{}", error);
                             errors.push(error);
@@ -1923,7 +1923,7 @@ impl ModelCached {
                     };
                 }
                 None => {
-                    let error = error.err(format!("no compartment: {}", cargo.space_id));
+                    let error = error.err(format!("no compartment: {}", cargo.code));
                     log::error!("{}", error);
                     println!("{}", error);
                     errors.push(error);
@@ -1940,7 +1940,7 @@ impl ModelCached {
             }
         }
         while !task_results.is_empty() {
-            if let Some((_space_id, density, moment)) = task_results.pop() {
+            if let Some((_code, density, moment)) = task_results.pop() {
                 values.push(moment * density);
             }
         }
@@ -1978,18 +1978,18 @@ impl ModelCached {
             match self.damaged_compartments.get(damaged_compartment) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
-                    let space_id = damaged_compartment.clone();
+                    let code = damaged_compartment.clone();
                     let compartment = compartment.clone();
                     let _error = error.clone();
                     let thread_name = format!(
-                        "{}.calc_damaged_compartments space_id:{}",
-                        &self.dbg, space_id
+                        "{}.calc_damaged_compartments code:{}",
+                        &self.dbg, code
                     );
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             task_results
-                                .push((space_id, compartment.read().get(heel, trim, draught)));
+                                .push((code, compartment.read().get(heel, trim, draught)));
                             Ok(())
                         })
                         .map_err(|err| {
@@ -2024,18 +2024,18 @@ impl ModelCached {
             }
         }
         while !task_results.is_empty() {
-            if let Some((space_id, data)) = task_results.pop() {
+            if let Some((code, data)) = task_results.pop() {
                 let (mass, position) = match data {
                     Ok((volume, position)) => (volume * water_density, position),
                     Err(err) => {
                         let error = error
-                            .pass_with(format!("task_results data in {space_id}"), err.to_string());
+                            .pass_with(format!("task_results data in {code}"), err.to_string());
                         log::error!("{}", error);
                         errors.push(error);
                         continue;
                     }
                 };
-                values.push((space_id, mass, Moment::from_pos(position, mass)));
+                values.push((code, mass, Moment::from_pos(position, mass)));
             }
         }
         if !errors.is_empty() {

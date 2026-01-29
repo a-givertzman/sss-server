@@ -12,7 +12,7 @@ pub struct LoadContainerData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: usize,
+    pub code: usize,
     /// ID assigned
     pub assignment_id: usize,    
     /// Тип назначения груза
@@ -36,7 +36,7 @@ impl LoadContainerArray {
         LoadUnitData{
             cargo_id: v.cargo_id,
             cargo_name: v.cargo_name,
-            space_id: v.space_id.to_string(),
+            code: v.code.to_string(),
             space_name: format!("slot_{}", v.slot_id),
             assignment_id: v.assignment_id,
             assigment_type: v.assigment_type,

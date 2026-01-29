@@ -8,7 +8,7 @@ pub struct BulkheadData {
     /// Имя перегородки
     pub name: String,    
     /// Помещение в котором находится перегородка
-    pub space_id: String,
+    pub code: String,
     /// масса, т
     pub mass: f64,
     /// Границы груза в связанной с судном системой координат
@@ -27,8 +27,8 @@ impl BulkheadDataArray {
         LoadUnitData{
             cargo_id: 0,
             cargo_name: v.name,
-            space_id: v.space_id.clone(),
-            space_name: v.space_id.clone(),
+            code: v.code.clone(),
+            space_name: v.code.clone(),
             assignment_id: 0,
             assigment_type: AssignmentType::Unspecified,
             cargo_type: UnitCargoType::GrainBulkhead,

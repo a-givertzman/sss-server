@@ -10,7 +10,8 @@ use crate::algorithm::entities::data::stability::{
 };
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{
-    CoefficientKArray, CoefficientKThetaArray, DataArray, MetacentricHeightSubdivisionArray, MultiplerSArray, MultiplerX1Array, MultiplerX2Array, loads::*
+    CoefficientKArray, CoefficientKThetaArray, DataArray, MetacentricHeightSubdivisionArray,
+    MultiplerSArray, MultiplerX1Array, MultiplerX2Array, loads::*,
 };
 use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::types::eval_result::EvalResult;
@@ -137,7 +138,7 @@ impl Eval<(), EvalResult> for Initial {
                 .api_client
                 .fetch(&format!(
                     "SELECT 
-                    space_id, \
+                    code, \
                     space_name, \
                     cargo_id, \
                     cargo_name, \
@@ -166,7 +167,7 @@ impl Eval<(), EvalResult> for Initial {
                     "SELECT 
                     cargo_id, \
                     cargo_name, \
-                    space_id, \
+                    code, \
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
@@ -197,7 +198,7 @@ impl Eval<(), EvalResult> for Initial {
                     "SELECT
                     cargo_id, \
                     cargo_name, \
-                    space_id, \
+                    code, \
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
@@ -224,7 +225,7 @@ impl Eval<(), EvalResult> for Initial {
                     c.cargo_id AS cargo_id, \
                     c.slot_id AS slot_id, \
                     c.cargo_name AS cargo_name, \
-                    c.space_id AS space_id, \
+                    c.code AS code, \
                     c.assignment_id AS assignment_id, \
                     c.assigment_context AS assigment_type, \
                     c.weight AS mass, \
@@ -250,7 +251,7 @@ impl Eval<(), EvalResult> for Initial {
                     "SELECT 
                     cargo_id, \
                     cargo_name, \
-                    space_id, \
+                    code, \
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
@@ -375,188 +376,40 @@ impl Eval<(), EvalResult> for Initial {
                 .map_err(|err| error.pass_with("strength_limits", err))?,
         )
         .map_err(|err| error.pass_with("strength_limits", err))?;
-        let hold_part = HoldPartDataArray::parse(&self
-                        .api_client
-                        .fetch(&format!(
-                        "SELECT 
-                            code AS space_id, \
+        let hold_part = HoldPartDataArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT DISTINCT
+                            code, \
                             group_id, \
                             group_index
                         FROM 
-                            hold_part
+                            hold_part_view
                         WHERE 
                             ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                            initial_ctx.ship_id, initial_ctx.project_id
-                        )).map_err(|err| error.pass_with("hold_part", err))?
-                    ).map_err(|err| error.pass_with("hold_part", err))?;
-
-
-    let hold_compartments = HoldCompartmentArray::parse(
-        &api_client
-            .fetch(&format!(
-                "SELECT
-            c.name_engl AS name, \
-            c.mass AS mass, \
-            cc.matter_type::TEXT AS matter_type, \
-            cgc.key::TEXT AS general_category, \
-            c.density AS density, \
-            c.volume AS volume, \
-            c.bound_x1 AS bound_x1, \
-            c.bound_x2 AS bound_x2, \
-            c.mass_shift_x AS mass_shift_x, \
-            c.mass_shift_y AS mass_shift_y, \
-            c.mass_shift_z AS mass_shift_z, \
-            c.grain_moment AS grain_moment \
-        FROM
-            hold_compartment c
-        JOIN
-            cargo_category AS cc ON c.category_id = cc.id
-        JOIN
-            cargo_general_category AS cgc ON cc.general_category_id = cgc.id
-        WHERE
-            c.ship_id={ship_id} AND mass>0;"
-            ))
-            .map_err(|e| {
-                Error::FromString(format!("api_client get_data hold_compartments error: {e}"))
-            })?,
-    )
-    .map_err(|e| Error::FromString(format!("api_client get_data hold_compartments error: {e}")))?;
-    let hold_parts = CompartmentArray::parse(
-        &api_client
-            .fetch(&format!(
-                "SELECT 
-            c.code AS name, \
-            c.mass AS mass, \
-            cc.matter_type::TEXT AS matter_type, \
-            cgc.key::TEXT AS general_category, \
-            h.density AS density, \
-            c.volume AS volume, \
-            c.bound_x1 AS bound_x1, \
-            c.bound_x2 AS bound_x2, \
-            c.mass_shift_x AS mass_shift_x, \
-            c.mass_shift_y AS mass_shift_y, \
-            c.mass_shift_z AS mass_shift_z, \
-            c.grain_moment AS grain_moment \
-        FROM 
-            hold_part c
-        JOIN
-            hold_compartment AS h ON c.group_id = h.group_id AND c.ship_id = h.ship_id AND c.group_index >= h.group_start_index AND c.group_index <= h.group_end_index
-        JOIN 
-            cargo_category AS cc ON h.category_id = cc.id
-        JOIN 
-            cargo_general_category AS cgc ON cc.general_category_id = cgc.id
-        WHERE 
-            c.ship_id={ship_id} AND c.mass>0;"
-            ))
-            .map_err(|e| {
-                Error::FromString(format!("api_client get_data hold_compartments error: {e}"))
-            })?,
-    )
-    .map_err(|e| Error::FromString(format!("api_client get_data hold_compartments error: {e}")))?;
-    let bulkhead = BulkheadArray::parse(
-        &api_client
-            .fetch(&format!(
-                "SELECT 
-                h.name_engl AS name, \
-                h.mass AS mass, \
-                cgc.key::TEXT AS general_category, \
-                p.bound_x1 AS bound_x1, \
-                p.bound_x2 AS bound_x2, \
-                p.mass_shift_x AS mass_shift_x, \
-                p.mass_shift_y AS mass_shift_y, \
-                p.mass_shift_z AS mass_shift_z \
-            FROM 
-                bulkhead AS h
-            JOIN 
-                cargo_category AS cc ON h.category_id = cc.id
-            JOIN 
-                cargo_general_category AS cgc ON cc.general_category_id = cgc.id
-            JOIN 
-                bulkhead_place AS p ON h.id = p.bulkhead_id
-            WHERE 
-                h.ship_id={ship_id};"
-            ))
-            .map_err(|e| Error::FromString(format!("api_client get_data bulkhead error: {e}")))?,
-    )
-    .map_err(|e| Error::FromString(format!("api_client get_data bulkhead error: {e}")))?;
-
-
-
-        let hold_compartment = HoldCompartmentArray::parse(&self
-                        .api_client
-                        .fetch(&format!(
-                        "SELECT 
-                            c.name_engl AS name, \
-                            code AS space_id, \
-                            group_space_id, \
-                            group_index
-                        FROM 
-                            hold_compartment
-                        WHERE 
-                            ship_id={} AND project_id IS NOT DISTINCT FROM {};",
-                            initial_ctx.ship_id, initial_ctx.project_id
-                        )).map_err(|err| error.pass_with("hold_part", err))?
-                    ).map_err(|err| error.pass_with("hold_part", err))?;
-ccc
-                    /* TODO:
-                        /// Индекс группы (трюма) 
-    pub group_id: usize,
-    /// Индекс помещения в группе
-    pub group_start_index: usize,
-    /// ID ограничивающего помещения слева
-    pub left_bulkhead_space_id: Option<String>,
-    /// ID ограничивающего помещения справа    
-    pub right_bulkhead_space_id: Option<String>,
-    /// ID груза
-    pub cargo_id: usize,
-    /// Имя груза
-    pub cargo_name: String,
-    /// ID помещения
-    pub space_id: String,
-    /// Имя помещения
-    pub space_name: String,
-    /// ID assigned
-    pub assignment_id: usize,
-    /// Тип назначения груза
-    pub assigment_type: AssignmentType,
-    /// Тип сыпучего груза
-    pub cargo_type: BulkCargoType,
-    /// масса, т
-    pub mass: f64,
-    /// Признак смещаемости груза. При его размещении применяются правила перевозки зерна 
-    pub shiftable: bool,
-    /// Средний удельный погрузочный объем, м^3/т
-    pub stowage_factor: Option<f64>,
-    /// Обьем, м^3
-    pub volume: Option<f64>,
-    /// Центр отсека, размещающего груз, м
-    pub mass_shift_x: Option<f64>,
-    pub mass_shift_y: Option<f64>,
-    pub mass_shift_z: Option<f64>,    
-                    */
-        let mut bulkhead = BulkheadDataArray::parse(&self
-                .api_client
-                .fetch(&format!(
-                "SELECT 
-                    b.name_engl AS name, \
-                    b.mass AS mass, \
-                    p.code AS space_id, \
-                    p.bound_x1 AS bound_x1, \
-                    p.bound_x2 AS bound_x2, \
-                    p.mass_shift_x AS mass_shift_x, \
-                    p.mass_shift_y AS mass_shift_y, \
-                    p.mass_shift_z AS mass_shift_z                   
-                FROM 
-                    bulkhead AS b
-                INNER JOIN
-                    bulkhead_place AS p ON b.id = p.bulkhead_id
-                WHERE 
-                    ship_id={} AND project_id IS NOT DISTINCT FROM {};",
                     initial_ctx.ship_id, initial_ctx.project_id
                 ))
-                .map_err(|err| error.pass_with("bulkhead", err))?
-            ).map_err(|err| error.pass_with("bulkhead", err))?.data();
-        unit_data.append(&mut bulkhead);
+                .map_err(|err| error.pass_with("hold_part", err))?,
+        ).map_err(|err| error.pass_with("hold_part", err))?;
+        let hold_compartment = HoldCompartmentArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT DISTINCT 
+                            code, \
+                            group_id, \
+                            group_start_index, \
+                            group_end_index
+                        FROM 
+                            hold_compartment_view
+                        WHERE 
+                            ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("hold_part", err))?,
+        )
+        .map_err(|err| error.pass_with("hold_part", err))?;
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
         initial_ctx.navigation_area = Some(navigation_area);
@@ -568,6 +421,8 @@ ccc
         initial_ctx.liquid = Some(liquid.data());
         initial_ctx.unit = Some(unit_data);
         initial_ctx.gaseous = Some(gaseous.data());
+        initial_ctx.hold_part = Some(hold_part.data());
+        initial_ctx.hold_compartment = Some(hold_compartment.data());
         initial_ctx.multipler_x1 = Some(multipler_x1.data());
         initial_ctx.multipler_x2 = Some(multipler_x2.data());
         initial_ctx.multipler_s = Some(multipler_s);

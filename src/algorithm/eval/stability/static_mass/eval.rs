@@ -92,7 +92,7 @@ impl Eval<(), EvalResult> for StaticMassStabEval {
                                 log::error!(
                                     "{}",
                                     error.pass_with(
-                                        format!("{} {} mass_shift", v.space_id, v.cargo_name),
+                                        format!("{} {} mass_shift", v.code, v.cargo_name),
                                         err
                                     )
                                 );

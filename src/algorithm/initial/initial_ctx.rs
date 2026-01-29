@@ -27,11 +27,18 @@ pub struct InitialCtx {
     pub icing: Option<IcingArray>,
     /// Постоянная нагрузка на судно
     pub load_constant: Option<LoadConstantArray>,
-    /// Переменная нагрузка на судно
+    /// Переменная нагрузка на судно - сыпучие грузы
     pub bulk: Option<HashMap<usize, LoadBulkData>>,
+    /// Переменная нагрузка на судно - жидкие грузы
     pub liquid: Option<HashMap<usize, LoadLiquidData>>,
+    /// Переменная нагрузка на судно - штучные грузы
     pub unit: Option<Vec<LoadUnitData>>,
+    /// Переменная нагрузка на судно - газообразные грузы
     pub gaseous: Option<HashMap<usize, LoadGaseousData>>,
+    /// Части трюма
+    pub hold_part: Option<HashMap<String, HoldPartData>>,
+    /// Композитные помещения из частей трюма
+    pub hold_compartment: Option<HashMap<String, HoldCompartmentData>>,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
     pub multipler_x1: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2

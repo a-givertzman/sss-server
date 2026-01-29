@@ -92,7 +92,7 @@ impl LiquidResult {
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
     /// ID помещения
-    pub space_id: String,  // TODO - убрать после переноса расчета момента в модель
+    pub code: String,  // TODO - убрать после переноса расчета момента в модель
     /// ID assigned
     pub assignment_id: usize,
     /// Тип назначения груза
@@ -112,7 +112,7 @@ pub struct BulkResult {
 impl BulkResult {
     ///
     pub fn new(
-        space_id: String,
+        code: String,
         assignment_id: usize,
         assigment_type: AssignmentType, 
         mass: f64,
@@ -121,7 +121,7 @@ impl BulkResult {
         level: f64,
     ) -> Self {
         Self {
-            space_id,
+            code,
             assignment_id,
             assigment_type, 
             mass,

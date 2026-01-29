@@ -40,7 +40,7 @@ pub fn gaseous() -> Vec<LoadGaseousData> {
     .map(|(i, v)| LoadGaseousData {
         cargo_id: i,
         cargo_name: v.0.to_owned(),
-        space_id: i.to_string(),
+        code: i.to_string(),
         space_name: v.0.to_owned(),
         assignment_id: i,
         assigment_type: v.2,
