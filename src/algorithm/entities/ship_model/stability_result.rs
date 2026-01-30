@@ -49,8 +49,8 @@ pub struct BalanceStabilityResult {
     pub bulk: Vec<BulkResult>,
     /// Данные жидких грузов
     pub liquid: Vec<LiquidResult>,
-
-    pub hold_compartment: Vec<LiquidResult>,
+    /// Данные композитных отсеков трюма, ограниченных зерновыми перегородками
+    pub hold_compartment: Vec<HoldCompartmentResult>,
 }
 ///
 /// TODO: Type doc here

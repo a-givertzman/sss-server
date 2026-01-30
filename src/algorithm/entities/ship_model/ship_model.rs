@@ -318,7 +318,7 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "compute_balance");
         let mut result = self
             .model_cached
-            .balance_stability(query, 0.000001)
+            .balance_stability(&query, 0.000001)
             .map_err(|err| error.pass(err))?;
         let grain_moment = self
             .grain_moment
@@ -337,7 +337,7 @@ impl ShipModel {
             if let Some(hold_part_codes) = query.hold_compartment.get(&v.code) {
                 v.moment = hold_part_codes.iter()
                 .flat_map(|code| grain_moment.get(code))
-                .flat_map(|curve| curve.value(v.level).unwrap_or(0.))
+                .map(|curve| curve.value(v.level).unwrap_or(0.))
                 .sum();
                 return;
             } 

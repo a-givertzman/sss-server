@@ -26,10 +26,7 @@ use crate::algorithm::entities::{
 use crate::{
     algorithm::{
         Calculus,
-        entities::{
-            model_cached::{DisplacementShape, LocalCache, Shape},
-            ship_model::ship_model::ShipModel,
-        },
+        entities::ship_model::ship_model::ShipModel,
     },
     infrostructure::{DevStream, SelectCalculus, SelectDevDoc, SelectDevInfo},
     server::{
@@ -198,7 +195,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
     dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
     dso_angles.dedup();
-    let mut model_cached = model_cached::ModelCached::new(
+    let model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
             model_dir,
@@ -266,11 +263,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
 */
-    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
-    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
-    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
-    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
-    dso_angles.dedup();
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,

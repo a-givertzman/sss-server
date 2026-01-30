@@ -8,23 +8,29 @@ use serde::Deserialize;
 
 pub struct HoldCompartmentData {
     /// ID помещения из документации
-    pub code: String,        
-    /// Индекс группы (трюма) 
+    pub code: String,
+    /// Индекс группы (трюма)
     pub group_id: usize,
     /// Индекс первого помещения слева
     pub group_start_index: usize,
     /// Индекс последнего помещения справа    
-    pub group_end_index: usize
+    pub group_end_index: usize,
 }
 /// Массив данных отделений трюма
 pub type HoldCompartmentArray = DataArray<HoldCompartmentData>;
 //
 impl HoldCompartmentArray {
     pub fn data(self, hold_part: HoldPartDataArray) -> HashMap<String, Vec<String>> {
-        self.data.into_iter().map(|v| {
-            let hold_part_codes = hold_part.codes(v.group_id);
-            let hold_part_codes = (v.group_start_index..=v.group_start_index).map(|code| hold_part_codes.get(&code).clone()).collect();
-            (v.code, hold_part_codes)
-        }).collect()
+        self.data
+            .into_iter()
+            .map(|v| {
+                let hold_part_codes = hold_part.codes(v.group_id);
+                let hold_part_codes = (v.group_start_index..=v.group_start_index)
+                    .filter_map(|code| hold_part_codes.get(&code))
+                    .map(|v| c.to_owned())
+                    .collect();
+                (v.code, hold_part_codes)
+            })
+            .collect()
     }
 }

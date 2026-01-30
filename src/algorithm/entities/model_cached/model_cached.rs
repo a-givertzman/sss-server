@@ -9,7 +9,9 @@ use crate::{
                 DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
             },
             ship_model::{
-                stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
+                stability_result::{
+                    BalanceStabilityResult, BulkResult, HoldCompartmentResult, LiquidResult,
+                },
                 *,
             },
         },
@@ -44,8 +46,6 @@ pub(crate) struct FloatingPositionQuery {
     pub bulk: Vec<BulkData>,
     /// жидкий груз
     pub liquid: Vec<LiquidData>,
-    /// Положение зерновых перегородок, координата по х
-    pub grain_bulkhead: Vec<f64>, // TODO
     /// номера поврежденных помещений
     pub damaged_compartment: Vec<String>,
     /// точность расчета
@@ -150,6 +150,8 @@ pub struct ModelCached {
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
+    /// Композитные отсеки трюмов, коды
+    hold_compartments: Option<IndexMap<String, Arc<RwLock<HoldCompartmentCache>>>>,
     /// - cache for damaged compartments, [index of compartments, [heel, trim, draught, volume, x, y, z ]]
     damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
     /// - cache for windage area
@@ -310,6 +312,7 @@ impl ModelCached {
                 Arc::clone(&thread_pool),
             ),
             compartments,
+            hold_compartments: None,
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
@@ -566,7 +569,8 @@ impl ModelCached {
     /// Расчет параметров поверхности для минимальной осадки
     pub fn windage_area_min(&self) -> Result<(f64, f64, f64), Error> {
         self.windage_area.windage_area_min().map_err(|err| {
-            Error::new(&self.dbg, "windage_area_min").pass_with("self.windage_area.windage_area_min", err)
+            Error::new(&self.dbg, "windage_area_min")
+                .pass_with("self.windage_area.windage_area_min", err)
         })
     }
     /// Расчет равновесного положения для прочности
@@ -602,22 +606,16 @@ impl ModelCached {
             let error_ = error.err(format!("compartment_{code} gaseous work"));
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
-            let thread_name = format!(
-                "{}.balance_strength gaseous code:{}",
-                &self.dbg, cargo.code
-            );
+            let thread_name = format!("{}.balance_strength gaseous code:{}", &self.dbg, cargo.code);
             log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
                         .get(&code)
-                        .ok_or(
-                            error_.err(format!("compartments_bounded.get no code:{code}")),
-                        )?
+                        .ok_or(error_.err(format!("compartments_bounded.get no code:{code}")))?
                         .read();
                     let volume_bounded = compartment_bounded.get_max_volume().map_err(|err| {
-                        error_
-                            .pass_with(format!("volume_bounded get_max, code:{code}"), err)
+                        error_.pass_with(format!("volume_bounded get_max, code:{code}"), err)
                     })?;
                     let volume: f64 = volume_bounded.iter().sum();
                     let density = if volume > 0. { cargo.mass / volume } else { 0. };
@@ -647,27 +645,20 @@ impl ModelCached {
             let volume = cargo.volume;
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
-            let thread_name = format!(
-                "{}.balance_strength bulk code:{}",
-                &self.dbg, cargo.code
-            );
+            let thread_name = format!("{}.balance_strength bulk code:{}", &self.dbg, cargo.code);
             log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
                         .get(&code)
-                        .ok_or(
-                            error_.err(format!("compartments_bounded.get no code:{code}")),
-                        )?
+                        .ok_or(error_.err(format!("compartments_bounded.get no code:{code}")))?
                         .read();
                     let volume_bounded =
                         compartment_bounded
                             .get(volume, 0., epsilon)
                             .map_err(|err| {
-                                error_.pass_with(
-                                    format!("compartment_bounded.get, code:{code}"),
-                                    err,
-                                )
+                                error_
+                                    .pass_with(format!("compartment_bounded.get, code:{code}"), err)
                             })?;
                     //    println!("model_cached balance_strength bulk code:{code} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
                     results_.push(balance::bulk_result::BulkResult::new(
@@ -735,18 +726,14 @@ impl ModelCached {
                     let density = cargo.mass / cargo.volume;
                     let compartment_bounded = compartments_bounded
                         .get(&code)
-                        .ok_or(
-                            error_.err(format!("compartments_bounded.get no code:{code}")),
-                        )?
+                        .ok_or(error_.err(format!("compartments_bounded.get no code:{code}")))?
                         .clone();
                     let trim = trim;
                     let volume = cargo.volume;
                     let epsilon = volume * epsilon_mass / mass_sum;
                     let results_ = liquid_results.clone();
-                    let thread_name = format!(
-                        "{}.balance_strength liquid code:{}",
-                        &self.dbg, cargo.code
-                    );
+                    let thread_name =
+                        format!("{}.balance_strength liquid code:{}", &self.dbg, cargo.code);
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
@@ -875,7 +862,7 @@ impl ModelCached {
     /// Расчет равновесного положения для остойчивости
     pub fn balance_stability(
         &self,
-        query: BalanceStabilityQuery,
+        query: &BalanceStabilityQuery,
         epsilon: f64,
     ) -> Result<BalanceStabilityResult, Error> {
         //   let time = std::time::Instant::now();
@@ -900,7 +887,7 @@ impl ModelCached {
                 moment_const: query.moment_const,
                 bulk: query.bulk.clone(),
                 liquid: query.liquid.clone(),
-                grain_bulkhead: query.grain_bulkhead.clone(), // TODO
+                hold_compartment: query.hold_compartment.clone(),
                 damaged_compartment: Vec::new(),
                 epsilon,
             })
@@ -921,14 +908,14 @@ impl ModelCached {
         let liquid = self
             .process_liquid(&query.liquid, heel, trim, epsilon)
             .map_err(|err| error.pass(err))?;
-        let bulk = self
-            .process_bulk(&query.bulk, epsilon)
+        let (bulk, hold_compartment) = self
+            .process_bulk(&query.bulk, &query.hold_compartment, epsilon)
             .map_err(|err| error.pass(err))?;
         let bow_area = self
             .windage_area
             .bow_area(trim_degree, draught_mid)
             .map_err(|err| error.pass(err))?;
-    /*    log::debug!(
+        /*    log::debug!(
             "ModelCached balance_stability bow_area:{bow_area}\nliquid:\n{}\nbulk:\n{}\n",
             liquid.iter().fold(String::new(), |s, v| s + &format!(
                 "assignment_id:{} trans_moment_of_inertia:{:.3}\n",
@@ -937,7 +924,7 @@ impl ModelCached {
             bulk.iter().fold(String::new(), |s, v| s + &format!(
                 "{} {}\n",
                 v.assignment_id, v.mass_shift.print()
-            )),            
+            )),
         );*/
         Ok(BalanceStabilityResult {
             heel,
@@ -951,14 +938,15 @@ impl ModelCached {
             displacement_center,
             bulk,
             liquid,
-        //    area_wl,
-        //    area_wl_center,
+            //    area_wl,
+            //    area_wl_center,
             length_wl,
             breadth_wl,
             rad_long,
             rad_trans,
             mass_center,
             bow_area,
+            hold_compartment,
         })
     }
     /// Расчет равновесного положения
@@ -977,7 +965,7 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk_floating(&query.bulk, query.epsilon)
+            .moment_bulk_floating(&query.bulk, &query.hold_compartment, query.epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         //   dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
@@ -1081,8 +1069,8 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
-         //   println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
-         //        epsilon, heel, trim, draught, new_d_v, new_d_m);
+            //   println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
+            //        epsilon, heel, trim, draught, new_d_v, new_d_m);
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1187,7 +1175,7 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk_floating(&query.bulk, epsilon)
+            .moment_bulk_floating(&query.bulk, &query.hold_compartment, epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
@@ -1326,7 +1314,7 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk_floating(&query.bulk, epsilon)
+            .moment_bulk_floating(&query.bulk, &query.hold_compartment, epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
@@ -1344,8 +1332,8 @@ impl ModelCached {
             self // момент инерции площади ватерлинии жидкости
                 .moment_liquid_dso_surface_moment(&query.liquid, epsilon)
                 .map_err(|err| error.pass_with("self.moment_liquid", err))?;
-       // println!("model_cached dso_surface_moment mass_bulk:{:.3} moment_bulk:{} mass_liquid:{:.3} mass_sum:{:.3} moment_liquid_surface:{:.3}",
-       //     mass_bulk, moment_bulk.to_pos(mass_bulk).print(), mass_liquid, mass_sum, moment_liquid_surface);
+        // println!("model_cached dso_surface_moment mass_bulk:{:.3} moment_bulk:{} mass_liquid:{:.3} mass_sum:{:.3} moment_liquid_surface:{:.3}",
+        //     mass_bulk, moment_bulk.to_pos(mass_bulk).print(), mass_liquid, mass_sum, moment_liquid_surface);
         // println!("heel:yg:yc:ctg_phy:zg:zc:sqrt_v:res:");
         //  println!("model_cached dso heel trim moment_liquid delta_moment_liquid delta_l lv l");
         for &heel in angles {
@@ -1376,8 +1364,8 @@ impl ModelCached {
                         &query.damaged_compartment,
                     )
                     .map_err(|err| error.pass(err))?;
-         //       println!("sdffsz model_cached dso heel:{:.3} i:{_i} shift_liquid:{}, trim:{:.3} step_trim:{:.3} epsilon:{:.3} trim_epsilon:{:.3} d_v:{:.3} new_d_v:{:.3} ",
-          //          heel, moment_liquid_floating.to_pos(mass_liquid).print(), trim, step_trim, epsilon, trim_epsilon, d_v.unwrap_or(0.), new_d_v);
+                //       println!("sdffsz model_cached dso heel:{:.3} i:{_i} shift_liquid:{}, trim:{:.3} step_trim:{:.3} epsilon:{:.3} trim_epsilon:{:.3} d_v:{:.3} new_d_v:{:.3} ",
+                //          heel, moment_liquid_floating.to_pos(mass_liquid).print(), trim, step_trim, epsilon, trim_epsilon, d_v.unwrap_or(0.), new_d_v);
                 if epsilon >= trim_epsilon {
                     if epsilon >= new_d_v.abs() {
                         let l = {
@@ -1391,7 +1379,7 @@ impl ModelCached {
                             let ld = tcg * cos_theta + vcg * sin_theta;
                             let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
                             let l = lv - ld - delta_l;
-                         //   println!("model_cached "heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
+                            //   println!("model_cached "heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
                             //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
                             //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
                             l
@@ -1538,15 +1526,20 @@ impl ModelCached {
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
-       // println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
+        // println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
         //        heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
-     //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
-      //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
+        //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
+        //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
     }
     // Считаем сыпучие грузы.
     // На них крен и дифферент не влияет.
-    fn process_bulk(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Vec<BulkResult>, Error> {
+    fn process_bulk(
+        &self,
+        bulks: &Vec<BulkData>,
+        hold_compartment: &HashMap<String, Vec<String>>,
+        epsilon: f64,
+    ) -> Result<(Vec<BulkResult>, Vec<HoldCompartmentResult>), Error> {
         let error = Error::new(&self.dbg, "moment_bulk");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
@@ -1556,11 +1549,22 @@ impl ModelCached {
             assert!(cargo.mass > 0.);
             let code = cargo.code.clone();
             let error_ = error.err(format!("compartment_{code} bulk work"));
-            let compartment = self
+
+            let compartment = if let Some(code_array) = hold_compartment.get(&code) {
+                for code in code_array {
+                    let compartment = self
+                        .compartments
+                        .get(&code)
+                        .ok_or(error.err(format!("no compartment:{code}")))?;
+                    compartment.read().c
+                }
+            } else {
+                self
                 .compartments
                 .get(&code)
                 .ok_or(error.err(format!("no compartment:{code}")))?
-                .clone();
+                .clone()
+            };
             let cargo = cargo.clone();
             let epsilon = epsilon;
             let results_ = task_results.clone();
@@ -1606,7 +1610,8 @@ impl ModelCached {
                     .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
             ));
         }
-        let mut result = Vec::new();
+        let mut bulk_result = Vec::new();
+        let mut hold_compartment_result = Vec::new();
         while !task_results.is_empty() {
             if let Some(data) = task_results.pop() {
                 result.push(data);
@@ -1615,13 +1620,18 @@ impl ModelCached {
         Ok(result)
     }
     /// Считаем момент сыпучих грузов
-    fn moment_bulk_floating(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Moment, Error> {
+    fn moment_bulk_floating(
+        &self,
+        bulks: &Vec<BulkData>,
+        hold_compartment: &HashMap<String, Vec<String>>,
+        epsilon: f64,
+    ) -> Result<Moment, Error> {
         let error = Error::new(&self.dbg, "moment_bulk_floating");
-        let values = self
-            .process_bulk(bulks, epsilon)
+        let (bulks, _) = self
+            .process_bulk(bulks, hold_compartment, epsilon)
             .map_err(|err| error.pass_with("process_bulk", err))?;
         let (_sum_mass, sum_moment): (f64, Moment) =
-            values
+            bulks
                 .iter()
                 .fold((0., Moment::zero()), |(mass_sum, moment_sum), v| {
                     (
@@ -1683,14 +1693,11 @@ impl ModelCached {
                             ));
                             Ok(())
                         })
-                        .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", cargo.code), err)
-                        });
+                        .map_err(|err| error.pass_with(format!("spawn for {}", cargo.code), err));
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
-                            let error =
-                                error.pass_with(format!("handle for {}", cargo.code), err);
+                            let error = error.pass_with(format!("handle for {}", cargo.code), err);
                             log::error!("{}", error);
                             errors.push(error);
                         }
@@ -1722,7 +1729,7 @@ impl ModelCached {
         let mut values = Vec::new();
         while !task_results.is_empty() {
             if let Some((_code, result)) = task_results.pop() {
-        //        if heel == -20. && trim < 3. { println!("heel:{heel} trim:{trim} {} {} {};", _code, result.mass, result.mass_shift.print());  }
+                //        if heel == -20. && trim < 3. { println!("heel:{heel} trim:{trim} {} {} {};", _code, result.mass, result.mass_shift.print());  }
                 values.push(result);
             }
         }
@@ -1782,10 +1789,8 @@ impl ModelCached {
                     let code = cargo.code.clone();
                     let cargo = cargo.clone();
                     let compartment = compartment.clone();
-                    let thread_name = format!(
-                        "{}.moment_liquid_dso_abs_moment code:{}",
-                        &self.dbg, code
-                    );
+                    let thread_name =
+                        format!("{}.moment_liquid_dso_abs_moment code:{}", &self.dbg, code);
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
@@ -1805,14 +1810,11 @@ impl ModelCached {
                             task_results.push((code, cargo.density, res));
                             Ok(())
                         })
-                        .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", cargo.code), err)
-                        });
+                        .map_err(|err| error.pass_with(format!("spawn for {}", cargo.code), err));
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
-                            let error =
-                                error.pass_with(format!("handle for {}", cargo.code), err);
+                            let error = error.pass_with(format!("handle for {}", cargo.code), err);
                             log::error!("{}", error);
                             println!("{}", error);
                             errors.push(error);
@@ -1908,14 +1910,11 @@ impl ModelCached {
                             task_results.push((code, cargo.density, res));
                             Ok(())
                         })
-                        .map_err(|err| {
-                            error.pass_with(format!("spawn for {}", cargo.code), err)
-                        });
+                        .map_err(|err| error.pass_with(format!("spawn for {}", cargo.code), err));
                     match handle {
                         Ok(task) => tasks.push(task),
                         Err(err) => {
-                            let error =
-                                error.pass_with(format!("handle for {}", cargo.code), err);
+                            let error = error.pass_with(format!("handle for {}", cargo.code), err);
                             log::error!("{}", error);
                             println!("{}", error);
                             errors.push(error);
@@ -1981,15 +1980,12 @@ impl ModelCached {
                     let code = damaged_compartment.clone();
                     let compartment = compartment.clone();
                     let _error = error.clone();
-                    let thread_name = format!(
-                        "{}.calc_damaged_compartments code:{}",
-                        &self.dbg, code
-                    );
+                    let thread_name =
+                        format!("{}.calc_damaged_compartments code:{}", &self.dbg, code);
                     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
-                            task_results
-                                .push((code, compartment.read().get(heel, trim, draught)));
+                            task_results.push((code, compartment.read().get(heel, trim, draught)));
                             Ok(())
                         })
                         .map_err(|err| {

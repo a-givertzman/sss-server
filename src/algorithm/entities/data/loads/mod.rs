@@ -6,7 +6,6 @@ mod gaseous;
 mod bulk;
 mod unit;
 mod container;
-mod bulkhead;
 mod hold_part;
 mod hold_compartment;
 
@@ -16,7 +15,6 @@ pub use gaseous::*;
 pub use bulk::*;
 pub use unit::*;
 pub use container::*;
-pub use bulkhead::*;
 pub use hold_part::*;
 pub use hold_compartment::*;
 

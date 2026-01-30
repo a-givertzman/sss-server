@@ -16,7 +16,7 @@ use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel},
             wind::eval::WindEval, 
             windage::eval::WindageEval
         }, strength::{
-            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, bending_moment::eval::BendingMomentEval, dynamic_mass::eval::DynamicMassEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, shear_force::eval::ShearForceEval, static_mass::eval::StaticMassStrEval, total_force::eval::TotalForceEval
+            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval, total_force::eval::TotalForceEval
         }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     }}, 
     conf::Conf, 
