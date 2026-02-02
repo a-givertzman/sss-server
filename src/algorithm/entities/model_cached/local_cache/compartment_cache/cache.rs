@@ -281,7 +281,6 @@ impl CompartmentCache {
             "{} get start, heel:{heel} trim:{trim} volume:{volume}",
             self.dbg
         );*/
-        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
         let query = [heel, trim, level];
         let result = LocalCache::get(self, &query)
