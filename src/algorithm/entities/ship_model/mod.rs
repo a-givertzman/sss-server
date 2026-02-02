@@ -27,8 +27,6 @@ pub struct BalanceStrengthQuery {
     pub liquid: Vec<LiquidData>,
     /// газообразный груз
     pub gaseous: Vec<GaseousData>,
-    /// Композитные отсеки трюмов, коды 
-    pub hold_compartment: HashMap<String, Vec<String>>,
     //    /// номера поврежденных помещений, TODO - только для аварийного расчета
     //    pub damaged_compartment: Vec<String>,
     /// точность расчета
@@ -53,8 +51,6 @@ pub struct BalanceStabilityQuery {
     pub bulk: Vec<BulkData>,
     /// жидкий груз
     pub liquid: Vec<LiquidData>,
-    /// Композитные отсеки трюмов, коды 
-    pub hold_compartment: HashMap<String, Vec<String>>,
     /// Коды поврежденных помещений, TODO - только для аварийного расчета
     pub damaged_compartment: Vec<String>,
 }

@@ -28,6 +28,7 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
+use serde_json::value::Index;
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 /// Структура для ввода данных расчета равновесного положения корпуса судна.
@@ -151,7 +152,7 @@ pub struct ModelCached {
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
     /// Композитные отсеки трюмов, коды
-    hold_compartments: Option<IndexMap<String, Arc<RwLock<HoldCompartmentCache>>>>,
+    hold_compartments: IndexMap<String, Arc<RwLock<HoldCompartmentCache>>>,
     /// - cache for damaged compartments, [index of compartments, [heel, trim, draught, volume, x, y, z ]]
     damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
     /// - cache for windage area
@@ -312,7 +313,7 @@ impl ModelCached {
                 Arc::clone(&thread_pool),
             ),
             compartments,
-            hold_compartments: None,
+            hold_compartments: IndexMap::new(),
             damaged_compartments,
             windage_area,
             displacement_bounded: HashMap::new(),
@@ -391,6 +392,86 @@ impl ModelCached {
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
         let error = Error::new(self.dbg.clone(), "init");
+        self.displacement
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+        for (name, compartment) in self.compartments.iter_mut() {
+            let mut guard = compartment.write();
+            guard
+                .init()
+                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
+            let volume_max = compartments_volume_max
+                .get(name)
+                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            guard
+                .calc_coeff(*volume_max)
+                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
+        }
+        /*     TODO - пока не используются, потом будет отдельный расчет
+        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+            damaged_compartment
+                .write()
+                .init()
+                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
+        }*/
+        self.windage_area
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+        let bounds_qnt = bounds.len_qnt();
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let displacement_bound = DisplacementBoundCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir.clone().join("disp_bounded"),
+            self.bounds_level_step,
+            self.model_x,
+            bounds.clone(),
+            Arc::clone(&self.thread_pool),
+        );
+        displacement_bound
+            .init()
+            .map_err(|err| error.pass_with(format!("displacement_bound.init"), err))?;
+        self.displacement_bounded
+            .insert(bounds_qnt, Arc::new(RwLock::new(displacement_bound)));
+        let mut cache_map = IndexMap::new();
+        for (compartment_id, compartment) in &self.compartments {
+            let compartment_bounded = compartment
+                .read()
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
+            compartment_bounded
+                .init()
+                .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
+            cache_map.insert(
+                compartment_id.clone(),
+                Arc::new(RwLock::new(compartment_bounded)),
+            );
+        }
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
+        Ok(())
+    }
+    /// Пересчет композитных отсеков трюма. Каждый расчет список таких отсеков обновляется
+    /// и пересчитывается. К имеющимся отсекам добавляются новые. Старые не удаляются.
+    pub fn update_hold_compartments(
+        &mut self,
+        new_hold_compartments: &Vec<(String, Vec<String>)>,
+    ) -> Result<(), Error> {
+        //    dbg!(self.dbg.clone(), "update_hold_compartments");
+        let error = Error::new(self.dbg.clone(), "update_hold_compartments");
+
+        for (new_code, codes_array) in new_hold_compartments {
+            if self.hold_compartments.contains_key(new_code) {
+                continue;
+            }
+            let compartments = codes_array.into_iter().filter_map(|code| self.compartments.get(code)).collect();
+            let new_hold_compartment = HoldCompartmentCache::new(&self.dbg, );
+            self.hold_compartments.insert(new_code.to_owned(), new_hold_compartment);
+        }
+
         self.displacement
             .init()
             .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
@@ -887,7 +968,6 @@ impl ModelCached {
                 moment_const: query.moment_const,
                 bulk: query.bulk.clone(),
                 liquid: query.liquid.clone(),
-                hold_compartment: query.hold_compartment.clone(),
                 damaged_compartment: Vec::new(),
                 epsilon,
             })
@@ -909,7 +989,7 @@ impl ModelCached {
             .process_liquid(&query.liquid, heel, trim, epsilon)
             .map_err(|err| error.pass(err))?;
         let (bulk, hold_compartment) = self
-            .process_bulk(&query.bulk, &query.hold_compartment, epsilon)
+            .process_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass(err))?;
         let bow_area = self
             .windage_area
@@ -965,7 +1045,7 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk_floating(&query.bulk, &query.hold_compartment, query.epsilon)
+            .moment_bulk_floating(&query.bulk, query.epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         //   dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
@@ -1175,7 +1255,7 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk_floating(&query.bulk, &query.hold_compartment, epsilon)
+            .moment_bulk_floating(&query.bulk, epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
@@ -1314,7 +1394,7 @@ impl ModelCached {
         // Считаем сыпучие грузы.
         // На них крен и дифферент не влияет.
         let moment_bulk = self
-            .moment_bulk_floating(&query.bulk, &query.hold_compartment, epsilon)
+            .moment_bulk_floating(&query.bulk, epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
@@ -1537,7 +1617,6 @@ impl ModelCached {
     fn process_bulk(
         &self,
         bulks: &Vec<BulkData>,
-        hold_compartment: &HashMap<String, Vec<String>>,
         epsilon: f64,
     ) -> Result<(Vec<BulkResult>, Vec<HoldCompartmentResult>), Error> {
         let error = Error::new(&self.dbg, "moment_bulk");
@@ -1549,50 +1628,65 @@ impl ModelCached {
             assert!(cargo.mass > 0.);
             let code = cargo.code.clone();
             let error_ = error.err(format!("compartment_{code} bulk work"));
-
-            let compartment = if let Some(code_array) = hold_compartment.get(&code) {
-                for code in code_array {
-                    let compartment = self
-                        .compartments
-                        .get(&code)
-                        .ok_or(error.err(format!("no compartment:{code}")))?;
-                    compartment.read().c
-                }
-            } else {
-                self
-                .compartments
-                .get(&code)
-                .ok_or(error.err(format!("no compartment:{code}")))?
-                .clone()
-            };
             let cargo = cargo.clone();
             let epsilon = epsilon;
             let results_ = task_results.clone();
             let thread_name = format!("{}.process_bulk code:{code}", &self.dbg);
             log::trace!("Starting thread {thread_name}");
-            let handle = scheduler
-                .spawn_named(thread_name, move || {
-                    let compartment_result = compartment
-                        .read()
-                        .get(0., 0., cargo.volume, epsilon)
-                        .map_err(|err| error_.pass_with("compartment.get", err))?;
-                    results_.push(stability_result::BulkResult::new(
-                        //       cargo_id,
-                        code,
-                        cargo.assignment_id,
-                        cargo.assigment_type,
-                        cargo.mass,
-                        compartment_result.volume_center,
-                        cargo.shiftable,
-                        compartment_result.level,
-                    ));
-                    Ok(())
-                })
-                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
-            match handle {
-                Ok(task) => tasks.push(task),
-                Err(err) => errors.push(err),
-            };
+            if let Some(hold_compartment) = self.hold_compartments.get(&code) {
+                let hold_compartment = Arc::clone(hold_compartment);
+                let handle = scheduler
+                    .spawn_named(thread_name, move || {
+                        let compartment_result = hold_compartment
+                            .read()
+                            .get_level(0., 0., cargo.volume, epsilon)
+                            .map_err(|err| error_.pass_with("hold_compartment.get", err))?;
+                        results_.push(stability_result::BulkResult::new(
+                            //       cargo_id,
+                            code,
+                            cargo.assignment_id,
+                            cargo.assigment_type,
+                            cargo.mass,
+                            compartment_result.volume_center,
+                            cargo.shiftable,
+                            compartment_result.level,
+                        ));
+                        Ok(())
+                    })
+                    .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+                match handle {
+                    Ok(task) => tasks.push(task),
+                    Err(err) => errors.push(err),
+                };
+            } else {
+                let compartment = Arc::clone(self
+                .compartments
+                .get(&code)
+                .ok_or(error.err(format!("no compartment:{code}")))?);
+                let handle = scheduler
+                    .spawn_named(thread_name, move || {
+                        let compartment_result = compartment
+                            .read()
+                            .get_level(0., 0., cargo.volume, epsilon)
+                            .map_err(|err| error_.pass_with("compartment.get", err))?;
+                        results_.push(stability_result::BulkResult::new(
+                            //       cargo_id,
+                            code,
+                            cargo.assignment_id,
+                            cargo.assigment_type,
+                            cargo.mass,
+                            compartment_result.volume_center,
+                            cargo.shiftable,
+                            compartment_result.level,
+                        ));
+                        Ok(())
+                    })
+                    .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+                match handle {
+                    Ok(task) => tasks.push(task),
+                    Err(err) => errors.push(err),
+                };
+            }
         }
         for task in tasks {
             log::trace!("join thread {}", task.name());
@@ -1623,12 +1717,11 @@ impl ModelCached {
     fn moment_bulk_floating(
         &self,
         bulks: &Vec<BulkData>,
-        hold_compartment: &HashMap<String, Vec<String>>,
         epsilon: f64,
     ) -> Result<Moment, Error> {
         let error = Error::new(&self.dbg, "moment_bulk_floating");
         let (bulks, _) = self
-            .process_bulk(bulks, hold_compartment, epsilon)
+            .process_bulk(bulks, epsilon)
             .map_err(|err| error.pass_with("process_bulk", err))?;
         let (_sum_mass, sum_moment): (f64, Moment) =
             bulks

@@ -20,7 +20,7 @@ pub struct HoldCompartmentData {
 pub type HoldCompartmentArray = DataArray<HoldCompartmentData>;
 //
 impl HoldCompartmentArray {
-    pub fn data(self, hold_part: HoldPartDataArray) -> HashMap<String, Vec<String>> {
+    pub fn data(self, hold_part: HoldPartDataArray) -> Vec<(String, Vec<String>)> {
         self.data
             .into_iter()
             .map(|v| {

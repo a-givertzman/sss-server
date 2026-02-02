@@ -51,6 +51,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     .hold_compartment
                     .as_ref()
                     .ok_or(error.err("hold_compartment error: no data!"))?;
+                self.model.write().update_hold_compartments(hold_compartment).map_err(|err| error.pass(err))?;
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -63,7 +64,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    hold_compartment: hold_compartment.clone(),
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                 };
                 let result: BalanceStabilityResult = self

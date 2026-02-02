@@ -1,3 +1,4 @@
+use crate::algorithm::entities::AddVec;
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::ICurve;
 use crate::algorithm::entities::Position;
@@ -37,7 +38,7 @@ pub struct ShipModel {
     horisontal_area_shift: Option<Position>,
     windage_area_stab: Option<f64>,
     windage_area_moment: Option<Moment>,
-    grain_moment: Option<HashMap<String, Curve<f64>>>,
+    grain_moments: Option<HashMap<String, GrainMoment>>,
     opening: Option<Vec<Position>>,
     deck_angle_point: Option<Vec<Position>>,
     model_cached: ModelCached,
@@ -78,7 +79,7 @@ impl ShipModel {
             horisontal_area_shift: None,
             windage_area_stab: None,
             windage_area_moment: None,
-            grain_moment: None,
+            grain_moments: None,
             opening: None,
             deck_angle_point: None,
             model_cached: model_cached,
@@ -91,8 +92,8 @@ impl ShipModel {
     /// ПО идее их должен читать контекст, но модель инициализируется первее
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
-        self.grain_moment = Some(
-            grain_moment(
+        self.grain_moments = Some(
+            grain_moments(
                 self.ship_id,
                 self.project_id.clone(),
                 &self.api_client.clone(),
@@ -202,6 +203,28 @@ impl ShipModel {
         self.windage_area_moment = Some(Moment::new(windage.1, 0., windage.2));
         self.bounds = Some(bounds);
         Ok(())
+    }
+    pub fn update_hold_compartments(
+        &mut self,
+        new_hold_compartments: &Vec<(String, Vec<String>)>,
+    ) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "update_hold_compartments");
+        {
+            let mut grain_moments = self
+                .grain_moments
+                .take()
+                .ok_or(error.err("grain_moments"))?;
+
+            for (code, part_codes) in new_hold_compartments {
+                if grain_moments.contains_key(code) {
+                    continue;
+                }
+                let new_grain_moment = GraintMoment::new(part_codes.iter().filter_map(|code| grain_moment.get(code)).collect());
+                grain_moments.insert(code.to_owned(), new_grain_moment);
+            }
+            self.grain_moments = Some(grain_moments);
+        }
+        self.model_cached.update_hold_compartments(new_hold_compartments)
     }
     ///
     /// TODO: Doc
@@ -320,8 +343,8 @@ impl ShipModel {
             .model_cached
             .balance_stability(&query, 0.000001)
             .map_err(|err| error.pass(err))?;
-        let grain_moment = self
-            .grain_moment
+        let grain_moments = self
+            .grain_moments
             .as_ref()
             .ok_or(error.err("grain_moment"))?;
         // TODO - переписать получение момента из модели
@@ -330,18 +353,18 @@ impl ShipModel {
                 v.moment = 0.;
                 return;
             }
-            if let Some(curve) = grain_moment.get(&v.code) {
+            if let Some(curve) = grain_moments.get(&v.code) {
                 v.moment = curve.value(v.level).unwrap_or(0.);
                 return;
             } 
             if let Some(hold_part_codes) = query.hold_compartment.get(&v.code) {
                 v.moment = hold_part_codes.iter()
-                .flat_map(|code| grain_moment.get(code))
+                .flat_map(|code| grain_moments.get(code))
                 .map(|curve| curve.value(v.level).unwrap_or(0.))
                 .sum();
                 return;
             } 
-            let error = error.err(format!("grain_moment.get(&v.code), {}", v.code));
+            let error = error.err(format!("grain_moments.get(&v.code), {}", v.code));
             log::error!("{}", error);
             v.moment = 0.;
         });
@@ -518,12 +541,12 @@ fn horisontal_area_stab(
 }
 /// Чтение данных объемного кренящего момента для зерна.
 /// Возвращает мапу (ид отсека, кривая момента от уровня заполнения отсека)
-fn grain_moment(
+fn grain_moments(
     ship_id: usize,
     project_id: String,
     api_client: &ApiClient,
-) -> Result<HashMap<String, Curve<f64>>, Error> {
-    let error = Error::new("ShipModel", "grain_moment");
+) -> Result<HashMap<String, GrainMoment>, Error> {
+    let error = Error::new("ShipModel", "grain_moments");
     let data = GrainMomentDataArray::parse(
         &api_client.fetch(&format!(
             "SELECT code, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"

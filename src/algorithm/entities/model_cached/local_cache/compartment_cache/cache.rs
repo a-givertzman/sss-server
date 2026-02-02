@@ -92,7 +92,7 @@ impl CompartmentCache {
         let error = Error::new(self.dbg(), "get_Ixx");
         //    println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
         let current = self
-            .get(0., 0., volume, epsilon)
+            .get_level(0., 0., volume, epsilon)
             .map_err(|err| error.pass(err))?;
         if !is_cargo_tank && use_max_moment {
             //        println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", max_moment.1, max_moment.2, max_moment.3, max_moment.0);
@@ -182,10 +182,10 @@ impl CompartmentCache {
             }
         }
         let current = self
-            .get(current_heel, current_trim, volume, epsilon)
+            .get_level(current_heel, current_trim, volume, epsilon)
             .map_err(|err| error.pass(err))?;
         let balanced = self
-            .get(balanced_heel, balanced_trim, volume, epsilon)
+            .get_level(balanced_heel, balanced_trim, volume, epsilon)
             .map_err(|err| error.pass(err))?;
         let res = current.abs_moment - balanced.abs_moment;
         //      println!("gdfhgfhjyjf volume:{} current:{} balanced:{} delta:{};", volume, current.abs_moment, balanced.abs_moment, res);
@@ -207,7 +207,7 @@ impl CompartmentCache {
         //    println!("compartment_cashe {} get_for_dso start:  heel:{heel} trim:{trim} volume:{volume} epsilon:{epsilon} use_max_moment:{use_max_moment} is_cargo_tank:{is_cargo_tank}", self.dbg);
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let mut result = self
-            .get(heel, trim, volume, epsilon)
+            .get_level(heel, trim, volume, epsilon)
             .map_err(|err| error.pass(err))?;
         if !is_cargo_tank {
             // Для всех цистерн кроме грузовых
@@ -226,7 +226,7 @@ impl CompartmentCache {
             let CompartmentCacheResult {
                 inertia_trans_x, ..
             } = self
-                .get(heel, trim, volume, epsilon)
+                .get_level(heel, trim, volume, epsilon)
                 .map_err(|err| error.pass(err))?;
             result.inertia_trans_x = inertia_trans_x;
         }
@@ -235,14 +235,14 @@ impl CompartmentCache {
     }    
     /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
-    pub fn get(
+    pub fn get_level(
         &self,
         heel: f64,
         trim: f64,
         volume: f64,
         epsilon: f64,
     ) -> Result<CompartmentCacheResult, Error> {
-        let error = Error::new(self.dbg(), "get");
+        let error = Error::new(self.dbg(), "get_level");
      /*   println!(
             "{} get start, heel:{heel} trim:{trim} volume:{volume}",
             self.dbg
@@ -269,6 +269,35 @@ impl CompartmentCache {
             abs_moment: result[7] * coeff,
         })
     }
+    /// Получение значения из кэша для заданных условий
+    pub fn get_volume(
+        &self,
+        heel: f64,
+        trim: f64,
+        level: f64,
+    ) -> Result<CompartmentCacheResult, Error> {
+        let error = Error::new(self.dbg(), "get_volume");
+     /*   println!(
+            "{} get start, heel:{heel} trim:{trim} volume:{volume}",
+            self.dbg
+        );*/
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+        let query = [heel, trim, level];
+        let result = LocalCache::get(self, &query)
+            .map_err(|err| error.pass_with("LocalCache::get(self, &query)", err))?;
+        Ok(CompartmentCacheResult {
+            heel,
+            trim,
+            level,
+            volume: result[0] * coeff,
+            volume_center: Position::new(result[1], result[2], result[3]),
+            inertia_trans_x: result[4] * coeff,
+            inertia_long_y: result[5] * coeff,
+            max_inertia_trans_x: result[6] * coeff,
+            abs_moment: result[7] * coeff,
+        })
+    }    
     //
     pub fn build_bounded(
         &self,
@@ -289,6 +318,10 @@ impl CompartmentCache {
             bounds,
             Arc::clone(&self.thread_pool),
         ))
+    }
+    //
+    pub fn volume_max(&self) -> Option<f64> {
+        self.volume_max.clone()
     }
 }
 //

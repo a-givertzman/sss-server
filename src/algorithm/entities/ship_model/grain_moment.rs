@@ -1,5 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных объемного кренящего момента для зерна
 use std::collections::HashMap;
+use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::data::DataArray;
 /// Данные по шпангоуту
@@ -38,3 +39,31 @@ impl GrainMomentDataArray {
         map
     }
 }
+/// Класс, инкапсулирующий кривую зернового момента для отсека.
+/// Может состоять из нескольких кривых
+pub struct GrainMoment {
+    curves: Vec<Curve<f64>>,
+}
+///
+impl GrainMoment {
+    ///
+    pub fn new(curves: Vec<Curve<f64>>) -> Self {
+        Self{ curves }
+    }
+    ///
+    pub fn value(&self, key: f64) -> Result<f64, Error> {
+        let (values, errors): (Vec<_>, Vec<_>) = 
+            self.curves.iter().map(|c| value_sum + c.value(key))
+                .partition(|v| v.is_ok());
+        if !errors.is_empty() {
+            let message =  errors.iter().fold(String::new(), |(sum, err)| format!("{sum}, {}", err.to));
+            return Error::new("GrainMoment", "value").mess(message);
+        }
+        Ok(values.into_iter().map(|v| v).sum())
+    }
+    ///
+    pub fn curves(self) -> Vec<Curve<f64>> {
+        self.curves.clone()
+    }
+}
+
