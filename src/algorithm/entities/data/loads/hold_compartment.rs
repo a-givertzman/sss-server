@@ -1,6 +1,4 @@
 //! Промежуточные структуры для serde_json для парсинга данных отделений трюма образованных зерновыми перегородками
-use std::collections::HashMap;
-
 use crate::algorithm::entities::data::{DataArray, loads::HoldPartDataArray};
 use serde::Deserialize;
 ///
@@ -20,14 +18,14 @@ pub struct HoldCompartmentData {
 pub type HoldCompartmentArray = DataArray<HoldCompartmentData>;
 //
 impl HoldCompartmentArray {
-    pub fn data(self, hold_part: HoldPartDataArray) -> Vec<(String, Vec<String>)> {
+    pub fn data(self, hold_part_data: HoldPartDataArray) -> Vec<(String, Vec<String>)> {
         self.data
             .into_iter()
             .map(|v| {
-                let hold_part_codes = hold_part.codes(v.group_id);
-                let hold_part_codes = (v.group_start_index..=v.group_start_index)
-                    .filter_map(|code| hold_part_codes.get(&code))
-                    .map(|v| c.to_owned())
+                let hold_part_codes = hold_part_data.codes(v.group_id);
+                let hold_part_codes = (v.group_start_index..=v.group_end_index)
+                    .filter_map(|index| hold_part_codes.get(&index))
+                    .map(|code| code.to_owned())
                     .collect();
                 (v.code, hold_part_codes)
             })

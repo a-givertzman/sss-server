@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         Position,
-        model_cached::{CompartmentCache, CompartmentCacheResult, local_cache::LocalCache},
+        model_cached::{CompartmentBoundCache, CompartmentCacheResult, local_cache::LocalCache},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -10,15 +10,15 @@ use std::sync::atomic::AtomicBool;
 
 ///
 /// Pre-calculated cache for floating position algorithm.
-pub struct HoldCompartmentCache {
+pub struct HoldCompartmentBoundCache {
     dbg: Dbg,
     /// Максимальный объем отсека из БД (Нетто)
     volume_max: f64,
-    compartments: Vec<Arc<RwLock<CompartmentCache>>>,
+    compartments: Vec<Arc<RwLock<CompartmentBoundCache>>>,
     exit: Arc<AtomicBool>,
 }
 //
-impl HoldCompartmentCache {
+impl HoldCompartmentBoundCache {
     ///
     /// Creates a new instance.
     /// * cache_dir - folder contains all cache files
@@ -28,7 +28,7 @@ impl HoldCompartmentCache {
         code: &String,
         compartments: Vec<Arc<RwLock<CompartmentCache>>>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("HoldCompartmentCache_{code}"));
+        let dbg = Dbg::new(parent, format!("HoldCompartmentBoundCache_{code}"));
         let volume_max = compartments
             .iter()
             .map(|v| v.read())

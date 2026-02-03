@@ -1,8 +1,8 @@
 //! Промежуточные структуры для serde_json для парсинга данных объемного кренящего момента для зерна
-use std::collections::HashMap;
+use crate::algorithm::entities::{Curve, ICurve as _, data::DataArray};
 use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::data::DataArray;
+use std::collections::HashMap;
 /// Данные по шпангоуту
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GrainMomentData {
@@ -48,22 +48,26 @@ pub struct GrainMoment {
 impl GrainMoment {
     ///
     pub fn new(curves: Vec<Curve<f64>>) -> Self {
-        Self{ curves }
+        Self { curves }
     }
     ///
     pub fn value(&self, key: f64) -> Result<f64, Error> {
-        let (values, errors): (Vec<_>, Vec<_>) = 
-            self.curves.iter().map(|c| value_sum + c.value(key))
-                .partition(|v| v.is_ok());
+        let (values, errors): (Vec<_>, Vec<_>) = self
+            .curves
+            .iter()
+            .map(|c| c.value(key))
+            .partition(|v| v.is_ok());
         if !errors.is_empty() {
-            let message =  errors.iter().fold(String::new(), |(sum, err)| format!("{sum}, {}", err.to));
-            return Error::new("GrainMoment", "value").mess(message);
+            return Err(Error::new("GrainMoment", "value").pass(
+                errors.iter().fold(String::new(), |acc, err| {
+                    format!("{acc}\n\t error: {:?}", err)
+                }),
+            ));
         }
-        Ok(values.into_iter().map(|v| v).sum())
+        Ok(values.into_iter().flatten().sum())
     }
     ///
-    pub fn curves(self) -> Vec<Curve<f64>> {
+    pub fn curves(&self) -> Vec<Curve<f64>> {
         self.curves.clone()
     }
 }
-

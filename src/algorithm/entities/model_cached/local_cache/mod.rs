@@ -17,6 +17,7 @@ mod damaged_compartment_cache;
 mod windage_cache;
 mod bow_area_cache;
 mod hold_compartment_cache;
+mod hold_compartment_bound_cache;
 
 pub(crate) use file_io::*;
 pub(crate) use local_cache::*;
@@ -28,4 +29,5 @@ pub(crate) use damaged_compartment_cache::*;
 pub(crate) use windage_cache::*;
 pub(crate) use bow_area_cache::*;
 pub(crate) use hold_compartment_cache::*;
+pub(crate) use hold_compartment_bound_cache::*;
 

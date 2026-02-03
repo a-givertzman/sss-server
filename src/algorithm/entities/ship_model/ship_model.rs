@@ -1,6 +1,4 @@
-use crate::algorithm::entities::AddVec;
 use crate::algorithm::entities::Curve;
-use crate::algorithm::entities::ICurve;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
@@ -12,6 +10,7 @@ use crate::algorithm::entities::data::strength::physical_frame::PhysicalFrameArr
 use crate::algorithm::entities::model_cached::AreaResult;
 use crate::algorithm::entities::model_cached::DsoResult;
 use crate::algorithm::entities::model_cached::ModelCached;
+use crate::algorithm::entities::ship_model::grain_moment::GrainMoment;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
 use crate::algorithm::entities::ship_model::volume_max::VolumeDataArray;
@@ -219,12 +218,21 @@ impl ShipModel {
                 if grain_moments.contains_key(code) {
                     continue;
                 }
-                let new_grain_moment = GraintMoment::new(part_codes.iter().filter_map(|code| grain_moment.get(code)).collect());
+                let new_grain_moment = GrainMoment::new(
+                    part_codes
+                        .iter()
+                        .filter_map(|code| grain_moments.get(code))
+                        .fold(Vec::new(), |mut acc, v| {
+                            acc.append(&mut v.curves());
+                            acc
+                        }),
+                );
                 grain_moments.insert(code.to_owned(), new_grain_moment);
             }
             self.grain_moments = Some(grain_moments);
         }
-        self.model_cached.update_hold_compartments(new_hold_compartments)
+        self.model_cached
+            .update_hold_compartments(new_hold_compartments)
     }
     ///
     /// TODO: Doc
@@ -356,14 +364,7 @@ impl ShipModel {
             if let Some(curve) = grain_moments.get(&v.code) {
                 v.moment = curve.value(v.level).unwrap_or(0.);
                 return;
-            } 
-            if let Some(hold_part_codes) = query.hold_compartment.get(&v.code) {
-                v.moment = hold_part_codes.iter()
-                .flat_map(|code| grain_moments.get(code))
-                .map(|curve| curve.value(v.level).unwrap_or(0.))
-                .sum();
-                return;
-            } 
+            }
             let error = error.err(format!("grain_moments.get(&v.code), {}", v.code));
             log::error!("{}", error);
             v.moment = 0.;
@@ -563,7 +564,12 @@ fn grain_moments(
             .clone()
             .map_err(|err| error.pass_with("Curve::new_linear", err))?;
     }
-    Ok(data.into_iter().map(|v| (v.0, v.1.unwrap())).collect())
+    let mut result = HashMap::new();
+    for data in data.into_iter() {
+        let curve = data.1.map_err(|err| error.pass(err))?;
+        result.insert(data.0, GrainMoment::new(vec![curve]));
+    }
+    Ok(result)
 }
 /// Чтение максимального объема для отсеков
 /// Возвращает мапу (ид отсека, максимальный объем (нетто))

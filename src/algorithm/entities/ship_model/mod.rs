@@ -3,8 +3,6 @@ mod volume_max;
 pub mod ship_model;
 pub mod stability_result;
 
-use std::collections::HashMap;
-
 use crate::algorithm::entities::{Bounds, Moment, data::loads::{AssignmentType, LiquidCargoType}};
 
 ///

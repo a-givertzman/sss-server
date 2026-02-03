@@ -6,11 +6,12 @@ use crate::{
             model_cached::{
                 AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
-                DisplacementCacheResult, DisplacementShape, Draught, Shape, WindageArea,
+                DisplacementCacheResult, DisplacementShape, Draught, HoldCompartmentBoundCache,
+                HoldCompartmentCache, Shape, WindageArea,
             },
             ship_model::{
                 stability_result::{
-                    BalanceStabilityResult, BulkResult, HoldCompartmentResult, LiquidResult,
+                    BalanceStabilityResult, BulkResult, LiquidResult,
                 },
                 *,
             },
@@ -28,7 +29,6 @@ use sal_sync::{
     sync::Stack,
     thread_pool::{JoinHandle, ThreadPool},
 };
-use serde_json::value::Index;
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 /// Структура для ввода данных расчета равновесного положения корпуса судна.
@@ -151,16 +151,19 @@ pub struct ModelCached {
     displacement: DisplacementCache,
     /// - cache for compartments, [index of compartments, [heel, trim, level, volume, x, y, z, i_x, i_y ]]
     compartments: IndexMap<String, Arc<RwLock<CompartmentCache>>>,
-    /// Композитные отсеки трюмов, коды
+    /// Композитные отсеки трюмов
     hold_compartments: IndexMap<String, Arc<RwLock<HoldCompartmentCache>>>,
     /// - cache for damaged compartments, [index of compartments, [heel, trim, draught, volume, x, y, z ]]
     damaged_compartments: IndexMap<String, Arc<RwLock<DamagedCompartmentCache>>>,
     /// - cache for windage area
     windage_area: WindageArea,
     /// - cache for bounds of model, [qnt_bounds, cache]
-    displacement_bounded: HashMap<usize, Arc<RwLock<DisplacementBoundCache>>>,
-    /// - cache for bounds of compartments, [qnt_bounds, [compartment_id, cache]]
-    compartments_bounded: HashMap<usize, IndexMap<String, Arc<RwLock<CompartmentBoundCache>>>>,
+    displacement_bounded: IndexMap<usize, Arc<RwLock<DisplacementBoundCache>>>,
+    /// - cache for bounds of compartments, [qnt_bounds, [code, cache]]
+    compartments_bounded: IndexMap<usize, IndexMap<String, Arc<RwLock<CompartmentBoundCache>>>>,
+    /// Композитные отсеки трюмов, разбиение по шпациям
+    hold_compartments_bounded:
+        IndexMap<usize, IndexMap<String, Arc<RwLock<HoldCompartmentBoundCache>>>>,
     thread_pool: Arc<ThreadPool>,
 }
 //
@@ -316,8 +319,9 @@ impl ModelCached {
             hold_compartments: IndexMap::new(),
             damaged_compartments,
             windage_area,
-            displacement_bounded: HashMap::new(),
-            compartments_bounded: HashMap::new(),
+            displacement_bounded: IndexMap::new(),
+            compartments_bounded: IndexMap::new(),
+            hold_compartments_bounded: IndexMap::new(),
             thread_pool,
         };
         Ok(model_cached)
@@ -437,7 +441,7 @@ impl ModelCached {
         self.displacement_bounded
             .insert(bounds_qnt, Arc::new(RwLock::new(displacement_bound)));
         let mut cache_map = IndexMap::new();
-        for (compartment_id, compartment) in &self.compartments {
+        for (code, compartment) in &self.compartments {
             let compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -445,10 +449,7 @@ impl ModelCached {
             compartment_bounded
                 .init()
                 .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
-            cache_map.insert(
-                compartment_id.clone(),
-                Arc::new(RwLock::new(compartment_bounded)),
-            );
+            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
@@ -462,76 +463,45 @@ impl ModelCached {
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "update_hold_compartments");
         let error = Error::new(self.dbg.clone(), "update_hold_compartments");
-
-        for (new_code, codes_array) in new_hold_compartments {
-            if self.hold_compartments.contains_key(new_code) {
-                continue;
+        for (code, codes_array) in new_hold_compartments {
+            if !self.hold_compartments.contains_key(code) {
+                let compartments: Vec<_> = codes_array
+                    .into_iter()
+                    .filter_map(|code| self.compartments.get(code))
+                    .map(|v| Arc::clone(v))
+                    .collect();
+                let new_hold_compartment = Arc::new(RwLock::new(HoldCompartmentCache::new(
+                    &self.dbg,
+                    code,
+                    compartments,
+                )));
+                self.hold_compartments
+                    .insert(code.to_owned(), new_hold_compartment);
             }
-            let compartments = codes_array.into_iter().filter_map(|code| self.compartments.get(code)).collect();
-            let new_hold_compartment = HoldCompartmentCache::new(&self.dbg, );
-            self.hold_compartments.insert(new_code.to_owned(), new_hold_compartment);
+            for (qnt_bounds, compartments_bounded) in self.compartments_bounded.iter() {
+                if !self.hold_compartments_bounded.contains_key(qnt_bounds) {
+                    self.hold_compartments_bounded
+                        .insert(*qnt_bounds, IndexMap::new());
+                }
+                let mut hold_compartments_bounded = self
+                    .hold_compartments_bounded
+                    .get(qnt_bounds)
+                    .as_mut()
+                    .unwrap();
+                if hold_compartments_bounded.contains_key(code) {
+                    continue;
+                }
+                let compartments_bounded: Vec<_> = codes_array
+                    .into_iter()
+                    .filter_map(|code| compartments_bounded.get(code))
+                    .map(|v| Arc::clone(v))
+                    .collect();
+                let new_hold_compartment_bounded = Arc::new(RwLock::new(
+                    HoldCompartmentBoundCache::new(&self.dbg, code, compartments_bounded),
+                ));
+                hold_compartments_bounded.insert(code.to_owned(), new_hold_compartment_bounded);
+            }
         }
-
-        self.displacement
-            .init()
-            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
-        for (name, compartment) in self.compartments.iter_mut() {
-            let mut guard = compartment.write();
-            guard
-                .init()
-                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let volume_max = compartments_volume_max
-                .get(name)
-                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
-            guard
-                .calc_coeff(*volume_max)
-                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
-        }
-        /*     TODO - пока не используются, потом будет отдельный расчет
-        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
-            damaged_compartment
-                .write()
-                .init()
-                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
-        }*/
-        self.windage_area
-            .init()
-            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
-        let bounds_qnt = bounds.len_qnt();
-        let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-        let displacement_bound = DisplacementBoundCache::new(
-            &self.dbg,
-            displacement_shape.clone(),
-            self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
-            self.model_x,
-            bounds.clone(),
-            Arc::clone(&self.thread_pool),
-        );
-        displacement_bound
-            .init()
-            .map_err(|err| error.pass_with(format!("displacement_bound.init"), err))?;
-        self.displacement_bounded
-            .insert(bounds_qnt, Arc::new(RwLock::new(displacement_bound)));
-        let mut cache_map = IndexMap::new();
-        for (compartment_id, compartment) in &self.compartments {
-            let compartment_bounded = compartment
-                .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
-            compartment_bounded
-                .init()
-                .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
-            cache_map.insert(
-                compartment_id.clone(),
-                Arc::new(RwLock::new(compartment_bounded)),
-            );
-        }
-        self.compartments_bounded
-            .insert(bounds.len_qnt(), cache_map);
         Ok(())
     }
     ///
@@ -604,8 +574,8 @@ impl ModelCached {
             .rebuild(bounds, self.ship_length_lbp)
             .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
         let mut cache_map = IndexMap::new();
-        for (compartment_id, compartment) in &self.compartments {
-            //      println!("model_cached build_bounded compartment:{compartment_id}");
+        for (code, compartment) in &self.compartments {
+            //      println!("model_cached build_bounded compartment:{code}");
             let mut compartment_bounded = compartment
                 .read()
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -613,10 +583,7 @@ impl ModelCached {
             compartment_bounded
                 .rebuild()
                 .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
-            cache_map.insert(
-                compartment_id.clone(),
-                Arc::new(RwLock::new(compartment_bounded)),
-            );
+            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
@@ -988,7 +955,7 @@ impl ModelCached {
         let liquid = self
             .process_liquid(&query.liquid, heel, trim, epsilon)
             .map_err(|err| error.pass(err))?;
-        let (bulk, hold_compartment) = self
+        let bulk = self
             .process_bulk(&query.bulk, epsilon)
             .map_err(|err| error.pass(err))?;
         let bow_area = self
@@ -1026,7 +993,6 @@ impl ModelCached {
             rad_trans,
             mass_center,
             bow_area,
-            hold_compartment,
         })
     }
     /// Расчет равновесного положения
@@ -1618,7 +1584,7 @@ impl ModelCached {
         &self,
         bulks: &Vec<BulkData>,
         epsilon: f64,
-    ) -> Result<(Vec<BulkResult>, Vec<HoldCompartmentResult>), Error> {
+    ) -> Result<Vec<BulkResult>, Error> {
         let error = Error::new(&self.dbg, "moment_bulk");
         let mut tasks: Vec<JoinHandle<_>> = vec![];
         let task_results = Arc::new(Stack::new());
@@ -1659,10 +1625,11 @@ impl ModelCached {
                     Err(err) => errors.push(err),
                 };
             } else {
-                let compartment = Arc::clone(self
-                .compartments
-                .get(&code)
-                .ok_or(error.err(format!("no compartment:{code}")))?);
+                let compartment = Arc::clone(
+                    self.compartments
+                        .get(&code)
+                        .ok_or(error.err(format!("no compartment:{code}")))?,
+                );
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
                         let compartment_result = compartment
@@ -1704,8 +1671,7 @@ impl ModelCached {
                     .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
             ));
         }
-        let mut bulk_result = Vec::new();
-        let mut hold_compartment_result = Vec::new();
+        let mut result = Vec::new();
         while !task_results.is_empty() {
             if let Some(data) = task_results.pop() {
                 result.push(data);
@@ -1714,13 +1680,9 @@ impl ModelCached {
         Ok(result)
     }
     /// Считаем момент сыпучих грузов
-    fn moment_bulk_floating(
-        &self,
-        bulks: &Vec<BulkData>,
-        epsilon: f64,
-    ) -> Result<Moment, Error> {
+    fn moment_bulk_floating(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Moment, Error> {
         let error = Error::new(&self.dbg, "moment_bulk_floating");
-        let (bulks, _) = self
+        let bulks = self
             .process_bulk(bulks, epsilon)
             .map_err(|err| error.pass_with("process_bulk", err))?;
         let (_sum_mass, sum_moment): (f64, Moment) =
