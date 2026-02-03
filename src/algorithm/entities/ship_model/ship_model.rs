@@ -549,10 +549,11 @@ fn grain_moments(
     api_client: &ApiClient,
 ) -> Result<HashMap<String, GrainMoment>, Error> {
     let error = Error::new("ShipModel", "grain_moments");
+    let sql = format!(
+        "SELECT code, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+    );
     let data = GrainMomentDataArray::parse(
-        &api_client.fetch(&format!(
-            "SELECT code, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
-        )).map_err(|err| error.pass_with("api_client.fetch", err))?
+        &api_client.fetch(&sql).map_err(|err| error.pass_with(format!("api_client.fetch {sql}"), err))?
     ).map_err(|err| error.pass_with("parse", err))?;
     let data: Vec<(String, Result<Curve<f64>, Error>)> = data
         .data()
