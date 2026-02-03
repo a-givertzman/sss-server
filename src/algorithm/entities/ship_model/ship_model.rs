@@ -203,6 +203,7 @@ impl ShipModel {
         self.bounds = Some(bounds);
         Ok(())
     }
+    ///
     pub fn update_hold_compartments(
         &mut self,
         new_hold_compartments: &Vec<(String, Vec<String>)>,
