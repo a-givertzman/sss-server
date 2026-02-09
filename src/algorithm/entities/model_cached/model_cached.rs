@@ -463,14 +463,12 @@ impl ModelCached {
         //    dbg!(self.dbg.clone(), "update_hold_compartments");
         let error = Error::new(self.dbg.clone(), "update_hold_compartments");
         for (code, codes_array) in new_hold_compartments {
-            dbg!(code, codes_array);
             if !self.hold_compartments.contains_key(code) {
                 let compartments: Vec<_> = codes_array
                     .into_iter()
                     .filter_map(|code| self.compartments.get(code))
                     .map(|v| Arc::clone(v))
                     .collect();
-                dbg!(self.compartments.len(), compartments.len());
                 let new_hold_compartment = Arc::new(RwLock::new(HoldCompartmentCache::new(
                     &self.dbg,
                     code,

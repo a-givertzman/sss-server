@@ -53,7 +53,7 @@ impl HoldCompartmentCache {
             (level_min, level_max)
         };
         let (volume_min, volume_max) = {
-            let (mut volume_min, mut volume_max) = (f64::MAX, f64::MIN);
+            let (mut volume_min, mut volume_max) = (0., 0.);
             for compartment in compartments.iter() {
                 let (current_volume_min, current_volume_max) = compartment
                     .read()
