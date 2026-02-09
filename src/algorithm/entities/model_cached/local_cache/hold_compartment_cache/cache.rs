@@ -1,7 +1,6 @@
 use crate::{
     algorithm::entities::{
-        Position,
-        model_cached::{CompartmentCache, CompartmentCacheResult, local_cache::LocalCache},
+        Moment, model_cached::{CompartmentCache, CompartmentCacheResult, local_cache::LocalCache},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -65,7 +64,9 @@ impl HoldCompartmentCache {
             }
             (volume_min, volume_max)
         };
-        println!("flkjsdfiklsjfl {dbg} level_min:{level_min}, level_max:{level_max} volume_min:{volume_min} volume_max:{volume_max}");
+        println!(
+            "flkjsdfiklsjfl {dbg} level_min:{level_min}, level_max:{level_max} volume_min:{volume_min} volume_max:{volume_max}"
+        );
         Ok(Self {
             dbg,
             volume_min,
@@ -99,29 +100,45 @@ impl HoldCompartmentCache {
                     .map_err(|err| error.pass(err))?;
                 result.push(current_result);
             }
-            let result = result.iter().fold(
-                CompartmentCacheResult {
-                    heel: heel,
-                    trim: trim,
-                    level: level,
-                    volume: 0.,
-                    volume_center: Position::zero(),
-                    inertia_trans_x: 0.,
-                    inertia_long_y: 0.,
-                    max_inertia_trans_x: 0.,
-                    abs_moment: 0.,
-                },
-                |mut acc, row| {
-                    acc.volume += row.volume;
-                    acc.volume_center += row.volume_center;
-                    acc.inertia_trans_x += row.inertia_trans_x;
-                    acc.inertia_long_y += row.inertia_long_y;
-                    acc.max_inertia_trans_x += row.max_inertia_trans_x;
-                    acc.abs_moment += row.abs_moment;
-                    acc
+            let (
+                volume,
+                volume_moment,
+                inertia_trans_x,
+                inertia_long_y,
+                max_inertia_trans_x,
+                abs_moment,
+            ) = result.iter().fold(
+                (0., Moment::zero(), 0., 0., 0., 0.),
+                |(
+                    acc_volume,
+                    acc_volume_moment,
+                    acc_inertia_trans_x,
+                    acc_inertia_long_y,
+                    acc_max_inertia_trans_x,
+                    acc_abs_moment,
+                ),
+                 row| {
+                    (
+                        acc_volume + row.volume,
+                        acc_volume_moment + Moment::from_pos(row.volume_center, row.volume),
+                        acc_inertia_trans_x + row.inertia_trans_x,
+                        acc_inertia_long_y + row.inertia_long_y,
+                        acc_max_inertia_trans_x + row.max_inertia_trans_x,
+                        acc_abs_moment + row.abs_moment,
+                    )
                 },
             );
-            Ok(result)
+            Ok(CompartmentCacheResult {
+                heel,
+                trim,
+                level,
+                volume,
+                volume_center: volume_moment.to_pos(volume),
+                inertia_trans_x,
+                inertia_long_y,
+                max_inertia_trans_x,
+                abs_moment,
+            })
         };
         if volume <= self.volume_min {
             // целевое значение на нижней границе диапазона, сразу берем значение
@@ -146,7 +163,10 @@ impl HoldCompartmentCache {
                 let next_level = (level + step * delta.signum())
                     .min(self.level_max)
                     .max(self.level_min);
-                          println!("local_cashe {} get_volume i:{i} heel:{heel} trim:{trim} level:{level} res_volume:{} trg_volume:{volume}", self.dbg, result.volume);
+                println!(
+                    "local_cashe {} get_volume i:{i} heel:{heel} trim:{trim} level:{level} res_volume:{} trg_volume:{volume}",
+                    self.dbg, result.volume
+                );
                 if delta.abs() <= epsilon || i >= 50 || level == next_level {
                     return Ok(result);
                 }
