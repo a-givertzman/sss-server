@@ -1024,7 +1024,7 @@ impl ModelCached {
             .moment_bulk_floating(&query.bulk, query.epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
-           dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
+    //       dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
         let moment_sum = query.moment_const + moment_bulk; // постоянный момент
@@ -1125,8 +1125,8 @@ impl ModelCached {
                 }
             }
             d_m = Some(new_d_m);
-               println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
-                    epsilon, heel, trim, draught, new_d_v, new_d_m);
+       //        println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
+        //            epsilon, heel, trim, draught, new_d_v, new_d_m);
             trim = trim + step_trim * new_d_v.signum();
             heel = heel + step_heel * new_d_m.signum();
             draught = new_draught;
@@ -1582,8 +1582,8 @@ impl ModelCached {
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
-         println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
-                heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
+      //   println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
+      //          heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
         //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
         //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
@@ -1601,7 +1601,6 @@ impl ModelCached {
             let code = cargo.code.clone();
             let error_ = error.err(format!("compartment_{code} bulk work"));
             let cargo = cargo.clone();
-            dbg!(&cargo);
             let epsilon = epsilon;
             let results_ = task_results.clone();
             let thread_name = format!("{}.process_bulk code:{code}", &self.dbg);
@@ -1614,7 +1613,7 @@ impl ModelCached {
                             .read()
                             .get_level(0., 0., cargo.volume, epsilon)
                             .map_err(|err| error_.pass_with("hold_compartment.get", err))?;
-                        dbg!(&code, cargo.mass, compartment_result.volume_center);
+               //         dbg!(&code, cargo.mass, compartment_result.volume_center);
                         results_.push(stability_result::BulkResult::new(
                             //       cargo_id,
                             code,
@@ -1703,7 +1702,7 @@ impl ModelCached {
                         moment_sum + Moment::from_pos(v.mass_shift, v.mass),
                     )
                 });
-            dbg!(_sum_mass, sum_moment);
+        //    dbg!(_sum_mass, sum_moment);
         Ok(sum_moment)
     }
     /// Считаем жидкие грузы

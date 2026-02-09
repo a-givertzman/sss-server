@@ -64,9 +64,7 @@ impl HoldCompartmentCache {
             }
             (volume_min, volume_max)
         };
-        println!(
-            "flkjsdfiklsjfl {dbg} level_min:{level_min}, level_max:{level_max} volume_min:{volume_min} volume_max:{volume_max}"
-        );
+//        println!("flkjsdfiklsjfl {dbg} level_min:{level_min}, level_max:{level_max} volume_min:{volume_min} volume_max:{volume_max}");
         Ok(Self {
             dbg,
             volume_min,
@@ -87,10 +85,10 @@ impl HoldCompartmentCache {
         epsilon: f64,
     ) -> Result<CompartmentCacheResult, Error> {
         let error = Error::new(&self.dbg, "get");
-        println!(
+    /*    println!(
             "{} get start, heel:{heel} trim:{trim} volume:{volume}",
             self.dbg
-        );
+        );*/
         let calc_res = |level: f64| -> Result<CompartmentCacheResult, Error> {
             let mut result = Vec::new();
             for compartment in self.compartments.iter() {
@@ -163,10 +161,10 @@ impl HoldCompartmentCache {
                 let next_level = (level + step * delta.signum())
                     .min(self.level_max)
                     .max(self.level_min);
-                println!(
+            /*    println!(
                     "local_cashe {} get_volume i:{i} heel:{heel} trim:{trim} level:{level} res_volume:{} trg_volume:{volume}",
                     self.dbg, result.volume
-                );
+                );*/
                 if delta.abs() <= epsilon || i >= 50 || level == next_level {
                     return Ok(result);
                 }
