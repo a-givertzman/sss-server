@@ -359,16 +359,16 @@ impl ShipModel {
         // TODO - переписать получение момента из модели
         result.bulk.iter_mut().for_each(|v| {
             if !v.shiftable {
-                v.moment = 0.;
+                v.grain_moment = 0.;
                 return;
             }
             if let Some(curve) = grain_moments.get(&v.code) {
-                v.moment = curve.value(v.level).unwrap_or(0.);
+                v.grain_moment = curve.value(v.level).unwrap_or(0.);
                 return;
             }
             let error = error.err(format!("grain_moments.get(&v.code), {}", v.code));
             log::error!("{}", error);
-            v.moment = 0.;
+            v.grain_moment = 0.;
         });
         Ok(result)
     }

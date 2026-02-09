@@ -114,6 +114,9 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::CenterVolumeY, result.displacement_center.y());
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
                 let bulk = result.bulk.clone();
+
+
+                
                 let liquid = result.liquid.clone();
                 log::info!(
                     "StabilityBalance heel:{:.3} trim_degree:{:.3} trim_meter:{:.3} draught_mid:{:.3} displacement:{:.3} 

@@ -1623,6 +1623,10 @@ impl ModelCached {
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
+                            compartment_result.volume,
+                            compartment_result.inertia_trans_x,    
+                            compartment_result.inertia_long_y,  
+                            compartment_result.max_inertia_trans_x,   
                         ));
                         Ok(())
                     })
@@ -1653,6 +1657,10 @@ impl ModelCached {
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
+                            compartment_result.volume,
+                            compartment_result.inertia_trans_x,    
+                            compartment_result.inertia_long_y,  
+                            compartment_result.max_inertia_trans_x,   
                         ));
                         Ok(())
                     })

@@ -102,11 +102,19 @@ pub struct BulkResult {
     /// Смещение центра массы груза
     pub mass_shift: Position, 
     ///  Признак смещаемости груза
-    pub shiftable: bool, 
-    /// Уровень заполнения отсека
-    pub level: f64,  // TODO - убрать после переноса расчета момента в модель
-    /// Объемный кренящий момент
-    pub moment: f64, 
+    pub shiftable: bool,     
+    ///  Уровень заполнения отсека
+    pub level: f64,
+    /// Объем груза в отсеке
+    pub volume: f64,
+    /// Поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub inertia_trans_x: f64,    
+    /// Продольный момент инерции площади ватерлинии относительно осей, параллельных осям Y, м^4 
+    pub inertia_long_y: f64,  
+    /// Максимальный поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub max_inertia_trans_x: f64,   
+    /// Абсолютный момент жидкости при текущих углах и объеме
+    pub grain_moment: f64,
 }
 ///
 impl BulkResult {
@@ -119,6 +127,10 @@ impl BulkResult {
         mass_shift: Position,
         shiftable: bool,
         level: f64,
+        volume: f64,
+        inertia_trans_x: f64,    
+        inertia_long_y: f64, 
+        max_inertia_trans_x: f64,   
     ) -> Self {
         Self {
             code,
@@ -128,7 +140,11 @@ impl BulkResult {
             mass_shift,
             shiftable,
             level,
-            moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
+            volume,
+            inertia_trans_x,    
+            inertia_long_y, 
+            max_inertia_trans_x,   
+            grain_moment: 0.,
         }
     }
 }

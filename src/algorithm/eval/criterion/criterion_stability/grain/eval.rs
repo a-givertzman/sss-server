@@ -38,7 +38,7 @@ impl Eval<Zg, EvalResult> for GrainEval {
             Ok(mut ctx) => {
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let balance: StabilityBalanceCtx = ctx.read();
-                let m_grain = balance.bulk.iter().map(|v| v.moment).sum();
+                let m_grain = balance.bulk.iter().map(|v| v.grain_moment).sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
                 let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding); 
                 let mut results = Vec::new();

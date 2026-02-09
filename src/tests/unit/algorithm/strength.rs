@@ -184,15 +184,15 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                         &dbg,
                         StrengthBalanceEval::new(
                             &dbg,
-                            ship_model.clone(),                                
+                            Arc::clone(&ship_model),                                
                             StaticMassStrEval::new(
                                 &dbg,                                   
                                 IcingStrEval::new(
                                     &dbg, 
-                                    ship_model.clone(),                                      
+                                    Arc::clone(&ship_model),                                      
                                     AreaStrEval::new(
                                         &dbg,
-                                        ship_model.clone(),
+                                        Arc::clone(&ship_model),
         // stability before ZG
         StabilityBalanceEval::new(
             &dbg,

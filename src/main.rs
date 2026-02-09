@@ -277,7 +277,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ship_id,
         project_id.to_owned(),
         model_cached,
-        api_client.clone(),
+        Arc::clone(&api_client),
     );
     let ship_model = Arc::new(RwLock::new(ship_model));
     ship_model.write().init().unwrap();
@@ -352,8 +352,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             Calculus::new(
                                                 dbg,
                                                 conf.clone(),
-                                                api_client.clone(),
-                                                ship_model.clone(),
+                                                Arc::clone(&api_client),
+                                                Arc::clone(&ship_model),
                                                 Arc::clone(&thread_pool),
                                             ),
                                         )),
