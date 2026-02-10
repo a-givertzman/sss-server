@@ -1,6 +1,4 @@
 //! Структуры для ввода/вывода данных
-//pub mod result;
-//pub mod check_result;
 pub mod ship;
 pub mod voyage;
 pub mod ship_data;

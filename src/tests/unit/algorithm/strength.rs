@@ -26,9 +26,7 @@ use crate::kernel::{
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
-use crate::algorithm::entities::{
-    Bounds, model_cached::{self},
-};
+use crate::algorithm::entities::model_cached::{self};
 use crate::prelude::{Context, Initial, InitialCtx};
 ///
 /// Application entry point
@@ -186,15 +184,15 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                         &dbg,
                         StrengthBalanceEval::new(
                             &dbg,
-                            ship_model.clone(),                                
+                            Arc::clone(&ship_model),                                
                             StaticMassStrEval::new(
                                 &dbg,                                   
                                 IcingStrEval::new(
                                     &dbg, 
-                                    ship_model.clone(),                                      
+                                    Arc::clone(&ship_model),                                      
                                     AreaStrEval::new(
                                         &dbg,
-                                        ship_model.clone(),
+                                        Arc::clone(&ship_model),
         // stability before ZG
         StabilityBalanceEval::new(
             &dbg,

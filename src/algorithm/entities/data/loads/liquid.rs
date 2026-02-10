@@ -12,7 +12,7 @@ pub struct LoadLiquidData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: String,
+    pub code: String,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
@@ -65,7 +65,7 @@ impl LoadLiquidData {
             assigment_type: self.assigment_type,
             cargo_type: self.cargo_type,
        //     cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            code: self.code.clone(),
             use_max_moment: self.use_moment_of_inertia_max,
             is_cargo_tank: self.compartment_purpose == CompartmentPurpose::CargoTank,
             mass: self.mass,

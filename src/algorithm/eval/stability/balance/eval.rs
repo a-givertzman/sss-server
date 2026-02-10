@@ -47,6 +47,11 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let hold_compartment = initial
+                    .hold_compartment
+                    .as_ref()
+                    .ok_or(error.err("hold_compartment error: no data!"))?;
+                self.model.write().update_hold_compartments(hold_compartment).map_err(|err| error.pass(err))?;
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -59,21 +64,19 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                 };
                 let result: BalanceStabilityResult = self
                     .model
                     .read()
                     .compute_stability(stability_query)
-                    .map_err(|err| error.pass_with("model.compute_balance", err))?;
-/*
+                    .map_err(|err| error.pass_with("model.compute_balance", err))?;/*
                 let liquid_data: HashMap<usize, String> = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
                         .liquid
                         .as_ref()
                         .ok_or(error.err("Read liquid error: no data!"))?
                         .iter()
-                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                        .map(|(_, v)| (v.assignment_id, v.code.clone()))
                         .collect();             
                 result.liquid.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", liquid_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
  
@@ -82,7 +85,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         .as_ref()
                         .ok_or(error.err("Read bulk error: no data!"))?
                         .iter()
-                        .map(|(_, v)| (v.assignment_id, v.space_id.clone()))
+                        .map(|(_, v)| (v.assignment_id, v.code.clone()))
                         .collect();             
                 result.bulk.iter().for_each(|v| println!("'{}' mass:{:.3} shift:{};", bulk_data.get(&v.assignment_id).unwrap(), v.mass, v.mass_shift.print()));
 
@@ -91,7 +94,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                         .as_ref()
                         .ok_or(error.err("Read unit error: no data!"))?
                         .iter()
-                        .map(|v| (v.space_id.clone(), v.mass, v.mass_shift()))
+                        .map(|v| (v.code.clone(), v.mass, v.mass_shift()))
                         .for_each(|v| println!("'{}' mass:{:.3} shift:{};", v.0, v.1, v.2.unwrap()));   
 */
                 ctx.write_params(ParameterID::DraughtMid, result.draught_mid);
@@ -111,6 +114,9 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::CenterVolumeY, result.displacement_center.y());
                 ctx.write_params(ParameterID::CenterVolumeZ, result.displacement_center.z());
                 let bulk = result.bulk.clone();
+
+
+                
                 let liquid = result.liquid.clone();
                 log::info!(
                     "StabilityBalance heel:{:.3} trim_degree:{:.3} trim_meter:{:.3} draught_mid:{:.3} displacement:{:.3} 

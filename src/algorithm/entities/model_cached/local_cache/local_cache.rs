@@ -133,7 +133,7 @@ pub fn get_volume(
             let mut query: Vec<_> = query.to_vec();
             query.push(level);
             result = cache.get(&query);
-            assert!(result.len() >= volume_index);
+            assert!(result.len() > volume_index);
             let delta = volume - result[volume_index - query.len()];
             if last_delta_signum != delta.signum() {
                 step = step * 0.3;

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, 
+use crate::{algorithm::{entities::{ship_model::ship_model::ShipModel}, 
     eval::{
         criterion::{
             CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
@@ -16,7 +16,7 @@ use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel},
             wind::eval::WindEval, 
             windage::eval::WindageEval
         }, strength::{
-            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, bending_moment::eval::BendingMomentEval, dynamic_mass::eval::DynamicMassEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, shear_force::eval::ShearForceEval, static_mass::eval::StaticMassStrEval, total_force::eval::TotalForceEval
+            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval, total_force::eval::TotalForceEval
         }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     }}, 
     conf::Conf, 
@@ -125,15 +125,15 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                         &dbg,
                         StrengthBalanceEval::new(
                             &dbg,
-                            self.ship_model.clone(),                                
+                            Arc::clone(&self.ship_model),                                
                             StaticMassStrEval::new(
                                 &dbg,                                   
                                 IcingStrEval::new(
                                     &dbg, 
-                                    self.ship_model.clone(),                                      
+                                    Arc::clone(&self.ship_model),                                      
                                     AreaStrEval::new(
                                         &dbg,
-                                        self.ship_model.clone(),
+                                        Arc::clone(&self.ship_model),
         // stability before ZG
         StabilityBalanceEval::new(
             &dbg,

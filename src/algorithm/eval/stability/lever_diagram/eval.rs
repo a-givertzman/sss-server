@@ -51,6 +51,10 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
         match self.ctx.eval(z_g_fix.clone()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let hold_compartment = initial
+                    .hold_compartment
+                    .as_ref()
+                    .ok_or(error.err("hold_compartment error: no data!"))?;
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -64,7 +68,6 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                 };
                 let cg = if let Zg(Some(z_g_fix)) = z_g_fix {
