@@ -47,6 +47,11 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let hold_compartment = initial
+                    .hold_compartment
+                    .as_ref()
+                    .ok_or(error.err("hold_compartment error: no data!"))?;
+                self.model.write().update_hold_compartments(hold_compartment).map_err(|err| error.pass(err))?;
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -60,7 +65,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                 };
                 let result: BalanceStabilityResult = self
@@ -124,6 +128,9 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::CenterMassY, result.mass_center.y());
                 ctx.write_params(ParameterID::CenterMassZ, result.mass_center.z());
                 let bulk = result.bulk.clone();
+
+
+                
                 let liquid = result.liquid.clone();
                 log::info!(
                     "StabilityBalance heel:{:.3} trim_degree:{:.3} trim_meter:{:.3} draught_mid:{:.3} displacement:{:.3} 

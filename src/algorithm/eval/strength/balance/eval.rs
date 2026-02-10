@@ -44,6 +44,10 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let hold_compartment = initial
+                    .hold_compartment
+                    .as_ref()
+                    .ok_or(error.err("hold_compartment error: no data!"))?;
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -63,8 +67,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     water_density: voyage.density,
                     distr_static: static_mass.distr_static,
                     bulk: static_mass.bulk.clone(),
-                    liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
+                    liquid: static_mass.liquid.clone(),                    
                     gaseous: static_mass.gaseous,
                     //    damaged_compartment: loads.damaged_compartment, //TODO
                     bounds: bounds.clone(),

@@ -22,6 +22,8 @@ pub struct CompartmentBoundCache {
     cache_path: PathBuf,
     level_step: f64,
     volume_max: f64,
+    /// коэффициент проницаемости
+    coeff: Option<f64>,
     bounds: Bounds,
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
@@ -51,6 +53,7 @@ impl CompartmentBoundCache {
             shape,
             volume_max,
             level_step,
+            coeff: None,
             bounds,
             caches: OnceLock::new(),
             cache_path,
@@ -61,21 +64,15 @@ impl CompartmentBoundCache {
     }
     /// Return volume in bounds
     /// cause panic if caches not initialized
-    pub fn get(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
+    pub fn get_from_volume(&self, volume: f64, trim: f64, epsilon: f64) -> Result<Vec<f64>, Error> {
         //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
-        let error = Error::new(&self.dbg, "get");
-        let caches = self.caches.get().ok_or(error.pass("no caches"))?;
-        let mut volume_vec = self.get_max_volume().map_err(|err| error.pass(err))?;
-        let volume_brutto: f64 = volume_vec.iter().sum();
-        let coeff = if volume_brutto > 0. {
-            self.volume_max / volume_brutto
-        } else {
-            1.
-        };
-        volume_vec.mul_single(coeff);
+        let error = Error::new(&self.dbg, "get_from_volume");        
         if volume >= self.volume_max {
+            let volume_vec = self.get_max_volume().map_err(|err| error.pass(err))?;    
             return Ok(volume_vec);
         }
+        let caches = self.caches.get().ok_or(error.pass("no caches"))?; 
+        let coeff = self.coeff.ok_or(error.err("no coeff"))?;       
         let volume = volume / coeff;
         let mut draugth = 0.;
         let mut delta_draugth = 5.;
@@ -108,10 +105,33 @@ impl CompartmentBoundCache {
         }
         Err(error.err("no result!"))
     }
+    /// Return volume in bounds
+    /// cause panic if caches not initialized
+    pub fn get_from_level(&self, level: f64, trim: f64) -> Result<Vec<f64>, Error> {
+        //    println!("jfhufjd {} {volume} {trim} {epsilon}", &self.dbg);
+        let error = Error::new(&self.dbg, "get_from_level");
+        let caches = self.caches.get().ok_or(error.pass("no caches"))?;
+        let coeff = self.coeff.ok_or(error.err("no coeff"))?;
+        let mut values: Vec<f64>;
+        let trim_sin = trim.to_radians().sin();
+        values = caches
+            .iter()
+            .map(|(center_x, cache)| match cache {
+                Some(cache) => cache.get(&[(level + center_x * trim_sin)])[0],
+                None => 0.,
+            })
+            .collect();
+        values.mul_single(coeff);
+        Ok(values)
+    }
     /// Return max volume in bounds
     /// cause panic if caches not initialized
     pub fn get_max_volume(&self) -> Result<Vec<f64>, Error> {
-        self.get_max(1)
+        let error = Error::new(&self.dbg, "get_max_volume");
+        let mut volume_vec = self.get_max(1).map_err(|err| error.pass(err))?;
+        let coeff = self.coeff.ok_or(error.err("no coeff"))?;
+        volume_vec.mul_single(coeff);     
+        Ok(volume_vec)
     }
     /// Return max value in bounds
     /// cause panic if caches not initialized
@@ -147,7 +167,7 @@ impl CompartmentBoundCache {
         ))
     }
     /// инициализация кэшей заранее посчитанными данными
-    pub fn init(&self) -> Result<(), Error> {
+    pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg.clone(), "init");
         let mut caches = Vec::new();
         for (i, b) in self.bounds.iter().enumerate() {
@@ -164,6 +184,19 @@ impl CompartmentBoundCache {
                 },
             );
         }
+        let volume_brutto: f64 = caches
+            .iter()
+            .map(|(_, cache)| match cache {
+                Some(cache) => cache.disp(1).1,
+                None => 0.,
+            })
+            .sum();
+        let coeff = if volume_brutto > 0. {
+            self.volume_max / volume_brutto
+        } else {
+            1.
+        };
+        self.coeff = Some(coeff);
         self.process(caches)
             .map_err(|err| error.pass_with("process_center", err))
     }

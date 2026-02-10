@@ -119,15 +119,15 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                         &dbg,
                         StrengthBalanceEval::new(
                             &dbg,
-                            self.ship_model.clone(),                                
+                            Arc::clone(&self.ship_model),                                
                             StaticMassStrEval::new(
                                 &dbg,                                   
                                 IcingStrEval::new(
                                     &dbg, 
-                                    self.ship_model.clone(),                                      
+                                    Arc::clone(&self.ship_model),                                      
                                     AreaStrEval::new(
                                         &dbg,
-                                        self.ship_model.clone(),
+                                        Arc::clone(&self.ship_model),
         // stability before ZG
         DynamicMassStabEval::new(
             &dbg,

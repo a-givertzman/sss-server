@@ -1,5 +1,4 @@
 use crate::algorithm::entities::Curve;
-use crate::algorithm::entities::ICurve;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
@@ -11,6 +10,7 @@ use crate::algorithm::entities::data::strength::physical_frame::PhysicalFrameArr
 use crate::algorithm::entities::model_cached::AreaResult;
 use crate::algorithm::entities::model_cached::DsoResult;
 use crate::algorithm::entities::model_cached::ModelCached;
+use crate::algorithm::entities::ship_model::grain_moment::GrainMoment;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
 use crate::algorithm::entities::ship_model::volume_max::VolumeDataArray;
@@ -37,7 +37,7 @@ pub struct ShipModel {
     horisontal_area_shift: Option<Position>,
     windage_area_stab: Option<f64>,
     windage_area_moment: Option<Moment>,
-    grain_moment: Option<HashMap<String, Curve<f64>>>,
+    grain_moments: Option<HashMap<String, GrainMoment>>,
     opening: Option<Vec<Position>>,
     deck_angle_point: Option<Vec<Position>>,
     model_cached: ModelCached,
@@ -78,7 +78,7 @@ impl ShipModel {
             horisontal_area_shift: None,
             windage_area_stab: None,
             windage_area_moment: None,
-            grain_moment: None,
+            grain_moments: None,
             opening: None,
             deck_angle_point: None,
             model_cached: model_cached,
@@ -91,8 +91,8 @@ impl ShipModel {
     /// ПО идее их должен читать контекст, но модель инициализируется первее
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
-        self.grain_moment = Some(
-            grain_moment(
+        self.grain_moments = Some(
+            grain_moments(
                 self.ship_id,
                 self.project_id.clone(),
                 &self.api_client.clone(),
@@ -202,6 +202,38 @@ impl ShipModel {
         self.windage_area_moment = Some(Moment::new(windage.1, 0., windage.2));
         self.bounds = Some(bounds);
         Ok(())
+    }
+    ///
+    pub fn update_hold_compartments(
+        &mut self,
+        new_hold_compartments: &Vec<(String, Vec<String>)>,
+    ) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "update_hold_compartments");
+        {
+            let mut grain_moments = self
+                .grain_moments
+                .take()
+                .ok_or(error.err("grain_moments"))?;
+
+            for (code, part_codes) in new_hold_compartments {
+                if grain_moments.contains_key(code) {
+                    continue;
+                }
+                let new_grain_moment = GrainMoment::new(
+                    part_codes
+                        .iter()
+                        .filter_map(|code| grain_moments.get(code))
+                        .fold(Vec::new(), |mut acc, v| {
+                            acc.append(&mut v.curves());
+                            acc
+                        }),
+                );
+                grain_moments.insert(code.to_owned(), new_grain_moment);
+            }
+            self.grain_moments = Some(grain_moments);
+        }
+        self.model_cached
+            .update_hold_compartments(new_hold_compartments)
     }
     ///
     /// TODO: Doc
@@ -318,25 +350,25 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "compute_balance");
         let mut result = self
             .model_cached
-            .balance_stability(query, 0.000001)
+            .balance_stability(&query, 0.000001)
             .map_err(|err| error.pass(err))?;
-        let grain_moment = self
-            .grain_moment
+        let grain_moments = self
+            .grain_moments
             .as_ref()
             .ok_or(error.err("grain_moment"))?;
         // TODO - переписать получение момента из модели
         result.bulk.iter_mut().for_each(|v| {
             if !v.shiftable {
-                v.moment = 0.;
+                v.grain_moment = 0.;
                 return;
             }
-            v.moment = if let Some(curve) = grain_moment.get(&v.space_id) {
-                curve.value(v.level).unwrap_or(0.)
-            } else {
-                let error = error.err(format!("grain_moment.get(&v.space_id), {}", v.space_id));
-                log::error!("{}", error);
-                0.
-            };
+            if let Some(curve) = grain_moments.get(&v.code) {
+                v.grain_moment = curve.value(v.level).unwrap_or(0.);
+                return;
+            }
+            let error = error.err(format!("grain_moments.get(&v.code), {}", v.code));
+            log::error!("{}", error);
+            v.grain_moment = 0.;
         });
         Ok(result)
     }
@@ -511,21 +543,22 @@ fn horisontal_area_stab(
 }
 /// Чтение данных объемного кренящего момента для зерна.
 /// Возвращает мапу (ид отсека, кривая момента от уровня заполнения отсека)
-fn grain_moment(
+fn grain_moments(
     ship_id: usize,
     project_id: String,
     api_client: &ApiClient,
-) -> Result<HashMap<String, Curve<f64>>, Error> {
-    let error = Error::new("ShipModel", "grain_moment");
+) -> Result<HashMap<String, GrainMoment>, Error> {
+    let error = Error::new("ShipModel", "grain_moments");
+    let sql = format!(
+        "SELECT code, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
+    );
     let data = GrainMomentDataArray::parse(
-        &api_client.fetch(&format!(
-            "SELECT space_id, level, moment FROM grain_moment_view WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
-        )).map_err(|err| error.pass_with("api_client.fetch", err))?
+        &api_client.fetch(&sql).map_err(|err| error.pass_with(format!("api_client.fetch {sql}"), err))?
     ).map_err(|err| error.pass_with("parse", err))?;
     let data: Vec<(String, Result<Curve<f64>, Error>)> = data
         .data()
         .iter()
-        .map(|(space_id, v)| (space_id.clone(), Curve::new_linear(v)))
+        .map(|(code, v)| (code.clone(), Curve::new_linear(v)))
         .collect();
     if let Some(error_data) = data.iter().filter(|v| v.1.is_err()).next() {
         error_data
@@ -533,7 +566,12 @@ fn grain_moment(
             .clone()
             .map_err(|err| error.pass_with("Curve::new_linear", err))?;
     }
-    Ok(data.into_iter().map(|v| (v.0, v.1.unwrap())).collect())
+    let mut result = HashMap::new();
+    for data in data.into_iter() {
+        let curve = data.1.map_err(|err| error.pass(err))?;
+        result.insert(data.0, GrainMoment::new(vec![curve]));
+    }
+    Ok(result)
 }
 /// Чтение максимального объема для отсеков
 /// Возвращает мапу (ид отсека, максимальный объем (нетто))
@@ -547,7 +585,7 @@ fn max_compartment_volume(
         &api_client
             .fetch(&format!(
                 "SELECT
-                s.space_id as space_id, \
+                s.code as code, \
                 c.volume_max as volume_max
             FROM
                 \"space\" AS s 

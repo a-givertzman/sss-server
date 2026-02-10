@@ -17,7 +17,7 @@ use kernel::{
     run::Run,
     types::{Arc, RwLock},
 };
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 //use prelude::*;
 use crate::algorithm::entities::{
     Bounds,
@@ -26,10 +26,7 @@ use crate::algorithm::entities::{
 use crate::{
     algorithm::{
         Calculus,
-        entities::{
-            model_cached::{DisplacementShape, LocalCache, Shape},
-            ship_model::ship_model::ShipModel,
-        },
+        entities::ship_model::ship_model::ShipModel,
     },
     infrostructure::{DevStream, SelectCalculus, SelectDevDoc, SelectDevInfo},
     server::{
@@ -238,7 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         conf.api.address.host.clone(),
         conf.api.address.port.clone(),
     ));
- /*   let physical_frames = [
+  /*  let physical_frames = [
         -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
         6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
         17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
@@ -256,7 +253,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
     ];
     let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
+    let mut compartments_volume_max = HashMap::new();
+    compartments_volume_max.insert("H104".to_owned(), 2560.3);
+    compartments_volume_max.insert("H206".to_owned(), 719.3);
+    compartments_volume_max.insert("SP101".to_owned(), 94.35);
+    compartments_volume_max.insert("SP102".to_owned(), 94.35);
+    compartments_volume_max.insert("SP201".to_owned(), 94.35);
+    compartments_volume_max.insert("SP202".to_owned(), 94.35);
     let res = model_cached.reload_shapes();
+    dbg!(&res);
+    let res = model_cached.init(compartments_volume_max, &bounds);
     dbg!(&res);
     let res = model_cached.rebuild_caches();
     dbg!(&res);
@@ -266,17 +272,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     return Ok(());
 */
-    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
-    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
-    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
-    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
-    dso_angles.dedup();
     let ship_model = ShipModel::new(
         &dbg,
         ship_id,
         project_id.to_owned(),
         model_cached,
-        api_client.clone(),
+        Arc::clone(&api_client),
     );
     let ship_model = Arc::new(RwLock::new(ship_model));
     ship_model.write().init().unwrap();
@@ -351,8 +352,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             Calculus::new(
                                                 dbg,
                                                 conf.clone(),
-                                                api_client.clone(),
-                                                ship_model.clone(),
+                                                Arc::clone(&api_client),
+                                                Arc::clone(&ship_model),
                                                 Arc::clone(&thread_pool),
                                             ),
                                         )),

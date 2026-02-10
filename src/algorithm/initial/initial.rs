@@ -9,8 +9,8 @@ use crate::algorithm::entities::data::stability::{
 };
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{
-    CoefficientKArray, CoefficientKThetaArray, MetacentricHeightSubdivisionArray, MultiplerSArray,
-    MultiplerX1Array, MultiplerX2Array, loads::*,
+    CoefficientKArray, CoefficientKThetaArray, MetacentricHeightSubdivisionArray,
+    MultiplerSArray, MultiplerX1Array, MultiplerX2Array, loads::*,
 };
 use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::types::eval_result::EvalResult;
@@ -135,7 +135,7 @@ impl Eval<(), EvalResult> for Initial {
                 .api_client
                 .fetch(&format!(
                     "SELECT 
-                    space_id, \
+                    code, \
                     space_name, \
                     cargo_id, \
                     cargo_name, \
@@ -163,7 +163,7 @@ impl Eval<(), EvalResult> for Initial {
                     "SELECT 
                     cargo_id, \
                     cargo_name, \
-                    space_id, \
+                    code, \
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
@@ -193,7 +193,7 @@ impl Eval<(), EvalResult> for Initial {
                     "SELECT
                     cargo_id, \
                     cargo_name, \
-                    space_id, \
+                    code, \
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
@@ -219,7 +219,7 @@ impl Eval<(), EvalResult> for Initial {
                     c.cargo_id AS cargo_id, \
                     c.slot_id AS slot_id, \
                     c.cargo_name AS cargo_name, \
-                    c.space_id AS space_id, \
+                    c.code AS code, \
                     c.assignment_id AS assignment_id, \
                     c.assigment_context AS assigment_type, \
                     c.weight AS mass, \
@@ -244,7 +244,7 @@ impl Eval<(), EvalResult> for Initial {
                     "SELECT 
                     cargo_id, \
                     cargo_name, \
-                    space_id, \
+                    code, \
                     space_name, \
                     assignment_id, \
                     assigment_context as assigment_type, \
@@ -359,9 +359,43 @@ impl Eval<(), EvalResult> for Initial {
                 WHERE 
                     limit_area='{area}' AND ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};"
                 ))
-                .map_err(|err| error.pass_with("get_strength_limit", err))?,
+                .map_err(|err| error.pass_with("strength_limits", err))?,
         )
-        .map_err(|err| error.pass_with("get_strength_limit", err))?;
+        .map_err(|err| error.pass_with("strength_limits", err))?;
+        let hold_part = HoldPartDataArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT DISTINCT
+                            code, \
+                            group_id, \
+                            group_index
+                        FROM 
+                            hold_part_view
+                        WHERE 
+                            ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("hold_part", err))?,
+        ).map_err(|err| error.pass_with("hold_part", err))?;
+        let hold_compartment = HoldCompartmentArray::parse(
+            &self
+                .api_client
+                .fetch(&format!(
+                    "SELECT DISTINCT 
+                            code, \
+                            group_id, \
+                            group_start_index, \
+                            group_end_index
+                        FROM 
+                            hold_compartment_view
+                        WHERE 
+                            ship_id={} AND project_id IS NOT DISTINCT FROM {};",
+                    initial_ctx.ship_id, initial_ctx.project_id
+                ))
+                .map_err(|err| error.pass_with("hold_part", err))?,
+        )
+        .map_err(|err| error.pass_with("hold_part", err))?;
         initial_ctx.ship = Some(ship);
         initial_ctx.ship_type = Some(ship_type);
         initial_ctx.navigation_area = Some(navigation_area);
@@ -373,6 +407,7 @@ impl Eval<(), EvalResult> for Initial {
         initial_ctx.liquid = Some(liquid.data());
         initial_ctx.unit = Some(unit_data);
         initial_ctx.gaseous = Some(gaseous.data());
+        initial_ctx.hold_compartment = Some(hold_compartment.data(hold_part));
         initial_ctx.multipler_x1 = Some(multipler_x1.data());
         initial_ctx.multipler_x2 = Some(multipler_x2.data());
         initial_ctx.multipler_s = Some(multipler_s);

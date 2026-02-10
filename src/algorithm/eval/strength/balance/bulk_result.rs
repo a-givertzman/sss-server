@@ -4,7 +4,7 @@ use crate::algorithm::entities::data::loads::AssignmentType;
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
     /// ID помещения
-    pub space_id: String, 
+    pub code: String, 
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Распределение массы по шпациям
@@ -14,12 +14,12 @@ pub struct BulkResult {
 impl BulkResult {
     ///
     pub fn new(
-        space_id: String,
+        code: String,
         assigment_type: AssignmentType,
         mass_values: Vec<f64>,
     ) -> Self {
         Self {
-            space_id,
+            code,
             assigment_type,
             mass_values,
         }

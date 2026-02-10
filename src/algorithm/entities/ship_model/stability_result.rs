@@ -94,7 +94,7 @@ impl LiquidResult {
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
     /// ID помещения
-    pub space_id: String,  // TODO - убрать после переноса расчета момента в модель
+    pub code: String,  // TODO - убрать после переноса расчета момента в модель
     /// ID assigned
     pub assignment_id: usize,
     /// Тип назначения груза
@@ -104,35 +104,59 @@ pub struct BulkResult {
     /// Смещение центра массы груза
     pub mass_shift: Position, 
     ///  Признак смещаемости груза
-    pub shiftable: bool, 
-    /// Уровень заполнения отсека
-    pub level: f64,  // TODO - убрать после переноса расчета момента в модель
-    /// Объемный кренящий момент
-    pub moment: f64, 
+    pub shiftable: bool,     
+    ///  Уровень заполнения отсека
+    pub level: f64,
+    /// Объем груза в отсеке
+    pub volume: f64,
+    /// Поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub inertia_trans_x: f64,    
+    /// Продольный момент инерции площади ватерлинии относительно осей, параллельных осям Y, м^4 
+    pub inertia_long_y: f64,  
+    /// Максимальный поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub max_inertia_trans_x: f64,   
+    /// Абсолютный момент жидкости при текущих углах и объеме
+    pub grain_moment: f64,
 }
 ///
 impl BulkResult {
     ///
     pub fn new(
-        space_id: String,
+        code: String,
         assignment_id: usize,
         assigment_type: AssignmentType, 
         mass: f64,
         mass_shift: Position,
         shiftable: bool,
         level: f64,
+        volume: f64,
+        inertia_trans_x: f64,    
+        inertia_long_y: f64, 
+        max_inertia_trans_x: f64,   
     ) -> Self {
         Self {
-            space_id,
+            code,
             assignment_id,
             assigment_type, 
             mass,
             mass_shift,
             shiftable,
             level,
-            moment: 0.,  // TODO - временно запоняется данными из бд, перенести расчет в модель
+            volume,
+            inertia_trans_x,    
+            inertia_long_y, 
+            max_inertia_trans_x,   
+            grain_moment: 0.,
         }
     }
+}
+/// TODO: Type doc here
+#[derive(Debug, Clone, Decode, Encode)]
+pub struct HoldCompartmentResult {  
+    mass_shift: Position,
+    level: f64,
+    long_moment_of_inertia_max: f64,
+    trans_moment_of_inertia_max: f64,  
 }
 
 
