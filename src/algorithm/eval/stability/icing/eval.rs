@@ -2,8 +2,10 @@ use crate::algorithm::context::context_access::ContextRead;
 use crate::algorithm::entities::Moment;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::eval::icing_timber::ctx::IcingTimberCtx;
+use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::{IcingCoeffCtx, UnitAreaCtx};
 use crate::algorithm::eval::stability::IcingStabCtx;
+use crate::prelude::ContextParamsWrite;
 use crate::{
     kernel::{Eval, types::{Arc, RwLock, eval_result::EvalResult}},
     prelude::ContextWrite,
@@ -39,7 +41,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
     fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            Ok(ctx) => {
+            Ok(mut ctx) => {
                 let icing_coeff: IcingCoeffCtx = ctx.read();
                 let icing_timber: IcingTimberCtx = ctx.read();
                 let unit_area: UnitAreaCtx = ctx.read();
@@ -78,19 +80,24 @@ impl Eval<(), EvalResult> for IcingStabEval {
                 // Суммарный момент от масса льда на горизонтальной проекции для каждой составляющей открытых палуб
                 let m_ice_h = m_ice_hdeck + delta_moment_unit + delta_moment_timber_icing - delta_moment_timber_no_icing;
                 // Суммарная масса льда и его моменты
-                let p_ice = p_ice_h + p_ice_v;
-                let m_ice = m_ice_v + m_ice_h;
+                let mass = p_ice_h + p_ice_v;
+                let moment = m_ice_v + m_ice_h;
                 let result = IcingStabCtx {
-                    p_ice,
-                    m_ice,
+                    mass,
+                    moment,
                 };
+                let mass_shift = moment.to_pos(mass);
                 log::info!(
                     "Icing mass:{:.3} shift:({:.3}, {:.3},{:.3})",
-                    result.p_ice,
-                    result.m_ice.x(),
-                    result.m_ice.y(),
-                    result.m_ice.z()
+                    result.mass,
+                    mass_shift.x(),
+                    mass_shift.y(),
+                    mass_shift.z()
                 );
+                ctx.write_params(ParameterID::MassIcing, mass);
+                ctx.write_params(ParameterID::MassIcingX, mass_shift.x());
+                ctx.write_params(ParameterID::MassIcingY, mass_shift.y());
+                ctx.write_params(ParameterID::MassIcingZ, mass_shift.z());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

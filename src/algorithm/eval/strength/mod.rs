@@ -17,5 +17,4 @@ pub use dynamic_mass::ctx::DynamicMassCtx;
 pub use total_force::ctx::TotalForceCtx;
 pub use shear_force::ctx::ShearForceCtx;
 pub use bending_moment::ctx::BendingMomentCtx;
-pub use result::ctx::ResultStrCtx;
 

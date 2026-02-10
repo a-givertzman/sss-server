@@ -10,6 +10,7 @@ pub mod navigation_area;
 pub mod point;
 pub mod screw;
 pub mod ship_type;
+pub mod criterion;
 
 pub use bow_board::*;
 pub use draft_mark::*;

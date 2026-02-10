@@ -2,6 +2,7 @@
 pub mod icing;
 pub mod static_mass;
 pub mod balance;
+pub mod dynamic_mass;
 pub mod metacentric_height;
 pub mod lever_diagram;
 pub mod wind;

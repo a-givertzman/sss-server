@@ -1,12 +1,12 @@
 //! Учет намокания палубного груза
-use crate::algorithm::entities::Position;
+use crate::algorithm::entities::Moment;
 ///
 #[derive(Debug, Clone)]
 pub struct WettingCtx {
     /// Суммарная масса
     pub mass: f64,
-    /// Смещение центра массы
-    pub mass_shift: Position,
+    /// Момент массы намокания палубного груза
+    pub moment: Moment,
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,
 }

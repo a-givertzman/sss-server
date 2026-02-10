@@ -36,7 +36,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
-            Ok(ctx) => {
+            Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let lever_diagram: LeverDiagramCtx = ctx.read();
                 let voyage = initial
@@ -97,6 +97,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                         angle,
                         target,
                     );
+                    ctx.write_params(ParameterID::VesselSpeed, v_0);
                     CriterionData::new_result(CriterionID::HeelTurning, angle, target)
                 } else {
                     match calculate_velocity(target) {
@@ -104,7 +105,8 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                             log::info!(
                                 "Criterion Circulation no angle, target:{:.3} calculated velocity:{:.3}",
                                 target, velocity,
-                            ); 
+                            );
+                            ctx.write_params(ParameterID::VesselSpeed, velocity);
                             CriterionData::new_error(
                                 CriterionID::HeelTurning,
                                 format!(
