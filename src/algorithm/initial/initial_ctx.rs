@@ -66,7 +66,7 @@ impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize, project_id: &str, bounds: Bounds) -> Self {
+    pub fn new(ship_id: &str, project_id: &str, bounds: Bounds) -> Self {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),

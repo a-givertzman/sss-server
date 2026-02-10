@@ -52,10 +52,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_id = initial.ship_id.clone();
-                let hold_compartment = initial
-                    .hold_compartment
-                    .as_ref()
-                    .ok_or(error.err("hold_compartment error: no data!"))?;
+                let project_id = initial.project_id.clone();
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -194,7 +191,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         v.0, v.1, v.2
                     )),
                 );
-                send_stability_diagram(&self.dbg, &self.api_client, &ship_id, diagram)
+                send_stability_diagram(&self.dbg, &ship_id, &project_id, &self.api_client, diagram)
                     .map_err(|err| error.pass(err))?;
                 ctx.write(result)
             }
@@ -214,21 +211,33 @@ impl std::fmt::Debug for LeverDiagramEval {
 /// Запись данных расчета плечей остойчивости в БД
 pub fn send_stability_diagram(
     dbg: &Dbg,
-    api_client: &ApiClient,
     ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
     data: Vec<(f64, f64, f64)>,
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_stability_diagram");
     log::info!("send_stability_diagram begin");
-    let mut full_sql = "DO $$ BEGIN ".to_owned();
-    full_sql += &format!("DELETE FROM stability_diagram WHERE ship_id={ship_id};");
-    full_sql += " INSERT INTO stability_diagram (ship_id, angle, value_dso, value_ddo) VALUES";
-    data.into_iter().for_each(|(angle, value_dso, value_ddo)| {
-        full_sql += &format!(" ({ship_id}, {angle}, {value_dso}, {value_ddo}),");
-    });
-    full_sql.pop();
-    full_sql.push(';');
-    full_sql += " END$$;";
+    if data.is_empty() {
+        return Err(error.err("empty data!"));
+    }   
+    let values_list: Vec<String> = data
+        .iter()
+        .map(|(angle, value_dso, value_ddo)| 
+            format!("({ship_id}, {project_id}, {angle}, {value_dso}, {value_ddo})")
+        ).collect();    
+    let full_sql = format!(
+        "DO $$ BEGIN \
+        DELETE FROM stability_diagram \
+        WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \
+        INSERT INTO stability_diagram \
+          (ship_id, project_id, angle, value_dso, value_ddo) \
+        VALUES \
+          {values_str}; \
+        END $$;",
+        values_str = values_list.join(",\n")
+    );
+ //   println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_stability_diagram end");
     Ok(())

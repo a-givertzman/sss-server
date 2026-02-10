@@ -47,14 +47,16 @@ impl Eval<(), EvalResult> for ResultCriterionEval {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_id = initial.ship_id.clone();
+                let project_id = initial.project_id.clone();
                 let criterion_stability: CriterionStabilityCtx = ctx.read();
                 let criterion_draught: CriterionDraughtCtx = ctx.read();
                 let zg: ZgCtx = ctx.read();
                 let parameters: &Parameters = ctx.read_ref();
                 send_stability_data(
                     &self.dbg,
-                    &self.api_client,
                     &ship_id,
+                    &project_id,
+                    &self.api_client,                    
                     &criterion_stability.data,
                     &zg.data,
                     &criterion_draught.data,
@@ -62,8 +64,9 @@ impl Eval<(), EvalResult> for ResultCriterionEval {
                 .map_err(|err| error.pass(err))?;
                 send_parameters_data(
                     &self.dbg,
-                    &self.api_client,
                     &ship_id,
+                    &project_id,
+                    &self.api_client,                    
                     parameters.clone().take_data(),
                 )
                 .map_err(|err| error.pass(err))?;
@@ -85,8 +88,9 @@ impl std::fmt::Debug for ResultCriterionEval {
 /// Запись данных расчета остойчивости в БД
 pub fn send_stability_data(
     dbg: &Dbg,
-    api_client: &ApiClient,
     ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
     criterion_data: &Vec<CriterionData>,
     zg_data: &HashMap<usize, f64>,
     criterion_draugth: &Vec<CriterionData>,
@@ -104,7 +108,7 @@ pub fn send_stability_data(
     log::info!("read criterion relaton ok");
     log::info!("send_stability_data send begin");
     let mut full_sql = "DO $$ BEGIN ".to_owned();
-    full_sql += &format!("DELETE FROM criterion_values WHERE ship_id={ship_id};");
+    full_sql += &format!("DELETE FROM criterion_values WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};");
     criterion_data.iter().for_each(|v| {
         let zg_value = if let Some(zg) = zg_data.get(&v.criterion_id) {
             zg.to_string()
@@ -130,8 +134,8 @@ pub fn send_stability_data(
         };
         full_sql += " INSERT INTO criterion_values "; 
         full_sql += &match v.error_message.clone() {
-            None => format!("(ship_id, criterion_id, actual_value, limit_value, state) VALUES ({ship_id}, {}, {}, {}, {state});", v.criterion_id, v.result, v.target),
-            Some(error) => format!("(ship_id, criterion_id, actual_value, limit_value, state, error_message) VALUES ({ship_id}, {}, {}, {}, {state}, '{}');", v.criterion_id, v.result, v.target, error),
+            None => format!("(ship_id, project_id, criterion_id, actual_value, limit_value, state) VALUES ({ship_id}, {project_id}, {}, {}, {}, {state});", v.criterion_id, v.result, v.target),
+            Some(error) => format!("(ship_id, project_id, criterion_id, actual_value, limit_value, state, error_message) VALUES ({ship_id}, {project_id}, {}, {}, {}, {state}, '{}');", v.criterion_id, v.result, v.target, error),
         };
     });
     full_sql += " END$$;";
@@ -142,23 +146,31 @@ pub fn send_stability_data(
 /// Запись данных расчета остойчивости в БД
 pub fn send_parameters_data(
     dbg: &Dbg,
-    api_client: &ApiClient,
     ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
     data: Vec<(usize, f64)>,
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_parameters_data");
     log::info!("send_parameters_data begin");
-    let mut full_sql = "DO $$ BEGIN ".to_owned();
-    full_sql += &format!("DELETE FROM parameter_data WHERE ship_id={ship_id};");
-    if !data.is_empty() {
-        full_sql += " INSERT INTO parameter_data (ship_id, parameter_id, result) VALUES";
-        data.into_iter().for_each(|v| {
-            full_sql += &format!(" ({ship_id}, {}, {}),", v.0, v.1);
-        });
-        full_sql.pop();
-        full_sql.push(';');
+    if data.is_empty() {
+        return Err(error.err("empty data!"));
     }
-    full_sql += " END$$;";
+    let data_list: Vec<_> =  data.into_iter().map(|v|
+        format!(" ({ship_id}, {project_id}, {}, {})", v.0, v.1)
+    ).collect();
+    let full_sql = format!(
+        "DO $$ BEGIN \
+        DELETE FROM parameter_data \
+        WHERE ship_id= {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \
+        INSERT INTO parameter_data \
+        (ship_id, project_id, parameter_id, result) \
+        VALUES \
+        {data_str}; \
+        END$$;",
+        data_str = data_list.join(",\n")
+    );
+    // println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_parameters_data end");
     Ok(())

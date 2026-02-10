@@ -50,7 +50,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let ship_id = 2;
+    let ship_id = "2";
     let project_id = "NULL";
     let cache_dir = "src/assets/cache/sofia".into();
     let model_dir = "src/assets/model/sofia".into();
@@ -110,7 +110,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let mut ship_model = ShipModel::new(
         &dbg,
-        ship_id,
+        ship_id.to_owned(),
         project_id.to_owned(),
         model_cached,
         api_client.clone(),
@@ -192,6 +192,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             &dbg,
             StabilityBalanceEval::new(
                 &dbg,
+                Arc::clone(&api_client),
                 Arc::clone(&ship_model),
                 StaticMassStabEval::new(
                     &dbg,

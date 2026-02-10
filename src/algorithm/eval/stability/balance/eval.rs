@@ -1,4 +1,5 @@
 use crate::algorithm::eval::stability::{StabilityBalanceCtx, StaticMassStabCtx};
+use crate::infrostructure::ApiClient;
 use crate::{
     algorithm::{
         context::context_access::{ContextRead, ContextReadRef},
@@ -20,6 +21,7 @@ use std::sync::Arc;
 /// Расчет равновесного положения судна
 pub struct StabilityBalanceEval {
     dbg: Dbg,
+    api_client: Arc<ApiClient>,    
     model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
@@ -29,12 +31,14 @@ impl StabilityBalanceEval {
     ///
     pub fn new(
         parent: impl Into<String>,
+        api_client: Arc<ApiClient>,
         model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "StabilityBalanceEval");
         Self {
             dbg,
+            api_client,
             model,
             ctx: Box::new(ctx),
         }
@@ -175,4 +179,27 @@ impl std::fmt::Debug for StabilityBalanceEval {
             .field("dbg", &self.dbg)
             .finish()
     }
+}
+/// Запись данных расчета отсеков
+pub fn send_compartments_param(
+    dbg: &Dbg,
+    ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
+    data: Vec<(f64, f64, f64)>,
+) -> Result<(), Error> {
+    let error = Error::new(dbg, "send_compartments_param");
+    log::info!("send_compartments_param begin");
+    let mut full_sql = "DO $$ BEGIN ".to_owned();
+    full_sql += &format!("DELETE FROM stability_diagram WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};");
+    full_sql += " INSERT INTO stability_diagram (ship_id, project_id, angle, value_dso, value_ddo) VALUES";
+    data.into_iter().for_each(|(angle, value_dso, value_ddo)| {
+        full_sql += &format!(" ({ship_id}, {project_id}, {angle}, {value_dso}, {value_ddo}),");
+    });
+    full_sql.pop();
+    full_sql.push(';');
+    full_sql += " END$$;";
+    api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
+    log::info!("send_stability_diagram end");
+    Ok(())
 }

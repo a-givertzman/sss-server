@@ -46,6 +46,7 @@ impl Eval<(), EvalResult> for ResultStrEval {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let ship_id = initial.ship_id.clone();
+                let project_id = initial.project_id.clone();
                 let bounds = initial
                     .bounds
                     .as_ref()
@@ -183,12 +184,19 @@ impl Eval<(), EvalResult> for ResultStrEval {
                                         .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
                                 );
                 */
-                send_values(&self.dbg, &self.api_client, &ship_id, results.take_values())
-                    .map_err(|err| error.pass(err))?;
+                send_values(
+                    &self.dbg,
+                    &ship_id,
+                    &project_id,
+                    &self.api_client,
+                    results.take_values(),
+                )
+                .map_err(|err| error.pass(err))?;
                 send_results(
                     &self.dbg,
-                    &self.api_client,
                     &ship_id,
+                    &project_id,
+                    &self.api_client,
                     results.take_results(),
                 )
                 .map_err(|err| error.pass(err))?;
@@ -210,30 +218,35 @@ impl std::fmt::Debug for ResultStrEval {
 /// Запись промежуточных данных расчета прочности в БД
 fn send_values(
     dbg: &Dbg,
-    api_client: &ApiClient,
     ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
     data: (Vec<String>, Vec<Vec<f64>>),
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_values");
     log::info!("send_strength_values begin");
     let (names, values) = data;
-    let mut full_sql = "DO $$ BEGIN ".to_owned();
-    full_sql += &format!("DELETE FROM result_strength_values WHERE ship_id = {ship_id};");
-    full_sql += &names.iter().fold(
-        " INSERT INTO result_strength_values\n (ship_id".to_string(),
-        |s, n| s + ", " + n,
+    let values_list: Vec<String> = values
+        .iter()
+        .map(|row| {
+            let row_data = row.iter()
+                .map(|n| n.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("({ship_id}, {project_id}, {row_data})")
+        })
+        .collect();
+    let full_sql = format!(
+        "DO $$ BEGIN \
+        DELETE FROM result_strength_values \
+        WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \
+        INSERT INTO result_strength_values (ship_id, project_id, {names_list}) \
+        VALUES {values_str}; \
+        END $$;",
+        names_list = names.join(", "),
+        values_str = values_list.join(",\n")
     );
-    full_sql += ")\n VALUES\n";
-    for values in values {
-        full_sql += &values
-            .iter()
-            .fold(format!(" ({ship_id}"), |s, n| s + &format!(", {}", n));
-        full_sql += "),\n";
-    }
-    full_sql.pop();
-    full_sql.pop();
-    full_sql += ";\nEND$$;";
-       println!("{}", &full_sql);
+ //   println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_strength_values end");
     Ok(())
@@ -241,36 +254,43 @@ fn send_values(
 /// Запись результата расчета прочности в БД
 fn send_results(
     dbg: &Dbg,
-    api_client: &ApiClient,
     ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
     data: (Vec<String>, Vec<Vec<f64>>),
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_results");
     log::info!("send_strength_results begin");
     let (names, values) = data;
-    let mut full_sql = "DO $$ BEGIN ".to_owned();
-    full_sql += &format!("DELETE FROM result_strength_force_and_moment WHERE ship_id={ship_id};");
-    full_sql += &names.iter().fold(
-        " INSERT INTO result_strength_force_and_moment\n (ship_id".to_string(),
-        |s, n| s + ", " + n,
-    );
-    full_sql += ")\n VALUES\n";
-    for values in values {
-        full_sql += &values
-            .iter()
-            .enumerate()
-            .fold(format!(" ({ship_id}"), |s, (i, n)| {
-                if names[i].contains("status") {
-                    s + &format!(", {}", *n == 1.) // 1 -
-                } else {
-                    s + &format!(", {}", n)
-                }
-            });
-        full_sql += "),\n";
-    }
-    full_sql.pop();
-    full_sql.pop();
-    full_sql += ";\nEND$$;";
+    let values_str: Vec<_> = values
+        .iter()
+        .map(|row| {
+            let row_values: Vec<_> = row
+                .iter()
+                .enumerate()
+                .map(|(i, n)| {
+                    if names[i].contains("status") {
+                        format!("{}", *n == 1.) // 1 -
+                    } else {
+                        format!("{n}")
+                    }
+                })
+                .collect();
+            format!(" ({ship_id}, {project_id}, {})", row_values.join(", "))
+        })
+        .collect();
+    let full_sql = &format!(
+        "DO $$ BEGIN \
+        DELETE FROM result_strength_force_and_moment \
+        WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \"
+        INSERT INTO result_strength_force_and_moment \
+         (ship_id, project_id, {names_list}) \
+        VALUES \
+         {values_list}; \
+        END$$;",
+        names_list = names.join(", "),
+        values_list = values_str.join(",\n")
+    ).to_owned();
     // println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_strength_results end");

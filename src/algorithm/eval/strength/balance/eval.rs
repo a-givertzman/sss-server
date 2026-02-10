@@ -44,10 +44,6 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let hold_compartment = initial
-                    .hold_compartment
-                    .as_ref()
-                    .ok_or(error.err("hold_compartment error: no data!"))?;
                 let voyage = initial
                     .voyage
                     .as_ref()

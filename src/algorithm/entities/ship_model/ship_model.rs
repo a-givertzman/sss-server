@@ -28,7 +28,7 @@ pub struct ShipModel {
     //   txid: usize,
     //   name: Name,
     dbg: Dbg,
-    ship_id: usize,
+    ship_id: String,
     //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
     bounds: Option<Bounds>,
@@ -57,7 +57,7 @@ impl ShipModel {
     /// - `exit` - exit signal for `recv_query` method
     pub fn new(
         parent: impl Into<String>,
-        ship_id: usize,
+        ship_id: String,
         //    ship_file_name: String,
         project_id: String,
         model_cached: ModelCached,
@@ -93,43 +93,47 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "init");
         self.grain_moments = Some(
             grain_moments(
-                self.ship_id,
-                self.project_id.clone(),
-                &self.api_client.clone(),
+                &self.ship_id,
+                &self.project_id,
+                &self.api_client,
             )
             .map_err(|err| error.pass(err))?,
         );
         self.opening = Some(
             opening(
-                self.ship_id,
-                self.project_id.clone(),
+                &self.ship_id,
+                &self.project_id,
                 &self.api_client.clone(),
             )
             .map_err(|err| error.pass(err))?,
         );
         self.deck_angle_point = Some(
             deck_angle_point(
-                self.ship_id,
-                self.project_id.clone(),
-                &self.api_client.clone(),
+                &self.ship_id,
+                &self.project_id,
+                &self.api_client,
             )
             .map_err(|err| error.pass(err))?,
         );
         // TODO переделать, пока не понятно в какой момент должны читаться объемы
         // возможно их надо пересчитывать каждый расчет
         let max_compartment_volume = max_compartment_volume(
-            self.ship_id,
-            self.project_id.clone(),
-            &self.api_client.clone(),
+            &self.ship_id,
+            &self.project_id,
+            &self.api_client,
         )
         .map_err(|err| error.pass_with("max_compartment_volume", err))?;
-        let bounds = get_physical_bounds(self.ship_id, &self.project_id, &self.api_client)
-            .map_err(|err| error.pass_with("bounds", err))?;
+        let bounds = get_physical_bounds(
+            &self.ship_id, 
+            &self.project_id, 
+            &self.api_client,
+        )
+        .map_err(|err| error.pass_with("bounds", err))?;
         self.horisontal_area_str = {
             let horisontal_area = horisontal_area_str(
-                self.ship_id,
-                self.project_id.clone(),
-                &self.api_client.clone(),
+                &self.ship_id,
+                &self.project_id,
+                &self.api_client,
             )
             .map_err(|err| error.pass(err))?;
             let (horisontal_area, errors): (Vec<_>, Vec<_>) = horisontal_area
@@ -170,9 +174,9 @@ impl ShipModel {
         };
         let (horisontal_area_stab, horisontal_area_moment) = {
             let horisontal_area_stab = horisontal_area_stab(
-                self.ship_id,
-                self.project_id.clone(),
-                &self.api_client.clone(),
+                &self.ship_id,
+                &self.project_id,
+                &self.api_client,
             )
             .map_err(|err| error.pass(err))?;
             horisontal_area_stab
@@ -433,7 +437,7 @@ impl Debug for ShipModel {
 ///
 /// Получение шпаций из физических фреймов
 fn get_physical_bounds(
-    ship_id: usize,
+    ship_id: &str,
     project_id: &str,
     api_client: &ApiClient,
 ) -> Result<Bounds, Error> {
@@ -454,7 +458,7 @@ fn get_physical_bounds(
 /// Получение шпаций, вероятно не нужно, шпации будут считаться из физических фреймов
 fn get_bounds(
     api_client: &ApiClient,
-    ship_id: usize,
+    ship_id: &str,
     project_id: String,
     qnt_bounds: usize,
 ) -> Result<Bounds, Error> {
@@ -517,8 +521,8 @@ fn get_bounds(
 */
 /// Чтение данных горизонтальных поверхностей для прочности из базы
 fn horisontal_area_str(
-    ship_id: usize,
-    project_id: String,
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<Vec<HStrArea>, Error> {
     let err = Error::new("ShipModel", "horisontal_area_str");
@@ -531,8 +535,8 @@ fn horisontal_area_str(
 }
 /// Чтение данных горизонтальных поверхностей для остойчивости из базы
 fn horisontal_area_stab(
-    ship_id: usize,
-    project_id: String,
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<Vec<HStabArea>, Error> {
     let err = Error::new("ShipModel", "horisontal_area_stab");
@@ -544,8 +548,8 @@ fn horisontal_area_stab(
 /// Чтение данных объемного кренящего момента для зерна.
 /// Возвращает мапу (ид отсека, кривая момента от уровня заполнения отсека)
 fn grain_moments(
-    ship_id: usize,
-    project_id: String,
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<HashMap<String, GrainMoment>, Error> {
     let error = Error::new("ShipModel", "grain_moments");
@@ -576,8 +580,8 @@ fn grain_moments(
 /// Чтение максимального объема для отсеков
 /// Возвращает мапу (ид отсека, максимальный объем (нетто))
 fn max_compartment_volume(
-    ship_id: usize,
-    project_id: String,
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<HashMap<String, f64>, Error> {
     let error = Error::new("ShipModel", "max_compartment_volume");
@@ -600,8 +604,8 @@ fn max_compartment_volume(
 }
 /// Чтение таблицы угла входа в воду кромки палубы
 fn deck_angle_point(
-    ship_id: usize,
-    project_id: String,
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<Vec<Position>, Error> {
     let error = Error::new("ShipModel", "deck_angle_point");
@@ -624,8 +628,8 @@ fn deck_angle_point(
 }
 /// Чтение таблицы открытых отверстий
 fn opening(
-    ship_id: usize,
-    project_id: String,
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
 ) -> Result<Vec<Position>, Error> {
     let error = Error::new("ShipModel", "opening");

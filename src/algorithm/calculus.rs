@@ -133,6 +133,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
             &dbg,
             StabilityBalanceEval::new(
                 &dbg,
+                Arc::clone(&self.api_client),
                 Arc::clone(&self.ship_model),
                 StaticMassStabEval::new(
                     &dbg,
@@ -153,7 +154,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                 &dbg,
                                 Arc::clone(&self.api_client),
                                 Context::new(InitialCtx::new(
-                                    query.ship_id,
+                                    &query.ship_id.to_string(),
                                     &query.project_id,
                                     bounds,
                                 )),

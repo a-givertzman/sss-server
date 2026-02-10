@@ -185,7 +185,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
        return Ok(());
     */
 
-    let ship_id = 2;
+    let ship_id = "2";
     let project_id = "NULL";
     let cache_dir: PathBuf = "src/assets/cache/sofia".into();
     let model_dir: PathBuf = "src/assets/model/sofia".into();
@@ -274,7 +274,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 */
     let ship_model = ShipModel::new(
         &dbg,
-        ship_id,
+        ship_id.to_owned(),
         project_id.to_owned(),
         model_cached,
         Arc::clone(&api_client),
