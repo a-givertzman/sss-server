@@ -1627,9 +1627,6 @@ impl ModelCached {
                             cargo.shiftable,
                             compartment_result.level,
                             compartment_result.volume,
-                            compartment_result.inertia_trans_x,    
-                            compartment_result.inertia_long_y,  
-                            compartment_result.max_inertia_trans_x,   
                         ));
                         Ok(())
                     })
@@ -1661,9 +1658,6 @@ impl ModelCached {
                             cargo.shiftable,
                             compartment_result.level,
                             compartment_result.volume,
-                            compartment_result.inertia_trans_x,    
-                            compartment_result.inertia_long_y,  
-                            compartment_result.max_inertia_trans_x,   
                         ));
                         Ok(())
                     })
@@ -1757,12 +1751,16 @@ impl ModelCached {
                             task_results.push((
                                 code.clone(),
                                 stability_result::LiquidResult::new(
+                                    code.clone(),
                                     cargo.assignment_id,
                                     cargo.assigment_type,
                                     cargo.mass,
                                     res.volume_center,
-                                    res.inertia_long_y,
-                                    res.inertia_trans_x,
+                                    res.level,
+                                    res.volume,
+                                    res.inertia_trans_x,    
+                                    res.inertia_long_y,  
+                                    res.max_inertia_trans_x,   
                                 ),
                             ));
                             Ok(())

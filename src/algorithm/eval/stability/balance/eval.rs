@@ -1,3 +1,4 @@
+use crate::algorithm::entities::ship_model::stability_result::{BulkResult, LiquidResult};
 use crate::algorithm::eval::stability::{StabilityBalanceCtx, StaticMassStabCtx};
 use crate::infrostructure::ApiClient;
 use crate::{
@@ -51,6 +52,8 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let ship_id = initial.ship_id.clone();
+                let project_id = initial.project_id.clone();
                 let hold_compartment = initial
                     .hold_compartment
                     .as_ref()
@@ -132,10 +135,21 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::CenterMassY, result.mass_center.y());
                 ctx.write_params(ParameterID::CenterMassZ, result.mass_center.z());
                 let bulk = result.bulk.clone();
-
-
-                
+                send_bulk_param(
+                    &self.dbg,
+                    &ship_id,
+                    &project_id,
+                    &self.api_client,
+                    &bulk,
+                ).map_err(|err| error.pass(err))?;                
                 let liquid = result.liquid.clone();
+                send_liquid_param(
+                    &self.dbg,
+                    &ship_id,
+                    &project_id,
+                    &self.api_client,
+                    &liquid,
+                ).map_err(|err| error.pass(err))?;
                 log::info!(
                     "StabilityBalance heel:{:.3} trim_degree:{:.3} trim_meter:{:.3} draught_mid:{:.3} displacement:{:.3} 
                     length_wl:{:.3} breadth_wl:{:.3} bow_area:{:.3} rad_trans:{:.3} rad_long:{:.3}
@@ -180,26 +194,77 @@ impl std::fmt::Debug for StabilityBalanceEval {
             .finish()
     }
 }
-/// Запись данных расчета отсеков
-pub fn send_compartments_param(
+/// Запись данных расчета отсеков с сыпучими грузами
+pub fn send_bulk_param(
     dbg: &Dbg,
     ship_id: &str,
     project_id: &str,
     api_client: &ApiClient,
-    data: Vec<(f64, f64, f64)>,
+    data: &Vec<BulkResult>,
 ) -> Result<(), Error> {
-    let error = Error::new(dbg, "send_compartments_param");
-    log::info!("send_compartments_param begin");
-    let mut full_sql = "DO $$ BEGIN ".to_owned();
-    full_sql += &format!("DELETE FROM stability_diagram WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id};");
-    full_sql += " INSERT INTO stability_diagram (ship_id, project_id, angle, value_dso, value_ddo) VALUES";
-    data.into_iter().for_each(|(angle, value_dso, value_ddo)| {
-        full_sql += &format!(" ({ship_id}, {project_id}, {angle}, {value_dso}, {value_ddo}),");
-    });
-    full_sql.pop();
-    full_sql.push(';');
+    let error = Error::new(dbg, "send_bulk_param");
+    log::info!("send_bulk_param begin");
+    if data.is_empty() {
+        return Err(error.err("empty data!"));
+    }   
+    let mut full_sql = "DO $$ BEGIN\n".to_owned();
+    for data in data.iter() {
+        full_sql += &format!(
+            "UPDATE \"cargo_assignment\" SET centre_of_gravity_x = {}, centre_of_gravity_y = {}, centre_of_gravity_z = {} WHERE id = {};\n",
+            data.mass_shift.x(), data.mass_shift.y(), data.mass_shift.z(), data.assignment_id
+        );
+        full_sql += &format!(
+            "UPDATE \"cargo_assignment/compartment/bulk\" SET cargo_height = {}, allocated_shifting_moment = {} \
+            WHERE id IN (SELECT bulk_cargo_assignment_id FROM \"cargo_assignment/compartment\" 
+            WHERE id IN (SELECT compartment_cargo_assignment_id FROM \"cargo_assignment\" WHERE id = {}));\n",
+            data.level, data.grain_moment, data.assignment_id
+        );
+        full_sql += &format!(
+            "UPDATE \"space/compartment\" SET level = {}, volume = {} \
+            WHERE id IN (SELECT compartment_id FROM bulk_cargo_view WHERE assignment_id = {});\n",
+            data.level, data.volume, data.assignment_id
+        );
+    }
     full_sql += " END$$;";
+ //   println!("{}", &full_sql);    
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
-    log::info!("send_stability_diagram end");
+    log::info!("send_bulk_param end");
+    Ok(())
+}
+/// Запись данных расчета отсеков с жидкими грузами
+pub fn send_liquid_param(
+    dbg: &Dbg,
+    ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
+    data: &Vec<LiquidResult>,
+) -> Result<(), Error> {
+    let error = Error::new(dbg, "send_liquid_param");
+    log::info!("send_liquid_param begin");
+    if data.is_empty() {
+        return Err(error.err("empty data!"));
+    }   
+    let mut full_sql = "DO $$ BEGIN\n".to_owned();
+    for data in data.iter() {
+        full_sql += &format!(
+            "UPDATE \"cargo_assignment\" SET centre_of_gravity_x = {}, centre_of_gravity_y = {}, centre_of_gravity_z = {} WHERE id = {};\n",
+            data.mass_shift.x(), data.mass_shift.y(), data.mass_shift.z(), data.assignment_id
+        );
+        full_sql += &format!(
+            "UPDATE \"cargo_assignment/compartment/liquid\" SET cargo_height = {}, long_moment_of_inertia = {}, trans_moment_of_inertia = {} \
+            WHERE id IN (SELECT liquid_cargo_assignment_id FROM \"cargo_assignment/compartment\" 
+            WHERE id IN (SELECT compartment_cargo_assignment_id FROM \"cargo_assignment\" WHERE id = {}));\n",
+            data.level, data.inertia_long_y, data.inertia_trans_x, data.assignment_id
+        );
+        full_sql += &format!(
+            "UPDATE \"space/compartment\" SET level = {}, volume = {} \
+            WHERE id IN (SELECT compartment_id FROM liquid_cargo_view WHERE assignment_id = {});\n",
+            data.level, data.volume, data.assignment_id
+        );
+    }
+    full_sql += " END$$;";
+ //   println!("{}", &full_sql);    
+    api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
+    log::info!("send_liquid_param end");
     Ok(())
 }

@@ -56,6 +56,8 @@ pub struct BalanceStabilityResult {
 /// TODO: Type doc here
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct LiquidResult {
+    /// Код помещения
+    pub code: String,  
     /// ID assigned
     pub assignment_id: usize,
     /// Тип назначения груза
@@ -64,37 +66,51 @@ pub struct LiquidResult {
     pub mass: f64,
     /// Смещение центра массы груза
     pub mass_shift: Position, 
-    /// продольный момент свободной поверхности жидкости
-    pub long_moment_of_inertia: f64,
-    /// поперечный момент свободной поверхности жидкости
-    pub trans_moment_of_inertia: f64,
+    ///  Уровень заполнения отсека
+    pub level: f64,
+    /// Объем груза в отсеке
+    pub volume: f64,
+    /// Поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub inertia_trans_x: f64,    
+    /// Продольный момент инерции площади ватерлинии относительно осей, параллельных осям Y, м^4 
+    pub inertia_long_y: f64,  
+    /// Максимальный поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
+    pub max_inertia_trans_x: f64,   
 }
 ///
 impl LiquidResult {
     ///
     pub fn new(
+        code: String,  
         assignment_id: usize,
         assigment_type: AssignmentType, 
         mass: f64,
         mass_shift: Position,
-        long_moment_of_inertia: f64,
-        trans_moment_of_inertia: f64,
+        level: f64,
+        volume: f64,
+        inertia_trans_x: f64,
+        inertia_long_y: f64,
+        max_inertia_trans_x: f64,  
     ) -> Self {
         Self {
+            code,
             assignment_id,
             assigment_type, 
             mass,
             mass_shift,
-            long_moment_of_inertia,
-            trans_moment_of_inertia,
+            level,
+            volume,
+            inertia_trans_x,
+            inertia_long_y,
+            max_inertia_trans_x
         }
     }
 }
 /// TODO: Type doc here
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
-    /// ID помещения
-    pub code: String,  // TODO - убрать после переноса расчета момента в модель
+    /// Код помещения
+    pub code: String,  
     /// ID assigned
     pub assignment_id: usize,
     /// Тип назначения груза
@@ -109,13 +125,7 @@ pub struct BulkResult {
     pub level: f64,
     /// Объем груза в отсеке
     pub volume: f64,
-    /// Поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
-    pub inertia_trans_x: f64,    
-    /// Продольный момент инерции площади ватерлинии относительно осей, параллельных осям Y, м^4 
-    pub inertia_long_y: f64,  
-    /// Максимальный поперечный момент инерции площади ватерлинии относительно осей, параллельных осям X, м^4 
-    pub max_inertia_trans_x: f64,   
-    /// Абсолютный момент жидкости при текущих углах и объеме
+    /// Момент смещения зерна
     pub grain_moment: f64,
 }
 ///
@@ -130,9 +140,6 @@ impl BulkResult {
         shiftable: bool,
         level: f64,
         volume: f64,
-        inertia_trans_x: f64,    
-        inertia_long_y: f64, 
-        max_inertia_trans_x: f64,   
     ) -> Self {
         Self {
             code,
@@ -143,20 +150,10 @@ impl BulkResult {
             shiftable,
             level,
             volume,
-            inertia_trans_x,    
-            inertia_long_y, 
-            max_inertia_trans_x,   
             grain_moment: 0.,
         }
     }
 }
-/// TODO: Type doc here
-#[derive(Debug, Clone, Decode, Encode)]
-pub struct HoldCompartmentResult {  
-    mass_shift: Position,
-    level: f64,
-    long_moment_of_inertia_max: f64,
-    trans_moment_of_inertia_max: f64,  
-}
+
 
 
