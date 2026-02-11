@@ -52,8 +52,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
         match self.ctx.eval(()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
-                let ship_id = initial.ship_id.clone();
-                let project_id = initial.project_id.clone();
                 let hold_compartment = initial
                     .hold_compartment
                     .as_ref()
@@ -137,16 +135,12 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 let bulk = result.bulk.clone();
                 send_bulk_param(
                     &self.dbg,
-                    &ship_id,
-                    &project_id,
                     &self.api_client,
                     &bulk,
                 ).map_err(|err| error.pass(err))?;                
                 let liquid = result.liquid.clone();
                 send_liquid_param(
                     &self.dbg,
-                    &ship_id,
-                    &project_id,
                     &self.api_client,
                     &liquid,
                 ).map_err(|err| error.pass(err))?;
@@ -197,8 +191,6 @@ impl std::fmt::Debug for StabilityBalanceEval {
 /// Запись данных расчета отсеков с сыпучими грузами
 pub fn send_bulk_param(
     dbg: &Dbg,
-    ship_id: &str,
-    project_id: &str,
     api_client: &ApiClient,
     data: &Vec<BulkResult>,
 ) -> Result<(), Error> {
@@ -214,15 +206,10 @@ pub fn send_bulk_param(
             data.mass_shift.x(), data.mass_shift.y(), data.mass_shift.z(), data.assignment_id
         );
         full_sql += &format!(
-            "UPDATE \"cargo_assignment/compartment/bulk\" SET cargo_height = {}, allocated_shifting_moment = {} \
+            "UPDATE \"cargo_assignment/compartment/bulk\" SET level = {}, volume = {}, allocated_shifting_moment = {} \
             WHERE id IN (SELECT bulk_cargo_assignment_id FROM \"cargo_assignment/compartment\" 
             WHERE id IN (SELECT compartment_cargo_assignment_id FROM \"cargo_assignment\" WHERE id = {}));\n",
-            data.level, data.grain_moment, data.assignment_id
-        );
-        full_sql += &format!(
-            "UPDATE \"space/compartment\" SET level = {}, volume = {} \
-            WHERE id IN (SELECT compartment_id FROM bulk_cargo_view WHERE assignment_id = {});\n",
-            data.level, data.volume, data.assignment_id
+            data.level, data.volume, data.grain_moment, data.assignment_id
         );
     }
     full_sql += " END$$;";
@@ -234,8 +221,6 @@ pub fn send_bulk_param(
 /// Запись данных расчета отсеков с жидкими грузами
 pub fn send_liquid_param(
     dbg: &Dbg,
-    ship_id: &str,
-    project_id: &str,
     api_client: &ApiClient,
     data: &Vec<LiquidResult>,
 ) -> Result<(), Error> {
@@ -251,15 +236,10 @@ pub fn send_liquid_param(
             data.mass_shift.x(), data.mass_shift.y(), data.mass_shift.z(), data.assignment_id
         );
         full_sql += &format!(
-            "UPDATE \"cargo_assignment/compartment/liquid\" SET cargo_height = {}, long_moment_of_inertia = {}, trans_moment_of_inertia = {} \
+            "UPDATE \"cargo_assignment/compartment/liquid\" SET level = {}, volume = {}, long_moment_of_inertia = {}, trans_moment_of_inertia = {} \
             WHERE id IN (SELECT liquid_cargo_assignment_id FROM \"cargo_assignment/compartment\" 
             WHERE id IN (SELECT compartment_cargo_assignment_id FROM \"cargo_assignment\" WHERE id = {}));\n",
-            data.level, data.inertia_long_y, data.inertia_trans_x, data.assignment_id
-        );
-        full_sql += &format!(
-            "UPDATE \"space/compartment\" SET level = {}, volume = {} \
-            WHERE id IN (SELECT compartment_id FROM liquid_cargo_view WHERE assignment_id = {});\n",
-            data.level, data.volume, data.assignment_id
+            data.level, data.volume, data.inertia_long_y, data.inertia_trans_x, data.assignment_id
         );
     }
     full_sql += " END$$;";

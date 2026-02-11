@@ -144,6 +144,7 @@ impl Eval<(), EvalResult> for Initial {
                     cargo_type, \
                     stowage_factor, \
                     weight AS mass, \
+                    volume, \
                     shiftable AS shiftable, \
                     centre_of_compartment_x as mass_shift_x,
                     centre_of_compartment_y as mass_shift_y,
