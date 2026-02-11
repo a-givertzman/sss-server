@@ -168,7 +168,7 @@ pub fn send_parameters_data(
         VALUES \
         {data_str}; \
         END$$;",
-        data_str = data_list.join(",\n")
+        data_str = data_list.join(", ")
     );
     // println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;

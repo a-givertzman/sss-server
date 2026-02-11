@@ -224,7 +224,7 @@ fn send_values(
     data: (Vec<String>, Vec<Vec<f64>>),
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_values");
-    log::info!("send_strength_values begin");
+    log::info!("send_values begin");
     let (names, values) = data;
     let values_list: Vec<String> = values
         .iter()
@@ -244,11 +244,11 @@ fn send_values(
         VALUES {values_str}; \
         END $$;",
         names_list = names.join(", "),
-        values_str = values_list.join(",\n")
+        values_str = values_list.join(", ")
     );
  //   println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
-    log::info!("send_strength_values end");
+    log::info!("send_values end");
     Ok(())
 }
 /// Запись результата расчета прочности в БД
@@ -260,7 +260,7 @@ fn send_results(
     data: (Vec<String>, Vec<Vec<f64>>),
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_results");
-    log::info!("send_strength_results begin");
+    log::info!("send_results begin");
     let (names, values) = data;
     let values_str: Vec<_> = values
         .iter()
@@ -282,17 +282,17 @@ fn send_results(
     let full_sql = &format!(
         "DO $$ BEGIN \
         DELETE FROM result_strength_force_and_moment \
-        WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \"
+        WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \
         INSERT INTO result_strength_force_and_moment \
          (ship_id, project_id, {names_list}) \
         VALUES \
          {values_list}; \
         END$$;",
         names_list = names.join(", "),
-        values_list = values_str.join(",\n")
+        values_list = values_str.join(", ")
     ).to_owned();
-    // println!("{}", &full_sql);
+    println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
-    log::info!("send_strength_results end");
+    log::info!("send_results end");
     Ok(())
 }

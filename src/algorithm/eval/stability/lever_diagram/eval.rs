@@ -235,7 +235,7 @@ pub fn send_stability_diagram(
         VALUES \
           {values_str}; \
         END $$;",
-        values_str = values_list.join(",\n")
+        values_str = values_list.join(", ")
     );
  //   println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;

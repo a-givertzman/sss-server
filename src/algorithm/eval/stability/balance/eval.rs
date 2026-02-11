@@ -197,7 +197,7 @@ pub fn send_bulk_param(
     let error = Error::new(dbg, "send_bulk_param");
     log::info!("send_bulk_param begin");
     if data.is_empty() {
-        return Err(error.err("empty data!"));
+        return Ok(());
     }   
     let mut full_sql = "DO $$ BEGIN\n".to_owned();
     for data in data.iter() {
@@ -227,7 +227,7 @@ pub fn send_liquid_param(
     let error = Error::new(dbg, "send_liquid_param");
     log::info!("send_liquid_param begin");
     if data.is_empty() {
-        return Err(error.err("empty data!"));
+        return Ok(());
     }   
     let mut full_sql = "DO $$ BEGIN\n".to_owned();
     for data in data.iter() {
