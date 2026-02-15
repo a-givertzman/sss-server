@@ -20,7 +20,6 @@ obj = "0.10.2"
 stl_io = "0.8.5"
 parry3d-f64 = "~0.22"
 parry2d-f64 = "~0.22"
-
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
 #sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", tag = "0.0.10" }
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
@@ -54,3 +53,5 @@ kanal = "~0.1"
 papaya = "~0.2"
 parking_lot = "~0.12"
 multimap = "0.10.1"
+csgrs = "=0.3.2"
+boolmesh = "0.1.7"

@@ -1,6 +1,12 @@
-use nalgebra::Const;
-use nalgebra::OPoint;
-use nalgebra::Vector3;
+use std::io::Write;
+use std::path::PathBuf;
+
+use boolmesh::prelude::Manifold;
+use nalgebra::{
+    Const, 
+    OPoint, Vector3
+};
+use boolmesh::{self, compute_boolean};
 use parry3d_f64::math::Point;
 use parry3d_f64::shape::TriMesh;
 use sal_core::{
@@ -8,8 +14,6 @@ use sal_core::{
     error::Error
 };
 use crate::algorithm::context::context_access::ContextRead;
-use crate::algorithm::eval::entities::surface_outer_body::SurfaceOuterBody;
-use crate::algorithm::eval::entities::surface_superstructure::SurfaceSuperstructure;
 use crate::algorithm::eval::import_model::convert_model_to_trimesh_ctx::ConvertModelToTrimeshCtx;
 use crate::algorithm::eval::import_model::import_3d_model_ctx::Import3DModelCtx;
 use crate::{
@@ -21,6 +25,43 @@ use crate::{
     prelude::ContextWrite,
 };
 ///
+/// Write data to .stl file
+pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
+    let error = Error::new("Shape", "write_stl");
+    let (result, empty_normals): (Vec<_>, Vec<_>) = mesh
+        .triangles()
+        .map(|t| (t.normal(), t))
+        .partition(|(n, _)| n.is_some());
+    if !empty_normals.is_empty() {
+        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
+    }
+    let triangles: Vec<_> = result
+        .into_iter()
+        .map(|(n, t)| {
+            let n = n.unwrap();
+            let normal = stl_io::Vector([n[0] as f32, n[1] as f32, n[2] as f32]);
+            let vertices = [
+                stl_io::Vector([t.a[0] as f32, t.a[1] as f32, t.a[2] as f32]),
+                stl_io::Vector([t.b[0] as f32, t.b[1] as f32, t.b[2] as f32]),
+                stl_io::Vector([t.c[0] as f32, t.c[1] as f32, t.c[2] as f32]),
+            ];
+            stl_io::Triangle { normal, vertices }
+        })
+        .collect();
+    let mut binary_stl = Vec::<u8>::new();
+    stl_io::write_stl(&mut binary_stl, triangles.iter())
+        .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
+    let mut buffer = std::fs::File::create(&path).map_err(|err| {
+        error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
+    })?;
+    buffer.write_all(&binary_stl).map_err(|err| {
+        error.pass_with(
+            format!("buffer.write_all, path:{:?}", path),
+            err.to_string(),
+        )
+    })
+}
+///
 /// Преобразование координат 3D модели в тип данных TriMesh
 pub struct ConvertModelToTrimeshEval {
     dbg: Dbg,
@@ -30,42 +71,212 @@ pub struct ConvertModelToTrimeshEval {
 //
 impl ConvertModelToTrimeshEval {
     ///
-    /// Новый экземпляр класса [ConvertModelToTrimeshEval]
-    pub fn new(
-        parent: impl Into<String>, 
-        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static
-    ) -> Self {
+    /// Новый экземпляр [ConvertModelToTrimeshEval]
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "ConvertModelToTrimeshEval");
         Self { dbg, ctx: Box::new(ctx) }
     }
     ///
-    /// Преобразование баттокса (корма/нос)
-    /// - 'buttocks' - набор точек баттокса
-    /// - `target_points` - кол-во точек интерполяции
-    fn convert_buttocks(
-        &self, 
-        buttocks: Vec<(f64, f64)>, 
-        target_points: usize
-    ) -> Option<TriMesh> {
-        if buttocks.len() < 3 {
-            log::warn!("{} | Not enough points for buttocks: {}", self.dbg, buttocks.len());
-            return None;
+    /// Преобразование координат в набор точек [Point]
+    fn convert_to_points_vec(
+        &self,
+        vec_x_y_z: &Vec<(f64, f64, f64)>, 
+    ) -> Vec<Point<f64>>{
+        let mut frame: Vec<Point<f64>> = Vec::new();
+        for (x, y, z) in vec_x_y_z {
+            let point = Point::new(*x, *z, *y);
+            frame.push(point);
         }
-        let mut vertices = Vec::new();
-        for (z, x) in &buttocks {
-            vertices.push(Point::new(*x, 0.0, *z));
+        return frame;
+    }
+    ///
+    /// Соединение точек из
+    /// двух блоков координат
+    /// - `vertices` - набор вершин 3D фигуры
+    /// - `indices` - набор индексов вершин 3D фигуры
+    /// - `points_x1` - первый блок точек для соединения
+    /// - `points_x2` - второй блок точек для соединения
+    fn connect_points(
+        &self,
+        vertices: &mut Vec<OPoint<f64, Const<3>>>,
+        indices: &mut Vec<[u32; 3]>,
+        points_x1: &[OPoint<f64, Const<3>>],
+        points_x2: &[OPoint<f64, Const<3>>],
+        reverse: bool,
+        p_1: bool,
+    ) {
+        let n = points_x1.len();
+        let mut base = vertices.len() as u32;
+        if p_1 {
+            for point in points_x1 {
+                vertices.push(*point);
+            }
+        } else {
+            base -= n as u32;
         }
-        vertices = self.resample_line(&vertices, target_points);
-        if let Some(buttocks) =  self.close_frame_end(vertices) {
-            match TriMesh::new(buttocks.0, buttocks.1) {
-                Ok(final_mesh) => return Some(final_mesh),
-                Err(err) => {
-                    log::error!("Failed to create mirrored TriMesh: {}", err);
-                    return None;
-                }
+        for point in points_x2 {
+            vertices.push(*point);
+        }
+        let x1 = base;
+        let x2 = base + n as u32;
+        // боковые торцы
+        for i in 0..n {
+            let next = (i + 1) % n;
+            let a = x1 + i as u32;
+            let b = x1 + next as u32;
+            let c = x2 + next as u32;
+            let d = x2 + i as u32;
+            if reverse {
+                indices.push([a, c, b]);
+                indices.push([a, d, c]);
+            } else {
+                indices.push([a, b, c]);
+                indices.push([a, c, d]);
             }
         }
-        None
+    }
+    ///
+    /// 
+    fn build_wall(
+        &self, 
+        reverse: bool, 
+        x2: u32, 
+        indices: &mut Vec<[u32; 3]>, 
+        vertices: &mut Vec<OPoint<f64, Const<3>>>,
+        points: &Vec<OPoint<f64, Const<3>>>, 
+        n: usize,
+    ) {
+        let centroid = self.calculate_centroid(points);
+        let center_idx = vertices.len() as u32;
+        vertices.push(centroid);
+        for i in 0..n {
+            let next = (i + 1) % n;
+            if reverse {
+                indices.push([
+                    center_idx,
+                    x2 + next as u32,
+                    x2 + i as u32,
+                ]);
+            } else {
+                indices.push([
+                    center_idx,
+                    x2 + i as u32,
+                    x2 + next as u32,
+                ]);
+            }
+        }
+    }
+    ///
+    /// Вычисляется центроида сэмпла
+    /// - `points` - точки у которых надо найти центроид
+    fn calculate_centroid(
+        &self, 
+        points: &[Point<f64>]
+    ) -> Point<f64> {
+        let sum = points.iter().fold(Point::new(0.0, 0.0, 0.0), |acc, p| {
+            Point::new(acc.x + p.x, acc.y + p.y, acc.z + p.z)
+        });
+        let count = points.len() as f64;
+        Point::new(sum.x / count, sum.y / count, sum.z / count)
+    }
+    ///
+    /// 
+    fn is_degenerate(
+    &self,
+    vertices: &[OPoint<f64, Const<3>>],
+    tri: [u32; 3],
+    ) -> bool {
+        let a = vertices[tri[0] as usize];
+        let b = vertices[tri[1] as usize];
+        let c = vertices[tri[2] as usize];
+        let ab = b - a;
+        let ac = c - a;
+        ab.cross(&ac).norm_squared() < 1e-12
+    }
+    ///
+    /// 
+    fn calculate_polygon_area(&self, points: &[Point<f64>]) -> f64 {
+        if points.len() < 3 {
+            return 0.0;
+        }
+        let mut area = 0.0;
+        for i in 0..points.len() {
+            let j = (i + 1) % points.len();
+            area += points[i].x * points[j].z - points[j].x * points[i].z;
+        }
+        area.abs() / 2.0
+    }
+    ///
+    /// Отзеркаливание точек по Y и 
+    /// добавление к векторам исходных вершин и индексов
+    fn mirror_points(
+        &self,
+        vertices: &mut Vec<OPoint<f64, Const<3>>>,
+        indices: &mut Vec<[u32; 3]>,
+    ) {
+        const EPS: f64 = 0.0;
+        let original_len = vertices.len();
+        let mut remap = vec![0u32; original_len];
+        for i in 0..original_len {
+            let p = vertices[i];
+            if p.y.abs() == EPS {
+                remap[i] = i as u32;
+            } else {
+                let mirrored = OPoint::<f64, Const<3>>::new(p.x, -p.y, p.z);
+                let new_index = vertices.len() as u32;
+                vertices.push(mirrored);
+                remap[i] = new_index;
+            }
+        }
+        let original_indices = indices.clone();
+        for [a, b, c] in original_indices {
+            let ma = remap[a as usize];
+            let mb = remap[b as usize];
+            let mc = remap[c as usize];
+            if ma == a && mb == b && mc == c {
+                continue;
+            }
+            indices.push([ma, mc, mb]);
+        }
+    }
+    ///
+    /// Создание [Manifold]
+    /// - `vertices` - вершины фигуры
+    /// - `indices` - массив индексов треугольников фигуры
+    fn create_manifold(&self, vertices: &[OPoint<f64, Const<3>>], indices: &[[u32; 3]]) -> Result<Manifold,Error> {
+        let mut all_coords = Vec::new();
+        for point in vertices {
+            all_coords.push(point.x);
+            all_coords.push(point.y);
+            all_coords.push(point.z);
+        }
+        let mut all_indx = Vec::new();
+        for triangle_indx in indices {
+            for indx in triangle_indx {
+                all_indx.push(*indx as usize);
+            }
+        }
+        match Manifold::new(&all_coords, &all_indx) {
+            Ok(manifold) => {
+                return Ok(manifold)
+            },
+            Err(e) => return Err(e.into()),
+        }
+    }
+    ///
+    /// Преобразование [Manifold] в [TriMesh]
+    /// - `manifold` - [Manifold] для преобразования
+    fn manifold_to_trimesh(&self, manifold: Manifold) -> Result<TriMesh, Error> {
+        let vertices: Vec<OPoint<f64, Const<3>>> =
+            manifold.ps.iter()
+                .map(|p| OPoint::<f64, Const<3>>::new(p.x, p.y, p.z))
+                .collect();
+        let indices: Vec<[u32; 3]> =
+            manifold.get_indices().iter()
+                .map(|t| [t[0] as u32, t[1] as u32, t[2] as u32])
+                .collect();
+        TriMesh::new(vertices, indices)
+            .map_err(|e| e.to_string().into())
     }
     ///
     /// Интерполяция фрейма до одинакового количества точек
@@ -116,7 +327,6 @@ impl ConvertModelToTrimeshEval {
                 let c = points[idx + 2];
                 let ba = Vector3::new(a.x - b.x, a.y - b.y, a.z - b.z);
                 let bc = Vector3::new(c.x - b.x, c.y - b.y, c.z - b.z);
-                
                 let dot = ba.dot(&bc);
                 let eps = 1e-6;
                 if dot.abs() < eps {
@@ -150,384 +360,146 @@ impl ConvertModelToTrimeshEval {
         result
     }
     ///
-    /// Создание стены из сэмпла
-    /// - `frame` - шпангоут, который надо закрыть стенкой
-    /// - `result` - набор готовых TriMesh
-    fn build_wall(
-        &self, 
-        frame: Vec<Point<f64>>, 
-        result: &mut Vec<TriMesh>
-    )  {
-        match self.close_frame_end(frame) {
-            Some((vertices, indices)) => {
-                match TriMesh::new(vertices, indices) {
-                    Ok(trimesh) => {
-                        result.push(trimesh);
-                    },
-                    Err(err) => {
-                        log::error!("Failed to create TriMesh: {}", err);
-                    },
-                }
-            },
-            None => {
-                log::debug!("Error to create a wall!");
-            },
-        }
-    }
-    ///
-    /// Заливка сэмпла веером
-    /// - `points` - точки для заливки
-    fn close_frame_end(
-        &self, 
-        points: Vec<Point<f64>>, 
-    ) -> Option<(Vec<Point<f64>>, Vec<[u32; 3]>)> {
-        let mut vertices = points.to_vec();
-        let mut indices = Vec::new();
-        if points.len() < 3 {
-            return Some((vertices, indices));
-        }
-        let centroid = self.calculate_centroid(&points);
-        let center_index = vertices.len() as u32;
-        vertices.push(centroid);
-        for i in 0..points.len() - 1 {
-            let idx1 = i as u32;
-            let idx2 = (i + 1) as u32;
-            if self.is_valid_triangle(&points[i], &points[i + 1], &centroid) {
-                if points[i].y <= 0.0 {
-                    indices.push([center_index, idx1, idx2]);
-                } else {
-                    indices.push([center_index, idx2, idx1]);
-                }
-            } 
-        }
-        if indices.is_empty() {
-            log::warn!("No valid triangles created in close_frame_end");
-            return None;
-        }
-        Some((vertices, indices))
-    }
-    ///
-    /// Вычисляется центроида сэмпла
-    /// - `points` - точки у которых надо найти центроид
-    fn calculate_centroid(
-        &self, 
-        points: &[Point<f64>]
-    ) -> Point<f64> {
-        let sum = points.iter().fold(Point::new(0.0, 0.0, 0.0), |acc, p| {
-            Point::new(acc.x + p.x, acc.y + p.y, acc.z + p.z)
-        });
-        let count = points.len() as f64;
-        Point::new(sum.x / count, sum.y / count, sum.z / count)
-    }
-    ///
-    /// Отзеркаливание по координате Y
-    /// - `line` - то что надо отзеркалить
-    fn mirror_y(
-        &self, 
-        line: &[Point<f64>]
-    ) -> Vec<Point<f64>> {
-        line.iter()
-            .map(|p| OPoint::<f64, Const<3>>::new(p.x, -p.y, p.z))
-            .collect()
-    }
-    ///
-    /// Проверка треугольника на валидность
-    /// - `p1` - точка треугольника
-    /// - `p2` - точка треугольника
-    /// - `p3` - точка треугольника
-    fn is_valid_triangle(
-        &self, 
-        p1: &Point<f64>, 
-        p2: &Point<f64>, 
-        p3: &Point<f64>
-    ) -> bool {
-        let eps = 1e-10;
+    /// Создание и индексирование вершин
+    /// - `tanks_3d` - набор блоков координат отсеков
+    fn convert_surface_outer(&self, tanks_3d: Import3DModelCtx) -> TriMesh {
+        let target_points = 600;
+        let mut result: Vec<TriMesh> = Vec::new();
+        let mut all_vertices = Vec::new();
+        let mut all_indices = Vec::new();
+        let mut start_wall = None;
+        let mut p1_flag = false;
+        for i in 0..tanks_3d.surface_outer_body.coordinates.len() - 1 {
+            let curr_frame = &tanks_3d.surface_outer_body.coordinates[i];
+            let next_frame = &tanks_3d.surface_outer_body.coordinates[i + 1];
+            let points_x1 = self.resample_line(
+                &self.convert_to_points_vec(curr_frame), 
+                target_points
+            );
+            let points_x2 = self.resample_line(
+                &self.convert_to_points_vec(next_frame), 
+                target_points
+            );
+            if start_wall.is_none() {
+                start_wall = Some(points_x1.clone());
+            }
+            if curr_frame[0].0 == next_frame[0].0 {
+                let start = start_wall.as_ref().unwrap();
+                self.build_wall(
+                false,
+                    0,
+                    &mut all_indices,
+                    &mut all_vertices,
+                    &start,
+                    start.len()
+                );
+                self.build_wall(
+                true,
+                    (all_vertices.len() - points_x1.len() - 1) as u32,
+                    &mut all_indices,
+                    &mut all_vertices,
+                    &points_x1,
+                    points_x1.len()
+                );
+                match TriMesh::new(all_vertices.clone(), all_indices.clone()) { // последняя часть
+                    Ok(tri) => {
+                        result.push(tri)
 
-        // Проверка на уникальность вершин
-        if (p1 - p2).norm_squared() < eps ||
-           (p2 - p3).norm_squared() < eps ||
-           (p3 - p1).norm_squared() < eps {
-            return false;
-        }
-        // Проверка на коллинеарность
-        let v1 = p2 - p1;
-        let v2 = p3 - p1;
-        let cross = v1.cross(&v2);
-        cross.norm_squared() > eps
-    }
-    ///
-    /// Квадрат из двух треугольников
-    /// 3D фигура
-    /// - `vertices` - набор вершин
-    /// - `indices` - набор индексов вершин
-    /// - `p1` - точка для соединения
-    /// - `p2` - точка для соединения
-    /// - `c1` - точка для соединения
-    /// - `c2` - точка для соединения
-    fn push_quad(
-        &self,
-        vertices: &mut Vec<Point<f64>>,
-        indices: &mut Vec<[u32; 3]>,
-        p1: Point<f64>,
-        p2: Point<f64>,
-        c1: Point<f64>,
-        c2: Point<f64>,
-        reverse: bool,
-    ) {
-        let base = vertices.len() as u32;
-        vertices.extend([p1, p2, c1, c2]);
-        if reverse {
-            indices.extend([
-                // [base, base + 2, base + 1],
-                // [base + 1, base + 2, base + 3],
-                [base, base + 2, base + 3],
-                [base, base + 3, base + 1],
-            ]);
-        } else {
-            indices.extend([
-                // [base, base + 1, base + 2],
-                // [base + 1, base + 3, base + 2],
-                [base, base + 3, base + 2],
-                [base, base + 1, base + 3],
-            ]);
-        }
-    }
-    ///
-    /// Соединение двух сэмплов
-    /// - `vertices` - набор вершин
-    /// - `indices` - набор индексов вершин
-    /// - `a` - шпангоут 1
-    /// - `b` - шпангоут 2
-    /// - `reverse` - маркирова для реверсивного соединения
-    fn stitch_lines(
-        &self, 
-        vertices: &mut Vec<Point<f64>>,
-        indices: &mut Vec<[u32; 3]>,
-        a: &[Point<f64>],
-        b: &[Point<f64>],
-        reverse: bool,
-    ) {
-        let n = a.len().min(b.len());
-        for i in 0..n.saturating_sub(1) {
-            self.push_quad(vertices, indices, a[i], a[i + 1], b[i], b[i + 1], reverse);
-        }
-    }
-    ///
-    /// Разбиение сэмпла пополам
-    /// с последующей интерполяцией
-    /// по всей длине
-    /// - `source` - сэмпл для разбиения
-    /// - `target_points` - кол-во точек на сэмпл для интерполяции
-    fn split_and_resample(
-        &self,
-        source: &[Point<f64>],
-        target_points: usize,
-    ) -> (Vec<Point<f64>>, Vec<Point<f64>>) {
-        let mut source_sort_by_y = source.to_vec();
-        source_sort_by_y.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
-        let y_mid = source_sort_by_y[source_sort_by_y.len() / 2].y;
-        let mut upper: Vec<Point<f64>> =
-            source.iter().cloned().filter(|p| p.y >= y_mid).collect();
-        upper = self.resample_line(&upper, target_points);
-        let mut lower: Vec<Point<f64>> =
-            source.iter().cloned().filter(|p| p.y <= y_mid).collect();
-        lower = self.resample_line(&lower, target_points);
-        let lower = self.mirror_y(&upper);
-        (upper, lower)
-    }
-    ///
-    /// Создание вершин и их индексирование
-    /// для 3D модели
-    /// - `frames` - исходные шпангоуты
-    /// - `nasal_block` - модель носового баттокса
-    /// - `target_points` - кол-во точек на сэмпл для интерполяции
-    pub fn get_vertices_indeces(
-        &self,
-        frames: Vec<(f64, Vec<Point<f64>>)>,
-        nasal_block: Option<TriMesh>,
-        main_decks_indices: Vec<usize>,
-        target_points: usize,
-    ) -> TriMesh {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
-        let mut result = Vec::new();
-        let mut start_trimesh = None;
-        for i in 0..frames.len().saturating_sub(1) {
-            start_trimesh.get_or_insert(i);
-            if frames[i].0 == frames[i + 1].0 {
-                // начальная стена
-                if !main_decks_indices.contains(&start_trimesh.unwrap()) {
-                    let start_frame = frames[start_trimesh.unwrap()].1.clone();
-                    let start_frame_mirr = self.mirror_y(&frames[start_trimesh.unwrap()].1.clone());
-                    let mut all_points = Vec::new();
-                    all_points.extend_from_slice(&start_frame);
-                    all_points.extend_from_slice(&start_frame_mirr);
-                    self.build_wall(all_points, &mut result);
-                } else {
-                    let start_frame = frames[start_trimesh.unwrap()].1.clone();
-                    self.build_wall(start_frame, &mut result);
-                }
-                // конечная стена
-                if !main_decks_indices.contains(&start_trimesh.unwrap()) {
-                    let curr_end_frame = frames[i].1.clone();
-                    let curr_end_frame_mirr = self.mirror_y(&frames[i].1.clone());
-                    let mut all_points = Vec::new();
-                    all_points.extend_from_slice(&curr_end_frame);
-                    all_points.extend_from_slice(&curr_end_frame_mirr);
-                    self.build_wall(all_points, &mut result);
-                } else {
-                    let curr_end_frame = frames[i].1.clone();
-                    self.build_wall(curr_end_frame, &mut result);
-                }
-                // часть корабля
-                match TriMesh::new(vertices, indices) {
-                    Ok(ship_part) => {
-                        result.push(ship_part);
                     },
-                    Err(err) => {
-                        log::error!("Failed to create TriMesh: {}", err);
-                    }
-                }
-                vertices = Vec::new();
-                indices = Vec::new();
-                start_trimesh = None;
+                    Err(e) => log::error!("Failed to write nasal mesh {}", e),
+                }  
+                all_indices = Vec::new();
+                all_vertices = Vec::new();
+                start_wall = None;
+                p1_flag = true;
                 continue;
-            }
-            let mut prev = frames[i].1.clone();
-            let mut curr = frames[i + 1].1.clone();
-            if prev.len() != curr.len() {
-                prev = self.resample_line(&prev, 600);
-                curr = self.resample_line(&curr, 600);
             } 
-            let is_main_i = main_decks_indices.contains(&i);
-            let is_main_j = main_decks_indices.contains(&(i + 1));
-            match (is_main_i, is_main_j) {
-                (false, false) => {
-                    self.stitch_lines(&mut vertices, &mut indices, &prev, &curr, true);
-                    let prev_reverse = self.mirror_y(&prev);
-                    let curr_reverse = self.mirror_y(&curr);
-                    self.stitch_lines(
-                        &mut vertices,
-                        &mut indices,
-                        &prev_reverse,
-                        &curr_reverse,
-                        false
-                    );
-                }
-                (false, true) => {
-                    let (upper, lower) = self.split_and_resample(&curr, target_points);
-                    self.stitch_lines(&mut vertices, &mut indices, &prev, &upper, true);
-                    let prev_rev = self.mirror_y(&prev);
-                    self.stitch_lines(&mut vertices, &mut indices, &prev_rev, &lower, false);
-                }
-                (true, false) => {
-                    let (upper, lower) = self.split_and_resample(&prev, target_points);
-                    self.stitch_lines(&mut vertices, &mut indices, &curr, &upper, false);
-                    let curr_rev = self.mirror_y(&curr);
-                    self.stitch_lines(&mut vertices, &mut indices, &curr_rev, &lower, true);
-                }
-                (true, true) => {
-                    self.stitch_lines(&mut vertices, &mut indices, &prev, &curr, true);
-                }
+            else if i == tanks_3d.surface_outer_body.coordinates.len() - 2 { // конец модели
+                let start = start_wall.as_ref().unwrap();
+                self.connect_points(
+                    &mut all_vertices, 
+                    &mut all_indices, 
+                    &points_x1, 
+                    &points_x2, 
+                    true,
+                    false
+                );
+                self.build_wall(
+                false,
+                    0,
+                    &mut all_indices,
+                    &mut all_vertices,
+                    &start,
+                    start.len()
+                );
+                self.build_wall(
+                false,
+                    (all_vertices.len() - points_x2.len() + 1) as u32,
+                    &mut all_indices,
+                    &mut all_vertices,
+                    &points_x2,
+                    points_x2.len()
+                );  
+                match TriMesh::new(all_vertices.clone(), all_indices.clone()) { // последняя часть
+                    Ok(tri) => {
+                        result.push(tri)
+
+                    },
+                    Err(e) => log::error!("Failed to write nasal mesh {}", e),
+                }  
+            }
+            if i == 0 || p1_flag {
+                self.connect_points(
+                    &mut all_vertices, 
+                    &mut all_indices, 
+                    &points_x1, 
+                    &points_x2, 
+                    true,
+                    true,
+                );
+                p1_flag = false;
+            } else {
+                self.connect_points(
+                    &mut all_vertices, 
+                    &mut all_indices, 
+                    &points_x1, 
+                    &points_x2, 
+                    true,
+                    false,
+                );                
             }
         }
-        // начальная стена
-        match start_trimesh {
-            Some(start_trimesh) => {
-                if !main_decks_indices.contains(&start_trimesh) {
-                    let start_frame = frames[start_trimesh].1.clone();
-                    let start_frame_mirr = self.mirror_y(&frames[start_trimesh].1.clone());
-                    let mut all_points = Vec::new();
-                    all_points.extend_from_slice(&start_frame);
-                    all_points.extend_from_slice(&start_frame_mirr);
-                    self.build_wall(all_points, &mut result);
-                } else {
-                    let start_frame = frames[start_trimesh].1.clone();
-                    self.build_wall(start_frame, &mut result);
-                }
-            },
-            None => {},
+        let mut last_manifold = None;
+        for tri in result {
+            match self.create_manifold(&tri.vertices(), &tri.indices()) {
+                Ok(ad) => {
+                    if last_manifold.is_none() {
+                        last_manifold = Some(ad);
+                    } else {
+                        match compute_boolean(&ad, &last_manifold.clone().unwrap(),  boolmesh::prelude::OpType::Intersect) {
+                            Ok(add) => {
+                                last_manifold = Some(add.clone());
+                                match self.manifold_to_trimesh(add) {
+                                    Ok(tr) => {
+                                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/1.stl"));
+                                        if let Err(e) = write_stl(&path, &tr) {
+                                            log::error!("Failed to write nasal mesh {}", e);
+                                        }
+                                    },
+                                    Err(e) => log::error!("Failed to write nasal mesh {}", e),
+                                }
+                            },
+                            Err(e) => log::error!("Failed to write nasal mesh {}", e),
+                        }
+                    }
+                },
+                Err(e) => log::error!("Failed to write nasal mesh {}", e)
+            }           
         }
-        // конечная стена
-        if !main_decks_indices.contains(&start_trimesh.unwrap()) {
-            let curr_end_frame = frames[frames.len() - 1].1.clone();
-            let curr_end_frame_mirr = self.mirror_y(&frames[frames.len() - 1].1.clone());
-            let mut all_points = Vec::new();
-            all_points.extend_from_slice(&curr_end_frame);
-            all_points.extend_from_slice(&curr_end_frame_mirr);
-            self.build_wall(all_points, &mut result);
-        } else {
-            let curr_end_frame = frames[frames.len() - 1].1.clone();
-            self.build_wall(curr_end_frame, &mut result);
+        match self.manifold_to_trimesh(last_manifold.unwrap()) {
+            Ok(tri) => return tri,
+            Err(e) => panic!("Failed to write nasal mesh {}", e),
         }
-        // часть корабля
-        match TriMesh::new(vertices, indices) {
-            Ok(ship_part) => {
-                result.push(ship_part);
-            },
-            Err(err) => {
-                log::error!("Failed to create TriMesh: {}", err);
-            }
-        }
-        // объединение всех частей модели в одну
-        let mut full_mesh = result.first().clone().unwrap().to_owned();
-        for mesh in 1..result.len() {
-            if result[mesh].vertices().len() > 0 {
-                full_mesh.append(&result[mesh]);
-            }
-        }
-        full_mesh
-    }
-    ///
-    /// Преобразование поверхности основной модели
-    /// - `surface` - экземпляр [SurfaceOuterBody]
-    /// - `target_points` - кол-во точек на сэмпл для интерполяции
-    fn convert_surface_outer(
-        &self, 
-        surface: SurfaceOuterBody, 
-        target_points: usize, 
-        nasal_block: Option<TriMesh>
-    ) -> Option<TriMesh> {
-        let mut frames: Vec<(f64, Vec<Point<f64>>)> = Vec::new();
-        for vertices in &surface.coordinates {
-            if vertices.is_empty() {;
-                continue;
-            }
-            let frame = vertices[0].0;
-            let points: Vec<Point<f64>> = vertices
-            .iter()
-            .map(|&(_, z, y)| Point::new(frame, y, z))
-            .collect();
-            frames.push((frame, points));
-        }
-        frames.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        let res = self.get_vertices_indeces(frames, nasal_block, surface.main_deck, target_points);
-        return Some(res);
-    }
-    ///
-    /// Преобразование поверхности надстроек
-    /// - `surface` - экземпляр [SurfaceSuperstructure]
-    /// - `target_points` - кол-во точек на сэмпл для интерполяции
-    fn convert_surface_superstructure(
-        &self, 
-        surface: SurfaceSuperstructure, 
-        target_points: usize
-    ) -> Option<TriMesh> {
-        let mut frames: Vec<(f64, Vec<Point<f64>>)> = Vec::new();
-        for vertices in &surface.coordinates {
-            if vertices.is_empty() {
-                continue;
-            }
-            let frame = vertices[0].0;
-            let points: Vec<Point<f64>> = vertices
-            .iter()
-            .map(|&(_, z, y)| Point::new(frame, y, z))
-            .collect();
-            frames.push((frame, points));
-        }
-        frames.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        let res = self.get_vertices_indeces(frames, None, Vec::new(), target_points);
-        Some(res)
     }
 }
 //
@@ -538,22 +510,16 @@ impl Eval<Zg, EvalResult> for ConvertModelToTrimeshEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let model_3d = ContextRead::<Import3DModelCtx>::read(&ctx).clone();
-                let target_points = 600; // Кол-во точек на сэмпл для интерполяции (качество модели)
-                let stern_block = self
-                    .convert_buttocks(model_3d.stern_block.coordinates.clone(), target_points);
-                let nasal_block = self
-
-                    .convert_buttocks(model_3d.nasal_block.coordinates.clone(), target_points);
                 let surface_outer_body = self
-                    .convert_surface_outer(model_3d.surface_outer_body.clone(), target_points, nasal_block.clone());
-                // let surface_superstructure = self
-                    // .convert_surface_superstructure(model_3d.surface_superstructure.clone(), target_points);
-                ctx.write(ConvertModelToTrimeshCtx {
-                    stern_block: stern_block,
-                    nasal_block: nasal_block,
-                    surface_outer_body,
-                    surface_superstructure: None,
-                })
+                    .convert_surface_outer(model_3d);
+                ctx.write(
+                    ConvertModelToTrimeshCtx {
+                        stern_block: None,
+                        nasal_block: None,
+                        surface_outer_body: Some(surface_outer_body),
+                        surface_superstructure: None,
+                    }
+                )
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
         }

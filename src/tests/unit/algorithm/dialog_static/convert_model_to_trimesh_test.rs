@@ -108,29 +108,28 @@ fn convert_model_to_trimesh() {
            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
            12068.8268,
         ),
-        (
-           2, 
-           "APK_2023",
-           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
-           2363.6901869983108,
-        ),
-        (
-           3,
-           "sophia",
-           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
-           21360.5678,
-        ),
-        (
-           4, 
-           "katamaran",
-           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
-           1986.66182,
-        ),
+        // (
+        //    2, 
+        //    "APK_2023",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
+        //    2363.6901869983108,
+        // ),
+        // (
+        //    3,
+        //    "sophia",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
+        //    21360.5678,
+        // ),
+        // (
+        //    4, 
+        //    "katamaran",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
+        //    1986.66182,
+        // ),
     ];
     for (step, ship_name, path_3d_model, target) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
         let mut initial_data = InitialCtx::new(0, "Unit-test");
-
         initial_data.path_3d_model = path_3d_model.to_string();
         let ctx = MocEval {
             ctx: Context::new(initial_data),

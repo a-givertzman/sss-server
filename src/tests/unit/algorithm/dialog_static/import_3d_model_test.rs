@@ -43,8 +43,7 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [import_3d_model_eval
-/// ]
+/// Testing [import_3d_model_eval]
 #[test]
 fn import_3d_model() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);

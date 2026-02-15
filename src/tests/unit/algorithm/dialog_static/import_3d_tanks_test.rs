@@ -59,7 +59,7 @@ fn import_3d_tanks() {
     let test_data = [
         (
             1,
-            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\tanks_test_1"
+            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\tanks.txt"
         ),
     ];
     for (step, path_3d_tanks) in test_data.iter() {

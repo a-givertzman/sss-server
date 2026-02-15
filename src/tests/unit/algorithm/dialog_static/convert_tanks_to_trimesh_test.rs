@@ -17,11 +17,11 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            Zg, import_tanks::{
+            Zg, import_model::{convert_model_to_trimesh_eval::ConvertModelToTrimeshEval, import_3d_model_eval::Import3DModelEval}, import_tanks::{
                 convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx, 
                 convert_tanks_to_trimesh_eval::ConvertTanksToTrimeshEval, 
                 import_3d_tanks_eval::Import3DTanksEval
-            }, 
+            } 
         }
     }, 
     kernel::{
@@ -98,37 +98,49 @@ fn convert_to_trimesh() {
     init_once();
     init_each();
     log::debug!("Starting convert_to_trimesh test");
-    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(31));
+    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(10));
     test_duration.run().unwrap();
     let test_data = [
         (
             1,
-            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\tanks_test_1"
+            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\tanks.txt",
+            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
         ),
     ];
-    for (step, path_3d_tanks) in test_data.iter() {
+    for (step, path_3d_tanks, path_3d_model) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_tanks);
         let mut initial_data = InitialCtx::new(0, "Unit-test");
         initial_data.path_3d_tanks = path_3d_tanks.to_string();
+        initial_data.path_3d_model = path_3d_model.to_string();
         let ctx = MocEval {
             ctx: Context::new(initial_data),
         };
-        let result = ConvertTanksToTrimeshEval::new("Test", Import3DTanksEval::new("Test", ctx))
-            .eval(Zg::empty());
+        let result = ConvertTanksToTrimeshEval::new(
+            "Test", 
+            Import3DTanksEval::new(
+                "Test", 
+                ConvertModelToTrimeshEval::new(
+                    "Test", 
+                    Import3DModelEval::new(
+                        "Test", 
+                        ctx
+                    )
+                )
+            )
+        ).eval(Zg::empty());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ConvertTanksToTrimeshCtx>::read(&ctx).clone();
-                let mut i = 0;
-                let mut mesh_with_flags = result.compartment_corner_points.clone().unwrap();
-                // let _ = mesh_with_flags.set_flags(TriMeshFlags::all());
-                for meshs in mesh_with_flags {
-                    if meshs.vertices().len() > 0 {
-                        let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks_{}.stl", i));
-                        if let Err(e) = write_stl(&path, &meshs) {
-                            log::error!("Failed to write nasal mesh {}", e);
+                match result.compartment_corner_points {
+                    Some(tanks) => {
+                        if tanks.vertices().len() > 0 {
+                            let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks.stl"));
+                            if let Err(e) = write_stl(&path, &tanks) {
+                                log::error!("Failed to write nasal mesh {}", e);
+                            }
                         }
-                        i += 1;
-                    }
+                    },
+                    None => log::warn!("Error to create tanks")
                 }
             },
             Err(err) => {
