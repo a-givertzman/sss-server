@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::algorithm::entities::data::{IcingArray, IcingData};
+use crate::algorithm::entities::data::stability::{IcingArray, IcingData};
 //
 impl From<Vec<(&str, f64)>> for IcingArray {
     fn from(src: Vec<(&str, f64)>) -> Self {

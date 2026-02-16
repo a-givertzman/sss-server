@@ -2,7 +2,7 @@
 
 mod tests {
     use crate::algorithm::entities::model_cached::AreaShape;
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use nalgebra::{Point3, Vector3};
     use sal_core::dbg::Dbg;
     use std::time::Duration;
@@ -10,7 +10,7 @@ mod tests {
     #[ignore = "too slow, run only in release mode"]
     #[test]
     fn shape_windage_area() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         let self_id = "test shape_aabb";
         println!("{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

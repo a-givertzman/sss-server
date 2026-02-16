@@ -5,9 +5,7 @@
 //! be taken to create a more specific cache structure.
 //
 use sal_core::{dbg::Dbg, error::Error};
-use std::{num::ParseFloatError, ops::Index, str::FromStr, sync::OnceLock};
-//
-type SyncVec<T> = std::sync::Arc<[T]>;
+use std::{num::ParseFloatError, str::FromStr, sync::OnceLock};
 ///
 /// Cached dataset lazyly read from the file on the first access.
 ///
@@ -29,7 +27,7 @@ pub struct Cache<T> {
     //таблица данных
     table: OnceLock<Vec<Vec<T>>>,
     //отсортированные вектора ключей, заполняются из таблицы при инициализации
-    keys: OnceLock<Vec<Vec<T>>>, 
+    keys: OnceLock<Vec<Vec<T>>>,
 }
 //
 //
@@ -63,19 +61,21 @@ impl<T: PartialOrd> Cache<T> {
     {
         assert!(vals.len() > 1);
         assert!(vals[0].len() > 1);
-        let keys: Vec<_> = (0..vals[0].len()).map(|i| {
-            // выбираем столбец по его индексу
-            let mut data: Vec<_> = vals.iter().map(|v| v[i].clone()).collect();
-            data.sort_by(|a, b| a.partial_cmp(&b).unwrap());
-            data.dedup();
-            data
-        }).collect();
+        let keys: Vec<_> = (0..vals[0].len())
+            .map(|i| {
+                // выбираем столбец по его индексу
+                let mut data: Vec<_> = vals.iter().map(|v| v[i].clone()).collect();
+                data.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                data.dedup();
+                data
+            })
+            .collect();
         self.table
             .set(vals.clone())
-            .map_err(|_| Error::new("Cache", "init").err("table.set"))?;
+            .map_err(|_| Error::new("Cache", "init").err("table.set error: already set"))?;
         self.keys
             .set(keys)
-            .map_err(|_| Error::new("Cache", "init").err("keys.set"))?;
+            .map_err(|_| Error::new("Cache", "init").err("keys.set error: already set"))?;
         Ok(())
     }
 }
@@ -126,9 +126,10 @@ impl Cache<f64> {
     /// # Panics
     /// non-comparable value (e. g. _NaN_)
     /// qnt_keys >= vals len
-    /// value is out of range
-    /// value index is out of key index range - TODO описать подробнее
+    /// key is out of range
     pub fn get(&self, query: &[f64]) -> Vec<f64> {
+        let query = Vec::from(query);
+   //     println!("{} get start, query:{:?}", self.dbg, query);
         let data = self
             .table
             .get()
@@ -147,28 +148,49 @@ impl Cache<f64> {
                     // ключ совпадает с одним из значений, возвращаем его
                     return vec![*key];
                 }
-                if keys.first().unwrap() > key || keys.last().unwrap() < key {
+                if keys.first().unwrap() > key {
                     // ключ вышел за пределы значений
-                    panic!("{}", format!("i:{key_i} key:{key} key is out of range!"));
+                /*    log::error!(
+                        "{}: {}",
+                        self.dbg,
+                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
+                    );*/
+        //            panic!("{}", format!("{} i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
+                    return vec![*keys.first().unwrap()];
+                } else if keys.last().unwrap() < key {
+                    // ключ вышел за пределы значений
+                /*    log::error!(
+                        "{}: {}",
+                        self.dbg,
+                        format!(" i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", keys, &query)
+                    );*/
+        //            panic!("{}", format!("{}  i:{key_i} key:{key} key is out of range! keys:{:?} query:{:?}", &self.dbg, keys, &query));
+                    return vec![*keys.last().unwrap()];
                 }
                 // пара значений, между которыми попадает ключ
                 let low_index = keys.partition_point(|x| x < &key);
-                return vec![keys[low_index-1], keys[low_index]];
+                assert!(
+                    keys.len() > low_index,
+                    "{}",
+                    format!("{:?}, low_index:{low_index} key:{key}", keys)
+                );
+                return vec![keys[low_index - 1], keys[low_index]];
             })
             .collect();
-       // println!("{:?}", pairs);
+    //    println!("pairs: {:?}", pairs);
         // фильтруем данные, оставляя только те строки, которые содержат какое-либо значение из пар
         let data: Vec<_> = data
             .iter()
             .filter(|v| {
                 for (c, v) in pairs.iter().zip(v.iter()) {
-                    if !c.contains(v) {
+                    if !c.contains(&v) {
                         return false;
                     }
                 }
                 true
             })
             .collect();
+     //   println!("data: {:?}", data);        
         // расчитываем дельту для каждого индекса
         let keys_and_delta: Vec<_> = query
             .iter()
@@ -186,7 +208,7 @@ impl Cache<f64> {
                         format!("key:{key}, data:{:?} query:{:?}", data, query)
                     );
                     // если одно значение ключ всегда будет равен значению, дельта не важна
-                    Some((key, 1.)) 
+                    Some((key, 1.))
                 } else {
                     debug_assert_eq!(data.len(), 2);
                     debug_assert!(
@@ -198,6 +220,7 @@ impl Cache<f64> {
                 }
             })
             .collect();
+     //   println!("keys_and_delta: {:?}", keys_and_delta); 
         // для каждой строки считаем коэффициенты и перемножаем их на значения
         let result = data
             .iter()
@@ -209,8 +232,8 @@ impl Cache<f64> {
                     .filter(|(k, _)| k.is_some())
                     .fold(1., |acc, (k, data)| {
                         let (key, delta) = k.unwrap();
-                        //        let k = ((key - data) as f64).abs() / delta;
-                        //     dbg!(key, delta, data, k);
+         //                 let k = ((key - data) as f64).abs() / delta;
+         //                println!("multipler key:{:?} delta:{:?} data:{:?} k:{:?}", key, delta, data, k);  
                         acc * (1. - ((key - data) as f64).abs() / delta)
                     });
                 // перемножаем каждое значение в строке на коэффициент строки, это будет
@@ -222,28 +245,90 @@ impl Cache<f64> {
         let result = (query.len()..result[0].len())
             .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
             .collect::<Vec<_>>();
+  //      dbg!(query, &result);
         result
     }
-    /// Максимальное значение по индексу
-    pub fn max_value(&self, index: usize) -> f64 {
-        let data = self
-            .table
-            .get()
-            .unwrap_or_else(|| panic!("{}.{} | Cache error: no table! index:{index}", self.dbg, "max_value"));
+    /*  /// Максимальное значение по индексу
+    pub fn value_disp(&self, index: usize) -> (f64, f64) {
+        let data = self.table.get().unwrap_or_else(|| {
+            panic!(
+                "{}.{} | Cache error: no table!",
+                self.dbg, "value_disp"
+            )
+        });
         assert!(data[0].len() > index);
         let v: Vec<_> = data.iter().map(|v| v[index]).collect();
         assert!(v.len() > 0);
-        let v = v.into_iter().max_by(|a, b| a.partial_cmp(b).unwrap());
-        v.unwrap()
-    }
-    /// Максимальное значение ключа по индексу
-    pub fn max_key(&self, index: usize) -> f64 {
+        let v_min = v.iter().min_by(|a, b| a.partial_cmp(b).unwrap());
+        let v_max = v.iter().max_by(|a, b| a.partial_cmp(b).unwrap());
+        (v_min.unwrap().clone(), v_max.unwrap().clone())
+    }*/
+    /// Вектор значений по индексам c условием, возвращает значения только для существующих ключей
+    /// ключи не должны содержать индексы значений
+    /// Возвращает Vec<(value from index1, value from index2)>
+    pub fn values_disp(&self, query: &[Option<f64>]) -> Vec<Vec<f64>> {
+        let data = self.table.get().unwrap_or_else(|| {
+            panic!("{}.{} | Cache error: no table!", self.dbg, "value_disp_opt")
+        });
         let keys = self
             .keys
             .get()
-            .unwrap_or_else(|| panic!("{}.{} | Cache error: no keys! index:{index}", self.dbg, "max_key"));
+            .unwrap_or_else(|| panic!("{}.{} | Error: no keys!", self.dbg, "get"));
+        assert!(
+            data[0].len() > query.len(),
+            "{}",
+            format!("{}, {:?}", data[0].len(), query)
+        );
+        let query: Vec<_> = query
+            .iter()
+            .enumerate()
+            .map(|(i, key)| {
+                let keys = &keys[i];
+                match key {
+                    Some(key) => vec![key],
+                    None => keys.iter().collect(),
+                }
+            })
+            .collect();
+     //   dbg!(&query);
+        let mut i = 0;
+        let mut res = Vec::new();
+        loop {
+            let mut is_cancel = true;
+            let query: Vec<_> = query
+                .iter()
+                .map(|q| {
+      //              dbg!(q, i);
+                    if q.len() <= i+1 {
+                        **q.last().unwrap()
+                    } else {
+                        is_cancel = false;
+                        *q[i]                      
+                    }
+                })
+                .collect();
+        //    dbg!(i, is_cancel, &query);
+            res.push(self.get(&query));
+            if is_cancel {
+                break;
+            }            
+            i += 1;
+        }
+    //    dbg!(&res);
+        res
+    }
+    /// Максимальное значение по индексу
+    #[allow(dead_code)]
+    pub fn disp(&self, index: usize) -> (f64, f64) {
+        let keys = self.keys.get().unwrap_or_else(|| {
+            panic!(
+                "{}.{} | Cache error: no keys! index:{index}",
+                self.dbg, "max_key"
+            )
+        });
         assert!(keys.len() > index);
         assert!(keys[index].len() > 0);
-        keys[index].last().unwrap().clone()
+        let keys = &keys[index];
+        (keys.first().unwrap().clone(), keys.last().unwrap().clone())
     }
 }

@@ -1,4 +1,4 @@
-mod data;
+//mod data;
 mod cache;
 //mod models; // перенес тесты в папку с крейтом из-за проблем с видимостью методов
 //mod fake_initial;
@@ -9,8 +9,11 @@ mod cache;
 //mod roll_frequency_test;
 //mod strength_area;
 //mod wetting;
-mod displacement_shape;
-mod area_shape;
+//mod displacement_shape;
+//mod area_shape;
 mod bound;
 mod bounds;
 mod draught;
+mod strength;
+
+mod cache_single;

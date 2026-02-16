@@ -1,8 +1,6 @@
 //! Момент свободной поверхности жидкости
 use std::{iter::Sum, ops::Add};
 
-use super::inertia_moment::InertiaMoment;
-
 /// Момент свободной поверхности жидкости
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FreeSurfaceMoment {
@@ -14,10 +12,6 @@ impl FreeSurfaceMoment {
     /// Конструктор
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
-    }
-    /// Рассчет момента свободной поверхности из момента инерции и плотности жидкости
-    pub fn from_inertia(inertia_moment: InertiaMoment, density: f64) -> Self {
-        Self::new(inertia_moment.x*density, inertia_moment.y*density)
     }
     //
     pub fn x(&self) -> f64 {

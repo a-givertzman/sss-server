@@ -159,7 +159,7 @@ impl Link {
                         }
                     }
                 }
-                if exit.load(Ordering::SeqCst) {
+                if exit.load(Ordering::Acquire) {
                     break 'main;
                 }
             }
@@ -287,7 +287,7 @@ impl Link {
     ///
     /// Sends "exit" signal to the `listen` task
     pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
         if let Err(err) = self.send.close() {
             log::trace!("{}.exit | Error: {:#?}", self.name, err);
         }
