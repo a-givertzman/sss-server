@@ -13,7 +13,7 @@ pub struct LoadGaseousData {
     /// Имя груза
     pub cargo_name: String,   
     /// ID помещения
-    pub space_id: String,
+    pub code: String,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
@@ -35,7 +35,7 @@ impl LoadGaseousData {
         GaseousData {
             assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            code: self.code.clone(),
             mass: self.mass,
         }
     }

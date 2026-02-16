@@ -3,7 +3,7 @@ use bincode::{Decode, Encode};
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
     /// ID помещения
-    pub space_id: String, 
+    pub code: String, 
     /// Объемный кренящий момент
     pub moment: f64,
 }
@@ -11,11 +11,11 @@ pub struct BulkResult {
 impl BulkResult {
     ///
     pub fn new(
-        space_id: String,
+        code: String,
         moment: f64,
     ) -> Self {
         Self {
-            space_id,
+            code,
             moment,
         }
     }

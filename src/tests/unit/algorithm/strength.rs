@@ -1,52 +1,13 @@
+use std::path::PathBuf;
+
 use crate::algorithm::eval::{
-        unit_area::eval::UnitAreaEval, 
-        wetting::eval::WettingEval, 
-        zg::eval::ZgEval, 
-        draft_mark::eval::DraftMarkEval, 
-        icing_coeff::eval::IcingCoeffEval, 
-        icing_timber::eval::IcingTimberEval, 
-        icing_timber_bound::eval::IcingTimberBoundEval, 
-        strength::{
-            area::eval::AreaStrEval, 
-            balance::eval::StrengthBalanceEval, 
-            bending_moment::eval::BendingMomentEval, 
-            dynamic_mass::eval::DynamicMassEval, 
-            icing::eval::IcingStrEval, 
-            shear_force::eval::ShearForceEval, 
-            static_mass::eval::StaticMassStrEval, 
-            total_force::eval::TotalForceEval
-        },         
-        stability::{
-            balance::eval::StabilityBalanceEval, 
-            icing::eval::IcingStabEval, 
-            lever_diagram::eval::LeverDiagramEval, 
-            metacentric_height::eval::MetacentricHeightEval, 
-            roll_amplitude::eval::RollingAmplitudeEval, 
-            roll_period::eval::RollingPeriodEval, 
-            static_mass::eval::StaticMassStabEval, 
-            wind::eval::WindEval, 
-            windage::eval::WindageEval
-        }, 
         criterion::{
-            acceleration::eval::AccelerationEval, 
-            bow_board::eval::BowBoardEval, 
-            circulation::eval::CirculationEval, 
-            dso_angle_max::eval::DSOAngleMaxEval, 
-            dso_area::eval::DSOAreaEval, 
-            dso_icing_max::eval::DSOIcingMaxEval, 
-            dso_max::eval::DSOMaxEval, 
-            dso_timber_max::eval::DSOTimberMaxEval, 
-            grain::eval::GrainEval, 
-            load_line::eval::LoadLineEval, 
-            metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, 
-            min_metacentric_height::eval::MinMetacentricHeightEval, 
-            reserve_buoyncy::eval::ReserveBuoyncyEval, 
-            screw::eval::ScrewEval, 
-            static_angle::eval::StaticAngleEval, 
-            wheather::eval::WheatherEval, 
-            CriterionStabilityEval, 
-            CriterionDraughtEval,
-        },        
+            CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, eval::ResultCriterionEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
+        }, draft_mark::eval::DraftMarkEval, icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, stability::{
+            balance::eval::StabilityBalanceEval, dynamic_mass::eval::DynamicMassStabEval, icing::eval::IcingStabEval, lever_diagram::eval::LeverDiagramEval, metacentric_height::eval::MetacentricHeightEval, roll_amplitude::eval::RollingAmplitudeEval, roll_period::eval::RollingPeriodEval, static_mass::eval::StaticMassStabEval, wind::eval::WindEval, windage::eval::WindageEval
+        }, strength::{
+            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassStrEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval,
+        }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     };
 use crate::app::app::App;
 use crate::conf::Conf;
@@ -59,27 +20,14 @@ use crate::kernel::{
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
-use crate::algorithm::entities::{
-    Bounds, model_cached::{self},
-};
+use crate::algorithm::entities::model_cached::{self};
 use crate::prelude::{Context, Initial, InitialCtx};
 ///
 /// Application entry point
 #[test]
 fn strength() -> Result<(), Box<dyn std::error::Error>> {
-    // let _log2 = log2::open("log.txt")
-    //     .level(Logger::from_default_env().filter().as_str())
-    //     .size(5 * 1024 * 1024)
-    //     .rotate(10)
-    //     .tee(false)
-    //     .module(true)
-    //     .start();
-
-
     DebugSession::new()
         .filter(LogLevel::Info)
-     //   .filter(LogLevel::Debug)
-     //   .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)
@@ -93,11 +41,12 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let ship_id = 2;
-    let project_id = "NULL";
-    let cache_dir = "src/assets/cache/sofia".into();
-    let model_dir = "src/assets/model/sofia".into();
-    let model_x = 65.25;
+    let ship_id = conf.api.params.ship_id.clone();
+    let project_id = conf.api.params.project_id.clone();
+    let model_x = conf.api.model.midel_x;
+    let model_name = conf.api.model.name.clone();
+    let cache_dir: PathBuf = ("src/assets/cache/".to_owned() + &model_name).into();
+    let model_dir: PathBuf = ("src/assets/model/".to_owned() + &model_name).into();
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));  
     let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
     dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
@@ -153,7 +102,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let mut ship_model = ShipModel::new(
         &dbg,
-        ship_id,
+        ship_id.to_owned(),
         project_id.to_owned(),
         model_cached,
         api_client.clone(),
@@ -202,38 +151,46 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                         Arc::clone(&ship_model),
                         LeverDiagramEval::new(
                             &dbg,
-                           Arc::clone(&ship_model),
+                            Arc::clone(&api_client),
+                            Arc::clone(&ship_model),
                             MetacentricHeightEval::new(
                                 &dbg,
         // strength
-        BendingMomentEval::new(
+  /*      BendingMomentEval::new(
             &dbg,
             ShearForceEval::new(
                 &dbg,
                 TotalForceEval::new(
                     &dbg,                                                        
-                    DynamicMassEval::new(
+    */                
+                ResultStrEval::new(
+                    &dbg,  
+                    Arc::clone(&api_client),
+                    DynamicMassStrEval::new(
                         &dbg,
                         StrengthBalanceEval::new(
                             &dbg,
-                            ship_model.clone(),                                
+                            Arc::clone(&ship_model),                                
                             StaticMassStrEval::new(
                                 &dbg,                                   
                                 IcingStrEval::new(
                                     &dbg, 
-                                    ship_model.clone(),                                      
+                                    Arc::clone(&ship_model),                                      
                                     AreaStrEval::new(
                                         &dbg,
-                                        ship_model.clone(),
+                                        Arc::clone(&ship_model),
         // stability before ZG
-        StabilityBalanceEval::new(
+        DynamicMassStabEval::new(
             &dbg,
-            Arc::clone(&ship_model),
-            StaticMassStabEval::new(
+            StabilityBalanceEval::new(
                 &dbg,
-                IcingStabEval::new(
+                Arc::clone(&api_client),
+                Arc::clone(&ship_model),
+                StaticMassStabEval::new(
                     &dbg,
-                    Arc::clone(&ship_model),                                        
+                    IcingStabEval::new(
+                        &dbg,
+                        Arc::clone(&ship_model),                                        
         WettingEval::new(
             &dbg,
             IcingTimberEval::new(
@@ -247,15 +204,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                             Initial::new(
                                 &dbg,
                                 Arc::clone(&api_client),
-                                Context::new(InitialCtx::new(ship_id, project_id, bounds)),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-                                    ),
-                                ),
+                                Context::new(InitialCtx::new(&ship_id, &project_id, bounds)),
                             ),
                         ),
                     ),
@@ -271,6 +220,15 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+    //        ),
+   //     ),
                                         ),
                                     ),
                                 ),
@@ -284,22 +242,27 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
         );//.eval(Zg::empty());
-        let ctx = DraftMarkEval::new(
-            &dbg,
-            CriterionDraughtEval::new(
+        let ctx = 
+            ResultCriterionEval::new(
                 &dbg,
-                ReserveBuoyncyEval::new(
+                Arc::clone(&api_client),
+                DraftMarkEval::new(
+                &dbg,
+                CriterionDraughtEval::new(
                     &dbg,
-                    ScrewEval::new(
+                    ReserveBuoyncyEval::new(
                         &dbg,
-                        BowBoardEval::new(
+                        ScrewEval::new(
                             &dbg,
-                            LoadLineEval::new(
+                            BowBoardEval::new(
                                 &dbg,
-                                    ZgEval::new(
-                                        Arc::clone(&thread_pool),
-                                        &dbg,
-                                        ctx,
+                                LoadLineEval::new(
+                                    &dbg,
+                                        ZgEval::new(
+                                            Arc::clone(&thread_pool),
+                                            &dbg,
+                                            ctx,
+                                    ),
                                 ),
                             ),
                         ),

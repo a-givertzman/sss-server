@@ -63,8 +63,7 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     water_density: voyage.density,
                     distr_static: static_mass.distr_static,
                     bulk: static_mass.bulk.clone(),
-                    liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
+                    liquid: static_mass.liquid.clone(),                    
                     gaseous: static_mass.gaseous,
                     //    damaged_compartment: loads.damaged_compartment, //TODO
                     bounds: bounds.clone(),

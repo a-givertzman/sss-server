@@ -25,8 +25,6 @@ pub struct BalanceStrengthQuery {
     pub liquid: Vec<LiquidData>,
     /// газообразный груз
     pub gaseous: Vec<GaseousData>,
-    /// Положение зерновых перегородок, координата по х
-    pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
     //    /// номера поврежденных помещений, TODO - только для аварийного расчета
     //    pub damaged_compartment: Vec<String>,
     /// точность расчета
@@ -51,9 +49,7 @@ pub struct BalanceStabilityQuery {
     pub bulk: Vec<BulkData>,
     /// жидкий груз
     pub liquid: Vec<LiquidData>,
-    /// Положение зерновых перегородок, координата по х
-    pub grain_bulkhead: Vec<f64>, // TODO сейчас не учитываются, добавить в расчет для отсеков
-    /// номера поврежденных помещений, TODO - только для аварийного расчета
+    /// Коды поврежденных помещений, TODO - только для аварийного расчета
     pub damaged_compartment: Vec<String>,
 }
 ///
@@ -64,7 +60,7 @@ pub struct BalanceStabilityQuery {
 pub struct BulkData {    
     pub assignment_id: usize,// ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
-    pub space_id: String, // ID помещения
+    pub code: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
     pub shiftable: bool,
@@ -75,7 +71,7 @@ pub struct BulkData {
 pub struct LiquidData {
     pub assignment_id: usize,// ID assigned
     pub assigment_type: AssignmentType,  // Тип назначения груза
-    pub space_id: String, // ID помещения    
+    pub code: String, // ID помещения    
     pub cargo_type: LiquidCargoType, // Тип жидкого груза
     pub use_max_moment: bool, // Признак использования максимального значения момента свободной поверхности жидкости
     pub is_cargo_tank: bool,
@@ -90,7 +86,7 @@ pub struct LiquidData {
 #[derive(Debug, Clone)]
 pub struct GaseousData {
     pub assigment_type: AssignmentType,  // Тип назначения груза
-    pub space_id: String, // ID помещения
+    pub code: String, // ID помещения
     pub mass: f64,
 }
 /// Разбиение площадей поверхности корпуса по шпациям для расчета прочности

@@ -4,15 +4,12 @@ use crate::algorithm::entities::ship_model::BalanceStabilityQuery;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::stability::{LeverDiagramCtx, StabilityBalanceCtx, StaticMassStabCtx};
+use crate::infrostructure::ApiClient;
 use crate::kernel::Eval;
 use crate::kernel::types::Arc;
 use crate::prelude::{ContextParamsWrite, ContextReadRef, InitialCtx};
 use crate::{
-    algorithm::{
-        context::context_access::ContextRead,
-        entities::math::curve::*,
-        eval::{zg::Zg},
-    },
+    algorithm::{context::context_access::ContextRead, entities::math::curve::*, eval::zg::Zg},
     kernel::types::eval_result::EvalResult,
     prelude::ContextWrite,
 };
@@ -23,6 +20,7 @@ use sal_sync::sync::RwLock;
 /// Диаграмма плеч статической и динамической остойчивости
 pub struct LeverDiagramEval {
     dbg: Dbg,
+    api_client: Arc<ApiClient>,
     model: Arc<RwLock<ShipModel>>,
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
@@ -32,12 +30,14 @@ impl LeverDiagramEval {
     ///
     pub fn new(
         parent: impl Into<String>,
+        api_client: Arc<ApiClient>,
         model: Arc<RwLock<ShipModel>>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent, "LeverDiagramEval");
         Self {
             dbg,
+            api_client,
             model,
             ctx: Box::new(ctx),
         }
@@ -51,6 +51,8 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
         match self.ctx.eval(z_g_fix.clone()) {
             Ok(mut ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let ship_id = initial.ship_id.clone();
+                let project_id = initial.project_id.clone();
                 let voyage = initial
                     .voyage
                     .as_ref()
@@ -64,7 +66,6 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    grain_bulkhead: static_mass.grain_bulkhead,
                     damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
                 };
                 let cg = if let Zg(Some(z_g_fix)) = z_g_fix {
@@ -168,7 +169,6 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     dso,
                     dso_curve,
                     ddo,
-                    diagram,
                     theta_max,
                     max_angles,
                     entry_angle,
@@ -186,14 +186,13 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         )),
                     result.entry_angle,
                     result.flooding_angle,
-                    result
-                        .diagram
-                        .iter()
-                        .fold(String::new(), |s, v| s + &format!(
-                            "\n{:.3} {:.3} {:.3}",
-                            v.0, v.1, v.2
-                        )),
+                    diagram.iter().fold(String::new(), |s, v| s + &format!(
+                        "\n{:.3} {:.3} {:.3}",
+                        v.0, v.1, v.2
+                    )),
                 );
+                send_stability_diagram(&self.dbg, &ship_id, &project_id, &self.api_client, diagram)
+                    .map_err(|err| error.pass(err))?;
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -208,4 +207,38 @@ impl std::fmt::Debug for LeverDiagramEval {
             .field("dbg", &self.dbg)
             .finish()
     }
+}
+/// Запись данных расчета плечей остойчивости в БД
+pub fn send_stability_diagram(
+    dbg: &Dbg,
+    ship_id: &str,
+    project_id: &str,
+    api_client: &ApiClient,
+    data: Vec<(f64, f64, f64)>,
+) -> Result<(), Error> {
+    let error = Error::new(dbg, "send_stability_diagram");
+    log::info!("send_stability_diagram begin");
+    if data.is_empty() {
+        return Err(error.err("empty data!"));
+    }   
+    let values_list: Vec<String> = data
+        .iter()
+        .map(|(angle, value_dso, value_ddo)| 
+            format!("({ship_id}, {project_id}, {angle}, {value_dso}, {value_ddo})")
+        ).collect();    
+    let full_sql = format!(
+        "DO $$ BEGIN \
+        DELETE FROM stability_diagram \
+        WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \
+        INSERT INTO stability_diagram \
+          (ship_id, project_id, angle, value_dso, value_ddo) \
+        VALUES \
+          {values_str}; \
+        END $$;",
+        values_str = values_list.join(", ")
+    );
+ //   println!("{}", &full_sql);
+    api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
+    log::info!("send_stability_diagram end");
+    Ok(())
 }

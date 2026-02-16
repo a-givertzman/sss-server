@@ -67,7 +67,7 @@ impl MetacentricHeightEval {
                 .iter()
                 .filter(|v| v.assigment_type == AssignmentType::Ballast)
                 .map(|c| {
-                    FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia)
+                    FreeSurfaceMoment::new(c.inertia_trans_x, c.inertia_long_y)
                 })
                 .sum::<FreeSurfaceMoment>(),
             mass,
@@ -77,7 +77,7 @@ impl MetacentricHeightEval {
                 .iter()
                 .filter(|v| v.assigment_type != AssignmentType::Ballast)
                 .map(|c| {
-                    FreeSurfaceMoment::new(c.trans_moment_of_inertia, c.long_moment_of_inertia)
+                    FreeSurfaceMoment::new(c.inertia_trans_x, c.inertia_long_y)
                 })
                 .sum::<FreeSurfaceMoment>(),
             mass,

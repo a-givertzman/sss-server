@@ -587,3 +587,17 @@ impl ContextRead<DraftMarkCtx> for Context {
         self.draft_mark.clone().unwrap()
     }
 }
+/*
+impl ContextWrite<ResultStrCtx> for Context {
+    fn write(mut self, value: ResultStrCtx) -> Result<Self, Error> {
+        self.result_str = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ResultStrCtx> for Context {
+    fn read(&self) -> ResultStrCtx {
+        self.result_str.clone().unwrap()
+    }
+}*/
+
+

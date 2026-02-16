@@ -7,6 +7,7 @@ pub mod dynamic_mass;
 pub mod total_force;
 pub mod shear_force;
 pub mod bending_moment;
+pub mod result;
 
 pub use area::ctx::AreaStrCtx; 
 pub use icing::ctx::IcingStrCtx;

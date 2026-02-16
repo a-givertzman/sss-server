@@ -6,6 +6,8 @@ mod gaseous;
 mod bulk;
 mod unit;
 mod container;
+mod hold_part;
+mod hold_compartment;
 
 pub use constant::*;
 pub use liquid::*;
@@ -13,6 +15,8 @@ pub use gaseous::*;
 pub use bulk::*;
 pub use unit::*;
 pub use container::*;
+pub use hold_part::*;
+pub use hold_compartment::*;
 
 use serde::{Deserialize, Serialize};
 /// Тип назначения груза

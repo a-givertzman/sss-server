@@ -1,29 +1,14 @@
 use std::sync::Arc;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use crate::{algorithm::{entities::{Bounds, ship_model::ship_model::ShipModel}, 
+use crate::{algorithm::{entities::ship_model::ship_model::ShipModel, 
     eval::{
         criterion::{
-            CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
+            CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, eval::ResultCriterionEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
         }, draft_mark::eval::DraftMarkEval, icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, stability::{
-            balance::eval::StabilityBalanceEval, 
-            icing::eval::IcingStabEval, 
-            lever_diagram::eval::LeverDiagramEval, 
-            metacentric_height::eval::MetacentricHeightEval, 
-            roll_amplitude::eval::RollingAmplitudeEval, 
-            roll_period::eval::RollingPeriodEval, 
-            static_mass::eval::StaticMassStabEval, 
-            wind::eval::WindEval, 
-            windage::eval::WindageEval
+            balance::eval::StabilityBalanceEval, dynamic_mass::eval::DynamicMassStabEval, icing::eval::IcingStabEval, lever_diagram::eval::LeverDiagramEval, metacentric_height::eval::MetacentricHeightEval, roll_amplitude::eval::RollingAmplitudeEval, roll_period::eval::RollingPeriodEval, static_mass::eval::StaticMassStabEval, wind::eval::WindEval, windage::eval::WindageEval
         }, strength::{
-            area::eval::AreaStrEval, 
-            balance::eval::StrengthBalanceEval, 
-            bending_moment::eval::BendingMomentEval, 
-            dynamic_mass::eval::DynamicMassEval, 
-            icing::eval::IcingStrEval, 
-            shear_force::eval::ShearForceEval, 
-            static_mass::eval::StaticMassStrEval, 
-            total_force::eval::TotalForceEval
+            area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassStrEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval
         }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     }}, 
     conf::Conf, 
@@ -115,38 +100,46 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                         Arc::clone(&self.ship_model),
                         LeverDiagramEval::new(
                             &dbg,
-                           Arc::clone(&self.ship_model),
+                            Arc::clone(&self.api_client),
+                            Arc::clone(&self.ship_model),
                             MetacentricHeightEval::new(
                                 &dbg,
         // strength
-        BendingMomentEval::new(
+    /*    BendingMomentEval::new(
             &dbg,
             ShearForceEval::new(
                 &dbg,
                 TotalForceEval::new(
                     &dbg,                                                        
-                    DynamicMassEval::new(
+     */
+            ResultStrEval::new(
+                    &dbg,   
+                    Arc::clone(&self.api_client),
+                    DynamicMassStrEval::new(
                         &dbg,
                         StrengthBalanceEval::new(
                             &dbg,
-                            self.ship_model.clone(),                                
+                            Arc::clone(&self.ship_model),                                
                             StaticMassStrEval::new(
                                 &dbg,                                   
                                 IcingStrEval::new(
                                     &dbg, 
-                                    self.ship_model.clone(),                                      
+                                    Arc::clone(&self.ship_model),                                      
                                     AreaStrEval::new(
                                         &dbg,
-                                        self.ship_model.clone(),
+                                        Arc::clone(&self.ship_model),
         // stability before ZG
-        StabilityBalanceEval::new(
+        DynamicMassStabEval::new(
             &dbg,
-            Arc::clone(&self.ship_model),
-            StaticMassStabEval::new(
+            StabilityBalanceEval::new(
                 &dbg,
-                IcingStabEval::new(
+                Arc::clone(&self.api_client),
+                Arc::clone(&self.ship_model),
+                StaticMassStabEval::new(
                     &dbg,
-                    Arc::clone(&self.ship_model),                
+                    IcingStabEval::new(
+                        &dbg,
+                        Arc::clone(&self.ship_model),                
         WettingEval::new(
             &dbg,
             IcingTimberEval::new(
@@ -161,18 +154,10 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                 &dbg,
                                 Arc::clone(&self.api_client),
                                 Context::new(InitialCtx::new(
-                                    query.ship_id,
+                                    &query.ship_id.to_string(),
                                     &query.project_id,
                                     bounds,
                                 )),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-                                    ),
-                                ),
                             ),
                         ),
                     ),
@@ -188,6 +173,15 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                 ),
             ),
         ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+    //        ),
+    //    ),
                             ),
                         ),
                     ),
@@ -201,22 +195,27 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                 ),
             ),
         );//.eval(Zg::empty());
-        let ctx = DraftMarkEval::new(
+        let ctx = 
+        ResultCriterionEval::new(
             &dbg,
-            CriterionDraughtEval::new(
+            Arc::clone(&self.api_client),
+            DraftMarkEval::new(
                 &dbg,
-                ReserveBuoyncyEval::new(
+                CriterionDraughtEval::new(
                     &dbg,
-                    ScrewEval::new(
+                    ReserveBuoyncyEval::new(
                         &dbg,
-                        BowBoardEval::new(
+                        ScrewEval::new(
                             &dbg,
-                            LoadLineEval::new(
+                            BowBoardEval::new(
                                 &dbg,
-                                    ZgEval::new(
-                                        Arc::clone(&self.thread_pool),
-                                        &dbg,
-                                        ctx,
+                                LoadLineEval::new(
+                                    &dbg,
+                                        ZgEval::new(
+                                            Arc::clone(&self.thread_pool),
+                                            &dbg,
+                                            ctx,
+                                    ),
                                 ),
                             ),
                         ),
@@ -235,3 +234,4 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
 //
 //
 unsafe impl Send for Calculus {}
+
