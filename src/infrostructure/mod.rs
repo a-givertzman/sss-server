@@ -1,4 +1,9 @@
 //!
 //! Client - Server interface implementation
-pub mod api;
-pub mod query;
+mod api;
+mod api_handlers;
+mod query;
+
+pub(crate) use api::*;
+pub(crate) use api_handlers::*;
+pub(crate) use query::*;

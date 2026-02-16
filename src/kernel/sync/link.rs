@@ -1,8 +1,7 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle, time::Duration};
 use bincode::{Decode, Encode};
-use coco::Stack;
 use sal_core::error::Error;
-use sal_sync::services::entity::{Name, PointTxId};
+use sal_sync::{services::entity::{Name, PointTxId}, sync::Owner};
 use crate::kernel::types::channel::{Receiver, RecvTimeoutError, Sender};
 use super::{LinkSend, DEFAULT_TIMEOUT};
 
@@ -14,7 +13,7 @@ pub struct Link {
     txid: usize,
     name: Name,
     send: Sender<Vec<u8>>,
-    recv: Stack<Receiver<Vec<u8>>>,
+    recv: Owner<Receiver<Vec<u8>>>,
     timeout: Duration,
     bincode_config: bincode::config::Configuration,
     exit: Arc<AtomicBool>,
@@ -29,13 +28,11 @@ impl Link {
     /// - `exit` - exit signal for `listen` method
     pub fn new(parent: impl Into<String>, send: Sender<Vec<u8>>, recv: Receiver<Vec<u8>>) -> Self {
         let name = Name::new(parent, "Link");
-        let loc_recv_st = Stack::new();
-        loc_recv_st.push(recv);
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
             send, 
-            recv: loc_recv_st,
+            recv: Owner::new(recv),
             timeout: DEFAULT_TIMEOUT,
             bincode_config: bincode::config::standard(),
             exit: Arc::new(AtomicBool::new(false)),
@@ -52,15 +49,11 @@ impl Link {
         let name = Name::new(parent, "Link");
         let (loc_send, rem_recv) = kanal::unbounded();
         let (rem_send, loc_recv) = kanal::unbounded();
-        let loc_recv_st = Stack::new();
-        loc_recv_st.push(loc_recv);
-        let rem_recv_st = Stack::new();
-        rem_recv_st.push(rem_recv);
         (
             Self { 
                 txid: PointTxId::from_str(&name.join()),
                 name: name.clone(),
-                send: loc_send, recv: loc_recv_st,
+                send: loc_send, recv: Owner::new(loc_recv),
                 timeout: DEFAULT_TIMEOUT,
                 bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
@@ -68,7 +61,7 @@ impl Link {
             Self { 
                 txid: PointTxId::from_str(&name.join()),
                 name,
-                send: rem_send, recv: rem_recv_st,
+                send: rem_send, recv: Owner::new(rem_recv),
                 timeout: DEFAULT_TIMEOUT,
                 bincode_config: bincode::config::standard(),
                 exit: Arc::new(AtomicBool::new(false)),
@@ -95,10 +88,10 @@ impl Link {
             Ok(query) => match self.send.send(query) {
                 Ok(_) => {
                     log::trace!("{}.req | Sent request: {q}", self.name);
-                    match self.recv.pop() {
+                    match self.recv.take() {
                         Some(recv) => match recv.recv() {
                             Ok(reply) => {
-                                self.recv.push(recv);
+                                self.recv.replace(recv);
                                 match bincode::decode_from_slice(&reply, self.bincode_config) {
                                     Ok((reply, _)) => {
                                         log::trace!("{}.req | Reply received: {:#?}", self.name, reply);
@@ -108,7 +101,7 @@ impl Link {
                                 }
                             }
                             Err(err) => {
-                                self.recv.push(recv);
+                                self.recv.replace(recv);
                                 Err(error.pass(err.to_string()))
                             }
                         }
@@ -129,7 +122,7 @@ impl Link {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
         let send = self.send.clone();
-        let recv = self.recv.pop().unwrap();
+        let recv = self.recv.take().unwrap();
         let timeout = self.timeout;
         let config = self.bincode_config;
         let exit = self.exit.clone();
@@ -166,7 +159,7 @@ impl Link {
                         }
                     }
                 }
-                if exit.load(Ordering::SeqCst) {
+                if exit.load(Ordering::Acquire) {
                     break 'main;
                 }
             }
@@ -186,10 +179,10 @@ impl Link {
     /// **Important note**: this function is not lock-free as it acquires a mutex guard of the channel internal for a short time.
     pub fn try_recv<T: Decode<()> + Debug>(&self) -> Result<Option<T>, Error> {
         let error = Error::new(&self.name, "try_recv");
-        match self.recv.pop() {
+        match self.recv.take() {
             Some(recv) => match recv.try_recv() {
                 Ok(query) => {
-                    self.recv.push(recv);
+                    self.recv.replace(recv);
                     match query {
                         Some(query) => {
                             match bincode::decode_from_slice(&query, self.bincode_config) {
@@ -206,7 +199,7 @@ impl Link {
                     }
                 }
                 Err(err) => {
-                    self.recv.push(recv);
+                    self.recv.replace(recv);
                     Err(error.pass_with("Recv error", err.to_string()))
                 }
             }
@@ -220,10 +213,10 @@ impl Link {
     /// - Returns Err if `Link` is closed
     pub fn recv_timeout<T: Decode<()> + Debug>(&self, duration: Duration) -> Result<Option<T>, Error> {
         let error = Error::new(&self.name, "recv_timeout");
-        match self.recv.pop() {
+        match self.recv.take() {
             Some(recv) => match recv.recv_timeout(duration) {
                 Ok(query) => {
-                    self.recv.push(recv);
+                    self.recv.replace(recv);
                     match bincode::decode_from_slice(&query, self.bincode_config) {
                         Ok((query, _)) => {
                             log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
@@ -235,7 +228,7 @@ impl Link {
                     }
                 }
                 Err(err) => {
-                    self.recv.push(recv);
+                    self.recv.replace(recv);
                     match err {
                         kanal::ReceiveErrorTimeout::Timeout => Ok(None),
                         _ => Err(error.pass_with("Recv error", err.to_string()))
@@ -252,10 +245,10 @@ impl Link {
     /// - Returns Err if channel is closed
     pub fn recv<T: Decode<()> + Debug>(&self) -> Result<T, Error> {
         let error = Error::new(&self.name, "recv");
-        match self.recv.pop() {
+        match self.recv.take() {
             Some(recv) => match recv.recv() {
                 Ok(query) => {
-                    self.recv.push(recv);
+                    self.recv.replace(recv);
                     match bincode::decode_from_slice(&query, self.bincode_config) {
                         Ok((query, _)) => {
                             log::trace!("{}.recv | Received query: {:#?}", self.name, query);
@@ -267,7 +260,7 @@ impl Link {
                     }
                 }
                 Err(err) => {
-                    self.recv.push(recv);
+                    self.recv.replace(recv);
                     Err(error.pass_with("Recv error", err.to_string()))
                 }
             }
@@ -294,7 +287,7 @@ impl Link {
     ///
     /// Sends "exit" signal to the `listen` task
     pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
         if let Err(err) = self.send.close() {
             log::trace!("{}.exit | Error: {:#?}", self.name, err);
         }

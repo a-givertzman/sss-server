@@ -1,10 +1,7 @@
 //! Дополнительные операции над вектором чисел с плавающей точкой
-pub mod integral_sum;
 pub mod integral_cotes;
 pub mod integral;
 
-#[allow(unused)]
-pub use integral_sum::IntegralSum as IntegralSum;
 #[allow(unused)]
 pub use integral_cotes::IntegralCotes as IntegralCotes;
 #[allow(unused)]
@@ -206,3 +203,19 @@ impl DivideVec for Vec<f64>  {
         Ok(())
     }    
 }
+/*
+//
+pub trait SortVec {
+    #[allow(unused)]
+    fn sort(&mut self);
+}
+//
+impl SortVec for Vec<f64>  {   
+    fn sort(&mut self) {
+        self.sort_by(|a, b| a.partial_cmp(&b).unwrap())
+    }    
+}
+    */
+
+
+
