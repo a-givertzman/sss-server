@@ -52,6 +52,6 @@ fn cache_single() -> Result<(), Box<dyn std::error::Error>> {
     );
     cache.rebuild().unwrap();
     cache.calc_coeff(168.4).unwrap();
-    dbg!(cache.get(-15.0, 3., 135., 0.000001));
+    dbg!(cache.get_level(-15.0, 3., 135., 0.000001));
     Ok(())
 }

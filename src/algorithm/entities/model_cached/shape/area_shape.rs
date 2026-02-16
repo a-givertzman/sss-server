@@ -1,5 +1,4 @@
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, write_stl};
-use bincode::{Decode, Encode};
 use nalgebra::*;
 use parry3d_f64::shape::{TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;

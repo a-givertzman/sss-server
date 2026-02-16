@@ -6,6 +6,8 @@ mod gaseous;
 mod bulk;
 mod unit;
 mod container;
+mod hold_part;
+mod hold_compartment;
 
 pub use constant::*;
 pub use liquid::*;
@@ -13,6 +15,8 @@ pub use gaseous::*;
 pub use bulk::*;
 pub use unit::*;
 pub use container::*;
+pub use hold_part::*;
+pub use hold_compartment::*;
 
 use serde::{Deserialize, Serialize};
 /// Тип назначения груза
@@ -38,33 +42,6 @@ impl std::fmt::Display for AssignmentType {
                 AssignmentType::Stores => "Stores",
                 AssignmentType::CargoLoad => "CargoLoad",
                 AssignmentType::Unspecified => "Unspecified",
-            },
-        )
-    }
-}
-/// Тип груза судна
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum CargoType {
-    #[serde(alias = "bulk")]
-    Bulk,
-    #[serde(alias = "unit")]
-    Unit,
-    #[serde(alias = "gaseous")]
-    Gaseous,
-    #[serde(alias = "liquid")]
-    Liquid,
-}
-//
-impl std::fmt::Display for CargoType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CargoType::Bulk => "Bulk",
-                CargoType::Unit => "Unit",
-                CargoType::Gaseous => "Gaseous",                
-                CargoType::Liquid => "Liquid",
             },
         )
     }

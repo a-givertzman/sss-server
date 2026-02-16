@@ -11,8 +11,7 @@ use std::{
 use crate::{
     algorithm::entities::{
         Position,
-        cache::Cache,
-        model_cached::{CompartmentCacheResult, DisplacementShape, Shape},
+        model_cached::{DisplacementShape, Shape},
     },
     kernel::types::{Arc, RwLock},
 };

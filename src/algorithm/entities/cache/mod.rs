@@ -126,8 +126,7 @@ impl Cache<f64> {
     /// # Panics
     /// non-comparable value (e. g. _NaN_)
     /// qnt_keys >= vals len
-    /// value is out of range
-    /// value index is out of key index range - TODO описать подробнее
+    /// key is out of range
     pub fn get(&self, query: &[f64]) -> Vec<f64> {
         let query = Vec::from(query);
    //     println!("{} get start, query:{:?}", self.dbg, query);

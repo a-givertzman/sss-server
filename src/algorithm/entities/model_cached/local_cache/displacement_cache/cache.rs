@@ -9,7 +9,7 @@ use crate::{
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{Scheduler, ThreadPool};
+use sal_sync::thread_pool::ThreadPool;
 use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
@@ -26,10 +26,6 @@ pub struct DisplacementCache {
     /// Draught in meters
     draught_min: f64,
     draught_max: f64,
-    heel_min: f64,
-    heel_max: f64,
-    trim_min: f64,
-    trim_max: f64,
     /// qnt draught steps for hull
     draught_step: f64,
     /// Model representation used for cache calculation.
@@ -65,30 +61,6 @@ impl DisplacementCache {
             shape,
             draught_min,
             draught_max,
-            heel_min: heel_steps
-                .clone()
-                .into_iter()
-                .reduce(f64::min)
-                .unwrap()
-                .clone(),
-            heel_max: heel_steps
-                .clone()
-                .into_iter()
-                .reduce(f64::max)
-                .unwrap()
-                .clone(),
-            trim_min: trim_steps
-                .clone()
-                .into_iter()
-                .reduce(f64::min)
-                .unwrap()
-                .clone(),
-            trim_max: trim_steps
-                .clone()
-                .into_iter()
-                .reduce(f64::max)
-                .unwrap()
-                .clone(),
             heel_steps,
             trim_steps,
             draught_step,
@@ -109,22 +81,6 @@ impl DisplacementCache {
         epsilon: f64,
     ) -> Result<DisplacementCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
-        /*      println!(
-            "{} get start, heel:{heel} trim:{trim} volume:{volume}",
-            self.dbg
-        );
-        if heel < self.heel_min || heel > self.heel_max {
-            return Err(error.err(format!(
-                "heel < min_heel || heel > max_heel, heel:{heel} min_heel:{} max_heel:{}",
-                self.heel_min, self.heel_max
-            )));
-        }
-        if trim < self.trim_min || trim > self.trim_max {
-            return Err(error.err(format!(
-                "trim < min_trim || trim > max_trim, trim:{trim} min_trim:{} max_trim:{}",
-                self.trim_min, self.trim_max
-            )));
-        }*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let (draught, result) = get_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
             .map_err(|err| error.pass(err))?;
@@ -147,12 +103,6 @@ impl DisplacementCache {
         let error = Error::new(self.dbg(), "get_max_volume");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         Ok(cache.disp(3))
-    }
-    // min/max for (heel, trim, draught)
-    pub fn get_keys_disp(&self) -> Result<((f64, f64), (f64, f64), (f64, f64)), Error> {
-        let error = Error::new(self.dbg(), "get_keys");
-        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        Ok((cache.disp(0), cache.disp(1), cache.disp(2)))
     }
 }
 //

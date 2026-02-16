@@ -12,7 +12,7 @@ pub struct LoadBulkData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: String,
+    pub code: String,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
@@ -53,7 +53,7 @@ impl LoadBulkData {
             assignment_id:  self.assignment_id,
             assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            code: self.code.clone(),
             mass: self.mass,            
             volume,
             shiftable: self.shiftable,
@@ -65,9 +65,9 @@ impl std::fmt::Display for LoadBulkData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LoadBulkData(space_id:{} space_name:{} cargo_id:{} cargo_name:{} assignment_id:{}
+            "LoadBulkData(code:{} space_name:{} cargo_id:{} cargo_name:{} assignment_id:{}
                 assigment_type:{} cargo_type:{}, mass:{}, stowage_factor:{} volume:{} )",
-            self.space_id,
+            self.code,
             self.space_name,
             self.cargo_id,
             self.cargo_name,

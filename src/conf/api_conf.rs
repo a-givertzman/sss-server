@@ -12,10 +12,14 @@ pub struct ApiAddress {
 /// Данные для выборки из БД
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Params {
-    #[serde(alias = "ship-id")]
-    pub ship_id: i32,
-    #[serde(alias = "project-id")]
-    pub project_id: Option<i32>,
+    pub ship_id: String,
+    pub project_id: String,
+}
+/// Данные для работы с моделью
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct Model {
+    pub midel_x: f64,
+    pub name: String,
 }
 ///
 /// Данные для доступа к БД
@@ -24,4 +28,5 @@ pub struct ApiConf {
     #[serde(alias = "api-address")]
     pub address: ApiAddress,
     pub params: Params,
+    pub model: Model,    
 }
