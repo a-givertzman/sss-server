@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::algorithm::eval::{
         criterion::{
             CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, eval::ResultCriterionEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
@@ -24,19 +26,8 @@ use crate::prelude::{Context, Initial, InitialCtx};
 /// Application entry point
 #[test]
 fn strength() -> Result<(), Box<dyn std::error::Error>> {
-    // let _log2 = log2::open("log.txt")
-    //     .level(Logger::from_default_env().filter().as_str())
-    //     .size(5 * 1024 * 1024)
-    //     .rotate(10)
-    //     .tee(false)
-    //     .module(true)
-    //     .start();
-
-
     DebugSession::new()
         .filter(LogLevel::Info)
-     //   .filter(LogLevel::Debug)
-     //   .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)
@@ -50,11 +41,12 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let ship_id = "2";
-    let project_id = "NULL";
-    let cache_dir = "src/assets/cache/sofia".into();
-    let model_dir = "src/assets/model/sofia".into();
-    let model_x = 65.25;
+    let ship_id = conf.api.params.ship_id.clone();
+    let project_id = conf.api.params.project_id.clone();
+    let model_x = conf.api.model.midel_x;
+    let model_name = conf.api.model.name.clone();
+    let cache_dir: PathBuf = ("src/assets/cache/".to_owned() + &model_name).into();
+    let model_dir: PathBuf = ("src/assets/model/".to_owned() + &model_name).into();
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));  
     let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
     dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
@@ -212,7 +204,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                             Initial::new(
                                 &dbg,
                                 Arc::clone(&api_client),
-                                Context::new(InitialCtx::new(ship_id, project_id, bounds)),
+                                Context::new(InitialCtx::new(&ship_id, &project_id, bounds)),
                             ),
                         ),
                     ),
