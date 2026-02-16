@@ -7,7 +7,7 @@ use crate::{
     kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::Scheduler;
+use sal_sync::thread_pool::ThreadPool;
 use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
@@ -28,7 +28,7 @@ pub struct DamagedCompartmentCache {
     ///
     /// Cache read from `self.file_path`.
     cache: Option<Cache<f64>>,
-    scheduler: Scheduler,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -47,9 +47,9 @@ impl DamagedCompartmentCache {
         draught_min: f64,
         draught_max: f64,
         draught_step: f64,
-        scheduler: Scheduler,
+        thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("DamagedCompartment_{compartment_id}_Cache"));
+        let dbg = Dbg::new(parent, format!("DamagedCompartmentCache_{compartment_id}"));
         Self {
             shape,
             heel_steps,
@@ -60,7 +60,7 @@ impl DamagedCompartmentCache {
             cache: None,
             cache_path: cache_dir.as_ref().join(compartment_id),
             dbg,
-            scheduler,
+            thread_pool,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -79,7 +79,7 @@ impl LocalCache for DamagedCompartmentCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
         let error = Error::new(&self.dbg, "calculate");
-        let cache_data = super::build_cache::BuildDamagedCompartmentCache::new(
+        let (data, mut errors) = super::build_cache::BuildDamagedCompartmentCache::new(
             &self.dbg,
             self.shape.clone(),
             self.heel_steps.clone(),
@@ -87,12 +87,10 @@ impl LocalCache for DamagedCompartmentCache {
             self.draught_min,
             self.draught_max,
             self.draught_step,
-            self.scheduler.clone(),
+            Arc::clone(&self.thread_pool),
             self.exit.clone(),
         )
         .build();
-        let data: Vec<_> = cache_data.iter().filter_map(|v| v.clone().ok()).collect();
-        let mut errors: Vec<_> = cache_data.into_iter().filter_map(|v| v.err()).collect();
         let cache = if let Some(cache) = self.cache.take() {
             cache
         } else {

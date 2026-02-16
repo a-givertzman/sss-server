@@ -38,7 +38,7 @@ fn init_each() -> () {}
 #[ignore = "too slow, run only in release mode"]
 #[test]
 fn calculated_windage_area_sofia() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = Dbg::new("test models", "calculated_windage_area_sofia");
@@ -49,7 +49,7 @@ fn calculated_windage_area_sofia() {
     let model_path = "src/assets/model/sofia/hill.stl";
     let additionals_path = "src/assets/model/sofia/additionals/";
     let cache_dir = "src/algorithm/entities/cache/tests/";
-    let center_coord = Some(Position::new(65.250, 0., 0.));
+    let center_coord = Some(65.250);
     let mut shape = AreaShape::new_uninit(
         &dbg,
         model_path.into(),

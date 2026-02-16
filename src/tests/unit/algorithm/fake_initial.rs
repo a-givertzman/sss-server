@@ -9,7 +9,7 @@ use crate::{
             context::Context,
             context_access::{ContextReadRef, ContextWrite},
         },
-    kernel::{eval::Eval, types::eval_result::EvalResult},
+    kernel::{Eval, types::eval_result::EvalResult},
 };
 
 use super::data::*;

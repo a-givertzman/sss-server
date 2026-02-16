@@ -1,14 +1,14 @@
 #[cfg(test)]
 
 mod tests {
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
     use crate::algorithm::entities::{Bound, Bounds};
 
     #[test]
     fn bounds_from_n() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         println!();
         let self_id = "test Bounds create from_n";
         println!("{}", self_id);
@@ -34,7 +34,7 @@ mod tests {
 
     #[test]
     fn bounds_from_frames() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         println!();
         let self_id = "test Bounds create from_frames";
         println!("{}", self_id);
@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn bounds_intersect() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         println!();
         let self_id = "test Bounds intersect";
         println!("{}", self_id);
