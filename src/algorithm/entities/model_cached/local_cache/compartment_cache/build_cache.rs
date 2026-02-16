@@ -1,15 +1,17 @@
-use nalgebra::OPoint;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
-    thread_pool::{JoinHandle, Scheduler},
+    thread_pool::{JoinHandle, ThreadPool},
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{
     algorithm::entities::{
         Position,
-        model_cached::{DisplacementShape, Shape, draught},
+        model_cached::{DisplacementShape, Shape},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -20,12 +22,8 @@ pub struct BuildCompartmentCache {
     shape: Arc<RwLock<DisplacementShape>>,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
-    level_step: f64,
-    /// центр полного объема из бд
-    center_max: Option<Position>,
-    /// полный объем из бд
-    volume_max: Option<f64>,
-    scheduler: Scheduler,
+    level_step_qnt: usize,
+    thread_pool: Arc<ThreadPool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -39,10 +37,8 @@ impl BuildCompartmentCache {
         shape: Arc<RwLock<DisplacementShape>>,
         heel_steps: Vec<f64>,
         trim_steps: Vec<f64>,
-        level_step: f64,
-        center_max: Option<Position>,
-        volume_max: Option<f64>,
-        scheduler: Scheduler,
+        level_step_qnt: usize,
+        thread_pool: Arc<ThreadPool>,
         exit: Arc<AtomicBool>,
     ) -> Self {
         Self {
@@ -50,35 +46,53 @@ impl BuildCompartmentCache {
             shape: shape.clone(),
             heel_steps,
             trim_steps,
-            level_step,
-            center_max,
-            volume_max,
-            scheduler,
+            level_step_qnt,
+            thread_pool,
             exit,
         }
     }
     ///
     /// Creates and starts worker for [CompartmentCache::calculate].
     ///
-    /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy]]
+    /// results: [[heel, trim, draught, volume, vx, vy, vz, ix, iy, max_moment, max_volume]]
     pub fn build(self) -> (Vec<Vec<f64>>, Vec<Error>) {
+        //  dbg!("BuildCompartmentCache build begin");
         log::info!("{}.build | Starting build", &self.dbg);
+        let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
         let error = Error::new(&self.dbg, "build");
-        let mut tasks: Vec<JoinHandle<_>> = vec![];
-        let draft_results = Arc::new(Stack::new());
-        let mut results = Vec::new();
+        let results = Arc::new(Stack::new());
         let mut errors = Vec::new();
+        let mut pass = |message: &str, err: Error| {
+            let error = error.pass_with(message, err);
+            log::error!("{:?}", &error);
+            errors.push(error);
+        };
         let shape = self.shape.clone();
         let (volume_max, center_max) = match shape.read().properties() {
             Ok((volume_max, center_max)) => (volume_max, center_max),
             Err(err) => return (vec![], vec![error.pass_with("shape.properties", err)]),
         };
-        let center_max = self.center_max.clone().unwrap_or(center_max);
-        let volume_max = self.volume_max.clone().unwrap_or(volume_max);
-        let draught_steps = match shape.read().draught_steps(self.level_step) {
-            Ok(draught_steps) => draught_steps,
-            Err(err) => return (vec![], vec![error.pass_with("shape.read().draught_steps()", err)]),
-        };
+        let max_heel = self
+            .heel_steps
+            .iter()
+            .fold(0., |acc, v| if acc < v.abs() { v.abs() } else { acc });
+        let max_trim = self
+            .trim_steps
+            .iter()
+            .fold(0., |acc, v| if acc < v.abs() { v.abs() } else { acc });
+        let draught_steps =
+            match shape
+                .read()
+                .draught_steps(self.level_step_qnt, max_heel, max_trim)
+            {
+                Ok(draught_steps) => draught_steps,
+                Err(err) => {
+                    return (
+                        vec![],
+                        vec![error.pass_with("shape.read().draught_steps()", err)],
+                    );
+                }
+            };
         let draught_zero = match shape.read().size() {
             Ok((_, _, _, z_min)) => z_min,
             Err(err) => return (vec![], vec![error.pass_with("shape.read().size()", err)]),
@@ -86,6 +100,12 @@ impl BuildCompartmentCache {
         if draught_steps.len() < 2 {
             return (vec![], vec![error.err("draught_steps.len < 2")]);
         }
+        let scheduler = self.thread_pool.scheduler();
+        assert!(self.heel_steps.len() > 1);
+        assert!(self.trim_steps.len() > 1);
+        assert!(self.heel_steps.contains(&0.));
+        assert!(self.trim_steps.contains(&0.));
+        assert!(draught_steps.len() > 1);
         'draught: for draught in draught_steps {
             for &heel in &self.heel_steps {
                 for &trim in &self.trim_steps {
@@ -94,14 +114,16 @@ impl BuildCompartmentCache {
                     if self.exit.load(Ordering::SeqCst) {
                         break 'draught;
                     }
-                    //  let dbg_ = self.dbg.clone();
-                    let draft_results = draft_results.clone();
-                    let shape = shape.clone();
-                    let handle = self
-                        .scheduler
-                        .spawn(move || {
+                    let results = results.clone();
+                    let shape = Arc::clone(&shape);
+                    let thread_name =
+                        format!("BuildCompartmentCache displacement {heel} {trim} {draught}");
+                    log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
+                 //   println!("{}.build | Starting thread {thread_name}", &self.dbg);
+                    let handle = scheduler
+                        .spawn_named(thread_name, move || {
                             let guard = shape.read();
-                            draft_results.push((
+                            results.push((
                                 heel,
                                 trim,
                                 draught,
@@ -120,63 +142,98 @@ impl BuildCompartmentCache {
                             )
                         });
                     match handle {
-                        Ok(task) => tasks.push(task),
-                        Err(err) => errors.push(err),
+                        Ok(task) => tasks.push_back(task),
+                        Err(err) => pass("task handle", err),
                     };
                 }
             }
         }
         for task in tasks {
+            log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                errors.push(error);
+                pass("task join", err);
             }
         }
-        while !draft_results.is_empty() {
-            if let Some((heel, trim, draught, volume, inertia)) = draft_results.pop() {
+        let mut vec_results = Vec::new();
+        while !results.is_empty() {
+            if let Some((heel, trim, draught, volume, inertia)) = results.pop() {
                 let (volume, center) = match volume {
                     Ok((volume, center)) => (volume, center),
                     Err(err) => {
-                        errors.push(error.pass_with("draft_results volume", err));
+                        pass("draft_results volume", err);
                         continue;
                     }
                 };
-                let (i_x, i_y) = match inertia {
-                    Ok((x, y)) => (x, y),
-                    Err(err) => {
-                        errors.push(error.pass_with("draft_results inertia", err));
-                        continue;
+                let (i_x, i_y) = if volume < volume_max {
+                    match inertia {
+                        Ok((x, y)) => (x, y),
+                        Err(err) => {
+                            pass("draft_results inertia", err);
+                            continue;
+                        }
                     }
-                };
-                if volume >= volume_max {
-                    // для полного объема значения заполняем руками для нормальной интерполяции
-                    results.push(vec![heel, trim, draught, volume_max, center_max.x(), center_max.y(), center_max.z(), 0., 0.]);
                 } else {
-                    results.push(vec![heel, trim, draught, volume, center.x(), center.y(), center.z(), i_x, i_y]);
-                }                
+                    (0., 0.)
+                };
+                vec_results.push(vec![
+                    heel,
+                    trim,
+                    draught,
+                    volume,
+                    center.x(),
+                    center.y(),
+                    center.z(),
+                    i_x,
+                    i_y,
+                    0., // i_x max
+                    0., // abs_moment
+                ]);
             }
         }
-        //   dbg!(&results);
         // для пустого объема значения заполняем руками для нормальной интерполяции
-        // берем значения с ненулевым объемом
-        let mut tmp: Vec<_> = results.iter().filter(|v| v[3] > 0.).collect();
-        // и сортируем чтобы найти значение с минимальными креном/дифферентом и объемом
-        tmp.sort_by(|a, b| (a[0].abs()*a[3] + a[1].abs()*a[3]).partial_cmp(&(b[0].abs()*b[3] + b[1].abs()*b[3])).unwrap());
-        let center_min = if let Some(first) = tmp.first() {
-            Position::new(first[4], first[5],draught_zero)
-        } else {
-            Position::new(center_max.x(), center_max.y(),draught_zero)
-        };
-        // для пустого объема значения меняем значения
-        results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
-            v[4] = center_min.x();
-            v[5] = center_min.y();
-            v[6] = center_min.z();
-            v[7] = 0.;
-            v[8] = 0.;
-        });
-        //   dbg!(&results);
-        (results, errors)
+        {
+            // берем значения с ненулевым объемом
+            let mut tmp: Vec<_> = vec_results.iter().filter(|v| v[3] > 0.).collect();
+            // и сортируем чтобы найти значение с минимальными креном/дифферентом и объемом
+            tmp.sort_by(|a, b| {
+                (a[0].abs() * a[3] + a[1].abs() * a[3])
+                    .partial_cmp(&(b[0].abs() * b[3] + b[1].abs() * b[3]))
+                    .unwrap()
+            });
+            let center_min = if let Some(first) = tmp.first() {
+                Position::new(first[4], first[5], draught_zero)
+            } else {
+                Position::new(center_max.x(), center_max.y(), draught_zero)
+            };
+            // для пустого объема значения меняем значения
+            vec_results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
+                v[4] = center_min.x();
+                v[5] = center_min.y();
+                v[6] = center_min.z();
+                v[7] = 0.;
+                v[8] = 0.;
+                v[9] = 0.;
+                v[10] = 0.;
+            });
+        }
+        for &heel in &self.heel_steps {
+            let sin_theta = heel.to_radians().sin();
+            let cos_theta = heel.to_radians().cos();
+            let mut current_vec: Vec<_> = vec_results
+                .iter_mut()
+                .filter(|v| v[0] == heel)
+                .collect::<Vec<_>>();
+           let max_inertia_trans_x = current_vec
+                .iter()
+                .map(|v| v[7])
+                .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                .unwrap(); 
+            current_vec.iter_mut().for_each(|v| {
+                    v[9] = max_inertia_trans_x;
+                    v[10] = (v[5] * cos_theta + v[6] * sin_theta) * v[3]; // абсолютный момент жидкости            
+                }
+            );
+        }
+        (vec_results, errors)
     }
 }

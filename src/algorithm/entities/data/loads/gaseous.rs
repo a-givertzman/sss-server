@@ -1,6 +1,7 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use std::collections::HashMap;
 
+use sal_core::error::Error;
 use serde::Deserialize;
 use crate::algorithm::entities::{Position, data::DataArray, ship_model::GaseousData};
 use super::AssignmentType;
@@ -12,11 +13,11 @@ pub struct LoadGaseousData {
     /// Имя груза
     pub cargo_name: String,   
     /// ID помещения
-    pub space_id: String,
+    pub code: String,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,    
     /// масса, т
@@ -24,54 +25,47 @@ pub struct LoadGaseousData {
     /// Общая масса, т
     pub volume: Option<f64>,
     /// Центр отсека, размещающего груз, м
-    pub mass_shift: Option<Position>,
+    pub mass_shift_x: Option<f64>,
+    pub mass_shift_y: Option<f64>,
+    pub mass_shift_z: Option<f64>,
 }
 //
 impl LoadGaseousData {
     pub fn data(&self) -> GaseousData {
         GaseousData {
-            assigned_id:  self.assigned_id,
+            assigment_type: self.assigment_type,
         //    cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            code: self.code.clone(),
             mass: self.mass,
         }
     }
-}
 //
-/*impl std::fmt::Display for LoadGaseousData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "LoadGaseousData(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {}) 
-            mass_shift:({}, {}, {}) horizontal_area:{} vertical_area:{} vertical_area_shift_y:({}, {}, {}) )",
-            self.name,
-            self.mass.unwrap_or(0.),            
-            self.general_category,
-            self.timber,
-            self.is_on_deck,
-            self.container.unwrap_or(false),
-            self.bound_x1,
-            self.bound_x2,
-            self.bound_y1.unwrap_or(0.),
-            self.bound_y2.unwrap_or(0.),
-            self.bound_z1.unwrap_or(0.),
-            self.bound_z2.unwrap_or(0.),
-            self.mass_shift_x.unwrap_or(0.),
-            self.mass_shift_y.unwrap_or(0.),
-            self.mass_shift_z.unwrap_or(0.),
-            self.horizontal_area.unwrap_or(0.),
-            self.vertical_area.unwrap_or(0.),
-            self.vertical_area_shift_x.unwrap_or(0.),
-            self.vertical_area_shift_y.unwrap_or(0.),
-            self.vertical_area_shift_z.unwrap_or(0.),
-        )
+    pub fn mass_shift(&self) -> Result<Position, Error> {
+        let error = Error::new("LoadGaseousData", "mass_shift");
+        let center_x =  if let Some(x) = self.mass_shift_x {
+            x
+        } else {
+            return Err(error.err("no mass_shift_x"));
+        };
+        let center_y =  if let Some(v) = self.mass_shift_y {
+            v
+        } else {
+            return Err(error.err("no mass_shift_y"));
+        };
+        let center_z =  if let Some(v) = self.mass_shift_y {
+            v
+        } else {
+            return Err(error.err("no mass_shift_z and bound_z2"));
+        };
+        return Ok(Position::new(center_x, center_y, center_z));        
     }
-}*/
+}
+
 /// Массив данных по грузам
 pub type LoadGaseousArray = DataArray<LoadGaseousData>;
 //
 impl LoadGaseousArray {
     pub fn data(self) -> HashMap<usize, LoadGaseousData> {
-        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assigned_id, v)).collect()
+        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assignment_id, v)).collect()
     }
 }

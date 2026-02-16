@@ -8,7 +8,6 @@ mod roll_frequency {
     use debugging::session::debug_session::{
         DebugSession, 
         LogLevel, 
-        Backtrace
     };
     use crate::{
         algorithm::{
@@ -20,7 +19,7 @@ mod roll_frequency {
             }
         }, 
         kernel::{
-            eval::Eval, 
+            Eval, 
             types::eval_result::EvalResult
         }, 
         prelude::{
@@ -47,7 +46,7 @@ mod roll_frequency {
     /// Testing 'eval'
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::debug!("");

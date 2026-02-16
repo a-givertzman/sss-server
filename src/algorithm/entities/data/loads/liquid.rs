@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use super::{AssignmentType, LiquidCargoType};
-use crate::algorithm::entities::{Position, data::DataArray, ship_model::LiquidData};
+use crate::algorithm::entities::{data::{DataArray, loads::CompartmentPurpose}, ship_model::LiquidData};
 use serde::{Deserialize, Serialize};
 /// Груз без привязки к помещению, всегда твердый
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -12,89 +12,73 @@ pub struct LoadLiquidData {
     /// Имя груза
     pub cargo_name: String,
     /// ID помещения
-    pub space_id: String,
+    pub code: String,
     /// Имя помещения
     pub space_name: String,
     /// ID assigned
-    pub assigned_id: usize,
+    pub assignment_id: usize,
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип жидкого груза
     pub cargo_type: LiquidCargoType,
+    /// Тип груза для отсека
+    pub compartment_purpose: CompartmentPurpose,
     /// масса, т
     pub mass: f64,
     /// Плотность
     pub density: Option<f64>,
     /// Обьем, м^3
     pub volume: Option<f64>,
-    /// Центр отсека, размещающего груз, м
-    pub mass_shift: Option<Position>,
-    /// Признак использования максимального значения момента свободной поверхности жидкости
+   /// Центр отсека, размещающего груз, м
+    pub mass_shift_x: Option<f64>,
+    pub mass_shift_y: Option<f64>,
+    pub mass_shift_z: Option<f64>,
+   /// Признак использования максимального значения момента свободной поверхности жидкости
     pub use_moment_of_inertia_max: bool,  
     /// Момент свободной поверхности жидкости
-    pub long_moment_of_inertia_max: f64,
-    pub trans_moment_of_inertia_max: f64,
+    pub long_moment_of_inertia_max: Option<f64>,
+    pub trans_moment_of_inertia_max: Option<f64>,
 }
 //
 impl LoadLiquidData {
-    pub fn data(&self) -> LiquidData {
+    pub fn data(&self) -> Option<LiquidData> {
         let volume = if let Some(volume) = self.volume {
             volume
         } else {
-            if let Some(density) = self.density {
-                if density > 0. {
-                    self.mass / density
-                } else {
-                    0.
-                }
+            if let Some(density) = self.density && density > 0. {
+                self.mass / density
             } else {
-                0.
+                return None;
             }
         };
-        LiquidData {
-            assigned_id:  self.assigned_id,
+        let density = if let Some(density) = self.density {
+            density
+        } else {
+            if self.mass > 0. {
+                volume / self.mass
+            } else {
+                return None;
+            }
+        };
+        Some(LiquidData {
+            assignment_id:  self.assignment_id,
+            assigment_type: self.assigment_type,
+            cargo_type: self.cargo_type,
        //     cargo_id: self.cargo_id,
-            space_id: self.space_id.clone(),
+            code: self.code.clone(),
+            use_max_moment: self.use_moment_of_inertia_max,
+            is_cargo_tank: self.compartment_purpose == CompartmentPurpose::CargoTank,
             mass: self.mass,
             volume,
-        }
+            density,
+        })
     }
 }
-/*
-impl std::fmt::Display for LoadLiquidData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "LoadLiquidData(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {})
-            mass_shift:({}, {}, {}) horizontal_area:{} vertical_area:{} vertical_area_shift_y:({}, {}, {}) )",
-            self.name,
-            self.mass.unwrap_or(0.),
-            self.general_category,
-            self.timber,
-            self.is_on_deck,
-            self.container.unwrap_or(false),
-            self.bound_x1,
-            self.bound_x2,
-            self.bound_y1.unwrap_or(0.),
-            self.bound_y2.unwrap_or(0.),
-            self.bound_z1.unwrap_or(0.),
-            self.bound_z2.unwrap_or(0.),
-            self.mass_shift_x.unwrap_or(0.),
-            self.mass_shift_y.unwrap_or(0.),
-            self.mass_shift_z.unwrap_or(0.),
-            self.horizontal_area.unwrap_or(0.),
-            self.vertical_area.unwrap_or(0.),
-            self.vertical_area_shift_x.unwrap_or(0.),
-            self.vertical_area_shift_y.unwrap_or(0.),
-            self.vertical_area_shift_z.unwrap_or(0.),
-        )
-    }
-}*/
 /// Массив данных по грузам
 pub type LoadLiquidArray = DataArray<LoadLiquidData>;
 //
 impl LoadLiquidArray {
     pub fn data(self) -> HashMap<usize, LoadLiquidData> {
-        self.data.into_iter().filter(|v| v.mass > 0.).map(|v| (v.assigned_id, v)).collect()
+        self.data.into_iter().map(|v| (v.assignment_id, v)).collect()
     }
 }

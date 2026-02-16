@@ -1,16 +1,16 @@
 #[cfg(test)]
 
 mod tests {
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::{algorithm::{entities::Position, eval::{LoadsCtx, LoadsEval}}, kernel::eval::Eval, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
+    use crate::{algorithm::{entities::Position, eval::{LoadsCtx, LoadsEval}}, kernel::Eval, prelude::{Context, InitialCtx}, tests::unit::algorithm::fake_initial::FakeInitial};
     use crate::algorithm::context::context_access::ContextRead;
 
     #[test]
     fn loads() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         let self_id = "test loads";
         println!("{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

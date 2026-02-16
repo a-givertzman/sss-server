@@ -13,6 +13,8 @@ pub struct Voyage {
     pub icing_type: String,
     /// Тип облединения палубного груза - леса
     pub icing_timber_type: String,
+    /// Тип акватории
+    pub area: Option<String>,    
 }
 //
 pub type VoyageArray = DataArray<Voyage>;
@@ -21,11 +23,12 @@ impl std::fmt::Display for Voyage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Voyage(density:{}, operational_speed:{}, icing_type:{}, icing_timber_type:{})",
+            "Voyage(density:{}, operational_speed:{}, icing_type:{}, icing_timber_type:{} area:{})",
             self.density,
             self.operational_speed,
             self.icing_type,
             self.icing_timber_type,
+            self.area.as_ref().unwrap_or(&"-".to_owned())
         )
     }
 }

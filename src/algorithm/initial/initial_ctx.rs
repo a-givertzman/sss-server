@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
-use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
+use crate::algorithm::entities::data::stability::ship_type::ShipType;
+use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
+use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, Ship, Voyage};
 
 ///
 /// Общая структура для ввода данных. Содержит все данные
@@ -26,11 +27,16 @@ pub struct InitialCtx {
     pub icing: Option<IcingArray>,
     /// Постоянная нагрузка на судно
     pub load_constant: Option<LoadConstantArray>,
-    /// Переменная нагрузка на судно
+    /// Переменная нагрузка на судно - сыпучие грузы
     pub bulk: Option<HashMap<usize, LoadBulkData>>,
+    /// Переменная нагрузка на судно - жидкие грузы
     pub liquid: Option<HashMap<usize, LoadLiquidData>>,
+    /// Переменная нагрузка на судно - штучные грузы
     pub unit: Option<Vec<LoadUnitData>>,
+    /// Переменная нагрузка на судно - газообразные грузы
     pub gaseous: Option<HashMap<usize, LoadGaseousData>>,
+    /// Композитные помещения из частей трюма, [код композитного помещения, [код части трюма]]
+    pub hold_compartment: Option<Vec<(String, Vec<String>)>>,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
     pub multipler_x1: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
@@ -53,12 +59,14 @@ pub struct InitialCtx {
     pub draft_mark: Option<Vec<DraftMarkParsedData>>,
     /// Минимальная допустимая метацентрическая высота деления на отсеки
     pub h_subdivision: Option<Vec<(f64, f64)>>,
+    /// Ограничения на максимальную нагрузку на корпус
+    pub strength_limits: Option<StrengthLimitDataArray>,
 }
 impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize, project_id: &str, bounds: Bounds) -> Self {
+    pub fn new(ship_id: &str, project_id: &str, bounds: Bounds) -> Self {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),

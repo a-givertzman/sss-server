@@ -5,225 +5,44 @@ mod conf;
 mod infrostructure;
 mod kernel;
 mod prelude;
+mod server;
 #[cfg(test)]
 mod tests;
 
-use algorithm::entities::{Position, Position2d};
-
-use algorithm::eval::*;
-
 use app::app::App;
-use conf::conf::Conf;
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use infrostructure::api::client::api_client::ApiClient;
+use conf::Conf;
+use debugging::session::debug_session::{DebugSession, LogLevel};
+use infrostructure::ApiClient;
 use kernel::{
-    eval::Eval,
     run::Run,
     types::{Arc, RwLock},
 };
-//use prelude::*;
+use std::path::PathBuf;
+use crate::algorithm::entities::model_cached;
+use crate::{
+    algorithm::{
+        Calculus,
+        entities::ship_model::ship_model::ShipModel,
+    },
+    infrostructure::{DevStream, SelectCalculus, SelectDevDoc, SelectDevInfo},
+    server::{
+        Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot,
+        SelectReq, Server,
+    },
+};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::ThreadPool;
-use crate::algorithm::entities::ship_model::ship_model::ShipModel;
-use crate::algorithm::entities::{
-    Bounds, Moment,
-    model_cached::{self, BoundDisplacementCache, DisplacementShape, Draught},
-};
-use crate::prelude::{Context, Initial, InitialCtx};
-use std::rc::Rc;
-use std::{collections::HashMap, path::PathBuf};
 ///
 /// Application entry point
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //   DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new()
+        .filter(LogLevel::Trace)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
 
-    /*
-        let dbg = Dbg::new("main", "bound_cache");
-        let cache_dir: PathBuf = "src/assets/cache/sofia".into();
-        let model_dir: PathBuf = "src/assets/model/sofia".into();
-        let model_center_coord = Position::new(65.250, 0., 0.);
-        let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
-        let bounds_length_mm = (bounds.length() * 1000.).ceil() as usize;
-        let thread_pool = ThreadPool::new(&dbg, Some(15));
-        let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-            &dbg,
-            model_dir.clone().join(PathBuf::from("hull.stl")),
-            Some(model_center_coord),
-            1000.,
-        )));
-        displacement_shape.write().init().unwrap();
-        dbg!("displacement_shape init ok");
-        let mut bound_cache = BoundDisplacementCache::new(
-            &dbg,
-            displacement_shape,
-            cache_dir
-                .clone()
-                .join("disp_bounded")
-                .join(format!("{bounds_length_mm}")),
-            1.,
-            bounds.clone(),
-            thread_pool.scheduler(),
-        );
-        dbg!("BoundCache::new ok");
-        let res = bound_cache.rebuild();
-        dbg!("BoundCache::new rebuild", res);
-        let res = bound_cache.get(5.9, 0.);
-        dbg!("BoundCache::new get", res);
-    */
-    
- /*   let physical_frames = [
-        -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
-        6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
-        17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
-        27.48, 28.22, 28.96, 29.7, 30.44, 31.18, 31.92, 32.66, 33.4, 34.14, 34.88, 35.62, 36.36,
-        37.1, 37.84, 38.58, 39.32, 40.06, 40.80, 41.54, 42.28, 43.02, 43.76, 44.5, 45.24, 45.98,
-        46.72, 47.46, 48.2, 48.94, 49.68, 50.42, 51.16, 51.9, 52.64, 53.38, 54.12, 54.86, 55.6,
-        56.34, 57.08, 57.82, 58.56, 59.30, 60.04, 60.78, 61.52, 62.26, 63.0, 63.74, 64.48, 65.22,
-        65.96, 66.7, 67.44, 68.18, 68.92, 69.66, 70.4, 71.14, 71.88, 72.62, 73.36, 74.1, 74.84,
-        75.58, 76.32, 77.06, 77.8, 78.54, 79.28, 80.02, 80.76, 81.5, 82.24, 82.98, 83.72, 84.46,
-        85.2, 85.94, 86.68, 87.42, 88.16, 88.9, 89.64, 90.38, 91.12, 91.86, 92.6, 93.34, 94.08,
-        94.82, 95.56, 96.3, 97.04, 97.78, 98.52, 99.26, 100.0, 100.74, 101.48, 102.22, 102.96,
-        103.7, 104.44, 105.18, 105.92, 106.66, 107.4, 108.14, 108.88, 109.62, 110.36, 111.1,
-        111.84, 112.58, 113.32, 114.06, 114.8, 115.54, 116.28, 117.02, 117.76, 118.5, 119.24,
-        119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
-        128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
-    ];
-
-    let dbg = Dbg::new("ShipModel", "compute_balance");
-    //   let model_path = "src/assets/sofia3.stp";
-    //    let center_coord = Position::new(65.250, 0., 0.);
-    //  let model_path = "src/assets/model_1510.stp";
-    //    let model_path = "src/assets/ark-Part3.obj";
-    //  let model_path = "src/assets/ark.stl";
-    //  let model_center_coord = Position::new(59.195, 0., 0.);
-    let cache_dir = "src/assets/cache/sofia".into();
-    let model_dir = "src/assets/model/sofia".into();
-    let model_center_coord = Position::new(65.250, 0., 0.);
-    let thread_pool = ThreadPool::new(&dbg, Some(15));
- //   let bounds = Bounds::from_n(138.86, model_center_coord.x(), 20).unwrap();
-    let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
-    let mut model = model_cached::ModelCached::new(
-        &dbg,
-        model_cached::ModelCachedConf {
-            model_dir,
-            cache_dir,
-            model_scale: 1000.,
-            model_center_coord,
-            heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
-                10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
-            ],
-            trim_steps: vec![
-                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2.,
-                3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
-            ],
-            ship_length_lbp: 130.5,
-            draught_min: 2.,
-            draught_max: 14.,
-            hull_draught_step: 1.,
-            bounds_level_step: 0.1,
-            compartment_level_step: 1.,
-            compartment_data: HashMap::new(),
-        },
-        thread_pool.scheduler(),
-    )
-    .unwrap();
-  //  let res = model.reload_shapes();   dbg!(&res);
-  //  let res = model.rebuild_caches();   dbg!(&res);
-  //  let res = model.rebuild_bounds(&bounds);   dbg!(&res);
-    let res = model.init();
-    dbg!(&res);
-    let res = model.init_bounded(&bounds);
-    dbg!(&res);
-*/
-
- /*   let mut result = |mass: f64, x: f64, y: f64, z: f64| {
-              model.floating_position(model_cached::FloatingPositionQuery {
-                  water_density: 1.025,
-                  mass_const: mass,
-                  moment_const: Moment::from_pos(Position::new(x - model_center_coord.x(), y, z), mass),
-                  bulk: vec![],
-                  liquid: vec![],
-                  grain_bulkhead: Vec::new(),
-                  damaged_compartment: Vec::new(),
-                  epsilon: 0.0001,
-              })
-          };
-
-          
-       //   let data = [ [10317.65, 90., 0., 6.],];
-         // let data = [ [10000., 63.371, -0.2, 6.]];
-
-            let data = [
-                [14194.5, 63.371, -0.001, 6.605],
-                [13163.9, 63.933, 0., 6.212],
-                [13987., 65.231, 0., 4.99],
-                [14135.3, 64.898, 0., 4.882],
-                [13238.467, 65.409, 0., 6.463],
-                [10960.742, 66.471, 0.001, 5.810],
-                [7212.705, 66.404, 0., 5.391],
-                [10000., 63.371, -0.2, 6.],
-                [10000., 63.371, 0.4, 6.],
-                [10000., 70., 0., 6.],
-                [10000., 55., 0., 6.],
-                [10000., 70., 0.1, 6.],
-            ];
-
-          for [m, x, y, z] in data {
-            //  print!("m:{m} x:{x} y:{y} z_fix:{z} result: ");
-              println!("{}", result(m, x, y, z).unwrap());
-          }
-*/
-
-/*
-    let query = model_cached::BalanceQuery {
-        bounds,
-        water_density: 1.025,
-        mass_const: 10000.,
-        //    moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
-        moment_const: Moment::from_pos(Position::new(0., 0., 0.), 0.),
-        bulk: vec![],
-        liquid: vec![],
-        gaseous: vec![],
-        grain_bulkhead: Vec::new(),
-        //      damaged_compartment: vec![],//"212".to_owned()],
-        epsilon: 0.00001,
-    };
- /*   let query = model_cached::BalanceQuery {
-        bounds,
-        water_density: 1.025,
-        mass_const: 10000.,
-        //    moment_const: Moment::from_pos(Position::new(1., -0.5, -1.), 5000.),
-        moment_const: Moment::from_pos(Position::new(0., 0., 0.), 0.),
-        bulk: vec![model_cached::BulkData {
-            cargo_id: 1,
-            space_id: "212".to_owned(),
-            mass: 5.,
-            volume: 5.,
-        }],
-        liquid: vec![model_cached::LiquidData {
-            cargo_id: 2,
-            space_id: "212".to_owned(),
-            mass: 5.,
-            volume: 5.,
-        }],
-        gaseous: vec![model_cached::GaseousData {
-            cargo_id: 3,
-            space_id: "212".to_owned(),
-            mass: 5.,
-        }],
-        grain_bulkhead: Vec::new(),
-        //      damaged_compartment: vec![],//"212".to_owned()],
-        epsilon: 0.00001,
-    };
-*/
-    let res = model.balance(query);
-    dbg!(res);
-    */
-
-    
     let dbg = Dbg::own("main");
-    let tmp_dbg = dbg.clone();
     let path = "config.yaml";
     let mut app = App::new(path);
     if let Err(err) = app.run() {
@@ -231,204 +50,184 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let conf = "./config.yaml";
     let conf = Conf::new(&dbg, conf);
-    let ship_id = 2;
-    let project_id = "NULL";
-    let cache_dir = "src/assets/cache/sofia".into();
-    let model_dir = "src/assets/model/sofia".into();
-    let model_center_coord = Position::new(65.250, 0., 0.);
-    let thread_pool = ThreadPool::new(&dbg, Some(conf.thread_pool.size));
+    let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
+    let ship_id = conf.api.params.ship_id.clone();
+    let project_id = conf.api.params.project_id.clone();
+    let model_x = conf.api.model.midel_x;
+    let model_name = conf.api.model.name.clone();
+    let cache_dir: PathBuf = ("src/assets/cache/".to_owned() + &model_name).into();
+    let model_dir: PathBuf = ("src/assets/model/".to_owned() + &model_name).into();
+    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
+    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
+    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
+    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+    dso_angles.dedup();
     let model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
             model_dir,
             cache_dir,
             model_scale: 1000.,
-            model_center_coord,
-            heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., 0., 2., 5.,
-                10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
+            model_x,
+            hull_heel_steps: vec![
+                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1., -0.5,
+                -0.2, 0., 0.2, 0.5, 1., 2., 5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
             ],
-            trim_steps: vec![
-                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., 0., 1., 2.,
-                3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
+            hull_trim_steps: vec![
+                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., -0.5, -0.2,
+                0., 0.2, 0.5, 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
             ],
+            compartment_heel_steps: vec![
+                -60., -30., -15., -10., -5., -2., 0., 2., 5., 10., 15., 30., 60.,
+            ],
+            compartment_trim_steps: vec![-40., -20., -10., -5., -2., 0., 2., 5., 10., 20., 40.],
             ship_length_lbp: 130.5,
-            draught_min: 2.,
-            draught_max: 14.,
-            hull_draught_step: 1.,
+            draught_min: 2.001,
+            hull_draught_min: 0.5,
+            hull_draught_max: 14.,
+            hull_draught_step: 0.5,
             bounds_level_step: 0.1,
-            compartment_level_step: 1.,
-            compartment_data: HashMap::new(),
+            compartment_level_step_qnt: 20,
+            dso_angles,
         },
-        thread_pool.scheduler(),
+        Arc::clone(&thread_pool),
     )
     .unwrap();
-    let physical_frames = [
-        -3.6, -3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8, 5.4, 6.0,
-        6.7, 7.4, 8.1, 8.8, 9.5, 10.2, 10.9, 11.6, 12.3, 13.0, 13.7, 14.4, 15.1, 15.8, 16.5, 17.2,
-        17.9, 18.6, 19.34, 20.08, 20.82, 21.56, 22.3, 23.04, 23.78, 24.52, 25.26, 26.0, 26.74,
-        27.48, 28.22, 28.96, 29.7, 30.44, 31.18, 31.92, 32.66, 33.4, 34.14, 34.88, 35.62, 36.36,
-        37.1, 37.84, 38.58, 39.32, 40.06, 40.80, 41.54, 42.28, 43.02, 43.76, 44.5, 45.24, 45.98,
-        46.72, 47.46, 48.2, 48.94, 49.68, 50.42, 51.16, 51.9, 52.64, 53.38, 54.12, 54.86, 55.6,
-        56.34, 57.08, 57.82, 58.56, 59.30, 60.04, 60.78, 61.52, 62.26, 63.0, 63.74, 64.48, 65.22,
-        65.96, 66.7, 67.44, 68.18, 68.92, 69.66, 70.4, 71.14, 71.88, 72.62, 73.36, 74.1, 74.84,
-        75.58, 76.32, 77.06, 77.8, 78.54, 79.28, 80.02, 80.76, 81.5, 82.24, 82.98, 83.72, 84.46,
-        85.2, 85.94, 86.68, 87.42, 88.16, 88.9, 89.64, 90.38, 91.12, 91.86, 92.6, 93.34, 94.08,
-        94.82, 95.56, 96.3, 97.04, 97.78, 98.52, 99.26, 100.0, 100.74, 101.48, 102.22, 102.96,
-        103.7, 104.44, 105.18, 105.92, 106.66, 107.4, 108.14, 108.88, 109.62, 110.36, 111.1,
-        111.84, 112.58, 113.32, 114.06, 114.8, 115.54, 116.28, 117.02, 117.76, 118.5, 119.24,
-        119.98, 120.72, 121.46, 122.2, 122.94, 123.68, 124.42, 125.16, 125.9, 126.5, 127.1, 127.7,
-        128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3, 134.9, 135.5,
-    ];
-    let bounds = Bounds::from_array(&physical_frames, model_center_coord.x()).unwrap();
-    let mut ship_model = ShipModel::new(
+
+    let api_client = Arc::new(ApiClient::new(
         &dbg,
-        ship_id,
+        conf.api.address.database.clone(),
+        conf.api.address.host.clone(),
+        conf.api.address.port.clone(),
+    ));
+
+    let ship_model = ShipModel::new(
+        &dbg,
+        ship_id.to_owned(),
         project_id.to_owned(),
         model_cached,
-        ApiClient::new(
-            &dbg,
-            conf.api.address.database.clone(),
-            conf.api.address.host.clone(),
-            conf.api.address.port.clone(),
-        ),
-        thread_pool.scheduler(),
+        Arc::clone(&api_client),
     );
-    ship_model.init().unwrap();
-    ship_model.init_cache_bounded(&bounds).unwrap();
+
     let ship_model = Arc::new(RwLock::new(ship_model));
-    log::debug!("main | Calculations...");
-    let ctx = 
-  /*  
-    CriterionStabilityEval::new(
+    ship_model.write().init().unwrap();
+
+    let server = Server::new(
         &dbg,
-        MetacentricHeightSubdivisionEval::new(
-            &dbg,
-            GrainEval::new(
-                &dbg,
-                CirculationEval::new(
-                    &dbg,
-                    AccelerationEval::new(
-                        &dbg,
-                        MinMetacentricHeightEval::new(
-                            &dbg,
-                            DSOAngleMaxEval::new(
-                                &dbg,
-                                DSOTimberMaxEval::new(
-                                    &dbg,
-                                    DSOIcingMaxEval::new(
-                                        &dbg,
-                                        DSOMaxEval::new(
-                                            &dbg,
-                                            DSOAreaEval::new(
-                                                &dbg,
-                                                StaticAngleEval::new(
-                                                    &dbg,
-                                                    WheatherEval::new(
-                                                        &dbg,
-                                                        RollingAmplitudeEval::new(
-                                                            &dbg,
-                                                            RollingPeriodEval::new(
-                                                                &dbg,
-                                                                WindEval::new(
-                                                                    &dbg,
-                                                                    WindageEval::new(
-                                                                        &dbg,
-                                                                        LeverDiagramEval::new(
-                                                                            &dbg,
-                                                                            //   link,
-                                                                            MetacentricHeightEval::new(
-                                                                                &dbg,
-                                                                                // Before ZG
-                                                                                StabilityAreaEval::new(
-                                                                                    &dbg,
-                                                                                    ship_model.clone(),
-                                                                                    */
-
-
-                                                                                    BalanceEval::new(
-                                                                                        &dbg,
-                                                                                        ship_model.clone(),
-                                                                                        LoadsEval::new(
-                                                                                            &dbg,
-                                                                                            WettingEval::new(
-                                                                                                &dbg,
-                                                                                                IcingEval::new(
-                                                                                                    &dbg,
-                                                                                                    StrengthAreaEval::new(
-                                                                                                        &dbg,
-                                                                                                        ship_model.clone(),
-                                                                                                        IcingTimberEval::new(
-                                                                                                            &dbg,
-                                                                                                            IcingStabEval::new(
-                                                                                                                &dbg,
-                                                                                                                Initial::new(
-                                                                                                                    &dbg,
-                                                                                                                    ship_model.clone(),
-                                                                                                                    ApiClient::new(
-                                                                                                                        &dbg,
-                                                                                                                        conf.api.address.database.clone(),
-                                                                                                                        conf.api.address.host.clone(),
-                                                                                                                        conf.api.address.port.clone(),
-                                                                                                                    ),
-                                                                                                                    Context::new(InitialCtx::new(ship_id, project_id, bounds)),
-                                                                                                                ),
-                                                                                                            ),
-                                                                                                        ),
-                                                                                                    ),
-                                                                                                ),
-                                                                                            ),
-                                                                                        ),
-                                                                                   ).eval(())
-    /*                                                                             ),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
+        conf.clone(),
+        thread_pool.scheduler(),
+        move |dbg, conf| {
+            Box::new(
+                //
+                // Select handler for incomong messages by Content
+                SelectContent::new(vec![
+                    // Handler for Content::Bytes
+                    (
+                        Content::Bytes,
+                        Box::new(SelectCot::new(vec![
+                            // Handling incomong messages with `Cot::Act` by field `cmd`
+                            (
+                                Cot::Act,
+                                Box::new(SelectAct::new(vec![
+                                    // Handling incomong commands
+                                    // ...
+                                ])),
+                            ),
+                            // Handling incomong messages with Cot::Req by field `req`
+                            (
+                                Cot::Req,
+                                Box::new(SelectReq::new(vec![
+                                    // Handling incomong requests
+                                    // ...
+                                ])),
+                            ),
+                        ])),
+                    ),
+                    // Handler for Content::Empty
+                    (
+                        Content::Empty,
+                        Box::new(SelectCot::new(vec![
+                            // Handling incomong messages with `Cot::Act` by field `cmd`
+                            (
+                                Cot::Act,
+                                Box::new(SelectAct::new(vec![
+                                    // Handling incomong commands
+                                    // ...
+                                ])),
+                            ),
+                            // Handling incomong messages with Cot::Req by field `req`
+                            (
+                                Cot::Req,
+                                Box::new(SelectReq::new(vec![
+                                    // Handling incomong requests
+                                    // ...
+                                ])),
+                            ),
+                        ])),
+                    ),
+                    // Handler for Content::Json
+                    (
+                        Content::Json,
+                        Box::new(SelectCot::new(vec![
+                            // Handling incomong messages with `Cot::Act` by field `cmd`
+                            (
+                                Cot::Act,
+                                Box::new(SelectAct::new(vec![
+                                    // Handling incomong command `DeviceStream`
+                                    (
+                                        QueryId::Calculus,
+                                        Box::new(SelectCalculus::new(
+                                            dbg,
+                                            conf.calculus.clone(),
+                                            thread_pool.scheduler(),
+                                            Calculus::new(
+                                                dbg,
+                                                conf.clone(),
+                                                Arc::clone(&api_client),
+                                                Arc::clone(&ship_model),
+                                                Arc::clone(&thread_pool),
                                             ),
-                                        ),
+                                        )),
                                     ),
-                                ),
+                                    // Handling incomong command `DeviceStream`
+                                    (
+                                        QueryId::DeviceStream,
+                                        Box::new(DevStream::new(
+                                            dbg,
+                                            DevStreamConf {
+                                                devices: vec![
+                                                    ("Dev1".into(), DevConf {}),
+                                                    ("Dev2".into(), DevConf {}),
+                                                ],
+                                            },
+                                            thread_pool.scheduler(),
+                                        )),
+                                    ),
+                                ])),
                             ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-    )
-    */
-    ;
-
-/*    
-    let _result = DraftMarkEval::new(
-        &tmp_dbg,
-        CriterionDraughtEval::new(
-            &tmp_dbg,
-            ReserveBuoyncyEval::new(
-                &tmp_dbg,
-                ScrewEval::new(
-                    &tmp_dbg,
-                    BowBoardEval::new(
-                        &tmp_dbg,
-                        LoadLineEval::new(
-                            &tmp_dbg,
-                            ZgEval::new(
-                                    thread_pool.scheduler(),
-                                    &tmp_dbg,
-                              //      &ship_model,
-                                    ctx,
+                            // Handling incomong messages with Cot::Req by field `req`
+                            (
+                                Cot::Req,
+                                Box::new(SelectReq::new(vec![
+                                    // Handling incomong request `DeviceInfo`
+                                    (
+                                        QueryId::DeviceInfo,
+                                        Box::new(SelectDevInfo::new("assets/info/")),
+                                    ),
+                                    // Handling incomong request `DeviceDoc`
+                                    (
+                                        QueryId::DeviceDoc,
+                                        Box::new(SelectDevDoc::new("assets/info/")),
+                                    ),
+                                ])),
                             ),
-                        ),
+                        ])),
                     ),
-                ),
-            ),
-        ),
-    )
-    .eval(());*/
-    dbg!(ctx);
+                ]),
+            )
+        },
+    );
+    server.run().map_err(|err| Error::new(&dbg, "").pass(err))?;
+    server.wait().map_err(|err| Error::new(dbg, "").pass(err))?;
     Ok(())
 }

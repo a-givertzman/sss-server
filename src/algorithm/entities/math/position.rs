@@ -6,26 +6,7 @@ use std::{
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 //
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Encode, PartialEq)]
-pub struct Point3 {
-    x: f64,
-    y: f64,
-    z: f64,
-}
-//
-impl TryFrom<Point3> for Position {
-    type Error = String;
-    fn try_from(data: Point3) -> Result<Self, Self::Error> {
-        Ok(Position {
-            x: data.x,
-            y: data.y,
-            z: data.z,
-        })
-    }
-}
-//
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
-#[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,
     y: f64,
@@ -57,6 +38,10 @@ impl Position {
     #[allow(unused)]
     pub fn len(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+    //
+    pub fn print(&self) -> String {
+        format!("({:.3} {:.3} {:.3})", self.x, self.y, self.z)
     }
 }
 //

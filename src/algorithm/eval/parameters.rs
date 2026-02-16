@@ -125,18 +125,9 @@ impl ParameterID {
     }
 }
 /// Набор результатов расчетов для записи в БД
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Parameters {
     data: HashMap<ParameterID, f64>,
-}
-//
-impl Parameters {
-    /// Главный конструктор
-    pub fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-        }
-    }
 }
 //
 impl IParameters for Parameters {

@@ -8,12 +8,14 @@ use serde::Deserialize;
 pub struct LoadUnitData {
     /// ID груза
     pub cargo_id: usize,
-    /// ID assigned
-    pub assigned_id: usize,
-    /// ID помещения
-    pub space_id: String,
     /// Имя груза
     pub cargo_name: String,
+    /// ID помещения
+    pub code: String,
+    /// Имя помещения
+    pub space_name: String,
+    /// ID assigned
+    pub assignment_id: usize,    
     /// Тип назначения груза
     pub assigment_type: AssignmentType,
     /// Тип груза судна
@@ -21,7 +23,9 @@ pub struct LoadUnitData {
     /// масса, т
     pub mass: f64,
     /// Центр тяжести, м
-    pub mass_shift: Option<Position>,
+    pub mass_shift_x: Option<f64>,
+    pub mass_shift_y: Option<f64>,
+    pub mass_shift_z: Option<f64>,
     /// Средний удельный погрузочный объем, м^3/т
     pub stowage_factor: Option<f64>,
     /// Проницаемость определяет количество, на которое груз впитывает воду
@@ -30,10 +34,14 @@ pub struct LoadUnitData {
     pub volume: Option<f64>,
     /// Площадь поверхности груза подвергающаяся обледенению (верхняя площадь груза)
     pub icing_area: Option<f64>,
-    pub centre_of_icing_area: Option<Position>,
+    pub centre_of_icing_area_x: Option<f64>,
+    pub centre_of_icing_area_y: Option<f64>,
+    pub centre_of_icing_area_z: Option<f64>,
     /// Площадь парусности груза (площадь проекции груза на ДП судна)  
     pub windage_area: Option<f64>,
-    pub centre_of_windage_area: Option<Position>,
+    pub centre_of_windage_area_x: Option<f64>,
+    pub centre_of_windage_area_y: Option<f64>,
+    pub centre_of_windage_area_z: Option<f64>,
     /// Границы груза в связанной с судном системой координат
     pub bound_x1: Option<f64>,
     pub bound_x2: Option<f64>,
@@ -54,7 +62,7 @@ impl LoadUnitData {
                 .map_err(|e| Error::new("LoadUnitData", "mass").pass_with("part_ratio", e))?)
     }
     /// Расчет площади обледенения по заданным ограничениям.
-    /// Возвращает площадь, попадающую в ограничение, момент плозади и дельту момента площади относительно палубы (bound_z1)
+    /// Возвращает площадь, попадающую в ограничение, момент площади и дельту момента площади относительно палубы (bound_z1)
     pub fn icing_area(
         &self,
         bound_x: &Bound,
@@ -87,7 +95,7 @@ impl LoadUnitData {
             let center_y = self_bound_y.intersect(bound_y)
                 .map_err(|e| error.pass_with("center_y intersect", e))?
                 .center().unwrap_or(0.);
-            let center_z = self.centre_of_icing_area.unwrap_or(Position::zero()).z();
+            let center_z = self.centre_of_icing_area_z.unwrap_or(self.bound_z2.unwrap_or(0.));
             let delta_z = (self.bound_z2.unwrap_or(0.) - self.bound_z1.unwrap_or(0.)).max(0.);
             (
                 Moment::from_pos(Position::new(center_x, center_y, center_z), area),
@@ -131,63 +139,52 @@ impl LoadUnitData {
     //
     pub fn mass_shift(&self) -> Result<Position, Error> {
         let error = Error::new("LoadUnitData", "mass_shift");
-        if let Some(mass_shift) = self.mass_shift {
-            Ok(mass_shift)
+        let center_x =  if let Some(x) = self.mass_shift_x {
+            x
         } else {
             if let Ok(bound_x) = self.bound_x() {
-                if let (
-                    Some(center_x),
-                    Some(bound_y1),
-                    Some(bound_y2),
-                    Some(bound_z1),
-                    Some(bound_z2),
-                ) = (
-                    bound_x.center(),
-                    self.bound_y1,
-                    self.bound_y2,
-                    self.bound_z1,
-                    self.bound_z2,
-                ) {
-                    let center_y = bound_y1 + (bound_y2 - bound_y1) / 2.;
-                    let center_z = bound_z1 + (bound_z2 - bound_z1) / 2.;
-                    return Ok(Position::new(center_x, center_y, center_z));
+                if let Some(x) = bound_x.center() {
+                    x
+                } else {
+                    return Err(error.err("no bound_x.center()"));
                 }
+            } else {
+                return Err(error.err("no mass_shift_x and bound_x"));
             }
-            Err(error.err("no mass_shift and bounds!"))
-        }
+        };
+        let center_y =  if let Some(v) = self.mass_shift_y {
+            v
+        } else {
+            let y1 = if let Some(v) = self.bound_y1 {
+                v
+            } else {
+                return Err(error.err("no mass_shift_y and bound_y1"));
+            };
+            let y2 = if let Some(v) = self.bound_y2 {
+                v
+            } else {
+                return Err(error.err("no mass_shift_y and bound_y2"));
+            };
+            y1 + (y2 - y1) / 2.
+        };
+        let center_z =  if let Some(v) = self.mass_shift_z {
+            v
+        } else {
+            let z1 = if let Some(v) = self.bound_z1 {
+                v
+            } else {
+                return Err(error.err("no mass_shift_z and bound_z1"));
+            };
+            let z2 = if let Some(v) = self.bound_z2 {
+                v
+            } else {
+                return Err(error.err("no mass_shift_z and bound_z2"));
+            };
+            z1 + (z2 - z1) / 2.
+        };
+        return Ok(Position::new(center_x, center_y, center_z));        
     }
 }
-
-//
-/*impl std::fmt::Display for LoadUnitData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "LoadUnitData(name:{} mass:{} general_category:{} timber:{} is_on_deck:{} container:{} bound_x:({}, {}) bound_y:({}, {}) bound_z:({}, {})
-            mass_shift:({}, {}, {}) horizontal_area:{} vertical_area:{} vertical_area_shift_y:({}, {}, {}) )",
-            self.name,
-            self.mass.unwrap_or(0.),
-            self.general_category,
-            self.timber,
-            self.is_on_deck,
-            self.container.unwrap_or(false),
-            self.bound_x1,
-            self.bound_x2,
-            self.bound_y1.unwrap_or(0.),
-            self.bound_y2.unwrap_or(0.),
-            self.bound_z1.unwrap_or(0.),
-            self.bound_z2.unwrap_or(0.),
-            self.mass_shift_x.unwrap_or(0.),
-            self.mass_shift_y.unwrap_or(0.),
-            self.mass_shift_z.unwrap_or(0.),
-            self.horizontal_area.unwrap_or(0.),
-            self.vertical_area.unwrap_or(0.),
-            self.vertical_area_shift_x.unwrap_or(0.),
-            self.vertical_area_shift_y.unwrap_or(0.),
-            self.vertical_area_shift_z.unwrap_or(0.),
-        )
-    }
-}*/
 /// Массив данных по грузам
 pub type LoadUnitArray = DataArray<LoadUnitData>;
 //
