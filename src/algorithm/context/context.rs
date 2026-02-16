@@ -1,6 +1,13 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
-    eval::{parameters::Parameters, *},
+    eval::{        
+        icing_timber::ctx::IcingTimberCtx,
+        icing_timber_bound::ctx::IcingTimberBoundCtx, parameters::Parameters, 
+        stability::*,
+        strength::*, 
+        criterion::*, 
+        *,
+    },
     initial::initial_ctx::InitialCtx,
 };
 ///
@@ -13,25 +20,39 @@ pub struct Context {
     pub(super) initial: InitialCtx,
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
-    pub(super) parameters: Option<Parameters>,
-    /// Распределение площади для расчета прочности
-    pub(super) strength_area: Option<StrengthAreaCtx>,
+    pub(super) parameters: Parameters,
+    /// Площади парусности палубных грузов для расчета остойчивости
+    pub(super) unit_area: Option<UnitAreaCtx>,    
     /// Коэффициенты для расчета обледенения судна
-    pub(super) icing_stab: Option<IcingStabCtx>,
+    pub(super) icing_coeff: Option<IcingCoeffCtx>,
     /// Ограничение горизонтальной площади обледенения палубного груза - леса
+    pub(super) icing_timber_bound: Option<IcingTimberBoundCtx>,
+    /// Площади обледенения горизонтальных поверхностей палубного лесного груза
     pub(super) icing_timber: Option<IcingTimberCtx>,
-    /// Учет обледенения судна и  груза
-    pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
-    /// Все грузы судна
-    pub(super) loads: Option<LoadsCtx>,
-    /// Расчет равновесного положения судна
-    /// Параметры + данные по смещаемым грузам
-    pub(super) balance: Option<BalanceCtx>,
-    /// Площади горизонтальных поверхностей и
-    /// площади парусности судна для расчета остойчивости
-    pub(super) stability_area: Option<StabilityAreaCtx>,
+    /// Распределение площади для расчета прочности
+    pub(super) area_str: Option<AreaStrCtx>,
+    /// Учет обледенения судна и груза для прочности
+    pub(super) icing_str: Option<IcingStrCtx>,
+    /// Расчет массы корпуса и статических грузов судна для прочности
+    pub(super) static_mass_str: Option<StaticMassStrCtx>,
+    /// Расчет равновесного положения судна для прочности
+    pub(super) strength_balance: Option<StrengthBalanceCtx>,
+    /// Распределение массы смещаемых грузов судна для прочности
+    pub(super) dynamic_mass: Option<DynamicMassCtx>,
+    /// Результирующая нагрузка на шпацию
+    pub(super) total_force: Option<TotalForceCtx>,
+    /// Срезающая сила, действующая на корпус судна
+    pub(super) shear_force: Option<ShearForceCtx>,
+    /// Изгибающий момент
+    pub(super) bending_moment: Option<BendingMomentCtx>,
+    /// Учет обледенения судна и груза для остойчивости
+    pub(super) icing_stab: Option<IcingStabCtx>,
+    /// Расчет массы корпуса и статических грузов судна
+    pub(super) static_mass_stab: Option<StaticMassStabCtx>,
+    /// Расчет равновесного положения судна для остойчивости
+    pub(super) stability_balance: Option<StabilityBalanceCtx>,
     /// Исправленная метацентрическая высота
     pub(super) metacentric_height: Option<MetacentricHeightCtx>,
     /// Диаграмма плеч статической и динамической остойчивости
@@ -40,7 +61,7 @@ pub struct Context {
     pub(super) wind: Option<WindCtx>,
     /// Парусность судна
     pub(super) windage: Option<WindageCtx>,
-    /// Период качки судна  
+    /// Период собственных бортовых колебаний судна
     pub(super) roll_period: Option<RollingPeriodCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
@@ -84,6 +105,8 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
+ //   /// Результаты расчета по прочности
+  //  pub(super) result_str: Option<ResultStrCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

@@ -6,26 +6,7 @@ use std::{
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 //
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Encode, PartialEq)]
-pub struct Point3 {
-    x: f64,
-    y: f64,
-    z: f64,
-}
-//
-impl TryFrom<Point3> for Position {
-    type Error = String;
-    fn try_from(data: Point3) -> Result<Self, Self::Error> {
-        Ok(Position {
-            x: data.x,
-            y: data.y,
-            z: data.z,
-        })
-    }
-}
-//
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq)]
-#[serde(try_from = "Point3")]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
 pub struct Position {
     x: f64,
     y: f64,
@@ -36,12 +17,6 @@ impl Position {
     /// Основной конструктор
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
-    }
-    /// Дополнительный конструктор  
-    /// * (f64, f64, f64) - x, y, z
-    #[allow(unused)]
-    pub fn from(v: (f64, f64, f64)) -> Self {
-        Self::new(v.0, v.1, v.2)
     }
     //
     pub fn x(&self) -> f64 {
@@ -63,6 +38,10 @@ impl Position {
     #[allow(unused)]
     pub fn len(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+    //
+    pub fn print(&self) -> String {
+        format!("({:.3} {:.3} {:.3})", self.x, self.y, self.z)
     }
 }
 //
@@ -101,3 +80,28 @@ impl AddAssign for Position {
         };
     }
 }
+//
+impl Into<[f64; 3]> for Position {
+    fn into(self) -> [f64; 3] {
+        [self.x, self.y, self.z]
+    }
+}
+//
+impl Into<nalgebra::Point3<f64>> for Position {
+    fn into(self) -> nalgebra::Point3<f64> {
+        nalgebra::Point3::new(self.x, self.y, self.z)
+    }
+}
+//
+impl From<nalgebra::Point3<f64>> for Position {
+    fn from(v: nalgebra::Point3<f64>) -> Self {
+        Self::new(v.x, v.y, v.z)
+    }
+}
+//
+impl From<(f64, f64, f64)> for Position {
+    fn from(v: (f64, f64, f64)) -> Self {
+        Self::new(v.0, v.1, v.2)
+    }
+}
+

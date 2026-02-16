@@ -6,7 +6,7 @@ mod switch {
     use sal_sync::services::entity::name::Name;
     use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{kernel::sync::{link::Link, switch::Switch}};
     ///
     ///
@@ -25,7 +25,7 @@ mod switch {
     ///
     /// Testing 'Switch::link'
     fn req() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         log::debug!("");
