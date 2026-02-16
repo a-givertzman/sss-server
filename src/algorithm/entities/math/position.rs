@@ -39,6 +39,10 @@ impl Position {
     pub fn len(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
+    //
+    pub fn print(&self) -> String {
+        format!("({:.3} {:.3} {:.3})", self.x, self.y, self.z)
+    }
 }
 //
 impl std::fmt::Display for Position {

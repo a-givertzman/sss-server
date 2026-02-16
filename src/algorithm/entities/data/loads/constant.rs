@@ -1,7 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
-use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::{data::DataArray, Bound};
+use crate::algorithm::entities::data::DataArray;
 /// Груз, приходящийся на шпацию
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoadConstantData {
@@ -10,13 +9,6 @@ pub struct LoadConstantData {
     /// Диапазон по длинне, м
     pub bound_x1: f64,
     pub bound_x2: f64,
-}
-//
-impl LoadConstantData {
-    //
-    pub fn mass(&self, bound_x: &Bound) -> Result<f64, Error> {
-        Ok(self.mass*Bound::new(self.bound_x1, self.bound_x2)?.part_ratio(bound_x)?)
-    }
 }
 //
 impl std::fmt::Display for LoadConstantData {

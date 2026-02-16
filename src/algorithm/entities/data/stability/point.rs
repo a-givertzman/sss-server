@@ -16,19 +16,6 @@ pub struct PointData {
     pub z: f64,
 }
 //
-impl PointData {
-    //
-    pub fn new(criterion_id: i32, name: String, x: f64, y: f64, z: f64) -> Self {
-        Self {
-            criterion_id,
-            name,
-            x,
-            y,
-            z,
-        }
-    }
-}
-//
 impl std::fmt::Display for PointData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

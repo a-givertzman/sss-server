@@ -132,22 +132,21 @@ pub fn get_volume(
         'volume_loop: for i in 0..=50 {
             let mut query: Vec<_> = query.to_vec();
             query.push(level);
-            //    println!("compartment_cashe {} get heel:{heel} level:{level}", self.dbg);
             result = cache.get(&query);
-            assert!(result.len() >= volume_index);
+            assert!(result.len() > volume_index);
             let delta = volume - result[volume_index - query.len()];
             if last_delta_signum != delta.signum() {
                 step = step * 0.3;
                 last_delta_signum = delta.signum();
             }
             let next_level = (level + step * delta.signum()).min(level_max).max(level_min);
-       //     println!("local_cashe {} get_volume i:{i} heel:{} trim:{} level:{level} res_volume:{} trg_volume:{volume}", parent, query[0], query[1], result[0]);
+  //          println!("local_cashe {} get_volume i:{i} heel:{} trim:{} level:{level} res_volume:{} trg_volume:{volume}, index:{}", parent, query[0], query[1], result[0], volume_index - query.len());
             if delta.abs() <= epsilon || i >= 50 || level == next_level {          
                 break 'volume_loop;
             }
             level = next_level.min(level_max).max(level_min);
         }
-    //    println!("local_cashe {} get_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
+  //      println!("local_cashe {} get_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
     Ok((level, result))

@@ -79,6 +79,23 @@ impl AreaCache {
             area_volume_z: result[3],
         })
     }
+    /// Получение данных кэша для минимальной осадки
+    /// Итерационно подбирает значение водоизмещения по осадке
+    /// Паникует если draught выходит за диапазон осадок
+    pub fn get_min(&self) -> Result<(f64, f64, f64), Error> {
+        let error = Error::new(self.dbg(), "get_min");
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let query = [self.draught_min];
+        let result_min = cache.get(&query);
+        let av_cs_dmin = result_min[2];
+        let mv_x_cs_dmin = result_min[0];
+        let mv_z_cs_dmin = result_min[1];
+        Ok((
+            result_min[2],
+            result_min[0],
+            result_min[1],
+        ))
+    }
 }
 //
 //
@@ -159,7 +176,7 @@ impl LocalCache for AreaCache {
             };
         }
         for task in tasks {
-            log::trace!("{}.build | join thread {}", &self.dbg, task.name());
+            log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

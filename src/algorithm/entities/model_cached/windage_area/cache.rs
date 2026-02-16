@@ -150,7 +150,7 @@ impl LocalCache for BowAreaCache {
             };
         }
         for task in tasks {
-            log::trace!("{}.build | join thread {}", &self.dbg, task.name());
+            log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }

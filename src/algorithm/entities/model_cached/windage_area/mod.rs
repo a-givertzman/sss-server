@@ -153,6 +153,16 @@ impl WindageArea {
         let res = windage_area.get(draught).map_err(|err| error.pass(err))?;
         Ok(res)
     }
+    /// Расчет площади и центра площади парусности для минимальной осадки
+    pub fn windage_area_min(&self) -> Result<(f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "windage_area_min");
+        let windage_area = self
+            .windage_area
+            .as_ref()
+            .ok_or(error.pass("no windage_area"))?;
+        let res = windage_area.get_min().map_err(|err| error.pass(err))?;
+        Ok(res)
+    }
     /// Расчет распределения площади парусности
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
     pub fn bounded_windage_area(&self) -> Result<Vec<f64>, Error> {

@@ -112,10 +112,6 @@ impl Bounds {
     pub fn iter(&self) -> std::slice::Iter<'_, Bound> {
         self.values.iter()
     }
-    /// Данные коллекции
-    pub fn data(self) -> Vec<Bound> {
-        self.values
-    }
     /// Длинна диапазона
     #[allow(unused)]
     pub fn length(&self) -> f64 {
