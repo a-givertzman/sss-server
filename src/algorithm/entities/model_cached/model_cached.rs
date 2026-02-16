@@ -322,7 +322,7 @@ impl ModelCached {
             hold_compartments_bounded: IndexMap::new(),
             thread_pool,
         };
-        dbg!(model_cached.compartments.len());
+     //   dbg!(model_cached.compartments.len());
         Ok(model_cached)
     }
     /// reload all shapes

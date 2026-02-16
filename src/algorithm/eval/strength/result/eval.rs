@@ -291,7 +291,7 @@ fn send_results(
         names_list = names.join(", "),
         values_list = values_str.join(", ")
     ).to_owned();
-    println!("{}", &full_sql);
+  //  println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_results end");
     Ok(())
