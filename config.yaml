@@ -10,8 +10,11 @@ api:
         port: "8081"
         database: "sss-computing"
     params:
-        ship_id: 2
-        project_id: NULL
+        ship_id: "2"
+        project_id: "NULL"
+    model:
+        midel_x: 65.25
+        name: "sofia"
 #
 # Server configuration
 server:
