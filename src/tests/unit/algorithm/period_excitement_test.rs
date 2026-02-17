@@ -13,7 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            roll_frequency_eval::{roll_frequency_ctx::RollingFrequencyCtx, roll_frequency_eval::RollingFrequencyEval}, RollingPeriodCtx, Zg
+            period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}, Zg
         }
     }, 
     kernel::{
@@ -22,7 +22,6 @@ use crate::{
     }, 
     prelude::{
         Context, 
-        ContextWrite, 
         InitialCtx
     }
 };
@@ -41,56 +40,57 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [roll_frequency_eval](src/algorithm/eval/roll_frequency_eval)
+/// Testing [period_excitement_eval](src/algorithm/eval/period_excitement)
 #[test]
-fn roll_frequency() {
+fn period_excitement() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = "RollFrequency";
+    let dbg = "PeriodExcitemennt";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
         (
             1,
-            1.0,
-            1.0,
-            6.28
+            Some(1.0),
+            None,
+            0.8,
         ),
         (
             2,
-            2.0,
-            1.0,
-            3.14
+            Some(2.0),
+            None,
+            1.1
         ),
         (
             3,
-            6.28,
-            1.0,
-            1.0,
+            None,
+            Some(5.0),
+            5.0
         )
     ];
-    let epsilon = 1e-2;
-    for (step, roll_period, c, target) in test_data.iter() {
-        let mut ctx = MocEval {
+    let epsilon = 1e-1;
+    for (step, wave_length, period_excitement, target) in test_data.iter() {
+        let mut initial = InitialCtx::new(
+            0, 
+            "Unit-test"
+        );
+        initial.wave_length = *wave_length;
+        if !period_excitement.is_none() {
+            initial.period_excitement = Some(PeriodExcitementCtx { period_excitement: period_excitement.unwrap() });
+        }
+        let ctx = MocEval {
             ctx: Context::new(
-                InitialCtx::new(
-                    0,
-                    "Unit-test",
-                )
+                initial
             ),
         };
-        ctx.ctx = ctx.ctx
-        .clone()
-        .write(RollingPeriodCtx { roll_period: *roll_period, c: *c })
-        .unwrap();
-        let result = RollingFrequencyEval::new("Test", ctx).eval(Zg::empty());
+        let result = PeriodExcitementEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<RollingFrequencyCtx>::read(&ctx).roll_frequency.clone();
-                assert!((result - *target) < epsilon, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                let result = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();
+                assert!((*target - result) < epsilon, "step {} \nresult: {:?}\ntarget: {:?}", step, target, result);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
 

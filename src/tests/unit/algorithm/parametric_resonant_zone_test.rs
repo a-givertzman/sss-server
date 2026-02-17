@@ -13,7 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            roll_frequency_eval::{roll_frequency_ctx::RollingFrequencyCtx, roll_frequency_eval::RollingFrequencyEval}, RollingPeriodCtx, Zg
+            parametric_resonant_zone::{parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_eval::ParametricResonantZoneEval}, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, Zg
         }
     }, 
     kernel::{
@@ -41,39 +41,39 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [roll_frequency_eval](src/algorithm/eval/roll_frequency_eval)
+/// Testing [parametric_resonant_zone_eval](src/algorithm/eval/parametric_resonant_zone)
 #[test]
-fn roll_frequency() {
+fn parametric_resonant_zone() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = "RollFrequency";
+    let dbg = "ParametricResonantZone";
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
         (
             1,
-            1.0,
-            1.0,
-            6.28
+            3.577708763999664,
+            6.797646651599361,
+            7.513188404399294,
         ),
         (
             2,
             2.0,
-            1.0,
-            3.14
+            3.8,
+            4.2,
         ),
         (
             3,
-            6.28,
-            1.0,
-            1.0,
+            3.23,
+            6.137,
+            6.783,
         )
     ];
-    let epsilon = 1e-2;
-    for (step, roll_period, c, target) in test_data.iter() {
+    let epsilon = 1e-1;
+    for (step, roll_frequency, left_side_target, right_side_target) in test_data.iter() {
         let mut ctx = MocEval {
             ctx: Context::new(
                 InitialCtx::new(
@@ -84,13 +84,15 @@ fn roll_frequency() {
         };
         ctx.ctx = ctx.ctx
         .clone()
-        .write(RollingPeriodCtx { roll_period: *roll_period, c: *c })
+        .write(RollingFrequencyCtx { roll_frequency: *roll_frequency })
         .unwrap();
-        let result = RollingFrequencyEval::new("Test", ctx).eval(Zg::empty());
+        let result = ParametricResonantZoneEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<RollingFrequencyCtx>::read(&ctx).roll_frequency.clone();
-                assert!((result - *target) < epsilon, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                let left_side_result = ContextRead::<ParametricResonantZoneCtx>::read(&ctx).left_side.clone();
+                assert!((left_side_result - *left_side_target) < epsilon, "step {} \nleft side result: {:?}\nleft side target: {:?}", step, left_side_result, left_side_target);
+                let right_side_result = ContextRead::<ParametricResonantZoneCtx>::read(&ctx).right_side.clone();
+                assert!((right_side_result - *right_side_target) < epsilon, "step {} \nright side result: {:?}\nright side target: {:?}", step, right_side_result, right_side_target);
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
 

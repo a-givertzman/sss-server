@@ -1,6 +1,17 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{        
+        apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
+        impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
+        main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, 
+        main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, 
+        move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, 
+        parameters::Parameters, 
+        parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
+        parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
+        period_excitement::period_excitement_ctx::PeriodExcitementCtx, 
+        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, 
+        vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, 
         icing_timber::ctx::IcingTimberCtx,
         icing_timber_bound::ctx::IcingTimberBoundCtx, parameters::Parameters, 
         stability::*,
@@ -8,6 +19,7 @@ use crate::algorithm::{
         criterion::*, 
         *,
     },
+    eval::{parameters::Parameters, *},
     initial::initial_ctx::InitialCtx,
 };
 ///
@@ -18,6 +30,8 @@ use crate::algorithm::{
 pub struct Context {
     /// where store [initial data](design\docs\algorithm\part01\initial_data.md)
     pub(super) initial: InitialCtx,
+    /// Массив [кажущихся частот волнения](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#порядок-расчета)
+    pub(super) apparent_frequencies: Option<ApparentFrequenciesCtx>,
     // Результаты расчета в виде (id, value)
     // id в соответствии с https://github.com/a-givertzman/sss/blob/35-shipmodel-fix-unit-cargo/docs/user-guide/ru/part08_stability/chapter03_parametresStability.md
     pub(super) parameters: Parameters,
@@ -29,6 +43,10 @@ pub struct Context {
     pub(super) icing_timber_bound: Option<IcingTimberBoundCtx>,
     /// Площади обледенения горизонтальных поверхностей палубного лесного груза
     pub(super) icing_timber: Option<IcingTimberCtx>,
+    /// Массив скоростей движения, при которых происходит явление последовательных ударов высоких волн
+    pub(super) impacts_high_waves: Option<ImpactsHighWavesCtx>, 
+    /// Учет обледенения судна и  груза
+    pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
     /// Распределение площади для расчета прочности
@@ -55,6 +73,8 @@ pub struct Context {
     pub(super) stability_balance: Option<StabilityBalanceCtx>,
     /// Исправленная метацентрическая высота
     pub(super) metacentric_height: Option<MetacentricHeightCtx>,
+    /// Массив скоростей хода, уз, при которых возникает движение судна на гребне волны и брочинг
+    pub(super) move_broching_filter: Option<MoveBrochingFilterCtx>,
     /// Диаграмма плеч статической и динамической остойчивости
     pub(super) lever_diagram: Option<LeverDiagramCtx>,
     /// Расчет плеча кренящего момента от давления ветра
@@ -83,6 +103,12 @@ pub struct Context {
     pub(super) min_metacentric_height: Option<MinMetacentricHeightCtx>,
     /// Критерий метацентрической высоты
     pub(super) metacentric_height_subdivision: Option<MetacentricHeightSubdivisionCtx>,
+    /// Параметрическая зона резонансной бортовой качки
+    pub(super) parametric_resonant_zone: Option<ParametricResonantZoneCtx>,
+    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне параметрического резонанса частот
+    pub(super) parametric_resonant_zone_speed_filter: Option<ParametricResonantZoneSpeedFilterCtx>,
+    /// Период волнения
+    pub(super) period_exctiment: Option<PeriodExcitementCtx>,
     /// Критерий ускорения 𝐾∗
     pub(super) acceleration: Option<AccelerationCtx>,
     /// Критерий крена на циркуляции
@@ -107,6 +133,12 @@ pub struct Context {
     pub(super) draft_mark: Option<DraftMarkCtx>,
  //   /// Результаты расчета по прочности
   //  pub(super) result_str: Option<ResultStrCtx>,
+      /// Максимальная скорость хода судна Vmax в узлах
+    pub(super) vmax: Option<VesselMaxSpeedCtx>,
+    /// Основная зона резонансной бортовой качки
+    pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
+    /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основого резонанса частот
+    pub(super) main_resonant_zone_speed_filter: Option<MainResonantZoneSpeedFilterCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]

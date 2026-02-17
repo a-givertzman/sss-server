@@ -71,6 +71,19 @@ impl ContextReadRef<InitialCtx> for Context {
     }
 }
 //
+//
+impl ContextWrite<ApparentFrequenciesCtx> for Context {
+    fn write(mut self, value: ApparentFrequenciesCtx) -> Result<Self, Error> {
+        self.apparent_frequencies = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ApparentFrequenciesCtx> for Context {
+    fn read(&self) -> ApparentFrequenciesCtx {
+        self.apparent_frequencies.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<TestingCtx> for Context {
     fn write(mut self, value: TestingCtx) -> Result<Self, Error> {
         self.testing = Some(value);
@@ -140,6 +153,18 @@ impl ContextWrite<WettingCtx> for Context {
 impl ContextRead<WettingCtx> for Context {
     fn read(&self) -> WettingCtx {
         self.wetting.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<VesselMaxSpeedCtx> for Context {
+    fn write(mut self, value: VesselMaxSpeedCtx) -> Result<Self, Error> {
+        self.vmax = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<VesselMaxSpeedCtx> for Context {
+    fn read(&self) -> VesselMaxSpeedCtx {
+        self.vmax.clone().unwrap()
     }
 }
 //
@@ -239,6 +264,30 @@ impl ContextRead<BendingMomentCtx> for Context {
     }
 }
 //
+impl ContextWrite<MainResonantZoneCtx> for Context {
+    fn write(mut self, value: MainResonantZoneCtx) -> Result<Self, Error> {
+        self.main_resonant_zone = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MainResonantZoneCtx> for Context {
+    fn read(&self) -> MainResonantZoneCtx {
+        self.main_resonant_zone.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<MainResonantZoneSpeedFilterCtx> for Context {
+    fn write(mut self, value: MainResonantZoneSpeedFilterCtx) -> Result<Self, Error> {
+        self.main_resonant_zone_speed_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MainResonantZoneSpeedFilterCtx> for Context {
+    fn read(&self) -> MainResonantZoneSpeedFilterCtx {
+        self.main_resonant_zone_speed_filter.clone().unwrap()
+    }
+}
+//
 impl ContextWrite<IcingStabCtx> for Context {
     fn write(mut self, value: IcingStabCtx) -> Result<Self, Error> {
         self.icing_stab = Some(value);
@@ -248,6 +297,18 @@ impl ContextWrite<IcingStabCtx> for Context {
 impl ContextRead<IcingStabCtx> for Context {
     fn read(&self) -> IcingStabCtx {
         self.icing_stab.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ImpactsHighWavesCtx> for Context {
+    fn write(mut self, value: ImpactsHighWavesCtx) -> Result<Self, Error> {
+        self.impacts_high_waves = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ImpactsHighWavesCtx> for Context {
+    fn read(&self) -> ImpactsHighWavesCtx {
+        self.impacts_high_waves.clone().unwrap()
     }
 }
 //
@@ -284,6 +345,18 @@ impl ContextWrite<MetacentricHeightCtx> for Context {
 impl ContextRead<MetacentricHeightCtx> for Context {
     fn read(&self) -> MetacentricHeightCtx {
         self.metacentric_height.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<MoveBrochingFilterCtx> for Context {
+    fn write(mut self, value: MoveBrochingFilterCtx) -> Result<Self, Error> {
+        self.move_broching_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<MoveBrochingFilterCtx> for Context {
+    fn read(&self) -> MoveBrochingFilterCtx {
+        self.move_broching_filter.clone().unwrap()
     }
 }
 //
@@ -344,6 +417,18 @@ impl ContextWrite<RollingAmplitudeCtx> for Context {
 impl ContextRead<RollingAmplitudeCtx> for Context {
     fn read(&self) -> RollingAmplitudeCtx {
         self.roll_amplitude.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<RollingFrequencyCtx> for Context {
+    fn write(mut self, value: RollingFrequencyCtx) -> Result<Self, Error> {
+        self.roll_frequency = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<RollingFrequencyCtx> for Context {
+    fn read(&self) -> RollingFrequencyCtx {
+        self.roll_frequency.clone().unwrap()
     }
 }
 //
@@ -464,6 +549,42 @@ impl ContextWrite<MetacentricHeightSubdivisionCtx> for Context {
 impl ContextRead<MetacentricHeightSubdivisionCtx> for Context {
     fn read(&self) -> MetacentricHeightSubdivisionCtx {
         self.metacentric_height_subdivision.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ParametricResonantZoneCtx> for Context {
+    fn write(mut self, value: ParametricResonantZoneCtx) -> Result<Self, Error> {
+        self.parametric_resonant_zone = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ParametricResonantZoneCtx> for Context {
+    fn read(&self) -> ParametricResonantZoneCtx {
+        self.parametric_resonant_zone.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ParametricResonantZoneSpeedFilterCtx> for Context {
+    fn write(mut self, value: ParametricResonantZoneSpeedFilterCtx) -> Result<Self, Error> {
+        self.parametric_resonant_zone_speed_filter = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ParametricResonantZoneSpeedFilterCtx> for Context {
+    fn read(&self) -> ParametricResonantZoneSpeedFilterCtx {
+        self.parametric_resonant_zone_speed_filter.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<PeriodExcitementCtx> for Context {
+    fn write(mut self, value: PeriodExcitementCtx) -> Result<Self, Error> {
+        self.period_exctiment = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<PeriodExcitementCtx> for Context {
+    fn read(&self) -> PeriodExcitementCtx {
+        self.period_exctiment.clone().unwrap()
     }
 }
 //

@@ -30,3 +30,4 @@
 //! 
 pub mod query;
 pub mod restart_eval;
+pub mod resonant_zone;
