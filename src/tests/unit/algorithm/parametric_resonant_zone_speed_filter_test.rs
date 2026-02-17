@@ -18,7 +18,7 @@ use crate::{
                 parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
                 parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval
             }, 
-        }, zg::Zg}
+        }}
     }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{
         Eval, 
         types::{
@@ -157,7 +157,7 @@ fn parametric_resonant_zone_speed_filter() {
                 let client = Arc::clone(&api_client);
                 client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
             })
-        ).eval(Zg::empty());
+        ).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ParametricResonantZoneSpeedFilterCtx>::read(&ctx).parametric_resonant_zone_speed_filter.clone();
@@ -177,8 +177,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

@@ -13,6 +13,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 ///
 /// Application entry point
+#[ignore = "too slow, run only in release mode"]
 #[test]
 fn cache_single() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()

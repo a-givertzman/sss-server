@@ -1,7 +1,6 @@
 use crate::algorithm::context::context_access::ContextRead;
 use crate::algorithm::eval::seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
 use crate::algorithm::eval::seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
-use crate::algorithm::eval::zg::Zg;
 use crate::kernel::{
         Eval, 
         types::eval_result::EvalResult
@@ -15,14 +14,14 @@ use sal_core::{
 /// Расчет массива [кажущихся частот волнения](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#порядок-расчета)
 pub struct ApparentFrequenciesEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl ApparentFrequenciesEval {
     ///
     /// Новый экземпляр [ApparentFrequenciesEval]
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "ApparentFrequenciesEval");
         Self {
             dbg,
@@ -32,10 +31,10 @@ impl ApparentFrequenciesEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for ApparentFrequenciesEval {
-    fn eval(&self, z_g_fix: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for ApparentFrequenciesEval {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(z_g_fix) {
+        match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
                 let voyage = initial

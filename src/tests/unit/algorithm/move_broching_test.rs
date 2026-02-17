@@ -7,7 +7,6 @@ use crate::{
                 move_broching_filter_ctx::MoveBrochingFilterCtx,
                 move_broching_filter_eval::MoveBrochingFilterEval,
             },
-            zg::Zg,
         },
     },
     kernel::{Eval, types::eval_result::EvalResult},
@@ -90,7 +89,7 @@ fn move_broching_filter() {
         let ctx = MocEval {
             ctx: Context::new(initial),
         };
-        let result = MoveBrochingFilterEval::new("Test", ctx).eval(Zg::empty());
+        let result = MoveBrochingFilterEval::new("Test", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx)
@@ -127,8 +126,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

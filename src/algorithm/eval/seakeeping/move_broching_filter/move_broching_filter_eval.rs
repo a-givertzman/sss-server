@@ -1,6 +1,5 @@
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
 use crate::algorithm::eval::seakeeping::move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx;
-use crate::algorithm::eval::zg::Zg;
 use crate::prelude::{ContextReadRef, ContextWrite, InitialCtx};
 use crate::kernel::{
         Eval, 
@@ -14,14 +13,14 @@ use sal_core::{
 /// Расчет [массива скоростей хода, уз, при которых возникает движение судна на гребне волны и брочинг](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#порядок-расчета)
 pub struct MoveBrochingFilterEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl MoveBrochingFilterEval {
     ///
     /// Новый экземпляр [MoveBrochingFilterEval]
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,) -> Self {
         let dbg = Dbg::new(parent, "MoveBrochingFilterEval");
         Self {
             dbg,
@@ -31,10 +30,10 @@ impl MoveBrochingFilterEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
-    fn eval(&self, z_g_fix: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MoveBrochingFilterEval {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(z_g_fix) {
+        match self.ctx.eval(()) {
             Ok(ctx) => {
                 let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let initial: &InitialCtx = ctx.read_ref();

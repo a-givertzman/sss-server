@@ -1,5 +1,4 @@
 use crate::{
-    algorithm::eval::zg::Zg,
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::Context,
 };
@@ -17,7 +16,7 @@ mod main_parametric_resonant_complex {
                 parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval,
                 parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval,
                 period_excitement::period_excitement_eval::PeriodExcitementEval,
-            }, zg::Zg}
+            }}
         }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{Eval, types::Arc}, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::main_parametric_resonant_complex::MocEval
     };
     use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -109,7 +108,7 @@ mod main_parametric_resonant_complex {
                     client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
                 }),
             )
-            .eval(Zg::empty());
+            .eval(());
             match result {
                 Ok(ctx) => {
                     let _app_freq = ContextRead::<MainResonantZoneCtx>::read(&ctx).clone();
@@ -129,8 +128,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

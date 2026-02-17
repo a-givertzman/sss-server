@@ -2,7 +2,6 @@ use crate::algorithm::entities::recalculation_course_angular::RecalculationCours
 use crate::algorithm::eval::seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
 use crate::algorithm::eval::seakeeping::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
 use crate::algorithm::eval::seakeeping::parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx;
-use crate::algorithm::eval::zg::Zg;
 use crate::infrostructure::resonant_zone::zone_id::ZoneID;
 use crate::prelude::{ContextRead, ContextReadRef, ContextWrite, InitialCtx};
 use crate::kernel::{
@@ -19,7 +18,7 @@ use sal_core::{
 /// находится в диапазоне [параметрического резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub struct ParametricResonantZoneSpeedFilterEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
     db_req: Box<dyn Fn(Vec<(f64,f64)>, ZoneID) -> Result<Vec<u8>, Error> + Send + Sync>,
 }
 //
@@ -29,7 +28,7 @@ impl ParametricResonantZoneSpeedFilterEval {
     /// Новый экземпляр [ParametricResonantZoneSpeedFilterEval]
     pub fn new(
         parent: impl Into<String>, 
-        ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static, 
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
         db_req: Box<dyn Fn(Vec<(f64,f64)>, ZoneID) -> Result<Vec<u8>, Error> + Send + Sync>) -> Self {
         let dbg = Dbg::new(parent, "ParametricResonantZoneSpeedFilterEval");
         Self {
@@ -41,10 +40,10 @@ impl ParametricResonantZoneSpeedFilterEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for ParametricResonantZoneSpeedFilterEval {
-    fn eval(&self, z_g_fix: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for ParametricResonantZoneSpeedFilterEval {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(z_g_fix) {
+        match self.ctx.eval(()) {
             Ok(ctx) => {
                 let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let ParametricResonantZoneCtx { left_side, right_side } = ContextRead::read(&ctx);

@@ -223,7 +223,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                 ),
             ),
         );//.eval(());
-
+        let client = Arc::clone(&self.api_client);
         let ctx = ParametricResonantZoneSpeedFilterEval::new(
                 &dbg,
                 MainResonantZoneSpeedFilterEval::new(
@@ -234,17 +234,17 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                             &dbg,
                             MainResonantZoneEval::new(
                                 &dbg,
-                                ParametricResonantZoneEval::new(dbg, ctx),
+                                ParametricResonantZoneEval::new(&dbg, ctx),
                             ),
                         ),
                     ),
                 ),
                 Box::new(move |resonant_zone, zone_id| {
-                    let client = Arc::clone(&self.api_client);
-                    client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
+                    let sql = ResonantZoneQuery::new(resonant_zone, zone_id).sql();
+                    client.fetch(&sql)
                 }),
             )
-            .eval(Zg::empty());
+            .eval(());
         ctx.map_err(|err| error.pass(err))
     }
     //

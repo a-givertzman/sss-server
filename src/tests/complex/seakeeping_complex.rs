@@ -1,5 +1,4 @@
 use crate::{
-    algorithm::eval::zg::Zg,
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::Context,
 };
@@ -22,7 +21,7 @@ mod seakeeping {
                     period_excitement_ctx::PeriodExcitementCtx,
                     period_excitement_eval::PeriodExcitementEval,
                 },
-            }, zg::Zg}
+            }}
         }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{Eval, types::Arc}, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::seakeeping_complex::MocEval
     };
     use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -141,7 +140,7 @@ mod seakeeping {
                     ),
                 ),
             )
-            .eval(Zg::empty());
+            .eval(());
             match result {
                 Ok(ctx) => {
                     let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx)
@@ -164,8 +163,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

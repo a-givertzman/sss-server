@@ -2,7 +2,6 @@ use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
 use crate::algorithm::eval::seakeeping::impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx;
 use crate::algorithm::eval::seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
-use crate::algorithm::eval::zg::Zg;
 use crate::prelude::{ContextRead, ContextWrite, InitialCtx};
 use crate::kernel::{
         Eval, 
@@ -16,14 +15,14 @@ use sal_core::{
 /// Расчет [массива скоростей движения, при которых происходит явление последовательных ударов высоких волн](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#порядок-расчета)
 pub struct ImpactsHighWavesEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl ImpactsHighWavesEval {
     ///
     /// Новый экземпляр [ImpactsHighWavesEval]
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "ImpactsHighWavesEval");
         Self {
             dbg,
@@ -46,10 +45,10 @@ impl ImpactsHighWavesEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for ImpactsHighWavesEval {
-    fn eval(&self, z_g_fix: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for ImpactsHighWavesEval {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(z_g_fix) {
+        match self.ctx.eval(()) {
             Ok(ctx) => {
                 let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();

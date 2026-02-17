@@ -10,7 +10,6 @@ use crate::{
                 },
                 period_excitement::period_excitement_ctx::PeriodExcitementCtx,
             },
-            zg::Zg,
         },
     },
     kernel::{Eval, types::eval_result::EvalResult},
@@ -104,7 +103,7 @@ fn impacts_high_waves() {
                 period_excitement: *period_excitement,
             })
             .unwrap();
-        let result = ImpactsHighWavesEval::new("Test", ctx).eval(Zg::empty());
+        let result = ImpactsHighWavesEval::new("Test", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ImpactsHighWavesCtx>::read(&ctx)
@@ -131,8 +130,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

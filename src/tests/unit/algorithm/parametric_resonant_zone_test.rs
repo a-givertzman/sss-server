@@ -5,7 +5,7 @@ use crate::{
         eval::{parameters::ParameterID, seakeeping::parametric_resonant_zone::{
                 parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
                 parametric_resonant_zone_eval::ParametricResonantZoneEval,
-            }, zg::Zg},
+            }},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextParamsWrite, InitialCtx},
@@ -60,7 +60,7 @@ fn parametric_resonant_zone() {
             )),
         };
         ctx.ctx.write_params(ParameterID::RollPeriod, 1./roll_frequency);
-        let result = ParametricResonantZoneEval::new("Test", ctx).eval(Zg::empty());
+        let result = ParametricResonantZoneEval::new("Test", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let left_side_result = ContextRead::<ParametricResonantZoneCtx>::read(&ctx)
@@ -97,8 +97,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

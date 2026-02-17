@@ -5,7 +5,6 @@ use crate::{
                 period_excitement_ctx::PeriodExcitementCtx,
                 period_excitement_eval::PeriodExcitementEval,
             },
-            zg::Zg,
         }
     },
     kernel::{Eval, types::eval_result::EvalResult},
@@ -63,7 +62,7 @@ fn period_excitement() {
         let ctx = MocEval {
             ctx: Context::new(initial),
         };
-        let result = PeriodExcitementEval::new("Test", ctx).eval(Zg::empty());
+        let result = PeriodExcitementEval::new("Test", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<PeriodExcitementCtx>::read(&ctx)
@@ -90,8 +89,8 @@ struct MocEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MocEval {
-    fn eval(&self, _zg: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MocEval {
+    fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
 }

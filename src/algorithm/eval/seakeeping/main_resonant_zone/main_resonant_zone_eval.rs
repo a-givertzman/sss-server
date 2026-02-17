@@ -1,6 +1,5 @@
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::seakeeping::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
-use crate::algorithm::eval::zg::Zg;
 use crate::prelude::{ContextParamsRead, ContextWrite};
 use crate::kernel::{
         Eval, 
@@ -14,14 +13,14 @@ use sal_core::{
 /// Расчет [основной зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub struct MainResonantZoneEval {
     dbg: Dbg,
-    ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
+    ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
 //
 impl MainResonantZoneEval {
     ///
     /// Новый экземпляр [MainResonantZoneEval]
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "MainResonantZoneEval");
         Self {
             dbg,
@@ -31,10 +30,10 @@ impl MainResonantZoneEval {
 }
 //
 //
-impl Eval<Zg, EvalResult> for MainResonantZoneEval {
-    fn eval(&self, z_g_fix: Zg) -> EvalResult {
+impl Eval<(), EvalResult> for MainResonantZoneEval {
+    fn eval(&self, _: ()) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
-        match self.ctx.eval(z_g_fix) {
+        match self.ctx.eval(()) {
             Ok(ctx) => {
                 let roll_frequency = 1.0/ctx.read_params(ParameterID::RollPeriod).max(f64::MIN);
                 let left_side = 0.7 * roll_frequency;
