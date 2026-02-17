@@ -1,7 +1,8 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use bincode::{Decode, Encode};
+use dashmap::DashMap;
 use sal_core::error::Error;
-use sal_sync::services::entity::{Name, PointTxId};
+use sal_sync::{services::entity::{Name, PointTxId}, thread_pool::{JoinHandle, Scheduler}};
 use super::{link::Link, LinkSend};
 ///
 /// Combines multiple links
@@ -11,7 +12,7 @@ use super::{link::Link, LinkSend};
 pub struct Hub {
     txid: usize,
     name: Name,
-    links: Arc<papaya::HashMap<String, Link>>,
+    links: Arc<DashMap<String, Link>>,
     timeout: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -23,14 +24,14 @@ impl Hub {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>) -> Self {
+    pub fn new(parent: impl Into<String>, exit: Option<Arc<AtomicBool>>) -> Self {
         let name = Name::new(parent, "Hub");
         Self {
             txid: PointTxId::from_str(&name.join()),
             name,
-            links: Arc::new(papaya::HashMap::new()),
+            links: Arc::new(DashMap::new()),
             timeout: Duration::from_micros(100),
-            exit: Arc::new(AtomicBool::new(false)),
+            exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }
     }
     ///
@@ -38,7 +39,7 @@ impl Hub {
     pub fn link(&self) -> Link {
         let (local, remote) = Link::split(&format!("{}:{}", self.name, self.links.len()));
         let key = remote.name().join();
-        self.links.pin().insert(key, local);
+        self.links.insert(key, local);
         remote
     }
     ///
@@ -49,26 +50,30 @@ impl Hub {
     ///     - Retur it from closure
     ///         - `Some<Event>` - will be sent as reply
     ///         - `None` - nothing will be sent
-    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&self, op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
+    pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(
+        &self,
+        scheduler: Scheduler,
+        op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static,
+    ) -> Result<JoinHandle<()>, Error> {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
         let links = self.links.clone();
         let timeout = self.timeout;
         let exit = self.exit.clone();
-        log::debug!("{}.listen | Starting...", dbg);
-        let handle = std::thread::Builder::new().name(dbg.clone()).spawn(move|| {
-            'main: loop {
-                let links_pin = links.pin();
-                let links_iter = links_pin.iter();
-                for (id, link) in links_iter {
+        log::trace!("{dbg}.listen | Start...");
+        let handle = scheduler.spawn(move || {
+            while !exit.load(Ordering::Acquire) {
+                let mut closed_links = vec![];
+                for entry in links.iter() {
+                    let (id, link) = entry.pair();
                     match link.recv_timeout(timeout) {
                         Ok(event) => {
                             match event {
                                 Some(event) => {
-                                    log::trace!("{}.listen | Link({id}) Received event: {:#?}", dbg, event);
+                                    log::trace!("{dbg}.listen | Link({id}) Received event: {:#?}", event);
                                     match (op)(event, link.sender()) {
                                         Some(reply) => {
-                                            log::debug!("{}.listen | Link({id}) Reply event: {:#?}", dbg, reply);
+                                            log::debug!("{dbg}.listen | Link({id}) Reply event: {:#?}", reply);
                                             if let Err(err) = link.send(reply) {
                                                 let err = error.pass_with(format!("Link({id}) Send reply error"), err.to_string());
                                                 log::error!("{}", err);
@@ -80,29 +85,37 @@ impl Hub {
                                 None => {}
                             }
                         }
-                        Err(err) => {
-                            let err = error.pass_with(format!("Link({id}) Recv error"), err.to_string());
-                            log::warn!("{}", err);
-                        }
+                        Err(_) => closed_links.push(id.to_owned())
+                    }
+                    if exit.load(Ordering::Acquire) {
+                        break;
                     }
                 }
-                if exit.load(Ordering::SeqCst) {
-                    break 'main;
+                for key in closed_links {
+                    if let Some((_, removed)) = links.remove(&key) {
+                        removed.exit();
+                        log::trace!("{dbg}.listen | Link '{key}' - closed");
+                    }
                 }
             }
-            log::debug!("{}.listen | Exit", dbg);
+            // log::debug!("{dbg}.listen | Closing Links...");
+            for link in links.iter() {
+                link.exit();
+            }
+            // log::debug!("{dbg}.listen | Closing Links - Ok");
+            log::debug!("{dbg}.listen | Exit");
+            Ok(())
         });
         let dbg = self.name.join();
         let error = Error::new(&self.name, "listen");
-        log::debug!("{}.listen | Starting - Ok", dbg);
+        log::debug!("{dbg}.listen | Start - Ok");
         handle.map_err(|err| error.pass(err.to_string()))
     }
     ///
     /// Sends "exit" signal to the service's task
     pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
-        let links = self.links.pin();
-        for (_, link) in links.iter() {
+        self.exit.store(true, Ordering::Release);
+        for link in self.links.iter() {
             link.exit();
         }
     }

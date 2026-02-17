@@ -26,10 +26,12 @@ Cargo.lock
 
 # log files
 *.log
+log*.*
 
 # win trash
 desktop.ini
 
 # too heavy
-/src/assets/*.obj
-/src/assets/*.stl
+src/assets/model/sofia/additionals/*
+src/algorithm/entities/model_cached/test/sofia/*
+

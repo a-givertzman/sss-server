@@ -6,7 +6,7 @@ mod link {
     use sal_core::error::Error;
     use sal_sync::services::entity::Name;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::kernel::sync::Link;
     ///
     ///
@@ -26,7 +26,7 @@ mod link {
     /// Testing 'Link::call'
     #[test]
     fn call() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         log::debug!("");
@@ -64,7 +64,7 @@ mod link {
     /// Testing 'Link::recv'
     #[test]
     fn recv() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         log::debug!("");
@@ -105,7 +105,7 @@ mod link {
     /// Testing 'Link::try_recv'
     #[test]
     fn try_recv() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         log::debug!("");
@@ -162,7 +162,7 @@ mod link {
     /// Testing 'Link::recv_timeout'
     #[test]
     fn recv_timeout() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         log::debug!("");

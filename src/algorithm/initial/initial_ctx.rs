@@ -1,15 +1,17 @@
 use std::collections::HashMap;
-use crate::algorithm::entities::data::ship_type::ShipType;
 use crate::algorithm::entities::Bounds;
-use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, IcingArray, Ship, Voyage};
+use crate::algorithm::entities::data::stability::ship_type::ShipType;
+use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
+use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, Ship, Voyage};
 use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
+
 ///
 /// Общая структура для ввода данных. Содержит все данные для расчетов.
 #[derive(Debug, Clone, Default)]
 pub struct InitialCtx {
     pub ship_id: String,
     pub project_id: String,
-    /// разбиение на шпации - фреймы
+    /// Разбиение на теоретические шпации
     pub bounds: Option<Bounds>,
     /// Текстовые данные по судну
     pub ship: Option<Ship>,
@@ -31,11 +33,16 @@ pub struct InitialCtx {
     pub course_angle: Option<f64>,
     /// Длина волны λ в метрах в диапазоне от 1.6 до 351.0 метров с шагом 0.1 метр.
     pub wave_length: Option<f64>,
-    /// Переменная нагрузка на судно
-    pub bulk: Option<Vec::<LoadBulkData>>,
-    pub liquid: Option<Vec::<LoadLiquidData>>,
-    pub unit: Option<Vec::<LoadUnitData>>,
-    pub gaseous: Option<Vec::<LoadGaseousData>>,
+    /// Переменная нагрузка на судно - сыпучие грузы
+    pub bulk: Option<HashMap<usize, LoadBulkData>>,
+    /// Переменная нагрузка на судно - жидкие грузы
+    pub liquid: Option<HashMap<usize, LoadLiquidData>>,
+    /// Переменная нагрузка на судно - штучные грузы
+    pub unit: Option<Vec<LoadUnitData>>,
+    /// Переменная нагрузка на судно - газообразные грузы
+    pub gaseous: Option<HashMap<usize, LoadGaseousData>>,
+    /// Композитные помещения из частей трюма, [код композитного помещения, [код части трюма]]
+    pub hold_compartment: Option<Vec<(String, Vec<String>)>>,
     /// Безразмерный множитель Х_1 для расчета качки, Табл. 2.1.5.1-1
     pub multipler_x1: Option<Vec<(f64, f64)>>,
     /// Безразмерный множитель Х_2 для расчета качки, Табл. 2.1.5.1-2
@@ -58,15 +65,18 @@ pub struct InitialCtx {
     pub draft_mark: Option<Vec<DraftMarkParsedData>>,
     /// Минимальная допустимая метацентрическая высота деления на отсеки
     pub h_subdivision: Option<Vec<(f64, f64)>>,
+    /// Ограничения на максимальную нагрузку на корпус
+    pub strength_limits: Option<StrengthLimitDataArray>,
 }
 impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: usize, project_id: &str,) -> Self {
+    pub fn new(ship_id: &str, project_id: &str, bounds: Bounds) -> Self {
         Self {
             ship_id: format!("{ship_id}"),
             project_id: project_id.to_owned(),
+            bounds: Some(bounds),
             ..Default::default()
         }
     }

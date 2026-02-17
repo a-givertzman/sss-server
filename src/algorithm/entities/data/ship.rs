@@ -1,6 +1,5 @@
 //! Промежуточные структуры для serde_json для парсинга данных судна
-use super::{DataArray, NavigationArea, NavigationAreaData};
-use sal_core::error::Error;
+use super::{DataArray};
 use serde::{Deserialize, Serialize};
 
 /// Общие по судну и расчету
@@ -36,13 +35,4 @@ impl std::fmt::Display for Ship {
         )
     }
 }
-//
-impl Ship {
-    pub fn navigation_area(&self) -> Result<NavigationAreaData, Error> {
-        Ok(NavigationAreaData {
-            area: NavigationArea::from_str(&self.navigation_area)?,
-            p_v: self.p_v,
-            m: self.m,
-        })
-    }
-}
+

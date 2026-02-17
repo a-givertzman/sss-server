@@ -1,15 +1,7 @@
 use std::ops::AddAssign;
-
 mod curve1d;
-mod curve2d;
-mod curve3d;
-
 pub use curve1d::*;
-pub use curve2d::*;
-pub use curve3d::*;
-
 use splines::Interpolate;
-
 use super::Position;
 
 
@@ -115,21 +107,4 @@ impl Interpolate<f64> for Position {
         )
     }
 }
-//
-pub struct CurveResult<T>
-where
-    T: Value
-{
-    pub value: T,
-    pub is_clamped: bool,
-}
-//
-impl<T> CurveResult<T>
-where
-    T: Value 
-{
-    //
-    pub fn new(value: T, is_clamped: bool) -> Self {
-        Self{value, is_clamped}
-    }
-}
+

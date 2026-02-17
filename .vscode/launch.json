@@ -7,39 +7,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'cdt-math'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=cdt-math",
-                    "--package=cdt-math"
-                ],
-                "filter": {
-                    "name": "cdt-math",
-                    "kind": "bin"
-                }
-            },
+            "name": "Debug",
+            "program": "${workspaceFolder}/target/debug/${workspaceRootFolderName}",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "sourceLanguages": ["rust"],
+            "stopOnEntry": false
         },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'cdt-math'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=cdt-math",
-                    "--package=cdt-math"
-                ],
-                "filter": {
-                    "name": "cdt-math",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        }
     ]
 }

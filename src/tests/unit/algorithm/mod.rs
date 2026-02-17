@@ -1,3 +1,4 @@
+//mod data;
 mod cache;
 mod data;
 mod apparent_frequencies_test;
@@ -17,4 +18,11 @@ mod period_excitement_test;
 mod roll_frequency_test;
 //mod strength_area;
 //mod wetting;
-mod shape;
+//mod displacement_shape;
+//mod area_shape;
+mod bound;
+mod bounds;
+mod draught;
+mod strength;
+
+mod cache_single;

@@ -94,6 +94,20 @@ impl Bounds {
         );
         Self::new(values)
     }
+    /// Вспомогательный конструктор
+    pub fn from_array(array: &[f64], midel_x: f64) -> Result<Self, Error> {
+        let error = Error::new("Bounds", "from_array");
+        if array.len() <= 1 {
+            return Err(error.err("array.len() <= 1"));
+        }
+        let mut last = array[0];
+        let frames: Vec<_> = (1..array.len()).map(|i| {
+            let res = (last - midel_x, array[i] - midel_x);
+            last = array[i];
+            res
+        }).collect();
+        Self::from_frames(&frames)
+    }
     /// Итератор по коллекции
     pub fn iter(&self) -> std::slice::Iter<'_, Bound> {
         self.values.iter()
@@ -113,12 +127,59 @@ impl Bounds {
                 .start()
                 .expect("Bounds delta error: no start value for first element!")
     }
-    /// Длинна элемента разбиения
+    /// Количество разбиений
+    #[allow(unused)]
+    pub fn len_qnt(&self) -> usize {
+        self.values.len()
+    }
+ /*   /// Длинна элемента разбиения
     pub fn delta(&self) -> f64 {
         self.values
             .first()
             .expect("Bounds delta error: no values!")
             .length()
             .expect("Bounds delta error: no length for first element!")
+    }*/
+    /// Преобразование диапазона значений
+    /// Возвращает вектор значений values в распределении bounds, пересчитанный к распределению self
+    pub fn intersect(&self, src_bounds: &Bounds, src_values: &[f64]) -> Result<Vec<f64>, Error> {
+        let error = Error::new("Bounds", "intersect");
+        let bounds = src_bounds.iter();
+        if bounds.len() != src_values.len() {
+            return Err(error.err("bounds.len() != values.len()"));
+        }
+        let query_data: Vec<_> = bounds.zip(src_values.iter()).collect();
+        let self_bounds = &self.values;
+        let (mut query_index, mut self_index) = (0, 0);
+        let mut current_q_i = None;
+        let mut result = Vec::new();
+        while self_index < self_bounds.len() {
+            result.push(0.);
+            while query_index < query_data.len() {
+                let (query_bound, query_value) = query_data[query_index];
+                let self_bound = &self_bounds[self_index];
+                let part_ratio = query_bound.part_ratio(self_bound).map_err(|err| {
+                    error.pass_with(
+                        format!("q_b.part_ratio(s_b), query_bound:{query_bound}, self_bound:{self_bound}, current_i:{self_index}"),
+                        err,
+                    )
+                })?;
+                if part_ratio > 0. {
+                    current_q_i = Some(query_index);
+                    result[self_index] += query_value * part_ratio;
+                } else if current_q_i.is_some() {
+                    break;
+                } 
+                /*println!("self: i:{self_index} b:({:.3} {:.3}) query: i:{query_index} b:({:.3} {:.3}) v:{:.3}  pr:{:.3} res:{:.3} cqi:{:?}", 
+                self_bound.start().unwrap_or(-10000.), self_bound.end().unwrap_or(-10000.), 
+                query_bound.start().unwrap_or(-10000.), query_bound.end().unwrap_or(-10000.), query_value,
+                part_ratio, result[self_index], current_q_i);*/
+                query_index += 1;
+            }
+            query_index = current_q_i.unwrap_or(0);
+            current_q_i = None;
+            self_index += 1;
+        }
+        Ok(result)
     }
 }
