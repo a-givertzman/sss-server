@@ -1,5 +1,7 @@
 pub mod context;
 pub mod entities;
 pub mod initial;
+pub mod eval;
+mod calculus;
 
-pub mod areas_strength;
+pub(crate) use calculus::*; 

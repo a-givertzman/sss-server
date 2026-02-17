@@ -1,7 +1,5 @@
-use sal_sync::services::entity::error::str_err::StrErr;
-
-use crate::algorithm::context::{context::Context, ctx_result::CtxResult};
+use sal_core::error::Error;
+use crate::algorithm::context::{context::Context};
 ///
 /// Result returned from Calculation steps
-// pub type EvalResult = (Switch, CtxResult<Context, StrErr>);
-pub type EvalResult = CtxResult<Context, StrErr>;
+pub type EvalResult = Result<Context, Error>;

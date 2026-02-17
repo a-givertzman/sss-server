@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod app {
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use std::{
         sync::Once,
         time::{Duration, Instant},
@@ -25,9 +25,8 @@ mod app {
     fn init_each() {}
     ///
     /// Testing such functionality / behavior
-    #[tokio::test(flavor = "multi_thread")]
-    async fn new() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+    fn new() {
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::debug!("");

@@ -1,46 +1,59 @@
 [package]
-name = "cdt-math"
+name = "sss-server"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 #
 # Logging
-log = "^0.4"
-env_logger = "^0.11"
+log = "~0.4"
+# log2 = "0.2.2"
+env_logger = "~0.11"
 #
 # Internal deps
-testing = { git = "https://github.com/a-givertzman/rust-testing.git" }
-# testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
-debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
-api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.0" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.3" }
-# sal-sync = { path = "../sal-sync" }
+testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
+debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.1.0" }
+api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.2" }
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
+#
+# 3D Libs
+obj = "~0.10"
+stl_io = "~0.10"
+#parry3d-f64 = "~0.25"
+#parry2d-f64 = "~0.25"
+#parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } 
+#parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } 
+parry3d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
+parry2d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
 #
 # Time
-chrono = "^0.4"
+chrono = "~0.4"
 #
 # Serde
-serde = { version = "^1.0", features = ["derive"] }
-serde_yaml = "^0.9"
-serde_json = "^1.0"
+serde = { version = "~1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "~1.0"
+bincode = { version = "~2.0", features = ["std"] }
 #
 # Regex
-regex = "^1.10"
+regex = "~1.12"
 #
 # Collections
-indexmap = "^2.7"
-rustc-hash = "^2.1"
-coco = "^0.3"
-dashmap = "^6.1"
-#
-# Async runtime engin
-tokio = { version = "1", features = ["full"] }
-tokio-stream = "0.1"
-futures = "^0.3"
-#
-# Error
-thiserror = "^2.0"
+indexmap = "~2.12"
+rustc-hash = "~2.1"
+dashmap = "~6.1"
 #
 # Math
-splines = "^4.4"
+splines = "~5.0"
+nalgebra = "~0.34"
+# glam = { version = "0.24", features = ["bytemuck"] }
+#
+# Helpful macros for working with enums and strings
+strum = "~0.27"
+strum_macros = "~0.27"
+#
+# Thread safe
+kanal = "~0.1"
+papaya = "~0.2"
+parking_lot = "~0.12"

@@ -1,8 +1,8 @@
 #[cfg(test)]
-mod rope_effort {
+mod tests_eval {
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     ///
     ///
     static INIT: Once = Once::new();
@@ -19,9 +19,9 @@ mod rope_effort {
     fn init_each() -> () {}
     ///
     /// Testing 'eval'
-    #[tokio::test(flavor = "multi_thread")]
+    #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::debug!("");

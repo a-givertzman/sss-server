@@ -1,16 +1,12 @@
 //! Дополнительные операции над вектором чисел с плавающей точкой
-pub mod integral_sum;
 pub mod integral_cotes;
 pub mod integral;
 
 #[allow(unused)]
-pub use integral_sum::IntegralSum as IntegralSum;
-#[allow(unused)]
 pub use integral_cotes::IntegralCotes as IntegralCotes;
 #[allow(unused)]
 pub use integral::Integral as Integral;
-
-use crate::kernel::error::error::Error;
+use sal_core::error::Error;
 
 /// Сумма сверху: $res_i = res_{i-1} + src_i, res_0 = 0$
 ///
@@ -119,7 +115,7 @@ pub trait AddVec {
 impl AddVec for Vec<f64>  {   
     fn add_vec(&mut self, rhs: &Self) -> Result<(), Error> {
         if self.len() != rhs.len() {
-            return Err(Error::FromString("AddVec add_vec error: self.len() != rhs.len()".to_string()));
+            return Err(Error::new("AddVec", "add_vec").err("self.len() != rhs.len()"));
         } 
         self.iter_mut()
             .zip(rhs)
@@ -145,7 +141,7 @@ pub trait SubVec {
 impl SubVec for Vec<f64>  {   
     fn sub_vec(&mut self, rhs: &Self) -> Result<(), Error> {
         if self.len() != rhs.len() {
-            return Err(Error::FromString("SubVec error: self.len() != rhs.len()".to_string()));
+            return Err(Error::new("SubVec", "sub_vec").err("self.len() != rhs.len()"));
         } 
         self.iter_mut()
             .zip(rhs)
@@ -172,7 +168,7 @@ pub trait MultipleVec {
 impl MultipleVec for Vec<f64>  {   
     fn mul_vec(&mut self, rhs: &Self) -> Result<(), Error> {
         if self.len() != rhs.len() {
-            return Err(Error::FromString("MultipleVec error: self.len() != rhs.len()".to_string()));
+            return Err(Error::new("MultipleVec", "mul_vec").err("self.len() != rhs.len()"));
         } 
         self.iter_mut()
             .zip(rhs)
@@ -199,7 +195,7 @@ pub trait DivideVec {
 impl DivideVec for Vec<f64>  {   
     fn div_vec(&mut self, rhs: &[f64]) -> Result<(), Error> {
         if self.len() != rhs.len() {
-            return Err(Error::FromString("DivideVec error: self.len() != rhs.len()".to_string()));
+            return Err(Error::new("DivideVec", "div_vec").err("self.len() != rhs.len()"));
         } 
         self.iter_mut()
             .zip(rhs)
@@ -207,3 +203,19 @@ impl DivideVec for Vec<f64>  {
         Ok(())
     }    
 }
+/*
+//
+pub trait SortVec {
+    #[allow(unused)]
+    fn sort(&mut self);
+}
+//
+impl SortVec for Vec<f64>  {   
+    fn sort(&mut self) {
+        self.sort_by(|a, b| a.partial_cmp(&b).unwrap())
+    }    
+}
+    */
+
+
+

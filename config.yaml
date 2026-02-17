@@ -1,4 +1,25 @@
-# api:
-host: "0.0.0.0"
-port: "8080"
-database: sss-computing
+#
+# Thread-pool params
+thread-pool:
+    size: 15
+# 
+# API params
+api:
+    address:
+        host: "0.0.0.0"
+        port: "8081"
+        database: "sss-computing"
+    params:
+        ship_id: "2"
+        project_id: "NULL"
+    model:
+        midel_x: 65.25
+        name: "sofia"
+#
+# Server configuration
+server:
+    address: 0.0.0.0:3838
+    connection:
+        timeout: 100 ms
+calculus:
+    max-time: 10 s
