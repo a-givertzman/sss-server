@@ -1,19 +1,14 @@
-use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
-use crate::algorithm::eval::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
-use crate::algorithm::eval::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
-use crate::algorithm::eval::parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx;
-use crate::algorithm::eval::zg_eval::Zg;
-use crate::infrostructure::api::client::api_client::ApiClient;
-use crate::infrostructure::query::resonant_zone::zone_id::ZoneID;
-use crate::prelude::InitialCtx;
-use crate::{
-    ContextWrite,
-    kernel::{
-        eval::Eval, 
+use crate::algorithm::eval::seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
+use crate::algorithm::eval::seakeeping::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
+use crate::algorithm::eval::seakeeping::parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx;
+use crate::algorithm::eval::zg::Zg;
+use crate::infrostructure::resonant_zone::zone_id::ZoneID;
+use crate::prelude::{ContextRead, ContextReadRef, ContextWrite, InitialCtx};
+use crate::kernel::{
+        Eval, 
         types::eval_result::EvalResult
-    },
-};
+    };
 use sal_core::{
     dbg::Dbg, 
     error::Error

@@ -1,56 +1,29 @@
 use crate::{
-    algorithm::eval::Zg, 
-    kernel::{
-        eval::Eval, 
-        types::eval_result::EvalResult
-    }, 
-    prelude::Context
+    algorithm::eval::zg::Zg,
+    kernel::{Eval, types::eval_result::EvalResult},
+    prelude::Context,
 };
 #[cfg(test)]
 mod main_parametric_resonant_complex {
-    use std::{
-        sync::{
-            Once
-        }, 
-        time::Duration
-    };
-    use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{
-        DebugSession, 
-        LogLevel, 
-        Backtrace
-    };
-    use sal_core::error::Error;
     use crate::{
         algorithm::{
-            context::context_access::ContextRead, 
-            eval::{
-                apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, 
+            context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::{parameters::ParameterID, seakeeping::{
+                apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval,
                 main_resonant_zone::{
-                    main_resonant_zone_ctx::MainResonantZoneCtx, 
-                    main_resonant_zone_eval::MainResonantZoneEval
-                }, 
-                main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, 
-                parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, 
-                parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, 
-                period_excitement::period_excitement_eval::PeriodExcitementEval, 
-                roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, 
-                vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, 
-                RollingPeriodCtx, 
-                Zg
-            }
-        }, 
-        infrostructure::query::resonant_zone::resonant_zone::ResonantZoneQuery, 
-        kernel::{
-            eval::Eval, types::Arc
-        }, 
-        prelude::{
-            Context, 
-            ContextWrite, 
-            InitialCtx
-        }, 
-        tests::complex::main_parametric_resonant_complex::MocEval
+                    main_resonant_zone_ctx::MainResonantZoneCtx,
+                    main_resonant_zone_eval::MainResonantZoneEval,
+                },
+                main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval,
+                parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval,
+                parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval,
+                period_excitement::period_excitement_eval::PeriodExcitementEval,
+            }, zg::Zg}
+        }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{Eval, types::Arc}, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::main_parametric_resonant_complex::MocEval
     };
+    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use sal_core::error::Error;
+    use std::{sync::Once, time::Duration};
+    use testing::stuff::max_test_duration::TestDuration;
     ///
     ///
     static INIT: Once = Once::new();
@@ -81,7 +54,12 @@ mod main_parametric_resonant_complex {
     /// Testing 'eval'
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new()
+            .filter(LogLevel::Info)
+            .module("api_tools", LogLevel::Error)
+            .module("sal_sync", LogLevel::Error)
+            .module("ena", LogLevel::Error)
+            .init();
         init_once();
         init_each();
         log::debug!("");
@@ -89,74 +67,53 @@ mod main_parametric_resonant_complex {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
-        let test_data = [
-            (
-                1,
-                30.0,
-                1.0,
-                1.0,
-                1.0,
-            )
-        ];
-        for (step, wave_length, roll_period, vmax, c) in test_data.iter() {
+        let test_data = [(1, 30.0, 1.0, 1.0, 1.0)];
+        for (step, wave_length, roll_period, vmax, _c) in test_data.iter() {
             let api_client = MockApiClient::new();
-            let mut initial_data= InitialCtx::new(
-                        0,
-                        "Unit-test",
+            let mut initial_data = InitialCtx::new(
+                "0",
+                "Unit-test",
+                Bounds::from_min_max(0., 100., 20).unwrap(),
             );
             initial_data.course_angle = Some(270.0);
             initial_data.wave_length = Some(*wave_length);
+            initial_data.voyage = Some(Voyage {
+                density: 1.025,
+                operational_speed: *vmax,
+                icing_type: "none".to_owned(),
+                icing_timber_type: "full".to_owned(),
+                area: Some("sea".to_owned()),
+            });
             let mut ctx = MocEval {
-                ctx: Context::new(
-                    initial_data,
-                ),
-            };    
-            ctx.ctx = ctx.ctx
-            .clone()
-            .write(
-                VesselMaxSpeedCtx { 
-                    vmax: *vmax, 
-                }
-            ).unwrap();    
-            ctx.ctx = ctx.ctx
-            .clone()
-            .write(
-                RollingPeriodCtx { 
-                    roll_period: *roll_period, 
-                    c: *c,
-                }
-            ).unwrap();
+                ctx: Context::new(initial_data),
+            };
+            ctx.ctx.write_params(ParameterID::RollPeriod, *roll_period);
             let dbg = "ComplexTest";
             let result = ParametricResonantZoneSpeedFilterEval::new(
                 dbg,
                 MainResonantZoneSpeedFilterEval::new(
-                dbg, 
-                ApparentFrequenciesEval::new(
-                    dbg, 
-                    PeriodExcitementEval::new(
-                        dbg, 
-                        MainResonantZoneEval::new(
-                            dbg, 
-                            ParametricResonantZoneEval::new(
-                                dbg, 
-                                    RollingFrequencyEval::new(
-                                        dbg,
-                                        ctx,
-                                    )
-                                )
-                            )
-                        )
-                    )
+                    dbg,
+                    ApparentFrequenciesEval::new(
+                        dbg,
+                        PeriodExcitementEval::new(
+                            dbg,
+                            MainResonantZoneEval::new(
+                                dbg,
+                                ParametricResonantZoneEval::new(dbg, ctx),
+                            ),
+                        ),
+                    ),
                 ),
-                Box::new(move |resonant_zone, zone_id|{
+                Box::new(move |resonant_zone, zone_id| {
                     let client = Arc::clone(&api_client);
                     client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
-                })
-            ).eval(Zg::empty());
+                }),
+            )
+            .eval(Zg::empty());
             match result {
                 Ok(ctx) => {
-                    let app_freq = ContextRead::<MainResonantZoneCtx>::read(&ctx).clone();
-                },
+                    let _app_freq = ContextRead::<MainResonantZoneCtx>::read(&ctx).clone();
+                }
                 Err(err) => panic!("step {} \nerror: {:#?}", step, err),
             }
             //assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

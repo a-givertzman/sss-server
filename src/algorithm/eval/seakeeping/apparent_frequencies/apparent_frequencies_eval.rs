@@ -1,13 +1,12 @@
 use crate::algorithm::context::context_access::ContextRead;
-use crate::algorithm::eval::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
-use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
-use crate::algorithm::eval::vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
-use crate::algorithm::eval::zg_eval::Zg;
+use crate::algorithm::eval::seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
+use crate::algorithm::eval::seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
+use crate::algorithm::eval::zg::Zg;
 use crate::kernel::{
-        eval::Eval, 
+        Eval, 
         types::eval_result::EvalResult
     };
-use crate::prelude::ContextWrite;
+use crate::prelude::{ContextReadRef, ContextWrite, InitialCtx};
 use sal_core::{
     dbg::Dbg, 
     error::Error
@@ -38,7 +37,12 @@ impl Eval<Zg, EvalResult> for ApparentFrequenciesEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
-                let vmax = ContextRead::<VesselMaxSpeedCtx>::read(&ctx).vmax.clone();
+                let initial: &InitialCtx = ctx.read_ref();
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let vmax = voyage.operational_speed;
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx).period_excitement.clone();
                 let course_angle_of_wave: Vec<f64> = (0..=3600).map(|x| x as f64 / 10.0).collect();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize * 10)).map(|x| x as f64 / 10.0).collect();

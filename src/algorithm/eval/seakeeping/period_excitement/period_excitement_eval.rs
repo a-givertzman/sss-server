@@ -1,14 +1,11 @@
 use crate::algorithm::context::context_access::ContextReadRef;
-use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
-use crate::algorithm::eval::zg_eval::Zg;
-use crate::prelude::InitialCtx;
-use crate::{
-    ContextWrite,
-    kernel::{
-        eval::Eval, 
+use crate::algorithm::eval::seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
+use crate::algorithm::eval::zg::Zg;
+use crate::prelude::{ContextWrite, InitialCtx};
+use crate::kernel::{
+        Eval, 
         types::eval_result::EvalResult
-    },
-};
+    };
 use sal_core::{
     dbg::Dbg, 
     error::Error

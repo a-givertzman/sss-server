@@ -7,17 +7,15 @@ use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{
     DebugSession, 
     LogLevel, 
-    Backtrace
 };
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, 
-        eval::{
-            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::{main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval}, Zg
-        }
+        context::context_access::ContextRead, entities::Bounds, eval::{seakeeping::{
+            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::{main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval}
+        }, zg::Zg}
     }, 
     kernel::{
-        eval::Eval, 
+        Eval, 
         types::eval_result::EvalResult
     }, 
     prelude::{
@@ -44,7 +42,12 @@ fn init_each() -> () {}
 /// Testing [main_resonant_zone_speed_filter](src/algorithm/eval/main_resonant_zone_speed_filter)
 #[test]
 fn main_resonant_zone_speed_filter() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     log::debug!("");
@@ -114,9 +117,10 @@ fn main_resonant_zone_speed_filter() {
     ];
     for (step, course_angle, main_resonant_zone, apparent_frequencies, target) in test_data.iter() {
         let mut initial_data = InitialCtx::new(
-            0,
-            "Unit-test",
-        );
+                "0",
+                "Unit-test",
+                Bounds::from_min_max(0., 100., 20).unwrap(),
+            );
         initial_data.course_angle = Some(*course_angle);
         let mut ctx = MocEval {
             ctx: Context::new(

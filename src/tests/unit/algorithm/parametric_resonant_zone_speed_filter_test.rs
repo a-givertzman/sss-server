@@ -6,31 +6,25 @@ use std::{
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{
     DebugSession, 
-    LogLevel, 
-    Backtrace
+    LogLevel,
 };
 use sal_core::error::Error;
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, 
-        eval::{
+        context::context_access::ContextRead, entities::Bounds, eval::{seakeeping::{
             apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
             parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
             parametric_resonant_zone_speed_filter::{
                 parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
                 parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval
             }, 
-            Zg
-        }
-    }, infrostructure::query::resonant_zone::resonant_zone::ResonantZoneQuery, 
-    kernel::{
-        eval::Eval, 
+        }, zg::Zg}
+    }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{
+        Eval, 
         types::{
-            eval_result::EvalResult, 
-            Arc
+            Arc, eval_result::EvalResult
         }
-    }, 
-    prelude::{
+    }, prelude::{
         Context, 
         ContextWrite, 
         InitialCtx
@@ -66,7 +60,12 @@ fn init_each() -> () {}
 /// Testing [parametric_resonant_zone_speed_filter](src/algorithm/eval/parametric_resonant_zone_speed_filter)
 #[test]
 fn parametric_resonant_zone_speed_filter() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     log::debug!("");
@@ -133,8 +132,9 @@ fn parametric_resonant_zone_speed_filter() {
     for (step, course_angle, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
         let api_client = MockApiClient::new();
         let mut initial_data = InitialCtx::new(
-            0,
+            "0",
             "Unit-test",
+            Bounds::from_min_max(0., 100., 20).unwrap(),
         );
         initial_data.course_angle = Some(*course_angle);
         let mut ctx = MocEval {

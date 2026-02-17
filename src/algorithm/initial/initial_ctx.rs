@@ -3,7 +3,7 @@ use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::stability::ship_type::ShipType;
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, Ship, Voyage};
-use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
+use crate::algorithm::eval::seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
 
 ///
 /// Общая структура для ввода данных. Содержит все данные для расчетов.

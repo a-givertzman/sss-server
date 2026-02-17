@@ -1,19 +1,11 @@
-use crate::algorithm::context::context_access::{
-    ContextRead, 
-    ContextReadRef
-};
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
-use crate::algorithm::eval::move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx;
-use crate::algorithm::eval::vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx;
-use crate::algorithm::eval::zg_eval::Zg;
-use crate::prelude::InitialCtx;
-use crate::{
-    ContextWrite,
-    kernel::{
-        eval::Eval, 
+use crate::algorithm::eval::seakeeping::move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx;
+use crate::algorithm::eval::zg::Zg;
+use crate::prelude::{ContextReadRef, ContextWrite, InitialCtx};
+use crate::kernel::{
+        Eval, 
         types::eval_result::EvalResult
-    },
-};
+    };
 use sal_core::{
     dbg::Dbg, 
     error::Error
@@ -46,6 +38,11 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
             Ok(ctx) => {
                 let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.unwrap();
                 let initial: &InitialCtx = ctx.read_ref();
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let vmax = voyage.operational_speed;
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
@@ -54,7 +51,6 @@ impl Eval<Zg, EvalResult> for MoveBrochingFilterEval {
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
                 let course_angle_of_wave: Vec<f64> = (1350..=2250).map(|x| x as f64 / 10.0).collect();
-                let vmax = ContextRead::<VesselMaxSpeedCtx>::read(&ctx).vmax.clone();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize * 10)).map(|x| x as f64 / 10.0).collect();
                 let mut result = RecalculationCourseAngular::to_northeastern(
                     course_angle, 

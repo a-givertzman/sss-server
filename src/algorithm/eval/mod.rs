@@ -10,7 +10,6 @@ pub mod wetting;
 pub mod unit_area;
 pub mod draft_mark;
 pub mod zg;
-pub mod roll_period_eval;
 pub mod seakeeping;
 
 pub use icing_coeff::ctx::IcingCoeffCtx;

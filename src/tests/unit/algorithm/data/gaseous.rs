@@ -1,6 +1,5 @@
 use crate::algorithm::entities::{
     data::loads::{AssignmentType, LoadGaseousData},
-    Position,
 };
 
 pub fn gaseous() -> Vec<LoadGaseousData> {
@@ -46,7 +45,9 @@ pub fn gaseous() -> Vec<LoadGaseousData> {
         assigment_type: v.2,
         mass: v.1,
         volume: None,
-        mass_shift: Some(Position::new(v.7, v.8, v.9)),
+        mass_shift_x: Some(v.7),
+        mass_shift_y: Some(v.8),
+        mass_shift_z: Some(v.9),
     })
     .collect()
     //     LoadLiquidArray::from(

@@ -1,16 +1,13 @@
-use crate::algorithm::eval::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
-use crate::algorithm::eval::roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
-use crate::algorithm::eval::zg_eval::Zg;
-use crate::algorithm::eval::{
-};
-use crate::{
-    ContextWrite,
-    algorithm::context::context_access::ContextRead,
-    kernel::{
-        eval::Eval, 
+use core::f64;
+
+use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::seakeeping::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
+use crate::algorithm::eval::zg::Zg;
+use crate::prelude::{ContextParamsRead, ContextWrite};
+use crate::kernel::{
+        Eval, 
         types::eval_result::EvalResult
-    },
-};
+    };
 use sal_core::{
     dbg::Dbg, 
     error::Error
@@ -41,7 +38,7 @@ impl Eval<Zg, EvalResult> for ParametricResonantZoneEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
-                let roll_frequency = ContextRead::<RollingFrequencyCtx>::read(&ctx).roll_frequency.clone();
+                let roll_frequency = 1.0/ctx.read_params(ParameterID::RollPeriod).max(f64::MIN);
                 let left_side = 1.9 * roll_frequency;
                 let right_side = 2.1 * roll_frequency;
                 let result = ParametricResonantZoneCtx {

@@ -1,32 +1,23 @@
-use std::collections::HashMap;
-#[cfg(test)]
-use std::{
-    sync::Once, 
-    time::Duration
-};
-use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{
-    DebugSession, 
-    LogLevel, 
-    Backtrace
-};
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, 
+        context::context_access::ContextRead,
+        entities::{Bounds, data::Voyage},
         eval::{
-            move_broching_filter::{move_broching_filter_ctx::MoveBrochingFilterCtx, move_broching_filter_eval::MoveBrochingFilterEval}, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, Zg
-        }
-    }, 
-    kernel::{
-        eval::Eval, 
-        types::eval_result::EvalResult
-    }, 
-    prelude::{
-        Context, 
-        ContextWrite, 
-        InitialCtx
-    }
+            seakeeping::move_broching_filter::{
+                move_broching_filter_ctx::MoveBrochingFilterCtx,
+                move_broching_filter_eval::MoveBrochingFilterEval,
+            },
+            zg::Zg,
+        },
+    },
+    kernel::{Eval, types::eval_result::EvalResult},
+    prelude::{Context, InitialCtx},
 };
+use debugging::session::debug_session::{DebugSession, LogLevel};
+use std::collections::HashMap;
+#[cfg(test)]
+use std::{sync::Once, time::Duration};
+use testing::stuff::max_test_duration::TestDuration;
 ///
 ///
 static INIT: Once = Once::new();
@@ -45,7 +36,12 @@ fn init_each() -> () {}
 /// Testing [move_broching_filter](src/algorithm/eval/move_broching_filter)
 #[test]
 fn move_broching_filter() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     log::debug!("");
@@ -54,67 +50,71 @@ fn move_broching_filter() {
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
-        (
-            1,
-            0.0,
-            1.0,
-            1.0,
-            vec![
-            ],
-        ),
+        (1, 0.0, 1.0, 1.0, vec![]),
         (
             2,
             0.0,
             0.1,
             1.0,
             vec![
-                (161.6, 0.6), 
-                (161.7, 0.6), 
-                (161.8, 0.6), 
-                (161.9, 0.6), 
-                (162.0, 0.6), 
-                (162.1, 0.6), 
-                (162.2, 0.6), 
-                (162.3, 0.6), 
-                (162.4, 0.6), 
-                (162.5, 0.6)
+                (161.6, 0.6),
+                (161.7, 0.6),
+                (161.8, 0.6),
+                (161.9, 0.6),
+                (162.0, 0.6),
+                (162.1, 0.6),
+                (162.2, 0.6),
+                (162.3, 0.6),
+                (162.4, 0.6),
+                (162.5, 0.6),
             ],
         ),
     ];
-    for (step, course_angle, length_lbp, vmax,target) in test_data.iter() {
+    for (step, course_angle, length_lbp, vmax, target) in test_data.iter() {
         let mut initial = InitialCtx::new(
-            0,
+            "0",
             "Unit-test",
+            Bounds::from_min_max(0., 100., 20).unwrap(),
         );
         initial.course_angle = Some(*course_angle);
         let mut ship_params = HashMap::new();
         ship_params.insert("LBP".to_owned(), *length_lbp);
         initial.ship_parameters = Some(ship_params);
-        let mut ctx = MocEval {
-            ctx: Context::new(
-                initial
-            ),
+        initial.voyage = Some(Voyage {
+            density: 1.025,
+            operational_speed: *vmax,
+            icing_type: "none".to_owned(),
+            icing_timber_type: "full".to_owned(),
+            area: Some("sea".to_owned()),
+        });
+        let ctx = MocEval {
+            ctx: Context::new(initial),
         };
-        ctx.ctx = ctx.ctx
-        .clone()
-        .write(
-            VesselMaxSpeedCtx {
-                vmax: *vmax
-            }
-        ).unwrap();
         let result = MoveBrochingFilterEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx).move_broching_filter.clone();
+                let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx)
+                    .move_broching_filter
+                    .clone();
                 if result.len() == 0 {
-                    assert!(*target == result, "step {} \nresult: {:?}\ntarget: {:?}", step, &result, target);
+                    assert!(
+                        *target == result,
+                        "step {} \nresult: {:?}\ntarget: {:?}",
+                        step,
+                        &result,
+                        target
+                    );
                 } else {
-                    assert!(*target == result[0..10], "step {} \nresult: {:?}\ntarget: {:?}", step, &result[0..10], target);
+                    assert!(
+                        *target == result[0..10],
+                        "step {} \nresult: {:?}\ntarget: {:?}",
+                        step,
+                        &result[0..10],
+                        target
+                    );
                 }
-
-            },
+            }
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
-
         }
     }
     test_duration.exit();

@@ -1,13 +1,23 @@
 use super::context::Context;
 use crate::algorithm::{
     context::testing_ctx::TestingCtx,
-    eval::{        
+    eval::{
+        criterion::*,
         icing_timber::ctx::IcingTimberCtx,
-        icing_timber_bound::ctx::IcingTimberBoundCtx, 
+        icing_timber_bound::ctx::IcingTimberBoundCtx,
         parameters::*,
-        strength::*,  
+        seakeeping::{
+            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx,
+            impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx,
+            main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx,
+            main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx,
+            move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx,
+            parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
+            parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx,
+            period_excitement::period_excitement_ctx::PeriodExcitementCtx,
+        },
         stability::*,
-        criterion::*, 
+        strength::*,
         *,
     },
     initial::initial_ctx::InitialCtx,
@@ -153,18 +163,6 @@ impl ContextWrite<WettingCtx> for Context {
 impl ContextRead<WettingCtx> for Context {
     fn read(&self) -> WettingCtx {
         self.wetting.clone().unwrap()
-    }
-}
-//
-impl ContextWrite<VesselMaxSpeedCtx> for Context {
-    fn write(mut self, value: VesselMaxSpeedCtx) -> Result<Self, Error> {
-        self.vmax = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<VesselMaxSpeedCtx> for Context {
-    fn read(&self) -> VesselMaxSpeedCtx {
-        self.vmax.clone().unwrap()
     }
 }
 //
@@ -417,18 +415,6 @@ impl ContextWrite<RollingAmplitudeCtx> for Context {
 impl ContextRead<RollingAmplitudeCtx> for Context {
     fn read(&self) -> RollingAmplitudeCtx {
         self.roll_amplitude.clone().unwrap()
-    }
-}
-//
-impl ContextWrite<RollingFrequencyCtx> for Context {
-    fn write(mut self, value: RollingFrequencyCtx) -> Result<Self, Error> {
-        self.roll_frequency = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<RollingFrequencyCtx> for Context {
-    fn read(&self) -> RollingFrequencyCtx {
-        self.roll_frequency.clone().unwrap()
     }
 }
 //
@@ -720,5 +706,3 @@ impl ContextRead<ResultStrCtx> for Context {
         self.result_str.clone().unwrap()
     }
 }*/
-
-

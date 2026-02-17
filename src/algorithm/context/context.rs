@@ -1,25 +1,22 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{        
-        apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
-        impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
-        main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, 
-        main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, 
-        move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, 
+        seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
+        seakeeping::impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
+        seakeeping::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, 
+        seakeeping::main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, 
+        seakeeping::move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, 
         parameters::Parameters, 
-        parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
-        parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
-        period_excitement::period_excitement_ctx::PeriodExcitementCtx, 
-        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, 
-        vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, 
+        seakeeping::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
+        seakeeping::parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
+        seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx, 
         icing_timber::ctx::IcingTimberCtx,
-        icing_timber_bound::ctx::IcingTimberBoundCtx, parameters::Parameters, 
+        icing_timber_bound::ctx::IcingTimberBoundCtx,
         stability::*,
         strength::*, 
         criterion::*, 
         *,
     },
-    eval::{parameters::Parameters, *},
     initial::initial_ctx::InitialCtx,
 };
 ///
@@ -45,8 +42,6 @@ pub struct Context {
     pub(super) icing_timber: Option<IcingTimberCtx>,
     /// Массив скоростей движения, при которых происходит явление последовательных ударов высоких волн
     pub(super) impacts_high_waves: Option<ImpactsHighWavesCtx>, 
-    /// Учет обледенения судна и  груза
-    pub(super) icing: Option<IcingCtx>,
     /// Учет намокания груза
     pub(super) wetting: Option<WettingCtx>,
     /// Распределение площади для расчета прочности
@@ -133,8 +128,6 @@ pub struct Context {
     pub(super) draft_mark: Option<DraftMarkCtx>,
  //   /// Результаты расчета по прочности
   //  pub(super) result_str: Option<ResultStrCtx>,
-      /// Максимальная скорость хода судна Vmax в узлах
-    pub(super) vmax: Option<VesselMaxSpeedCtx>,
     /// Основная зона резонансной бортовой качки
     pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
     /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основого резонанса частот

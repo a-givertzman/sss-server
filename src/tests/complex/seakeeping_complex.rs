@@ -1,34 +1,35 @@
 use crate::{
-    algorithm::eval::Zg, 
-    kernel::{
-        eval::Eval, 
-        types::eval_result::EvalResult
-    }, 
-    prelude::Context
+    algorithm::eval::zg::Zg,
+    kernel::{Eval, types::eval_result::EvalResult},
+    prelude::Context,
 };
 #[cfg(test)]
 mod seakeeping {
-    use std::{
-        collections::HashMap, fs::File, sync::Once, time::Duration
-    };
-    use serde_json::to_writer;
-    use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{
-        DebugSession, 
-        LogLevel, 
-        Backtrace
-    };
-    use sal_core::error::Error;
     use crate::{
         algorithm::{
-            context::context_access::ContextRead, 
-            eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, impacts_high_waves::impacts_high_waves_eval::ImpactsHighWavesEval, main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, move_broching_filter::{move_broching_filter_ctx::MoveBrochingFilterCtx, move_broching_filter_eval::MoveBrochingFilterEval}, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}, roll_frequency_eval::roll_frequency_eval::RollingFrequencyEval, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, RollingPeriodCtx, Zg}
-        }, infrostructure::query::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{eval::Eval, types::Arc}, prelude::{
-            Context, 
-            ContextWrite, 
-            InitialCtx
-        }, tests::complex::seakeeping_complex::MocEval
+            context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::{parameters::ParameterID, seakeeping::{
+                apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval,
+                impacts_high_waves::impacts_high_waves_eval::ImpactsHighWavesEval,
+                main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval,
+                main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval,
+                move_broching_filter::{
+                    move_broching_filter_ctx::MoveBrochingFilterCtx,
+                    move_broching_filter_eval::MoveBrochingFilterEval,
+                },
+                parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval,
+                parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval,
+                period_excitement::{
+                    period_excitement_ctx::PeriodExcitementCtx,
+                    period_excitement_eval::PeriodExcitementEval,
+                },
+            }, zg::Zg}
+        }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{Eval, types::Arc}, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::seakeeping_complex::MocEval
     };
+    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use sal_core::error::Error;
+    use serde_json::to_writer;
+    use std::{collections::HashMap, fs::File, sync::Once, time::Duration};
+    use testing::stuff::max_test_duration::TestDuration;
     ///
     ///
     static INIT: Once = Once::new();
@@ -64,7 +65,12 @@ mod seakeeping {
     /// Testing 'eval'
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new()
+            .filter(LogLevel::Info)
+            .module("api_tools", LogLevel::Error)
+            .module("sal_sync", LogLevel::Error)
+            .module("ena", LogLevel::Error)
+            .init();
         init_once();
         init_each();
         log::debug!("");
@@ -72,95 +78,78 @@ mod seakeeping {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
-        let test_data = [
-            (
-                1,
-                270.0,
-                7.933569184169254,
-                0.4435,
-                6.0,
-                20.0,
-                50.0,
-                vec![
-                    (
-
-                    )
-                ]
-            )
-        ];
-        for (step, course_angle, roll_period, c, period_excitement, vmax, length_lbp, target) in test_data.iter() {
+        let test_data = [(
+            1,
+            270.0,
+            7.933569184169254,
+            0.4435,
+            6.0,
+            20.0,
+            50.0,
+            vec![()],
+        )];
+        for (step, course_angle, roll_period, c, period_excitement, vmax, length_lbp, target) in
+            test_data.iter()
+        {
             let api_client = MockApiClient::new();
-            let mut initial_data= InitialCtx::new(
-                0,
+            let mut initial_data = InitialCtx::new(
+                "0",
                 "Unit-test",
+                Bounds::from_min_max(0., 100., 20).unwrap(),
             );
             initial_data.course_angle = Some(*course_angle);
-            initial_data.period_excitement = Some(
-                PeriodExcitementCtx { 
-                    period_excitement: *period_excitement 
-                }
-            );
+            initial_data.period_excitement = Some(PeriodExcitementCtx {
+                period_excitement: *period_excitement,
+            });
             let mut ship_params = HashMap::new();
             ship_params.insert("LBP".to_owned(), *length_lbp);
             initial_data.ship_parameters = Some(ship_params);
+            initial_data.voyage = Some(Voyage {
+                density: 1.025,
+                operational_speed: *vmax,
+                icing_type: "none".to_owned(),
+                icing_timber_type: "full".to_owned(),
+                area: Some("sea".to_owned()),
+            });
             let mut ctx = MocEval {
-                ctx: Context::new(
-                    initial_data,
-                ),
+                ctx: Context::new(initial_data),
             };
-            ctx.ctx = ctx.ctx
-            .clone()
-            .write(
-                RollingPeriodCtx { 
-                    roll_period: *roll_period,
-                    c: *c, 
-                }
-            ).unwrap();
-            ctx.ctx = ctx.ctx
-            .clone()
-            .write(
-                VesselMaxSpeedCtx { 
-                    vmax: *vmax,
-                }
-            ).unwrap();
+            ctx.ctx.write_params(ParameterID::RollPeriod, *roll_period);
             let result = ImpactsHighWavesEval::new(
-                dbg, 
+                dbg,
                 MoveBrochingFilterEval::new(
-                    dbg, 
+                    dbg,
                     MainResonantZoneSpeedFilterEval::new(
-                        dbg, 
+                        dbg,
                         ParametricResonantZoneSpeedFilterEval::new(
-                            dbg, 
+                            dbg,
                             ApparentFrequenciesEval::new(
-                                dbg, 
+                                dbg,
                                 PeriodExcitementEval::new(
-                                    dbg, 
+                                    dbg,
                                     MainResonantZoneEval::new(
-                                        dbg, 
-                                        ParametricResonantZoneEval::new(
-                                            dbg, 
-                                            RollingFrequencyEval::new(
-                                                dbg,
-                                                ctx
-                                            )
-                                        )
-                                    )
-                                )
+                                        dbg,
+                                        ParametricResonantZoneEval::new(dbg, ctx),
+                                    ),
+                                ),
                             ),
-                            Box::new(move |resonant_zone, zone_id|{
+                            Box::new(move |resonant_zone, zone_id| {
                                 let client = Arc::clone(&api_client);
                                 client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
-                            })
-                        )
-                    )
-                )
-            ).eval(Zg::empty());
+                            }),
+                        ),
+                    ),
+                ),
+            )
+            .eval(Zg::empty());
             match result {
                 Ok(ctx) => {
-                    let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx).move_broching_filter.clone();
+                    let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx)
+                        .move_broching_filter
+                        .clone();
                     write_json("broching.json", &result).expect("error");
                     //assert!(result == *target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
-                },
+                }
                 Err(err) => panic!("step {} \nerror: {:#?}", step, err),
             }
         }

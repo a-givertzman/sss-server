@@ -7,5 +7,6 @@ pub(crate) fn voyage() -> Voyage {
         operational_speed: 16.,
         icing_type: "none".to_owned(),
         icing_timber_type: "full".to_owned(),
+        area: Some("sea".to_owned()),
     }
 }

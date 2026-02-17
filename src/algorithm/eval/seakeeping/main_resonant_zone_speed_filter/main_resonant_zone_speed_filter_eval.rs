@@ -1,17 +1,13 @@
-use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
-use crate::algorithm::eval::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
-use crate::algorithm::eval::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
-use crate::algorithm::eval::main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx;
-use crate::algorithm::eval::zg_eval::Zg;
-use crate::prelude::InitialCtx;
-use crate::{
-    ContextWrite,
-    kernel::{
-        eval::Eval, 
+use crate::algorithm::eval::seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx;
+use crate::algorithm::eval::seakeeping::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
+use crate::algorithm::eval::seakeeping::main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx;
+use crate::algorithm::eval::zg::Zg;
+use crate::prelude::{ContextRead, ContextReadRef, ContextWrite, InitialCtx};
+use crate::kernel::{
+        Eval, 
         types::eval_result::EvalResult
-    },
-};
+    };
 use sal_core::{
     dbg::Dbg, 
     error::Error

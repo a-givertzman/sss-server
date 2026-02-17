@@ -242,6 +242,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
         );//.eval(Zg::empty());
+        //
         let ctx = 
             ResultCriterionEval::new(
                 &dbg,
@@ -270,6 +271,29 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         );  
+
+        let result = ParametricResonantZoneSpeedFilterEval::new(
+                dbg,
+                MainResonantZoneSpeedFilterEval::new(
+                    dbg,
+                    ApparentFrequenciesEval::new(
+                        dbg,
+                        PeriodExcitementEval::new(
+                            dbg,
+                            MainResonantZoneEval::new(
+                                dbg,
+                                ParametricResonantZoneEval::new(dbg, ctx),
+                            ),
+                        ),
+                    ),
+                ),
+                Box::new(move |resonant_zone, zone_id| {
+                    let client = Arc::clone(&api_client);
+                    client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
+                }),
+            )
+            .eval(Zg::empty());
+
     ctx.eval(()).unwrap();   
     Ok(())
 }

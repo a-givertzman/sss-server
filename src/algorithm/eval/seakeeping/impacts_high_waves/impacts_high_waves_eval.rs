@@ -1,17 +1,13 @@
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
-use crate::algorithm::eval::impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx;
-use crate::algorithm::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
-use crate::algorithm::eval::zg_eval::Zg;
-use crate::prelude::InitialCtx;
-use crate::{
-    ContextWrite,
-    algorithm::context::context_access::ContextRead,
-    kernel::{
-        eval::Eval, 
+use crate::algorithm::eval::seakeeping::impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx;
+use crate::algorithm::eval::seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
+use crate::algorithm::eval::zg::Zg;
+use crate::prelude::{ContextRead, ContextWrite, InitialCtx};
+use crate::kernel::{
+        Eval, 
         types::eval_result::EvalResult
-    },
-};
+    };
 use sal_core::{
     dbg::Dbg, 
     error::Error
