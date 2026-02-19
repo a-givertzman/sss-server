@@ -230,6 +230,8 @@ impl CompartmentCache {
                 .map_err(|err| error.pass(err))?;
             result.inertia_trans_x = inertia_trans_x;
         }
+        result.level = result.level.max(0.); // Расчетный уровень может быть меньше 0 из-за крена
+                                            // но для оператора это не имеет смысла, обрезаем по 0
         //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
     }    
