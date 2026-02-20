@@ -114,12 +114,12 @@ impl Eval<(), EvalResult> for DraftMarkEval {
                 log::info!(
                     "DraftMark result:{}\n",
                     result.iter().fold(String::new(), |s, v| s + &format!(
-                        "\n{} {} ({:.3} {:.3} {:.3})",
+                        "\n{} {} ({:.3} {:.3} {:?})",
                         v.criterion_id,
                         v.name,
                         v.x,
                         v.y,
-                        v.z.unwrap_or(0.)
+                        v.z
                     ))
                 );
                 let result = DraftMarkCtx { data: result };
