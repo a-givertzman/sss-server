@@ -79,9 +79,9 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                 };
                 let DsoResult {
                     heel,
-                    dso,
-                    entry_angle,
-                    flooding_angle,
+                    mut dso,
+                    mut entry_angle,
+                    mut flooding_angle,
                 } = self
                     .model
                     .read()
@@ -93,88 +93,165 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         query,
                     )
                     .map_err(|err| error.pass_with("model.compute_dso", err))?;
-                let dso_curve =
-                    Curve::new_linear(&dso).map_err(|e| error.pass_with("calculate curve", e))?;
-                // нахождение максимума диаграммы
-                let mut tmp_dso: Vec<&(f64, f64)> = dso.iter().filter(|(a, _)| *a >= 0.).collect();
-                tmp_dso.sort_by(|(_, v1), (_, v2)| {
-                    v2.partial_cmp(v1)
-                        .expect("LeverDiagram calculate error: sort dso!")
-                });
-                let (theta_max, _max_value) = tmp_dso
-                    .first()
-                    .expect("LeverDiagram calculate error, no dso values!");
-                let theta_max = *theta_max;
-                //     log::trace!( "{}", format!("LeverDiagram calculate max_angle:{theta_max} max_value:{max_value}"));
-                // нахождение углов максимумов и угла пересечения с 0
-                let mut max_angles: Vec<(f64, f64)> = Vec::new();
-                let mut last_value = dso_curve
-                    .value(0.)
-                    .map_err(|e| error.pass_with("calculate last_value", e))?;
-                let mut last_value2 = last_value + 1.;
-                let mut last_angle = 0.;
-                for &(angle_deg, value) in dso.iter().filter(|(a, _)| *a >= 0.) {
-                    if value < last_value && last_value > last_value2 {
-                        max_angles.push((last_angle, last_value));
-                    }
-                    if last_value != value {
-                        last_value2 = last_value;
-                        last_value = value;
-                        last_angle = angle_deg
-                    }
-                }
-                if max_angles.is_empty() {
-                    max_angles.push((
-                        theta_max,
-                        dso_curve
-                            .value(theta_max)
-                            .map_err(|e| error.pass_with("calculate max_angles", e))?,
-                    ));
-                }
                 //
-                let angle_zero = crate::algorithm::eval::stability::lever_diagram::ctx::angle(
-                    theta_max, &dso_curve, 0.,
-                );
-                let angle_zero = *angle_zero
+                let process_dso = |
+                    dso: Vec<(f64, f64)>, 
+                    entry_angle: Option<Vec<(f64, f64)>>, 
+                    flooding_angle: Option<Vec<(f64, f64)>>,
+                | -> Result<LeverDiagramCtx, Error> {
+                    let dso_curve = Curve::new_linear(&dso)
+                        .map_err(|e| error.pass_with("calculate curve", e))?;
+                    // нахождение максимума диаграммы
+                    let theta_max = {
+                        let mut tmp_dso: Vec<&(f64, f64)> =
+                            dso.iter().filter(|(a, _)| *a >= 0.).collect();
+                        tmp_dso.sort_by(|(_, v1), (_, v2)| {
+                            v2.partial_cmp(v1)
+                                .expect("LeverDiagram calculate error: sort dso!")
+                        });
+                        let (theta_max, _max_value) = tmp_dso
+                            .first()
+                            .expect("LeverDiagram calculate error, no dso values!");
+                        *theta_max
+                    };
+                    // нахождение углов максимумов и угла пересечения с 0
+                    let max_angles: Vec<(f64, f64)> = {
+                        let mut res = Vec::new();
+                        let mut last_value = dso_curve
+                            .value(0.)
+                            .map_err(|e| error.pass_with("calculate last_value", e))?;
+                        let mut last_value2 = last_value + 1.;
+                        let mut last_angle = 0.;
+                        for &(angle_deg, value) in dso.iter().filter(|(a, _)| *a >= 0.) {
+                            if value < last_value && last_value > last_value2 {
+                                res.push((last_angle, last_value));
+                            }
+                            if last_value != value {
+                                last_value2 = last_value;
+                                last_value = value;
+                                last_angle = angle_deg
+                            }
+                        }
+                        if res.is_empty() {
+                            res.push((
+                                theta_max,
+                                dso_curve
+                                    .value(theta_max)
+                                    .map_err(|e| error.pass_with("calculate max_angles", e))?,
+                            ));
+                        }
+                        res
+                    };
+                    //
+                    let angle_zero = *crate::algorithm::eval::stability::lever_diagram::ctx::angle(
+                        theta_max, &dso_curve, 0.,
+                    )
                     .map_err(|e| error.pass_with("calculate angle_zero", e))?
                     .first()
                     .ok_or(error.err("calculate angle_zero no angles"))?;
-                let mut ddo = Vec::new();
-                for &(angle_deg, _) in dso.iter().filter(|(a, _)| a.fract().abs() < 0.001) {
-                    let value = if angle_deg < angle_zero {
-                        dso_curve
-                            .integral(angle_deg, angle_zero)
-                            .map_err(|e| error.pass_with("calculate ddo", e))?
-                            .to_radians()
-                    } else if angle_deg > angle_zero {
-                        dso_curve
-                            .integral(angle_zero, angle_deg)
-                            .map_err(|e| error.pass_with("calculate ddo", e))?
-                            .to_radians()
-                    } else {
-                        0.
+                    //
+                    let ddo = {
+                        let mut ddo = Vec::new();
+                        for &(angle_deg, _) in dso.iter().filter(|(a, _)| a.fract().abs() < 0.001) {
+                            let value = if angle_deg < angle_zero {
+                                dso_curve
+                                    .integral(angle_deg, angle_zero)
+                                    .map_err(|e| error.pass_with("calculate ddo", e))?
+                                    .to_radians()
+                            } else if angle_deg > angle_zero {
+                                dso_curve
+                                    .integral(angle_zero, angle_deg)
+                                    .map_err(|e| error.pass_with("calculate ddo", e))?
+                                    .to_radians()
+                            } else {
+                                0.
+                            };
+                            ddo.push((angle_deg, value));
+                        }
+                        ddo
                     };
-                    ddo.push((angle_deg, value));
-                }
-                let diagram = dso
+                    // Поиск входа в воду отверстий и палубы как пересечения с 0
+                    let find_zero_angle = |v: Vec<(f64, f64)>| -> Result<f64, Error> {
+                        let v: Vec<_> = v
+                            .into_iter()
+                            .filter(|&(a, _v)| a >= 0.)
+                            .map(|(a, v)| (v, a))
+                            .collect();
+                        Curve::new_linear(&v)
+                            .map_err(|err| error.pass(err))?
+                            .value(0.)
+                            .map_err(|err| error.pass(err))
+                    };
+                    let entry_angle = if let Some(angle) = entry_angle {
+                        find_zero_angle(angle)
+                            .map_err(|err| error.pass_with("entry_angle", err))?
+                    } else {
+                        0. // для записи в базу не считаем
+                    };
+                    let flooding_angle = if let Some(angle) = flooding_angle {
+                        find_zero_angle(angle)
+                            .map_err(|err| error.pass_with("flooding_angle", err))?
+                    } else {
+                        0. // для записи в базу не считаем
+                    };                    
+                    let result = LeverDiagramCtx {
+                        dso,
+                        dso_curve,
+                        ddo,
+                        theta_max,
+                        max_angles,
+                        entry_angle,
+                        flooding_angle,
+                    };
+                    Ok(result)
+                };
+                // Диаграмма для записи результата в базу данных.
+                let result = process_dso(dso.clone(), None, None)
+                    .map_err(|err| error.pass_with("process_dso for db", err))?;
+                let diagram = result.dso
                     .iter()
                     .filter(|(a, _)| a.fract().abs() < 0.001)
-                    .zip(ddo.iter())
+                    .zip(result.ddo.iter())
                     .map(|((a1, v1), (_, v2))| (*a1, *v1, *v2))
                     .collect::<Vec<_>>();
-                ctx.write_params(ParameterID::Roll, heel);
-                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, entry_angle);
-                ctx.write_params(ParameterID::AngleOfDownFlooding, flooding_angle);
-                let result = LeverDiagramCtx {
-                    dso,
-                    dso_curve,
-                    ddo,
-                    theta_max,
-                    max_angles,
-                    entry_angle,
-                    flooding_angle,
+                send_stability_diagram(
+                        &self.dbg,
+                        &ship_id,
+                        &project_id,
+                        &self.api_client,
+                        diagram,
+                    )
+                    .map_err(|err| error.pass(err))?;
+                // Диаграмма для дальнейшего расчета.
+                // Проверяем нулевое плечо если оно положительно переворачиваем его
+                // чтобы в расчете учитывался худший случай крена.
+                // плечо для нулевого угла
+                let lever_zero = dso
+                    .iter()
+                    .find(|(a, _)| *a == 0.)
+                    .ok_or(error.err("calculate lever_zero error!"))?
+                    .1;
+                // знак статического угла крена
+                // если крен на левый борт то переворачиваем диаграммы
+                if lever_zero > 0. {
+                    let reverse = |mut v: Vec<(f64, f64)>| -> Vec<(f64, f64)> {
+                        v = v.into_iter().map(|(a, v)| (-a, -v)).collect();
+                        v.sort_by(|(a1, _), (a2, _)| {
+                            a1.partial_cmp(a2)
+                                .expect("LeverDiagram calculate error: sort!")
+                        });
+                        v
+                    };
+                    dso = reverse(dso);
+                    entry_angle = reverse(entry_angle);
+                    flooding_angle = reverse(flooding_angle);
                 };
-                log::info!(
+                let result = process_dso(dso.clone(), Some(entry_angle), Some(flooding_angle))
+                    .map_err(|err| error.pass_with("process_dso for db", err))?;
+                ctx.write_params(ParameterID::Roll, heel);
+                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, result.entry_angle);
+                ctx.write_params(ParameterID::AngleOfDownFlooding, result.flooding_angle);
+    /*            log::info!(
                     "LeverDiagram theta_max:{}\n max_angles [angle l]:{}\n entry_angle:{}\n flooding_angle:{}\n diagram [angle dso ddo]:{}\n",
                     result.theta_max,
                     result
@@ -190,9 +267,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         "\n{:.3} {:.3} {:.3}",
                         v.0, v.1, v.2
                     )),
-                );
-                send_stability_diagram(&self.dbg, &ship_id, &project_id, &self.api_client, diagram)
-                    .map_err(|err| error.pass(err))?;
+                );*/
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
@@ -220,12 +295,13 @@ pub fn send_stability_diagram(
     log::info!("send_stability_diagram begin");
     if data.is_empty() {
         return Err(error.err("empty data!"));
-    }   
+    }
     let values_list: Vec<String> = data
         .iter()
-        .map(|(angle, value_dso, value_ddo)| 
+        .map(|(angle, value_dso, value_ddo)| {
             format!("({ship_id}, {project_id}, {angle}, {value_dso}, {value_ddo})")
-        ).collect();    
+        })
+        .collect();
     let full_sql = format!(
         "DO $$ BEGIN \
         DELETE FROM stability_diagram \
@@ -237,7 +313,7 @@ pub fn send_stability_diagram(
         END $$;",
         values_str = values_list.join(", ")
     );
- //   println!("{}", &full_sql);
+    //   println!("{}", &full_sql);
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_stability_diagram end");
     Ok(())

@@ -119,9 +119,9 @@ pub(crate) struct DsoResult {
     /// DSO
     pub dso: Vec<(f64, f64)>,
     /// Угол входа в воду палубы    
-    pub entry_angle: f64,
+    pub entry_angle: Vec<(f64, f64)>,
     /// Угол входа в воду открытых отверстий             
-    pub flooding_angle: f64,
+    pub flooding_angle: Vec<(f64, f64)>,
 }
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
@@ -1163,46 +1163,6 @@ impl ModelCached {
                 deck_angle_point,
             )
             .map_err(|err| error.pass(err))?;
-        // плечо для нулевого угла
-        let lever_zero = dso
-            .iter()
-            .find(|(a, _)| *a == 0.)
-            .ok_or(error.err("calculate lever_zero error!"))?
-            .1;
-        // знак статического угла крена
-        // если крен на левый борт то переворачиваем диаграммы
-        let heel = if lever_zero > 0. {
-            let reverse = |mut v: Vec<(f64, f64)>| -> Vec<(f64, f64)> {
-                v = v.into_iter().map(|(a, v)| (-a, -v)).collect();
-                v.sort_by(|(a1, _), (a2, _)| {
-                    a1.partial_cmp(a2)
-                        .expect("LeverDiagram calculate error: sort!")
-                });
-                v
-            };
-            dso = reverse(dso);
-            entry_angle = reverse(entry_angle);
-            flooding_angle = reverse(flooding_angle);
-            -heel
-        } else {
-            heel
-        };
-        // Поиск входа в воду отверстий и палубы как пересечения с 0
-        let find_zero_angle = |v: Vec<(f64, f64)>| -> Result<f64, Error> {
-            let v: Vec<_> = v
-                .into_iter()
-                .filter(|&(a, _v)| a >= 0.)
-                .map(|(a, v)| (v, a))
-                .collect();
-            Curve::new_linear(&v)
-                .map_err(|err| error.pass(err))?
-                .value(0.)
-                .map_err(|err| error.pass(err))
-        };
-        let entry_angle =
-            find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
-        let flooding_angle = find_zero_angle(flooding_angle)
-            .map_err(|err| error.pass_with("flooding_angle", err))?;
         Ok(DsoResult {
             dso,
             entry_angle,

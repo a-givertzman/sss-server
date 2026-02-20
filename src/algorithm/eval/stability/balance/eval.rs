@@ -110,7 +110,6 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                 ctx.write_params(ParameterID::DraughtMean, result.draught_mean);
                 ctx.write_params(ParameterID::TrimDeg, result.trim_degree);
                 ctx.write_params(ParameterID::TrimMeter, result.trim_meter);
-                ctx.write_params(ParameterID::Roll, result.heel);
                 ctx.write_params(
                     ParameterID::TonesPerCm,
                     0.01 * result.area_wl * water_density,
