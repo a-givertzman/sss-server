@@ -271,7 +271,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         );  
-        
+   /*     
         let ctx = ParametricResonantZoneSpeedFilterEval::new(
                 &dbg,
                 MainResonantZoneSpeedFilterEval::new(
@@ -292,7 +292,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                     client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
                 }),
             );
-
+*/
     ctx.eval(()).unwrap();   
     Ok(())
 }
