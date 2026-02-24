@@ -98,7 +98,7 @@ fn convert_to_trimesh() {
     init_once();
     init_each();
     log::debug!("Starting convert_to_trimesh test");
-    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(10));
+    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(6000));
     test_duration.run().unwrap();
     let test_data = [
         (

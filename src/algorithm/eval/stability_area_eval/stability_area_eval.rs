@@ -87,11 +87,11 @@ impl Eval<(), EvalResult> for StabilityAreaEval {
                 let min_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x1)
-                    .min_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .min_by(|a, b| a.partial_cmp(b).unwrap());
                 let max_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x2)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .max_by(|a, b| a.partial_cmp(b).unwrap());
                 // Если есть границы грузов ищем распределения площадей грузов
                 let units_bound = if let (Some(min_x), Some(max_x)) = (min_x, max_x) {
                     // Диапазон грузов по оси Х

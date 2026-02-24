@@ -1,7 +1,11 @@
+use std::io::Write;
+use std::path::PathBuf;
+
 use boolmesh::prelude::{
     self, 
     Manifold
 };
+use csgrs::mesh::Mesh;
 use nalgebra::{
     Const, 
     OPoint
@@ -11,7 +15,10 @@ use boolmesh::{
     compute_boolean
 };
 use parry3d_f64::math::Point;
-use parry3d_f64::shape::TriMesh;
+use parry3d_f64::shape::{
+    TriMesh, 
+    TriMeshFlags
+};
 use sal_core::{
     dbg::Dbg, 
     error::Error
@@ -28,6 +35,43 @@ use crate::{
     },
     prelude::ContextWrite,
 };
+///
+/// Write data to .stl file
+pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
+    let error = Error::new("Shape", "write_stl");
+    let (result, empty_normals): (Vec<_>, Vec<_>) = mesh
+        .triangles()
+        .map(|t| (t.normal(), t))
+        .partition(|(n, _)| n.is_some());
+    if !empty_normals.is_empty() {
+        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
+    }
+    let triangles: Vec<_> = result
+        .into_iter()
+        .map(|(n, t)| {
+            let n = n.unwrap();
+            let normal = stl_io::Vector([n[0] as f32, n[1] as f32, n[2] as f32]);
+            let vertices = [
+                stl_io::Vector([t.a[0] as f32, t.a[1] as f32, t.a[2] as f32]),
+                stl_io::Vector([t.b[0] as f32, t.b[1] as f32, t.b[2] as f32]),
+                stl_io::Vector([t.c[0] as f32, t.c[1] as f32, t.c[2] as f32]),
+            ];
+            stl_io::Triangle { normal, vertices }
+        })
+        .collect();
+    let mut binary_stl = Vec::<u8>::new();
+    stl_io::write_stl(&mut binary_stl, triangles.iter())
+        .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
+    let mut buffer = std::fs::File::create(&path).map_err(|err| {
+        error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
+    })?;
+    buffer.write_all(&binary_stl).map_err(|err| {
+        error.pass_with(
+            format!("buffer.write_all, path:{:?}", path),
+            err.to_string(),
+        )
+    })
+}
 ///
 /// Преобразование координат 3D модели в тип данных TriMesh
 pub struct ConvertTanksToTrimeshEval {
@@ -311,36 +355,57 @@ impl ConvertTanksToTrimeshEval {
     }
     ///
     /// Подгон отсеков под модель корабля
-    fn substract_ship_model(&self, ship_model: TriMesh, tanks: Vec<TriMesh>) -> Option<TriMesh> {
-        // объединение всех частей модели в одну
-        let mut tank = tanks.first().clone().unwrap().to_owned();
-        for mesh in 0..tanks.len() {
-            if tanks[mesh].vertices().len() > 0 {
-                tank.append(&tanks[mesh]);
-            }
-        }
-        match self.create_manifold(&ship_model.vertices(), &ship_model.indices()) {
-            Ok(manifold_curr) => {
-                // последняя фигура
-                match self.create_manifold(&tank.vertices().to_vec(), &tank.indices().to_vec()) {
-                    Ok(manifold_last) => {
-                        match compute_boolean(&manifold_last, &manifold_curr, prelude::OpType::Subtract) {
-                            Ok(substract_res) => {
+    fn substract_ship_model(&self, ship_model: Vec<TriMesh>, tanks: Vec<TriMesh>) -> Option<TriMesh> {
+        let mut full_tank = None;
+        for tank in tanks {
+            // последняя фигура
+            match self.create_manifold(&tank.vertices().to_vec(), &tank.indices().to_vec()) {
+                Ok(manifold_last) => {
+                    if full_tank.is_none() {
+                        full_tank = Some(manifold_last)
+                    } else {
+                        match compute_boolean(&manifold_last, &full_tank.clone().unwrap(), prelude::OpType::Add) {
+                            Ok(add_res) => {
+                                full_tank = Some(add_res); 
                                 // преобразование рез-та
-                                match self.manifold_to_trimesh(substract_res) {
-                                    Ok(trimesh) => {
-                                        return Some(trimesh);
-                                    },
-                                    Err(e) => log::error!("Enable to convert manifold to trimesh: {}", e),
-                                }
                             },
                             Err(e) => log::error!("Error to subtract figures: {}", e),
                         }
-                    },
-                    Err(e) => log::error!("Error to create Manifold: {}", e),
+                    }
+
+                },
+                Err(e) => log::error!("Error to create Manifold: {}", e),
+            }
+        }
+        for ship_part in ship_model {
+            match self.create_manifold(&ship_part.vertices().to_vec(), &ship_part.indices().to_vec()) {
+                Ok(manifold_ship) => {
+                    match compute_boolean(&full_tank.clone().unwrap(), &manifold_ship.clone(), prelude::OpType::Subtract) {
+                        Ok(add_res) => {
+                            full_tank = Some(add_res); 
+                        },
+                        Err(e) => log::error!("Error to subtract figures: {}", e),
+                    }
+                },
+                Err(e) => log::error!("Error to create Manifold: {}", e),
+            }
+        }
+        match self.manifold_to_trimesh(full_tank.unwrap()) {
+            Ok(mut trimesh) => {
+                let _ = trimesh.set_flags(
+                    TriMeshFlags::MERGE_DUPLICATE_VERTICES |
+                    TriMeshFlags::DELETE_DUPLICATE_TRIANGLES |
+                    TriMeshFlags::DELETE_DEGENERATE_TRIANGLES |
+                    TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES |
+                    TriMeshFlags::FIX_INTERNAL_EDGES |
+                    TriMeshFlags::ORIENTED
+                );
+                let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/1.stl"));
+                if let Err(e) = write_stl(&path, &trimesh) {
+                    log::error!("Failed to write nasal mesh {}", e);
                 }
             },
-            Err(e) => log::error!("Error to create Manifold: {}", e),
+            Err(_) => todo!(),
         }
         None
     }

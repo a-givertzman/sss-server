@@ -34,7 +34,7 @@ serde_json = "~1.0"
 bincode = "~2.0"
 #
 # Regex
-regex = "~1.11"
+regex = "1"
 #
 # Collections
 indexmap = "2.11.4"
@@ -53,5 +53,6 @@ kanal = "~0.1"
 papaya = "~0.2"
 parking_lot = "~0.12"
 multimap = "0.10.1"
-csgrs = "=0.3.2"
+csgrs = "0.20.1"
 boolmesh = "0.1.7"
+mesh-repair = "0.2.0"

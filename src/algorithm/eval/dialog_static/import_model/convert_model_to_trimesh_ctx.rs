@@ -6,6 +6,6 @@ use parry3d_f64::shape::TriMesh;
 pub struct ConvertModelToTrimeshCtx {
     pub stern_block: Option<TriMesh>,
     pub nasal_block: Option<TriMesh>,
-    pub surface_outer_body: Option<TriMesh>,
+    pub surface_outer_body: Option<Vec<TriMesh>>,
     pub surface_superstructure: Option<TriMesh>,
 }
