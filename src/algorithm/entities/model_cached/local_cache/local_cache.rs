@@ -54,7 +54,7 @@ pub(crate) trait LocalCache {
     fn calculate(&mut self) -> Vec<Error>;
     ///
     /// Returns approximated values based on given set.
-    // TODO получениеf
+    // TODO получение
     fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
         Ok(self
@@ -98,7 +98,7 @@ pub(crate) trait LocalCache {
 /// Получение значения из кэша для заданных условий и объема.
 /// На входе параметры без уровня, уровень подбирается к объему.
 /// Уровень должен быть последним ключем и не входить в query.
-pub fn get_volume(
+pub fn get_from_volume(
     parent: &Dbg,
     cache: &Cache<f64>,
     query: &[f64],
@@ -106,9 +106,9 @@ pub fn get_volume(
     volume_index: usize,
     epsilon: f64,
 ) -> Result<(f64, Vec<f64>), Error> {
-    let error = Error::new(parent, "get");
-  /*  println!(
-        "{} get_volume start, query:{:?} volume:{volume} target_index:{volume_index}",
+    let error = Error::new(parent, "get_from_volume");
+    /*  println!(
+        "{} get_from_volume start, query:{:?} volume:{volume} target_index:{volume_index}",
         parent, query,
     );*/
     let (level_min, level_max) = cache.disp(query.len());
@@ -117,12 +117,26 @@ pub fn get_volume(
         // целевое значение на нижней границе диапазона, сразу берем значение
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_min));
-        (level_min, cache.values_disp(&query).first().ok_or(error.err(format!("no result!")))?.to_vec())
+        (
+            level_min,
+            cache
+                .values_disp(&query)
+                .first()
+                .ok_or(error.err(format!("no result!")))?
+                .to_vec(),
+        )
     } else if volume >= volume_max {
         // целевое значение на верхней границе диапазона, сразу берем значение
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_max));
-        (level_max, cache.values_disp(&query).first().ok_or(error.err(format!("no result!")))?.to_vec())
+        (
+            level_max,
+            cache
+                .values_disp(&query)
+                .first()
+                .ok_or(error.err(format!("no result!")))?
+                .to_vec(),
+        )
     } else {
         // ищем значение постепенно приближая объем перебирая уровни заполнения
         let mut level = level_max / 2.;
@@ -139,14 +153,69 @@ pub fn get_volume(
                 step = step * 0.3;
                 last_delta_signum = delta.signum();
             }
-            let next_level = (level + step * delta.signum()).min(level_max).max(level_min);
-  //          println!("local_cashe {} get_volume i:{i} heel:{} trim:{} level:{level} res_volume:{} trg_volume:{volume}, index:{}", parent, query[0], query[1], result[0], volume_index - query.len());
-            if delta.abs() <= epsilon || i >= 50 || level == next_level {          
+            let next_level = (level + step * delta.signum())
+                .min(level_max)
+                .max(level_min);
+            //          println!("local_cashe {} get_from_volume i:{i} heel:{} trim:{} level:{level} res_volume:{} trg_volume:{volume}, index:{}", parent, query[0], query[1], result[0], volume_index - query.len());
+            if delta.abs() <= epsilon || i >= 50 || level == next_level {
                 break 'volume_loop;
             }
             level = next_level.min(level_max).max(level_min);
         }
-  //      println!("local_cashe {} get_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
+        //      println!("local_cashe {} get_from_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
+        (level, result)
+    };
+    Ok((level, result))
+}
+
+/// Получение значения из кэша для заданных условий и объема.
+/// На входе параметры без уровня, уровень подбирается к объему.
+/// Уровень должен быть последним ключем и не входить в query.
+pub fn get_from_level(
+    parent: &Dbg,
+    cache: &Cache<f64>,
+    query: &[f64],
+    level: f64,
+    volume_index: usize,
+) -> Result<(f64, Vec<f64>), Error> {
+    let error = Error::new(parent, "get_from_level");
+    /*  println!(
+        "{} get_from_level start, query:{:?} volume:{volume} target_index:{volume_index}",
+        parent, query,
+    );*/
+    let (level_min, level_max) = cache.disp(query.len());
+    let (volume_min, volume_max) = cache.disp(volume_index);
+ //   dbg!(level_min, level_max, volume_min, volume_max);
+    let (level, result) = if level <= level_min {
+        // целевое значение на нижней границе диапазона, сразу берем значение
+        let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
+        query.push(Some(level_min));
+        (
+            volume_min,
+            cache
+                .values_disp(&query)
+                .first()
+                .ok_or(error.err(format!("no result!")))?
+                .to_vec(),
+        )
+    } else if level >= level_max {
+        // целевое значение на верхней границе диапазона, сразу берем значение
+        let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
+        query.push(Some(level_max));
+        (
+            volume_max,
+            cache
+                .values_disp(&query)
+                .first()
+                .ok_or(error.err(format!("no result!")))?
+                .to_vec(),
+        )
+    } else {
+        let mut query: Vec<_> = query.to_vec();
+        query.push(level);
+        let result = cache.get(&query);
+        assert!(result.len() > volume_index);
+        //      println!("local_cashe {} get_from_level result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
     Ok((level, result))

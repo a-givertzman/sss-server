@@ -3,7 +3,7 @@ use crate::{
         Bounds, Curve, ICurve, Position,
         cache::Cache,
         model_cached::{
-            CompartmentBoundCache, CompartmentCacheResult, DisplacementShape, get_volume, local_cache::LocalCache, save
+            CompartmentBoundCache, CompartmentCacheResult, DisplacementShape, get_from_level, get_from_volume, local_cache::LocalCache, save
         },
     },
     kernel::types::{Arc, RwLock},
@@ -230,8 +230,6 @@ impl CompartmentCache {
                 .map_err(|err| error.pass(err))?;
             result.inertia_trans_x = inertia_trans_x;
         }
-        result.level = result.level.max(0.); // Расчетный уровень может быть меньше 0 из-за крена
-                                            // но для оператора это не имеет смысла, обрезаем по 0
         //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
         return Ok(result);
     }    
@@ -251,7 +249,7 @@ impl CompartmentCache {
         );*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
-        let (level, result) = get_volume(
+        let (level, result) = get_from_volume(
             &self.dbg,
             cache,
             &[heel, trim],
@@ -283,15 +281,16 @@ impl CompartmentCache {
             "{} get start, heel:{heel} trim:{trim} volume:{volume}",
             self.dbg
         );*/
-        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
-        let query = [heel, trim, level];
-        let result = LocalCache::get(self, &query)
-            .map_err(|err| error.pass_with("LocalCache::get(self, &query)", err))?;
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let query = [heel, trim];
+        let (volume, result) = get_from_level(&self.dbg, cache, &query, level, 3)
+            .map_err(|err| error.pass_with("get_from_level", err))?;
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;        
         Ok(CompartmentCacheResult {
             heel,
             trim,
             level,
-            volume: result[0] * coeff,
+            volume: volume * coeff,
             volume_center: Position::new(result[1], result[2], result[3]),
             inertia_trans_x: result[4] * coeff,
             inertia_long_y: result[5] * coeff,

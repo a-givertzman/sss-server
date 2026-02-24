@@ -3,7 +3,7 @@ use crate::{
         Position,
         cache::Cache,
         model_cached::{
-            DisplacementCacheResult, DisplacementShape, get_volume, local_cache::LocalCache, save,
+            DisplacementCacheResult, DisplacementShape, get_from_volume, local_cache::LocalCache, save,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -82,7 +82,7 @@ impl DisplacementCache {
     ) -> Result<DisplacementCacheResult, Error> {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
-        let (draught, result) = get_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
+        let (draught, result) = get_from_volume(&self.dbg, cache, &[heel, trim], volume, 3, epsilon)
             .map_err(|err| error.pass(err))?;
         Ok(DisplacementCacheResult {
             heel,
