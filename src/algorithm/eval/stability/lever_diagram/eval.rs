@@ -94,11 +94,10 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     )
                     .map_err(|err| error.pass_with("model.compute_dso", err))?;
                 //
-                let process_dso = |
-                    dso: Vec<(f64, f64)>, 
-                    entry_angle: Option<Vec<(f64, f64)>>, 
-                    flooding_angle: Option<Vec<(f64, f64)>>,
-                | -> Result<LeverDiagramCtx, Error> {
+                let process_dso = |dso: Vec<(f64, f64)>,
+                                   entry_angle: Option<Vec<(f64, f64)>>,
+                                   flooding_angle: Option<Vec<(f64, f64)>>|
+                 -> Result<LeverDiagramCtx, Error> {
                     let dso_curve = Curve::new_linear(&dso)
                         .map_err(|e| error.pass_with("calculate curve", e))?;
                     // нахождение максимума диаграммы
@@ -183,8 +182,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                             .map_err(|err| error.pass(err))
                     };
                     let entry_angle = if let Some(angle) = entry_angle {
-                        find_zero_angle(angle)
-                            .map_err(|err| error.pass_with("entry_angle", err))?
+                        find_zero_angle(angle).map_err(|err| error.pass_with("entry_angle", err))?
                     } else {
                         0. // для записи в базу не считаем
                     };
@@ -193,7 +191,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                             .map_err(|err| error.pass_with("flooding_angle", err))?
                     } else {
                         0. // для записи в базу не считаем
-                    };                    
+                    };
                     let result = LeverDiagramCtx {
                         dso,
                         dso_curve,
@@ -205,23 +203,16 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     };
                     Ok(result)
                 };
-                // Диаграмма для записи результата в базу данных.
+                // Исходная диаграмма для записи результата в базу данных.
                 let result = process_dso(dso.clone(), None, None)
                     .map_err(|err| error.pass_with("process_dso for db", err))?;
-                let diagram = result.dso
+                let raw_diagram = result
+                    .dso
                     .iter()
                     .filter(|(a, _)| a.fract().abs() < 0.001)
                     .zip(result.ddo.iter())
                     .map(|((a1, v1), (_, v2))| (*a1, *v1, *v2))
                     .collect::<Vec<_>>();
-                send_stability_diagram(
-                        &self.dbg,
-                        &ship_id,
-                        &project_id,
-                        &self.api_client,
-                        diagram,
-                    )
-                    .map_err(|err| error.pass(err))?;
                 // Диаграмма для дальнейшего расчета.
                 // Проверяем нулевое плечо если оно положительно переворачиваем его
                 // чтобы в расчете учитывался худший случай крена.
@@ -248,10 +239,27 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                 };
                 let result = process_dso(dso.clone(), Some(entry_angle), Some(flooding_angle))
                     .map_err(|err| error.pass_with("process_dso for db", err))?;
+                let transformed_diagram = result
+                    .dso
+                    .iter()
+                    .filter(|(a, _)| a.fract().abs() < 0.001)
+                    .zip(result.ddo.iter())
+                    .map(|((a1, v1), (_, v2))| (*a1, *v1, *v2))
+                    .collect::<Vec<_>>();
+                send_stability_diagram(
+                    &self.dbg,
+                    &ship_id,
+                    &project_id,
+                    &self.api_client,
+                    raw_diagram,
+                    transformed_diagram,
+                )
+                .map_err(|err| error.pass(err))?;
+
                 ctx.write_params(ParameterID::Roll, heel);
                 ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, result.entry_angle);
                 ctx.write_params(ParameterID::AngleOfDownFlooding, result.flooding_angle);
-    /*            log::info!(
+                /*            log::info!(
                     "LeverDiagram theta_max:{}\n max_angles [angle l]:{}\n entry_angle:{}\n flooding_angle:{}\n diagram [angle dso ddo]:{}\n",
                     result.theta_max,
                     result
@@ -289,17 +297,26 @@ pub fn send_stability_diagram(
     ship_id: &str,
     project_id: &str,
     api_client: &ApiClient,
-    data: Vec<(f64, f64, f64)>,
+    raw_diagram: Vec<(f64, f64, f64)>,
+    transformed_diagram: Vec<(f64, f64, f64)>,
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_stability_diagram");
     log::info!("send_stability_diagram begin");
-    if data.is_empty() {
-        return Err(error.err("empty data!"));
+    if raw_diagram.is_empty() {
+        return Err(error.err("empty raw_diagram!"));
     }
+    if raw_diagram.len() != transformed_diagram.len() {
+        return Err(error.err("raw_diagram.len() != transformed_diagram.len(!"));
+    }
+    let data: Vec<_> = raw_diagram
+        .iter()
+        .zip(transformed_diagram.iter())
+        .map(|(v1, v2)| (v1.0, v1.1, v1.2, v2.1, v2.2))
+        .collect();
     let values_list: Vec<String> = data
         .iter()
-        .map(|(angle, value_dso, value_ddo)| {
-            format!("({ship_id}, {project_id}, {angle}, {value_dso}, {value_ddo})")
+        .map(|(angle, raw_dso, raw_ddo, transformed_dso, transformed_ddo)| {
+            format!("({ship_id}, {project_id}, {angle}, {raw_dso}, {raw_ddo}, {transformed_dso}, {transformed_ddo})")
         })
         .collect();
     let full_sql = format!(
@@ -307,7 +324,7 @@ pub fn send_stability_diagram(
         DELETE FROM stability_diagram \
         WHERE ship_id = {ship_id} AND project_id IS NOT DISTINCT FROM {project_id}; \
         INSERT INTO stability_diagram \
-          (ship_id, project_id, angle, value_dso, value_ddo) \
+          (ship_id, project_id, angle, raw_value_dso, raw_value_ddo, transformed_value_dso, transformed_value_ddo) \
         VALUES \
           {values_str}; \
         END $$;",
