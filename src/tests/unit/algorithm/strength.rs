@@ -27,7 +27,7 @@ use crate::prelude::{Context, Initial, InitialCtx};
 #[test]
 fn strength() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()
-        .filter(LogLevel::Info)
+        .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)

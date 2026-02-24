@@ -337,7 +337,7 @@ impl ModelCached {
             let shape = shape.clone();
             let task_results = task_results.clone();
             let thread_name = format!("{}.reload_shapes displacement_shape {name}", &self.dbg);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
@@ -356,7 +356,7 @@ impl ModelCached {
             let shape = self.windage_shape.clone();
             let task_results = task_results.clone();
             let thread_name = format!("{}.reload_shapes windage_shape", &self.dbg);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
@@ -370,7 +370,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+         //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -657,7 +657,7 @@ impl ModelCached {
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
             let thread_name = format!("{}.balance_strength gaseous code:{}", &self.dbg, cargo.code);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
@@ -697,7 +697,7 @@ impl ModelCached {
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
             let thread_name = format!("{}.balance_strength bulk code:{}", &self.dbg, cargo.code);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let volume_bounded = if let Some(compartment) =
@@ -733,7 +733,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -792,7 +792,7 @@ impl ModelCached {
                     let results_ = liquid_results.clone();
                     let thread_name =
                         format!("{}.balance_strength liquid code:{}", &self.dbg, cargo.code);
-                    log::trace!("Starting thread {thread_name}");
+               //     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let volume_bounded = compartment_bounded
@@ -825,7 +825,7 @@ impl ModelCached {
                 let results_ = hull_results.clone();
                 let displacement_bounded = displacement_bounded.clone();
                 let thread_name = format!("{}.balance_strength displacement_bounded", &self.dbg);
-                log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
                         results_.push(displacement_bounded.read().get(trim, draught));
@@ -842,7 +842,7 @@ impl ModelCached {
                     Err(err) => errors.push(err),
                 };
                 for task in tasks {
-                    log::trace!("join thread {}", task.name());
+               //     log::trace!("join thread {}", task.name());
                     if let Err(err) = task.join() {
                         let error = error.pass_with("task join", err.to_string());
                         log::error!("{}", error);
@@ -1567,7 +1567,7 @@ impl ModelCached {
             let epsilon = epsilon;
             let results_ = task_results.clone();
             let thread_name = format!("{}.process_bulk code:{code}", &self.dbg);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             if let Some(hold_compartment) = self.hold_compartments.get(&code) {
                 let hold_compartment = Arc::clone(hold_compartment);
                 let handle = scheduler
@@ -1629,7 +1629,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1694,7 +1694,7 @@ impl ModelCached {
                     let error_ = error.clone();
                     let compartment = compartment.clone();
                     let thread_name = format!("{}.process_liquid code:{}", &self.dbg, code);
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1743,7 +1743,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+         //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1823,7 +1823,7 @@ impl ModelCached {
                     let compartment = compartment.clone();
                     let thread_name =
                         format!("{}.moment_liquid_dso_abs_moment code:{}", &self.dbg, code);
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1862,7 +1862,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+         //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1927,7 +1927,7 @@ impl ModelCached {
                         "{}.moment_liquid_dso_surface_moment code:{}",
                         &self.dbg, code
                     );
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1962,7 +1962,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -2014,7 +2014,7 @@ impl ModelCached {
                     let _error = error.clone();
                     let thread_name =
                         format!("{}.calc_damaged_compartments code:{}", &self.dbg, code);
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             task_results.push((code, compartment.read().get(heel, trim, draught)));
@@ -2044,7 +2044,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
