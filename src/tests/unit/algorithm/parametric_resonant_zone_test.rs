@@ -1,11 +1,7 @@
 use crate::{
     algorithm::{
         context::context_access::ContextRead,
-        entities::Bounds,
-        eval::{parameters::ParameterID, seakeeping::parametric_resonant_zone::{
-                parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
-                parametric_resonant_zone_eval::ParametricResonantZoneEval,
-            }},
+        entities::Bounds, eval::{parameters::ParameterID, seakeeping::eval::parametric_resonant_zone::{parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_eval::ParametricResonantZoneEval}},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextParamsWrite, InitialCtx},
@@ -60,7 +56,7 @@ fn parametric_resonant_zone() {
             )),
         };
         ctx.ctx.write_params(ParameterID::RollPeriod, 1./roll_frequency);
-        let result = ParametricResonantZoneEval::new("Test", ctx).eval(());
+        let result = ParametricResonantZoneEval::new(ctx).eval(());
         match result {
             Ok(ctx) => {
                 let left_side_result = ContextRead::<ParametricResonantZoneCtx>::read(&ctx)

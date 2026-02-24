@@ -1,20 +1,17 @@
-use core::f64;
-
-use crate::algorithm::eval::parameters::ParameterID;
-use crate::algorithm::eval::seakeeping::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx;
-use crate::prelude::{ContextParamsRead, ContextWrite};
-use crate::kernel::{
+use crate::{
+    algorithm::eval::seakeeping::eval::{
+        parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
+        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
+    },
+    kernel::{
         Eval, 
         types::eval_result::EvalResult
-    };
-use sal_core::{
-    dbg::Dbg, 
-    error::Error
+    }, 
+    prelude::{ContextRead, ContextWrite}
 };
 ///
 /// Расчет [параметрической зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub struct ParametricResonantZoneEval {
-    dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -22,10 +19,8 @@ pub struct ParametricResonantZoneEval {
 impl ParametricResonantZoneEval {
     ///
     /// Новый экземпляр [ParametricResonantZoneEval]
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,) -> Self {
-        let dbg = Dbg::new(parent, "ParametricResonantZoneEval");
+    pub fn new(ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
         Self {
-            dbg,
             ctx: Box::new(ctx),
         }
     }
@@ -34,10 +29,9 @@ impl ParametricResonantZoneEval {
 //
 impl Eval<(), EvalResult> for ParametricResonantZoneEval {
     fn eval(&self, _: ()) -> EvalResult {
-        let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let roll_frequency = 1.0/ctx.read_params(ParameterID::RollPeriod).max(f64::MIN);
+                let roll_frequency = ContextRead::<RollingFrequencyCtx>::read(&ctx).roll_frequency.clone();
                 let left_side = 1.9 * roll_frequency;
                 let right_side = 2.1 * roll_frequency;
                 let result = ParametricResonantZoneCtx {
@@ -46,16 +40,7 @@ impl Eval<(), EvalResult> for ParametricResonantZoneEval {
                 };
                 ctx.write(result)
             }
-            Err(err) => Err(error.pass_with("Read context error", err)),
+            Err(err) => Err(err),
         }
-    }
-}
-//
-//
-impl std::fmt::Debug for ParametricResonantZoneEval {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ParametricResonantZoneEval")
-            .field("dbg", &self.dbg)
-            .finish()
     }
 }

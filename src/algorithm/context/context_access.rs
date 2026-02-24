@@ -6,15 +6,8 @@ use crate::algorithm::{
         icing_timber::ctx::IcingTimberCtx,
         icing_timber_bound::ctx::IcingTimberBoundCtx,
         parameters::*,
-        seakeeping::{
-            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx,
-            impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx,
-            main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx,
-            main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx,
-            move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx,
-            parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
-            parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx,
-            period_excitement::period_excitement_ctx::PeriodExcitementCtx,
+        seakeeping::eval::{
+            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, hitting_zones::hitting_point_ctx::HittingZonesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
         },
         stability::*,
         strength::*,
@@ -403,6 +396,30 @@ impl ContextWrite<RollingPeriodCtx> for Context {
 impl ContextRead<RollingPeriodCtx> for Context {
     fn read(&self) -> RollingPeriodCtx {
         self.roll_period.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<RollingFrequencyCtx> for Context {
+    fn write(mut self, value: RollingFrequencyCtx) -> Result<Self, Error> {
+        self.roll_frequency = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<RollingFrequencyCtx> for Context {
+    fn read(&self) -> RollingFrequencyCtx {
+        self.roll_frequency.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<HittingZonesCtx> for Context {
+    fn write(mut self, value: HittingZonesCtx) -> Result<Self, Error> {
+        self.hitiing_zones = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<HittingZonesCtx> for Context {
+    fn read(&self) -> HittingZonesCtx {
+        self.hitiing_zones.clone().unwrap()
     }
 }
 //

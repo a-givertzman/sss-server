@@ -1,16 +1,7 @@
 use crate::{
     algorithm::{
         context::context_access::ContextRead,
-        entities::Bounds,
-        eval::{
-            seakeeping::{
-                impacts_high_waves::{
-                    impacts_high_waves_ctx::ImpactsHighWavesCtx,
-                    impacts_high_waves_eval::ImpactsHighWavesEval,
-                },
-                period_excitement::period_excitement_ctx::PeriodExcitementCtx,
-            },
-        },
+        entities::Bounds, eval::seakeeping::eval::{impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
@@ -103,7 +94,7 @@ fn impacts_high_waves() {
                 period_excitement: *period_excitement,
             })
             .unwrap();
-        let result = ImpactsHighWavesEval::new("Test", ctx).eval(());
+        let result = ImpactsHighWavesEval::new(ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ImpactsHighWavesCtx>::read(&ctx)

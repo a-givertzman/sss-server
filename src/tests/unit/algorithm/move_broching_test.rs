@@ -2,12 +2,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead,
         entities::{Bounds, data::Voyage},
-        eval::{
-            seakeeping::move_broching_filter::{
-                move_broching_filter_ctx::MoveBrochingFilterCtx,
-                move_broching_filter_eval::MoveBrochingFilterEval,
-            },
-        },
+        eval::seakeeping::eval::move_broching_filter::{move_broching_filter_ctx::MoveBrochingFilterCtx, move_broching_filter_eval::MoveBrochingFilterEval},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, InitialCtx},
@@ -89,7 +84,7 @@ fn move_broching_filter() {
         let ctx = MocEval {
             ctx: Context::new(initial),
         };
-        let result = MoveBrochingFilterEval::new("Test", ctx).eval(());
+        let result = MoveBrochingFilterEval::new(ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx)

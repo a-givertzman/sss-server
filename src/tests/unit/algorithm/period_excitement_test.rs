@@ -1,11 +1,6 @@
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, entities::Bounds, eval::{
-            seakeeping::period_excitement::{
-                period_excitement_ctx::PeriodExcitementCtx,
-                period_excitement_eval::PeriodExcitementEval,
-            },
-        }
+        context::context_access::ContextRead, entities::Bounds, eval::seakeeping::eval::period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, InitialCtx},
@@ -62,7 +57,7 @@ fn period_excitement() {
         let ctx = MocEval {
             ctx: Context::new(initial),
         };
-        let result = PeriodExcitementEval::new("Test", ctx).eval(());
+        let result = PeriodExcitementEval::new(ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<PeriodExcitementCtx>::read(&ctx)
