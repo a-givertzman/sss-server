@@ -283,14 +283,14 @@ impl CompartmentCache {
         );*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let query = [heel, trim];
-        let (volume, result) = get_from_level(&self.dbg, cache, &query, level, 3)
+        let (level, result) = get_from_level(&self.dbg, cache, &query, level, 3)
             .map_err(|err| error.pass_with("get_from_level", err))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;        
         Ok(CompartmentCacheResult {
             heel,
             trim,
             level,
-            volume: volume * coeff,
+            volume: result[0] * coeff,
             volume_center: Position::new(result[1], result[2], result[3]),
             inertia_trans_x: result[4] * coeff,
             inertia_long_y: result[5] * coeff,

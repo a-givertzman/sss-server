@@ -113,7 +113,7 @@ pub fn get_from_volume(
     );*/
     let (level_min, level_max) = cache.disp(query.len());
     let (volume_min, volume_max) = cache.disp(volume_index);
-    let (level, result) = if volume <= volume_min {
+    let (level, mut result) = if volume <= volume_min {
         // целевое значение на нижней границе диапазона, сразу берем значение
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_min));
@@ -165,7 +165,9 @@ pub fn get_from_volume(
         //      println!("local_cashe {} get_from_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
-    Ok((level, result))
+    result[0] = result[0].max(0.); // при крене/дифференте объем и уровень могут быть отрицательными для заданного уровня
+                                    // но для расчета это не имеет смысла, обнуляем в таком случае
+    Ok((level.max(0.), result))
 }
 
 /// Получение значения из кэша для заданных условий и объема.
@@ -186,7 +188,7 @@ pub fn get_from_level(
     let (level_min, level_max) = cache.disp(query.len());
     let (volume_min, volume_max) = cache.disp(volume_index);
  //   dbg!(level_min, level_max, volume_min, volume_max);
-    let (level, result) = if level <= level_min {
+    let (level, mut result) = if level <= level_min {
         // целевое значение на нижней границе диапазона, сразу берем значение
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_min));
@@ -218,5 +220,7 @@ pub fn get_from_level(
         //      println!("local_cashe {} get_from_level result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
-    Ok((level, result))
+    result[0] = result[0].max(0.); // при крене/дифференте объем и уровень могут быть отрицательными для заданного уровня
+                                    // но для расчета это не имеет смысла, обнуляем в таком случае
+    Ok((level.max(0.), result))
 }

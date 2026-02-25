@@ -69,9 +69,9 @@ impl DamagedCompartmentCache {
         let error = Error::new(self.dbg(), "get");
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let query = [heel, trim];
-        let (volume, result) = get_from_level(&self.dbg, cache, &query, draught, 3)
+        let (level, result) = get_from_level(&self.dbg, cache, &query, draught, 3)
             .map_err(|err| error.pass_with("get_from_level", err))?;
-        Ok((volume, Position::new(result[1], result[2], result[3])))
+        Ok((result[0], Position::new(result[1], result[2], result[3])))
     }
 }
 //
