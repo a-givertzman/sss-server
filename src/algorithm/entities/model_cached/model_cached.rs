@@ -390,7 +390,7 @@ impl ModelCached {
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(
         &mut self,
-        compartments_volume_max: HashMap<String, f64>,
+        compartments_max: HashMap<String, (f64, f64)>,
         bounds: &Bounds,
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
@@ -403,11 +403,11 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let volume_max = compartments_volume_max
+            let (level_max, volume_max) = compartments_max
                 .get(name)
                 .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
             guard
-                .calc_coeff(*volume_max)
+                .calc_coeff(*volume_max, *level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         /*     TODO - пока не используются, потом будет отдельный расчет

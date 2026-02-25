@@ -103,6 +103,8 @@ pub fn get_from_volume(
     cache: &Cache<f64>,
     query: &[f64],
     volume: f64,
+    level_max: Option<f64>,
+    volume_max: Option<f64>,
     volume_index: usize,
     epsilon: f64,
 ) -> Result<(f64, Vec<f64>), Error> {
@@ -111,36 +113,36 @@ pub fn get_from_volume(
         "{} get_from_volume start, query:{:?} volume:{volume} target_index:{volume_index}",
         parent, query,
     );*/
-    let (level_min, level_max) = cache.disp(query.len());
-    let (volume_min, volume_max) = cache.disp(volume_index);
-    let (level, mut result) = if volume <= volume_min {
+    let volume_max = volume_max
+        .or_else(|| Some(cache.disp(volume_index).1))
+        .ok_or(error.err("no volume_max"))?;
+    let (mut level, mut result) = if volume <= 0. {
         // целевое значение на нижней границе диапазона, сразу берем значение
+        let (level_min, _) = cache.disp(query.len());
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_min));
-        (
-            level_min,
-            cache
-                .values_disp(&query)
-                .first()
-                .ok_or(error.err(format!("no result!")))?
-                .to_vec(),
-        )
+        let result = cache
+            .values_disp(&query)
+            .first()
+            .ok_or(error.err(format!("no result!")))?
+            .to_vec();
+        (0., result)
     } else if volume >= volume_max {
         // целевое значение на верхней границе диапазона, сразу берем значение
+        let (_, level_max) = cache.disp(query.len());
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_max));
-        (
-            level_max,
-            cache
-                .values_disp(&query)
-                .first()
-                .ok_or(error.err(format!("no result!")))?
-                .to_vec(),
-        )
+        let result = cache
+            .values_disp(&query)
+            .first()
+            .ok_or(error.err(format!("no result!")))?
+            .to_vec();
+        (level_max, result)
     } else {
         // ищем значение постепенно приближая объем перебирая уровни заполнения
+        let (level_min, level_max) = cache.disp(query.len());
         let mut level = level_max / 2.;
-        let mut step = level_max / 4.;
+        let mut step = level_max / 5.;
         let mut last_delta_signum = 1.;
         let mut result = Vec::new();
         'volume_loop: for i in 0..=50 {
@@ -160,13 +162,15 @@ pub fn get_from_volume(
             if delta.abs() <= epsilon || i >= 50 || level == next_level {
                 break 'volume_loop;
             }
-            level = next_level.min(level_max).max(level_min);
+            level = next_level;
         }
         //      println!("local_cashe {} get_from_volume result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
         (level, result)
     };
-    result[0] = result[0].max(0.); // при крене/дифференте объем и уровень могут быть отрицательными для заданного уровня
-                                    // но для расчета это не имеет смысла, обнуляем в таком случае
+    result[0] = volume;
+    if let Some(level_max) = level_max {
+        level = level.max(0.).min(level_max);
+    }
     Ok((level.max(0.), result))
 }
 
@@ -178,49 +182,44 @@ pub fn get_from_level(
     cache: &Cache<f64>,
     query: &[f64],
     level: f64,
+    volume_max: Option<f64>,
     volume_index: usize,
-) -> Result<(f64, Vec<f64>), Error> {
+) -> Result<Vec<f64>, Error> {
     let error = Error::new(parent, "get_from_level");
     /*  println!(
         "{} get_from_level start, query:{:?} volume:{volume} target_index:{volume_index}",
         parent, query,
     );*/
+    let volume_max = volume_max
+        .or_else(|| Some(cache.disp(volume_index).1))
+        .ok_or(error.err("no volume_max"))?;
     let (level_min, level_max) = cache.disp(query.len());
-    let (volume_min, volume_max) = cache.disp(volume_index);
- //   dbg!(level_min, level_max, volume_min, volume_max);
-    let (level, mut result) = if level <= level_min {
+    //   dbg!(level_min, level_max, volume_min, volume_max);
+    let mut result = if level <= level_min {
         // целевое значение на нижней границе диапазона, сразу берем значение
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_min));
-        (
-            volume_min,
-            cache
-                .values_disp(&query)
-                .first()
-                .ok_or(error.err(format!("no result!")))?
-                .to_vec(),
-        )
+        cache
+            .values_disp(&query)
+            .first()
+            .ok_or(error.err(format!("no result!")))?
+            .to_vec()
     } else if level >= level_max {
         // целевое значение на верхней границе диапазона, сразу берем значение
         let mut query: Vec<_> = query.iter().map(|&v| Some(v)).collect();
         query.push(Some(level_max));
-        (
-            volume_max,
-            cache
-                .values_disp(&query)
-                .first()
-                .ok_or(error.err(format!("no result!")))?
-                .to_vec(),
-        )
+        cache
+            .values_disp(&query)
+            .first()
+            .ok_or(error.err(format!("no result!")))?
+            .to_vec()
     } else {
         let mut query: Vec<_> = query.to_vec();
         query.push(level);
-        let result = cache.get(&query);
-        assert!(result.len() > volume_index);
-        //      println!("local_cashe {} get_from_level result {:?} level:{level} trg_volume:{volume} res:{:?} ", parent, &query, &result);
-        (level, result)
+        cache.get(&query)
     };
-    result[0] = result[0].max(0.); // при крене/дифференте объем и уровень могут быть отрицательными для заданного уровня
-                                    // но для расчета это не имеет смысла, обнуляем в таком случае
-    Ok((level.max(0.), result))
+    // при крене/дифференте объем и уровень могут быть отрицательными для заданного уровня
+    // но для расчета это не имеет смысла, обнуляем в таком случае
+    result[volume_index] = result[volume_index].max(0.).min(volume_max);
+    Ok(result)
 }
