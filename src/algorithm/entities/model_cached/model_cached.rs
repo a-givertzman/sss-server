@@ -390,7 +390,7 @@ impl ModelCached {
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(
         &mut self,
-        compartments_max: HashMap<String, (f64, f64)>,
+        compartments_max: HashMap<String, (Option<f64>, f64)>,
         bounds: &Bounds,
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");

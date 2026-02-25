@@ -69,11 +69,11 @@ impl CompartmentCache {
         }
     }
     /// Расчет коэффициента проницаемости
-    pub fn calc_coeff(&mut self, volume_max: f64, level_max: f64) -> Result<(), Error> {
+    pub fn calc_coeff(&mut self, volume_max: f64, level_max: Option<f64>) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "calc_coeff");
         let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.disp(3).1;
         self.volume_max = Some(volume_max);
-        self.level_max = Some(level_max);
+        self.level_max = level_max;
         self.coeff = Some(if volume_brutto > 0. {
             volume_max / volume_brutto
         } else {

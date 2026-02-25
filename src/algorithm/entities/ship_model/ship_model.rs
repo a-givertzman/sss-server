@@ -583,7 +583,7 @@ fn compartments_max(
     ship_id: &str,
     project_id: &str,
     api_client: &ApiClient,
-) -> Result<HashMap<String, (f64, f64)>, Error> {
+) -> Result<HashMap<String, (Option<f64>, f64)>, Error> {
     let error = Error::new("ShipModel", "compartments_max");
     let data = MaxDataArray::parse(
         &api_client

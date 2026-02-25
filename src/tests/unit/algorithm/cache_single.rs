@@ -52,7 +52,7 @@ fn cache_single() -> Result<(), Box<dyn std::error::Error>> {
         Arc::clone(&thread_pool),
     );
     cache.rebuild().unwrap();
-    cache.calc_coeff(168.4).unwrap();
+    cache.calc_coeff(168.4, Some(9.65)).unwrap();
     dbg!(cache.get_level(-15.0, 3., 135., 0.000001));
     Ok(())
 }
