@@ -367,7 +367,7 @@ impl ShipModel {
                 return;
             }
             if let Some(curve) = grain_moments.get(&v.code) {
-                v.grain_moment = curve.value(v.level).unwrap_or(0.);
+                v.grain_moment = curve.value(v.level).unwrap_or(0.)/v.stowage_factor;
                 return;
             }
             let error = error.err(format!("grain_moments.get(&v.code), {}", v.code));

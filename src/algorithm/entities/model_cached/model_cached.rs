@@ -1150,7 +1150,7 @@ impl ModelCached {
     ) -> Result<DsoResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "dso");
-        let (mut dso, mut entry_angle, mut flooding_angle) = self
+        let (dso, entry_angle, flooding_angle) = self
             .dso_surface_moment(
                 query,
                 heel,
@@ -1583,6 +1583,7 @@ impl ModelCached {
                             cargo.assignment_id,
                             cargo.assigment_type,
                             cargo.mass,
+                            cargo.stowage_factor,
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
@@ -1614,6 +1615,7 @@ impl ModelCached {
                             cargo.assignment_id,
                             cargo.assigment_type,
                             cargo.mass,
+                            cargo.stowage_factor,
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
