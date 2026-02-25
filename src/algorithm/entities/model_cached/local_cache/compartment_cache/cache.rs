@@ -330,6 +330,10 @@ impl CompartmentCache {
         ))
     }
     //
+    pub fn level_max(&self) -> Option<f64> {
+        self.level_max.clone()
+    }
+    //
     pub fn volume_max(&self) -> Option<f64> {
         self.volume_max.clone()
     }

@@ -212,7 +212,7 @@ pub fn send_bulk_param(
         );
     }
     full_sql += " END$$;";
-    println!("{}", &full_sql);    
+ //   println!("{}", &full_sql);    
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_bulk_param end");
     Ok(())
@@ -242,7 +242,7 @@ pub fn send_liquid_param(
         );
     }
     full_sql += " END$$;";
-    println!("{}", &full_sql);    
+  //  println!("{}", &full_sql);    
     api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_liquid_param end");
     Ok(())
