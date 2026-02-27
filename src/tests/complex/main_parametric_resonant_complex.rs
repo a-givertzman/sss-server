@@ -6,38 +6,15 @@ use crate::{
 mod main_parametric_resonant_complex {
     use crate::{
         algorithm::{
-            context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::{parameters::ParameterID, seakeeping::{
-                apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval,
-                main_resonant_zone::{
-                    main_resonant_zone_ctx::MainResonantZoneCtx,
-                    main_resonant_zone_eval::MainResonantZoneEval,
-                },
-                main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval,
-                parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval,
-                parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval,
-                period_excitement::period_excitement_eval::PeriodExcitementEval,
-            }}
-        }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{Eval, types::Arc}, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::main_parametric_resonant_complex::MocEval
+            context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::{parameters::ParameterID, seakeeping::eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::{main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_eval::MainResonantZoneEval}, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval}}
+        }, kernel::Eval, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::main_parametric_resonant_complex::MocEval
     };
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use sal_core::error::Error;
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     ///
     ///
     static INIT: Once = Once::new();
-    // Mock for ApiClient
-    struct MockApiClient;
-    //
-    impl MockApiClient {
-        fn new() -> Arc<Self> {
-            Arc::new(Self)
-        }
-        // Заглушка для запроса к БД
-        fn fetch(&self, _query: &str) -> Result<Vec<u8>, Error> {
-            Ok(Vec::new())
-        }
-    }
     ///
     /// once called initialisation
     fn init_once() {
@@ -68,23 +45,24 @@ mod main_parametric_resonant_complex {
         test_duration.run().unwrap();
         let test_data = [(1, 30.0, 1.0, 1.0, 1.0)];
         for (step, wave_length, roll_period, vmax, _c) in test_data.iter() {
-            let api_client = MockApiClient::new();
-            let mut initial_data = InitialCtx::new(
+            let mut initial = InitialCtx::new(
                 "0",
                 "Unit-test",
                 Bounds::from_min_max(0., 100., 20).unwrap(),
             );
-            initial_data.course_angle = Some(270.0);
-            initial_data.wave_length = Some(*wave_length);
-            initial_data.voyage = Some(Voyage {
+            initial.voyage = Some(Voyage {
                 density: 1.025,
                 operational_speed: *vmax,
                 icing_type: "none".to_owned(),
                 icing_timber_type: "full".to_owned(),
                 area: Some("sea".to_owned()),
+                course_angle: 270.0,
+                wave_heading_angle: 90.,
+                wave_length: *wave_length,
+                current_speed: 10.,
             });
             let mut ctx = MocEval {
-                ctx: Context::new(initial_data),
+                ctx: Context::new(initial),
             };
             ctx.ctx.write_params(ParameterID::RollPeriod, *roll_period);
             let dbg = "ComplexTest";
@@ -103,10 +81,6 @@ mod main_parametric_resonant_complex {
                         ),
                     ),
                 ),
-                Box::new(move |resonant_zone, zone_id| {
-                    let client = Arc::clone(&api_client);
-                    client.fetch(&ResonantZoneQuery::new(resonant_zone, zone_id).sql())
-                }),
             )
             .eval(());
             match result {

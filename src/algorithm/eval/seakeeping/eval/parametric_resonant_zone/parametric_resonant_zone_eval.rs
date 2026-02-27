@@ -1,3 +1,5 @@
+use sal_core::dbg::Dbg;
+
 use crate::{
     algorithm::eval::seakeeping::eval::{
         parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
@@ -12,6 +14,7 @@ use crate::{
 ///
 /// Расчет [параметрической зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub struct ParametricResonantZoneEval {
+    dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 //
@@ -19,8 +22,10 @@ pub struct ParametricResonantZoneEval {
 impl ParametricResonantZoneEval {
     ///
     /// Новый экземпляр [ParametricResonantZoneEval]
-    pub fn new(ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+        let dbg = Dbg::new(parent, "ParametricResonantZoneEval");
         Self {
+            dbg,
             ctx: Box::new(ctx),
         }
     }

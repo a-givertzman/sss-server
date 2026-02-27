@@ -1,7 +1,7 @@
 use crate::{
     algorithm::{
         context::context_access::ContextRead,
-        entities::Bounds, eval::seakeeping::eval::{impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx},
+        entities::{Bounds, data::Voyage}, eval::seakeeping::eval::{impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
@@ -78,14 +78,24 @@ fn impacts_high_waves() {
         ),
     ];
     for (step, course_angle, period_excitement, target) in test_data.iter() {
-        let mut initial_data = InitialCtx::new(
+        let mut initial = InitialCtx::new(
             "0",
             "Unit-test",
             Bounds::from_min_max(0., 100., 20).unwrap(),
         );
-        initial_data.course_angle = Some(*course_angle);
+        initial.voyage = Some(Voyage {
+            density: 1.025,
+            operational_speed: 12.,
+            icing_type: "none".to_owned(),
+            icing_timber_type: "full".to_owned(),
+            area: Some("sea".to_owned()),
+            course_angle: *course_angle,
+            wave_heading_angle: 90.,
+            wave_length: 10.,
+            current_speed: 10.,
+        });
         let mut ctx = MocEval {
-            ctx: Context::new(initial_data),
+            ctx: Context::new(initial),
         };
         ctx.ctx = ctx
             .ctx
@@ -94,7 +104,7 @@ fn impacts_high_waves() {
                 period_excitement: *period_excitement,
             })
             .unwrap();
-        let result = ImpactsHighWavesEval::new(ctx).eval(());
+        let result = ImpactsHighWavesEval::new("impacts_high_waves", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ImpactsHighWavesCtx>::read(&ctx)

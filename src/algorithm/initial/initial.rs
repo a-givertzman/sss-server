@@ -90,7 +90,11 @@ impl Eval<(), EvalResult> for Initial {
                     operational_speed, \
                     icing_type::TEXT, \
                     icing_timber_type::TEXT, \
-                    water_area AS area
+                    water_area AS area, \
+                    course_angle, \
+                    wave_heading_angle, \
+                    wave_length, \
+                    current_speed
                 FROM             
                     voyage_view            
                 WHERE  

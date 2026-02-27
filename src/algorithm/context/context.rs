@@ -124,8 +124,8 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
- //   /// Результаты расчета по прочности
-  //  pub(super) result_str: Option<ResultStrCtx>,
+    /// Период волнения Tw в секундах в диапазоне от 1.0 до 15.0 секунд, с шагом 0.1 секунда
+    pub(super) period_excitement: Option<PeriodExcitementCtx>,
     /// Основная зона резонансной бортовой качки
     pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
     /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основого резонанса частот

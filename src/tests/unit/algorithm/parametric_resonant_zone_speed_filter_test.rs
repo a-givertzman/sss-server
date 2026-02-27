@@ -11,8 +11,8 @@ use debugging::session::debug_session::{
 use sal_core::error::Error;
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, entities::Bounds, eval::seakeeping::eval::{apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::{parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval}}
-    }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery, kernel::{
+        context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::seakeeping::eval::{apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::{parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval}}
+    }, kernel::{
         Eval, 
         types::{
             Arc, eval_result::EvalResult
@@ -123,16 +123,25 @@ fn parametric_resonant_zone_speed_filter() {
         ),
     ];
     for (step, course_angle, parametric_resonant_zone, apparent_frequencies, target) in test_data.iter() {
-        let api_client = MockApiClient::new();
-        let mut initial_data = InitialCtx::new(
+        let mut initial = InitialCtx::new(
             "0",
             "Unit-test",
             Bounds::from_min_max(0., 100., 20).unwrap(),
         );
-        initial_data.course_angle = Some(*course_angle);
+        initial.voyage = Some(Voyage {
+            density: 1.025,
+            operational_speed: 12.,
+            icing_type: "none".to_owned(),
+            icing_timber_type: "full".to_owned(),
+            area: Some("sea".to_owned()),
+            course_angle: *course_angle,
+            wave_heading_angle: 90.,
+            wave_length: 10.,
+            current_speed: 10.,
+        }); 
         let mut ctx = MocEval {
             ctx: Context::new(
-                initial_data,
+                initial,
             ),
         };
         ctx.ctx = ctx.ctx
@@ -144,6 +153,7 @@ fn parametric_resonant_zone_speed_filter() {
         .write(apparent_frequencies.clone())
         .unwrap();
         let result = ParametricResonantZoneSpeedFilterEval::new(
+            "parametric_resonant_zone_speed_filter",
             ctx
         ).eval(());
         match result {

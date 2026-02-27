@@ -1,3 +1,5 @@
+use sal_core::{dbg::Dbg, error::Error};
+
 use crate::{
     algorithm::eval::seakeeping::{
         entities::{
@@ -20,20 +22,29 @@ use crate::{
     }
 };
 pub struct ParametricResonantZoneSpeedFilterEval {
+    dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
 impl ParametricResonantZoneSpeedFilterEval {
-    pub fn new(ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+        let dbg = Dbg::new(parent, "ParametricResonantZoneSpeedFilterEval");
         Self {
+            dbg,
             ctx: Box::new(ctx),
         }
     }
 }
 impl Eval<(), EvalResult> for ParametricResonantZoneSpeedFilterEval {
     fn eval(&self, _: ()) -> EvalResult {
+        let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let course_angle = ContextReadRef::<InitialCtx>::read_ref(&ctx).course_angle.expect("No `course angle` in initial data");
+                let initial = ContextReadRef::<InitialCtx>::read_ref(&ctx);
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let course_angle = voyage.course_angle;
                 let ParametricResonantZoneCtx { left_side, right_side } = ContextRead::read(&ctx);
                 let param_zone: Vec<(f64, f64)> = RecalculationCourseAngular::to_northeastern(
                     course_angle, 

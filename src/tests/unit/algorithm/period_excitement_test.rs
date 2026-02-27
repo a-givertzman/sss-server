@@ -1,9 +1,14 @@
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, entities::Bounds, eval::seakeeping::eval::period_excitement::{period_excitement_ctx::PeriodExcitementCtx, period_excitement_eval::PeriodExcitementEval}
+        context::context_access::ContextRead,
+        entities::{Bounds, data::Voyage},
+        eval::seakeeping::eval::period_excitement::{
+            period_excitement_ctx::PeriodExcitementCtx,
+            period_excitement_eval::PeriodExcitementEval,
+        },
     },
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{Context, InitialCtx},
+    prelude::{Context, ContextWrite, InitialCtx},
 };
 use debugging::session::debug_session::{DebugSession, LogLevel};
 #[cfg(test)]
@@ -47,17 +52,35 @@ fn period_excitement() {
     ];
     let epsilon = 1e-1;
     for (step, wave_length, period_excitement, target) in test_data.iter() {
-        let mut initial = InitialCtx::new("0", "Unit-test", Bounds::from_min_max(0., 100., 20).unwrap());
-        initial.wave_length = *wave_length;
-        if !period_excitement.is_none() {
-            initial.period_excitement = Some(PeriodExcitementCtx {
-                period_excitement: period_excitement.unwrap(),
-            });
-        }
-        let ctx = MocEval {
+        let mut initial = InitialCtx::new(
+            "0",
+            "Unit-test",
+            Bounds::from_min_max(0., 100., 20).unwrap(),
+        );
+        initial.voyage = Some(Voyage {
+            density: 1.025,
+            operational_speed: 12.,
+            icing_type: "none".to_owned(),
+            icing_timber_type: "full".to_owned(),
+            area: Some("sea".to_owned()),
+            course_angle: 90.,
+            wave_heading_angle: 90.,
+            wave_length: wave_length.unwrap_or(10.),
+            current_speed: 10.,
+        });
+        let mut ctx = MocEval {
             ctx: Context::new(initial),
         };
-        let result = PeriodExcitementEval::new(ctx).eval(());
+        if let Some(period_excitement) = period_excitement {
+            ctx.ctx = ctx
+                .ctx
+                .clone()
+                .write(PeriodExcitementCtx {
+                    period_excitement: *period_excitement,
+                })
+                .unwrap();
+        }
+        let result = PeriodExcitementEval::new("period_excitement_test", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<PeriodExcitementCtx>::read(&ctx)

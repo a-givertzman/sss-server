@@ -3,8 +3,6 @@ use crate::algorithm::entities::Bounds;
 use crate::algorithm::entities::data::stability::ship_type::ShipType;
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, Ship, Voyage};
-use crate::algorithm::eval::seakeeping::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx;
-
 ///
 /// Общая структура для ввода данных. Содержит все данные для расчетов.
 #[derive(Debug, Clone, Default)]
@@ -27,12 +25,6 @@ pub struct InitialCtx {
     pub icing: Option<IcingArray>,
     /// Постоянная нагрузка на судно
     pub load_constant: Option<LoadConstantArray>,
-    /// Период волнения Tw в секундах в диапазоне от 1.0 до 15.0 секунд, с шагом 0.1 секунда
-    pub period_excitement: Option<PeriodExcitementCtx>,
-    /// Курс судна в северо-восточной системе координат
-    pub course_angle: Option<f64>,
-    /// Длина волны λ в метрах в диапазоне от 1.6 до 351.0 метров с шагом 0.1 метр.
-    pub wave_length: Option<f64>,
     /// Переменная нагрузка на судно - сыпучие грузы
     pub bulk: Option<HashMap<usize, LoadBulkData>>,
     /// Переменная нагрузка на судно - жидкие грузы

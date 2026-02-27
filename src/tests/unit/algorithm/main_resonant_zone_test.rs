@@ -61,7 +61,7 @@ fn main_resonant_zone() {
             )),
         };
         ctx.ctx.write_params(ParameterID::RollPeriod, 1./roll_frequency);
-        let result = MainResonantZoneEval::new(ctx).eval(());
+        let result = MainResonantZoneEval::new("main_resonant_zone", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let left_side_result = ContextRead::<MainResonantZoneCtx>::read(&ctx)
