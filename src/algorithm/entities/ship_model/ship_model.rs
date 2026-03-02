@@ -310,13 +310,13 @@ impl ShipModel {
     pub fn static_area_v(&self) -> Result<(f64, Moment), Error> {
         let error = Error::new(&self.dbg, "static_area_v");
         let area = self
-            .horisontal_area_stab
+            .windage_area_stab
             .clone()
-            .ok_or(error.err("no horisontal_area_stab"))?;
+            .ok_or(error.err("no windage_area_stab"))?;
         let moment = self
-            .horisontal_area_shift
+            .windage_area_moment
             .clone()
-            .ok_or(error.err("no horisontal_area_moment"))?;
+            .ok_or(error.err("no windage_area_moment"))?;
         Ok((area, moment))
     }
     ///
