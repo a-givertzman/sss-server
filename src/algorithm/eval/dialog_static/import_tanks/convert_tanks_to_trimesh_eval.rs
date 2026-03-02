@@ -355,58 +355,7 @@ impl ConvertTanksToTrimeshEval {
     }
     ///
     /// Подгон отсеков под модель корабля
-    fn substract_ship_model(&self, ship_model: Vec<TriMesh>, tanks: Vec<TriMesh>) -> Option<TriMesh> {
-        let mut full_tank = None;
-        for tank in tanks {
-            // последняя фигура
-            match self.create_manifold(&tank.vertices().to_vec(), &tank.indices().to_vec()) {
-                Ok(manifold_last) => {
-                    if full_tank.is_none() {
-                        full_tank = Some(manifold_last)
-                    } else {
-                        match compute_boolean(&manifold_last, &full_tank.clone().unwrap(), prelude::OpType::Add) {
-                            Ok(add_res) => {
-                                full_tank = Some(add_res); 
-                                // преобразование рез-та
-                            },
-                            Err(e) => log::error!("Error to subtract figures: {}", e),
-                        }
-                    }
-
-                },
-                Err(e) => log::error!("Error to create Manifold: {}", e),
-            }
-        }
-        for ship_part in ship_model {
-            match self.create_manifold(&ship_part.vertices().to_vec(), &ship_part.indices().to_vec()) {
-                Ok(manifold_ship) => {
-                    match compute_boolean(&full_tank.clone().unwrap(), &manifold_ship.clone(), prelude::OpType::Subtract) {
-                        Ok(add_res) => {
-                            full_tank = Some(add_res); 
-                        },
-                        Err(e) => log::error!("Error to subtract figures: {}", e),
-                    }
-                },
-                Err(e) => log::error!("Error to create Manifold: {}", e),
-            }
-        }
-        match self.manifold_to_trimesh(full_tank.unwrap()) {
-            Ok(mut trimesh) => {
-                let _ = trimesh.set_flags(
-                    TriMeshFlags::MERGE_DUPLICATE_VERTICES |
-                    TriMeshFlags::DELETE_DUPLICATE_TRIANGLES |
-                    TriMeshFlags::DELETE_DEGENERATE_TRIANGLES |
-                    TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES |
-                    TriMeshFlags::FIX_INTERNAL_EDGES |
-                    TriMeshFlags::ORIENTED
-                );
-                let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/1.stl"));
-                if let Err(e) = write_stl(&path, &trimesh) {
-                    log::error!("Failed to write nasal mesh {}", e);
-                }
-            },
-            Err(_) => todo!(),
-        }
+    fn substract_ship_model(&self, ship_model: TriMesh, tanks: Vec<TriMesh>) -> Option<TriMesh> {
         None
     }
 }
@@ -419,13 +368,13 @@ impl Eval<Zg, EvalResult> for ConvertTanksToTrimeshEval {
             Ok(ctx) => {
                 let tanks_3d = ContextRead::<Import3DTanksCtx>::read(&ctx).clone();
                 let model_3d = ContextRead::<ConvertModelToTrimeshCtx>::read(&ctx).clone();
-                let result = self.substract_ship_model(
-                    model_3d.surface_outer_body.unwrap(), 
-                    self.get_vertices_indeces(tanks_3d)
-                );
+                // let result = self.substract_ship_model(
+                //     model_3d.surface_outer_body.unwrap(), 
+                //     self.get_vertices_indeces(tanks_3d)
+                // );
                 ctx.write(
                     ConvertTanksToTrimeshCtx {
-                        compartment_corner_points: result,
+                        compartment_corner_points: None,
                     }
                 )
             }

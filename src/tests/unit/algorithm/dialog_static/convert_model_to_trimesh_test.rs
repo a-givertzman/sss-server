@@ -102,12 +102,12 @@ fn convert_model_to_trimesh() {
     test_duration.run().unwrap();
     let error_percent = 1.0;
     let test_data = [
-        (
-           1, 
-           "unboxes_АРК_2023",
-           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
-           12068.8268,
-        ),
+        // (
+        //    1, 
+        //    "unboxes_АРК_2023",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
+        //    12068.8268,
+        // ),
         // (
         //    2, 
         //    "APK_2023",
@@ -120,12 +120,12 @@ fn convert_model_to_trimesh() {
         //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
         //    21360.5678,
         // ),
-        // (
-        //    4, 
-        //    "katamaran",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
-        //    1986.66182,
-        // ),
+        (
+           4, 
+           "katamaran",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
+           1986.66182,
+        ),
     ];
     for (step, ship_name, path_3d_model, target) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
@@ -139,16 +139,16 @@ fn convert_model_to_trimesh() {
             Ok(ctx) => {
                 match ContextRead::<ConvertModelToTrimeshCtx>::read(&ctx).clone().surface_outer_body.clone() {
                     Some(surface_outer_body) => {
-                        // let mut result = 0.0;
-                        // let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/{}.stl", ship_name));
-                        // if let Err(e) = write_stl(&path, &surface_outer_body) {
-                        //     log::error!("Failed to write nasal mesh {}", e);
-                        // }
-                        // result += volume(&surface_outer_body);
-                        // let current_error = (result - target).abs() / ((result + target) / 2.0);
-                        // log::debug!("Result volume: {:?}", result);
-                        // log::debug!("Target volume: {:?}", target);
-                        // assert!(current_error <= error_percent, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                        let mut result = 0.0;
+                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/{}.stl", ship_name));
+                        if let Err(e) = write_stl(&path, &surface_outer_body) {
+                            log::error!("Failed to write nasal mesh {}", e);
+                        }
+                        result += volume(&surface_outer_body);
+                        let current_error = (result - target).abs() / ((result + target) / 2.0);
+                        log::debug!("Result volume: {:?}", result);
+                        log::debug!("Target volume: {:?}", target);
+                        assert!(current_error <= error_percent, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                     },
                     None => {
                         log::debug!("Error to calculate TriMesh from model: {}", path_3d_model);
