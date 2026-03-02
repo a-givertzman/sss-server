@@ -57,7 +57,6 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 let heel_lever = |v: f64| -> f64 {
                     // Кренящий момент на циркуляции
                     let m_r = 0.2 * (v * v * mass / l_wl) * (moment_shift_z - d / 2.).abs();
-                    dbg!(v, mass, l_wl, moment_shift_z, d);
                     // Плечо кренящего момента на циркуляции
                     let l_r = m_r / mass;
                     log::trace!("Circulation angle v:{v} m_r:{m_r} l_r:{l_r}");
