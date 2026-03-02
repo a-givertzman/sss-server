@@ -1,7 +1,7 @@
 use crate::algorithm::context::context_access::ContextParamsRead;
 use crate::algorithm::eval::criterion::*;
-use crate::algorithm::eval::stability::*;
 use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::stability::*;
 use crate::algorithm::eval::zg::Zg;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
@@ -91,39 +91,51 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                     Err(_) => None,
                 };
                 let target = 16.0f64.min(entry_angle / 2.);
-                let result = if let Some(angle) = angle {
-                    log::info!(
-                        "Criterion Circulation ok, angle:{:.3} target:{:.3}",
-                        angle,
-                        target,
-                    );
-                    ctx.write_params(ParameterID::VesselSpeed, v_0);
-                    CriterionData::new_result(CriterionID::HeelTurning, angle, target)
-                } else {
-                    match calculate_velocity(target) {
-                        Ok(velocity) => {                    
+                match angle {
+                    Some(angle) => {
+                        if angle <= target {
                             log::info!(
-                                "Criterion Circulation no angle, target:{:.3} calculated velocity:{:.3}",
-                                target, velocity,
+                                "Criterion Circulation ok, angle:{:.3} target:{:.3}",
+                                angle,
+                                target,
                             );
-                            ctx.write_params(ParameterID::VesselSpeed, velocity);
-                            CriterionData::new_error(
-                                CriterionID::HeelTurning,
-                                format!(
-                                    "Крен {target} градусов, рекомендуемая скорость {} m/s');",
-                                    velocity,
+                            ctx.write_params(ParameterID::VesselSpeed, v_0);
+                            let result = CirculationCtx {
+                                data: CriterionData::new_result(
+                                    CriterionID::HeelTurning,
+                                    angle,
+                                    target,
                                 ),
-                            )
-                        },
-                        Err(err) => {
-                            let error = error.pass_with("calculate_velocity", err);
-                            log::error!("{error}");
-                            CriterionData::new_error(
-                                CriterionID::HeelTurning,
-                                "Ошибка вычисления рекомендуемой скорости: ".to_owned()
-                                    + &error.to_string(),
-                            )
+                            };
+                            return ctx.write(result);
                         }
+                    }
+                    None => (),
+                }
+                let result = match calculate_velocity(target) {
+                    Ok(velocity) => {
+                        log::info!(
+                            "Criterion Circulation no angle, target:{:.3} calculated velocity:{:.3}",
+                            target,
+                            velocity,
+                        );
+                        ctx.write_params(ParameterID::VesselSpeed, velocity);
+                        CriterionData::new_error(
+                            CriterionID::HeelTurning,
+                            format!(
+                                "Крен {target} градусов, рекомендуемая скорость {} m/s');",
+                                velocity,
+                            ),
+                        )
+                    }
+                    Err(err) => {
+                        let error = error.pass_with("calculate_velocity", err);
+                        log::error!("{error}");
+                        CriterionData::new_error(
+                            CriterionID::HeelTurning,
+                            "Ошибка вычисления рекомендуемой скорости: ".to_owned()
+                                + &error.to_string(),
+                        )
                     }
                 };
                 let result = CirculationCtx { data: result };
