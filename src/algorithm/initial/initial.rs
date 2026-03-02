@@ -87,7 +87,7 @@ impl Eval<(), EvalResult> for Initial {
                 .fetch(&format!(
                     "SELECT             
                     density, \
-                    operational_speed, \
+                    operational_speed*0.514444444 AS operational_speed, \
                     icing_type::TEXT, \
                     icing_timber_type::TEXT, \
                     water_area AS area

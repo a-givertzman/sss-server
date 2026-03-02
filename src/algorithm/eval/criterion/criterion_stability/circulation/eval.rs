@@ -16,6 +16,8 @@ pub struct CirculationEval {
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
+const MS_TO_KNOT: f64 = 1.94384449244;
+//
 //
 impl CirculationEval {
     ///
@@ -56,10 +58,10 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 // Плечо кренящего момента на циркуляции при скорости v, m/s
                 let heel_lever = |v: f64| -> f64 {
                     // Кренящий момент на циркуляции
-                    let m_r = 0.2 * (v * v * mass / l_wl) * (moment_shift_z - d / 2.).abs();
+                    let m_r = 0.2 * (v * v * mass / l_wl) * (moment_shift_z - d / 2.).abs()/9.81;
                     // Плечо кренящего момента на циркуляции
                     let l_r = m_r / mass;
-                    log::trace!("Circulation angle v:{v} m_r:{m_r} l_r:{l_r}");
+                    log::trace!("Circulation speed:{v} mass:{mass} l_wl:{l_wl} moment_shift_z:{moment_shift_z} d:{d} m_r:{m_r} l_r:{l_r}");
                     l_r
                 };
                 // Максимальная скорость при заданном угле крена
@@ -77,15 +79,13 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                         if delta_angle.abs() < 0.001 {
                             break;
                         }
-                        log::trace!(
-                            "Circulation velocity src_angle:{target_angle} current_vel:{current_vel} delta_vel:{delta_vel} delta_angle:{delta_angle}"
-                        );
+                        //log::trace!("Circulation velocity src_angle:{target_angle} current_vel:{current_vel} delta_vel:{delta_vel} delta_angle:{delta_angle}");
                         current_vel += delta_vel * delta_angle.signum();
                         delta_vel /= 2.;
                     }
-                    Ok(current_vel)
+                    Ok(current_vel) //
                 };
-                // Угла крена на циркуляции при скорости v_0, m/s
+                // Угол крена на циркуляции при скорости v_0б м/с
                 let angle = match lever_diagram.angle(heel_lever(v_0)) {
                     Ok(angles) => angles.first().copied(),
                     Err(_) => None,
@@ -99,7 +99,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                                 angle,
                                 target,
                             );
-                            ctx.write_params(ParameterID::VesselSpeed, v_0);
+                            ctx.write_params(ParameterID::VesselSpeed, v_0*MS_TO_KNOT);
                             let result = CirculationCtx {
                                 data: CriterionData::new_result(
                                     CriterionID::HeelTurning,
@@ -114,6 +114,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                 }
                 let result = match calculate_velocity(target) {
                     Ok(velocity) => {
+                        let velocity = velocity*MS_TO_KNOT;
                         log::info!(
                             "Criterion Circulation no angle, target:{:.3} calculated velocity:{:.3}",
                             target,
@@ -123,7 +124,7 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                         CriterionData::new_error(
                             CriterionID::HeelTurning,
                             format!(
-                                "Крен {target} градусов, рекомендуемая скорость {} m/s');",
+                                "Крен {target} градусов, рекомендуемая скорость {} узлы');",
                                 velocity,
                             ),
                         )
