@@ -4,6 +4,7 @@ use crate::algorithm::eval::seakeeping::eval::main_resonant_zone::main_resonant_
 use crate::algorithm::eval::seakeeping::eval::roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
 use crate::kernel::Eval;
 use crate::kernel::types::eval_result::EvalResult;
+use crate::prelude::ContextParamsRead;
 use crate::prelude::ContextRead;
 use crate::prelude::ContextWrite;
 ///
@@ -34,9 +35,7 @@ impl Eval<(), EvalResult> for MainResonantZoneEval {
     fn eval(&self, _: ()) -> EvalResult {
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let roll_frequency = ContextRead::<RollingFrequencyCtx>::read(&ctx)
-                    .roll_frequency
-                    .clone();
+                let roll_frequency = ctx.read_params(crate::algorithm::eval::parameters::ParameterID::RollPeriod);
                 let left_side = 0.7 * roll_frequency;
                 let right_side = 1.3 * roll_frequency;
                 let result = MainResonantZoneCtx {

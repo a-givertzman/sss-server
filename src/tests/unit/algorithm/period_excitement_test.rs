@@ -75,7 +75,8 @@ fn period_excitement() {
             ctx.ctx = ctx
                 .ctx
                 .clone()
-                .write(PeriodExcitementCtx {
+                .write(
+                    PeriodExcitementCtx {
                     period_excitement: *period_excitement,
                 })
                 .unwrap();

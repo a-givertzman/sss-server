@@ -585,6 +585,11 @@ impl ContextWrite<PeriodExcitementCtx> for Context {
         Result::Ok(self)
     }
 }
+impl ContextReadRef<Option<PeriodExcitementCtx>> for Context {
+    fn read_ref(&self) -> &Option<PeriodExcitementCtx> {
+        &self.period_exctiment
+    }
+}
 impl ContextRead<PeriodExcitementCtx> for Context {
     fn read(&self) -> PeriodExcitementCtx {
         self.period_exctiment.clone().unwrap()
