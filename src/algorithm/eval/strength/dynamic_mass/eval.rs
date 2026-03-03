@@ -102,74 +102,24 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                                 .fold(0., |s, v| s + v.mass(b).unwrap_or(0.)),
                         );
                     }
-                    let add_to = |src: &mut Vec<f64>, values: &Vec<f64>| -> Result<(), Error> {
-                        src.add_vec(values)
-                            .map_err(|err| error.pass_with("vec_ballast.add", err))?;
-                        Ok(())
-                    };
-                    let mut add_by_type =
-                        |assigment_type: AssignmentType, values: &Vec<f64>| -> Result<(), Error> {
-                            match assigment_type {
-                                AssignmentType::Ballast => add_to(&mut vec_ballast, values),
-                                AssignmentType::Stores => add_to(&mut vec_store, values),
-                                AssignmentType::CargoLoad => add_to(&mut vec_cargo, values),
-                                AssignmentType::Unspecified => Ok(()),
-                            }
-                        };
-                    /*        let mut process_by_type =
-                    |values: &Vec<f64>, assigment_type: AssignmentType| match assigment_type {
-                        AssignmentType::Ballast => vec_ballast
-                            .add_vec(&values)
-                            .map_err(|err| error.pass_with("vec_ballast.add", err)),
-                        AssignmentType::Stores => vec_store
-                            .add_vec(&values)
-                            .map_err(|err| error.pass_with("vec_store.add", err)),
-                        AssignmentType::CargoLoad => vec_cargo
-                            .add_vec(&values)
-                            .map_err(|err| error.pass_with("vec_cargo.add", err)),
-                        AssignmentType::Unspecified => Ok(()),
-                    };*/
                     let strength_balance: StrengthBalanceCtx = ctx.read();
-
-                    /*      let gaseous = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
-                        .gaseous
-                        .as_ref()
-                        .ok_or(error.err("Read gaseous error: no data!"))?
-                        .iter()
-                        .filter(|(_, v)| v.mass > 0.)
-                        .map(|(_, v)| (v.code.clone(), v.mass))
-                        .collect::<HashMap<_, _>>();
-                    let bulk = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
-                        .bulk
-                        .as_ref()
-                        .ok_or(error.err("Read bulk error: no data!"))?
-                        .iter()
-                        .filter(|(_, v)| v.mass > 0.)
-                        .map(|(_, v)| (v.code.clone(), v.mass))
-                        .collect::<HashMap<_, _>>();
-                    let liquid = <dyn ContextReadRef<InitialCtx>>::read_ref(&ctx)
-                        .liquid
-                        .as_ref()
-                        .ok_or(error.err("Read bulk error: no data!"))?
-                        .iter()
-                        .filter(|(_, v)| v.mass > 0.)
-                        .map(|(_, v)| (v.code.clone(), v.mass))
-                        .collect::<HashMap<_, _>>();*/
-                    for v in strength_balance.gaseous {
-                        //        println!("gaseous {} mass:{} vec_sum:{}", v.code, gaseous.get(&v.code).unwrap(), v.mass_values.iter().sum::<f64>());
-                        add_by_type(v.assigment_type, &v.mass_values)
-                            .map_err(|err| error.pass_with("gaseous", err))?;
-                    }
-                    for v in strength_balance.bulk {
-                        //       println!("bulk {} vec_sum:{}", v.code, v.mass_values.iter().sum::<f64>());
-                        //       v.mass_values.iter().for_each(|b| print!("{:.3} ", b));
-                        add_by_type(v.assigment_type, &v.mass_values)
-                            .map_err(|err| error.pass_with("bulk", err))?;
-                    }
-                    for v in strength_balance.liquid {
-                        //        println!("liquid {} mass:{} vec_sum:{}", v.code, liquid.get(&v.code).unwrap(), v.mass_values.iter().sum::<f64>());
-                        add_by_type(v.assigment_type, &v.mass_values)
-                            .map_err(|err| error.pass_with("liquid", err))?;
+                    let mut bounded_cargo = Vec::new();
+                    bounded_cargo.append(&mut strength_balance.gaseous.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
+                    bounded_cargo.append(&mut strength_balance.bulk.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
+                    bounded_cargo.append(&mut strength_balance.liquid.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
+                    for (assigment_type, values) in bounded_cargo {
+                        match assigment_type {
+                            AssignmentType::Ballast => vec_ballast
+                                .add_vec(&values)
+                                .map_err(|err| error.pass_with("vec_ballast.add", err))?,
+                            AssignmentType::Stores => vec_store
+                                .add_vec(&values)
+                                .map_err(|err| error.pass_with("vec_store.add", err))?,
+                            AssignmentType::CargoLoad => vec_cargo
+                                .add_vec(&values)
+                                .map_err(|err| error.pass_with("vec_cargo.add", err))?,
+                            AssignmentType::Unspecified => (),
+                        }
                     }
                     let mut mass_values = vec_hull.clone();
                     mass_values
