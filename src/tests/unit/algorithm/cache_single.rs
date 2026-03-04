@@ -34,7 +34,7 @@ fn cache_single() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Conf::new(&dbg, conf);
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));
     let cache_dir: PathBuf = "src/tests/unit/algorithm/cache/assets".into();
-    let model_dir: PathBuf = "src/assets/model/sofia/compartments/201.stl".into();
+    let model_dir: PathBuf = "assets/model/sofia/compartments/201.stl".into();
     let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
         &dbg, model_dir, None, 1000.,
     )));

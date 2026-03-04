@@ -46,8 +46,8 @@ fn calculated_windage_area_sofia() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
     let dbg = Dbg::new("ShipModel", "calculated_windage_area_sofia");
-    let model_path = "src/assets/model/sofia/hill.stl";
-    let additionals_path = "src/assets/model/sofia/additionals/";
+    let model_path = "assets/model/sofia/hill.stl";
+    let additionals_path = "assets/model/sofia/additionals/";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(65.250);
     let mut shape = AreaShape::new_uninit(
