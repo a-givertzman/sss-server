@@ -34,12 +34,21 @@ impl Eval<(), EvalResult> for LoadLineEval {
         match self.ctx.eval(()) {
             Ok(ctx) => {
                 let initial: &InitialCtx = ctx.read_ref();
+                let ship_parameters = initial.ship_parameters.as_ref().unwrap();
+                let delta_d = *ship_parameters
+                    .get("Allowance for fresh water for freeboard")
+                    .ok_or(error.err("Allowance for fresh water for freeboard in ship_parameters"))?;
+                let voyage = initial
+                    .voyage
+                    .as_ref()
+                    .ok_or(error.err("voyage error: no data!"))?;
+                let water_density = voyage.density;
                 let data = initial.load_line.as_ref().unwrap();
                 let mut result = Vec::new();
                 let draught = Draught::new(&self.dbg, &ctx).map_err(|err| error.pass(err))?;
                 for v in data.iter() {
                     let z_fix = draught.value(&v.pos);
-                    let z_target = v.pos.z();
+                    let z_target = v.pos.z() + delta_d*(1025.0 - water_density*1000.)/25.0;
                     log::info!(
                         "Criterion LoadLine point:{} z_fix:{:.3} z_target:{:.3}",
                         v.pos.print(),
