@@ -2,7 +2,7 @@ use crate::{
     algorithm::entities::{
         Position,
         cache::Cache,
-        model_cached::{DisplacementShape, local_cache::LocalCache, save},
+        model_cached::{DisplacementShape, get_from_level, local_cache::LocalCache, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -67,9 +67,10 @@ impl DamagedCompartmentCache {
     /// Return (volume, center of volume)
     pub fn get(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, Position), Error> {
         let error = Error::new(self.dbg(), "get");
-        let query = [heel, trim, draught];
-        let result = LocalCache::get(self, &query)
-            .map_err(|err| error.pass_with(" LocalCache::get(self, &query)", err))?;
+        let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
+        let query = [heel, trim];
+        let result = get_from_level(&self.dbg, cache, &query, draught, None, 3)
+            .map_err(|err| error.pass_with("get_from_level", err))?;
         Ok((result[0], Position::new(result[1], result[2], result[3])))
     }
 }
@@ -125,7 +126,7 @@ impl LocalCache for DamagedCompartmentCache {
     fn cache(&self) -> Option<&Cache<f64>> {
         self.cache.as_ref()
     }
-    
+
     fn set_cache(&mut self, cache: Cache<f64>) {
         self.cache = Some(cache);
     }

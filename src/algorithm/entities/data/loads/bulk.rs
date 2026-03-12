@@ -49,6 +49,11 @@ impl LoadBulkData {
                 return None;
             }
         };
+        let stowage_factor = if let Some(stowage_factor) = self.stowage_factor {
+            stowage_factor
+        } else {
+            self.mass / volume
+        };
         Some(BulkData {
             assignment_id:  self.assignment_id,
             assigment_type: self.assigment_type,
@@ -56,6 +61,7 @@ impl LoadBulkData {
             code: self.code.clone(),
             mass: self.mass,            
             volume,
+            stowage_factor,
             shiftable: self.shiftable,
         })
     }

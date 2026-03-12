@@ -115,7 +115,7 @@ impl Eval<Zg, EvalResult> for WindageEval {
                     av, xv, zv
                 ); 
                 log::trace!("\t Wind av_cs_dmin:{av_cs_dmin} mv_x_cs_dmin:{mv_x_cs_dmin} mv_z_cs_dmin:{mv_z_cs_dmin}
-                    av_ds:{av_ds} mv_x_ds:{mv_x_ds} mv_z_ds:{mv_z_ds}
+                    delta_av:{delta_av} av_ds:{av_ds} mv_x_ds:{mv_x_ds} mv_z_ds:{mv_z_ds}
                     av_dmin:{av_dmin} mv_x_dmin:{mv_x_dmin} mv_z_dmin:{mv_z_dmin}
                     av:{av} mv_x:{mv_x} mv_z:{mv_z} zv_bp:{zv_bp}");
                 ctx.write(result)

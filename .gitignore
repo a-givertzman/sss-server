@@ -32,6 +32,6 @@ log*.*
 desktop.ini
 
 # too heavy
-src/assets/model/sofia/additionals/*
+assets/model/sofia/additionals/*
 src/algorithm/entities/model_cached/test/sofia/*
 

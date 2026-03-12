@@ -13,7 +13,7 @@ use crate::algorithm::entities::model_cached::ModelCached;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMoment;
 use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
-use crate::algorithm::entities::ship_model::volume_max::VolumeDataArray;
+use crate::algorithm::entities::ship_model::volume_max::MaxDataArray;
 use crate::algorithm::entities::ship_model::*;
 use crate::algorithm::entities::{Bound, Bounds};
 use crate::algorithm::eval::strength::StrengthBalanceCtx;
@@ -117,12 +117,12 @@ impl ShipModel {
         );
         // TODO переделать, пока не понятно в какой момент должны читаться объемы
         // возможно их надо пересчитывать каждый расчет
-        let max_compartment_volume = max_compartment_volume(
+        let compartments_max = compartments_max(
             &self.ship_id,
             &self.project_id,
             &self.api_client,
         )
-        .map_err(|err| error.pass_with("max_compartment_volume", err))?;
+        .map_err(|err| error.pass_with("compartments_max", err))?;
         let bounds = get_physical_bounds(
             &self.ship_id, 
             &self.project_id, 
@@ -196,7 +196,7 @@ impl ShipModel {
         self.horisontal_area_shift = Some(horisontal_area_moment.to_pos(horisontal_area_stab));
         self.bounds = Some(bounds.clone());
         self.model_cached
-            .init(max_compartment_volume, &bounds)
+            .init(compartments_max, &bounds)
             .map_err(|err| Error::new(&self.dbg, "init").pass(err))?;
         let windage = self
             .model_cached
@@ -310,13 +310,13 @@ impl ShipModel {
     pub fn static_area_v(&self) -> Result<(f64, Moment), Error> {
         let error = Error::new(&self.dbg, "static_area_v");
         let area = self
-            .horisontal_area_stab
+            .windage_area_stab
             .clone()
-            .ok_or(error.err("no horisontal_area_stab"))?;
+            .ok_or(error.err("no windage_area_stab"))?;
         let moment = self
-            .horisontal_area_shift
+            .windage_area_moment
             .clone()
-            .ok_or(error.err("no horisontal_area_moment"))?;
+            .ok_or(error.err("no windage_area_moment"))?;
         Ok((area, moment))
     }
     ///
@@ -367,7 +367,7 @@ impl ShipModel {
                 return;
             }
             if let Some(curve) = grain_moments.get(&v.code) {
-                v.grain_moment = curve.value(v.level).unwrap_or(0.);
+                v.grain_moment = curve.value(v.level).unwrap_or(0.)/v.stowage_factor;
                 return;
             }
             let error = error.err(format!("grain_moments.get(&v.code), {}", v.code));
@@ -577,19 +577,20 @@ fn grain_moments(
     }
     Ok(result)
 }
-/// Чтение максимального объема для отсеков
+/// Чтение максимального объема и уровня для отсеков
 /// Возвращает мапу (ид отсека, максимальный объем (нетто))
-fn max_compartment_volume(
+fn compartments_max(
     ship_id: &str,
     project_id: &str,
     api_client: &ApiClient,
-) -> Result<HashMap<String, f64>, Error> {
-    let error = Error::new("ShipModel", "max_compartment_volume");
-    let data = VolumeDataArray::parse(
+) -> Result<HashMap<String, (Option<f64>, f64)>, Error> {
+    let error = Error::new("ShipModel", "compartments_max");
+    let data = MaxDataArray::parse(
         &api_client
             .fetch(&format!(
                 "SELECT
                 s.code as code, \
+                c.level_max as level_max,
                 c.volume_max as volume_max
             FROM
                 \"space\" AS s 

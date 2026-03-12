@@ -63,6 +63,7 @@ pub struct BulkData {
     pub code: String, // ID помещения
     pub mass: f64,
     pub volume: f64,
+    pub stowage_factor: f64,
     pub shiftable: bool,
 }
 ///

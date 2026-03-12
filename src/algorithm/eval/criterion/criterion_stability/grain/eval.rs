@@ -113,14 +113,13 @@ impl Eval<Zg, EvalResult> for GrainEval {
                     .lever_moment(theta_grain_angle)
                     .map_err(|err| error.pass_with("first_grain_lever", err))?;
                 let second_grain_lever = lambda_0 + delta_ab * second_angle;
-                let grain_area = (first_grain_lever
-                    + (second_grain_lever - first_grain_lever) / 2.)
-                    * (second_angle - theta_grain_angle).to_radians();
+                let grain_area = (first_grain_lever + second_grain_lever)
+                    * (second_angle - theta_grain_angle).to_radians() / 2.;
                 let result_area = dso_area - grain_area;
                 let theta_grain40 = lever_diagram
                     .lever_moment(second_angle)
                     .map_err(|err| error.pass_with("theta_grain40", err))?;
-                log::info!("Criterion DSOTimberMax area m_grain:{m_grain} lambda_0:{lambda_0} 
+                log::info!("Criterion Grain area m_grain:{m_grain} lambda_0:{lambda_0} 
                     first_point_ab:({:.3} {:.3}) second_point_ab:({:.3} {:.3})
                     first_angle:{theta_grain_angle} angle_delta_max:{angle_delta_max} second_angle:{second_angle} 
                     delta_ab:{delta_ab} dso_area:{dso_area} first_grain_lever:{first_grain_lever} second_grain_lever:{second_grain_lever}
@@ -165,7 +164,7 @@ impl Eval<Zg, EvalResult> for GrainEval {
                 ));
                 results.push(CriterionData::new_result(
                     CriterionID::AreaLcGrainDisplacement,
-                    grain_area,
+                    result_area,
                     0.075,
                 ));
                 let result = GrainCtx { data: results };

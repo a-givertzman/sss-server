@@ -87,6 +87,8 @@ impl Eval<(), EvalResult> for IcingStabEval {
                     moment,
                 };
                 let mass_shift = moment.to_pos(mass);
+                let shift_h = m_ice_h.to_pos(p_ice_h);
+                let shift_v = m_ice_v.to_pos(p_ice_v);
                 log::info!(
                     "Icing mass:{:.3} shift:({:.3}, {:.3},{:.3})",
                     result.mass,
@@ -98,6 +100,14 @@ impl Eval<(), EvalResult> for IcingStabEval {
                 ctx.write_params(ParameterID::MassIcingX, mass_shift.x());
                 ctx.write_params(ParameterID::MassIcingY, mass_shift.y());
                 ctx.write_params(ParameterID::MassIcingZ, mass_shift.z());
+                ctx.write_params(ParameterID::WeightOfIceOnHorizontalSurfaces, p_ice_h);
+                ctx.write_params(ParameterID::LongitudinalCenterOfWeightOfIceOnHorizontalSurfaces, shift_h.x());
+                ctx.write_params(ParameterID::TransverseCenterOfWeightOfIceOnHorizontalSurfaces, shift_h.y());
+                ctx.write_params(ParameterID::VerticalCenterOfWeightOfIceOnHorizontalSurfaces, shift_h.z());
+                ctx.write_params(ParameterID::WeightOfIceOnVerticalSurfaces, p_ice_v);
+                ctx.write_params(ParameterID::LongitudinalCenterOfWeightOfIceOnVerticalSurfaces, shift_v.x());
+                ctx.write_params(ParameterID::TransverseCenterOfWeightOfIceOnVerticalSurfaces, shift_v.y());
+                ctx.write_params(ParameterID::VerticalCenterOfWeightOfIceOnVerticalSurfaces, shift_v.z());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

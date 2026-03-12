@@ -116,6 +116,14 @@ pub enum ParameterID {
     HeelingLeverOfDSOCorrespondingToTheRollToTheWindwardSide = 106,
     RollToTheWindwardSide = 107,
     GrainArea = 108,
+    WeightOfIceOnHorizontalSurfaces = 109,
+    LongitudinalCenterOfWeightOfIceOnHorizontalSurfaces = 110,
+    TransverseCenterOfWeightOfIceOnHorizontalSurfaces = 111,
+    VerticalCenterOfWeightOfIceOnHorizontalSurfaces = 112,
+    WeightOfIceOnVerticalSurfaces = 113,
+    LongitudinalCenterOfWeightOfIceOnVerticalSurfaces = 114,
+    TransverseCenterOfWeightOfIceOnVerticalSurfaces = 115,
+    VerticalCenterOfWeightOfIceOnVerticalSurfaces = 116,
 }
 //
 impl ParameterID {

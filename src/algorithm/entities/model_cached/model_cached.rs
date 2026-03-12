@@ -119,9 +119,9 @@ pub(crate) struct DsoResult {
     /// DSO
     pub dso: Vec<(f64, f64)>,
     /// Угол входа в воду палубы    
-    pub entry_angle: f64,
+    pub entry_angle: Vec<(f64, f64)>,
     /// Угол входа в воду открытых отверстий             
-    pub flooding_angle: f64,
+    pub flooding_angle: Vec<(f64, f64)>,
 }
 ///
 /// See [sal_3dlib::props::Attributes] to get more details about what the attribute type is.
@@ -337,7 +337,7 @@ impl ModelCached {
             let shape = shape.clone();
             let task_results = task_results.clone();
             let thread_name = format!("{}.reload_shapes displacement_shape {name}", &self.dbg);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
@@ -356,7 +356,7 @@ impl ModelCached {
             let shape = self.windage_shape.clone();
             let task_results = task_results.clone();
             let thread_name = format!("{}.reload_shapes windage_shape", &self.dbg);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
@@ -370,7 +370,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+         //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -390,7 +390,7 @@ impl ModelCached {
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(
         &mut self,
-        compartments_volume_max: HashMap<String, f64>,
+        compartments_max: HashMap<String, (Option<f64>, f64)>,
         bounds: &Bounds,
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
@@ -403,11 +403,11 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let volume_max = compartments_volume_max
+            let (level_max, volume_max) = compartments_max
                 .get(name)
                 .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
             guard
-                .calc_coeff(*volume_max)
+                .calc_coeff(*volume_max, *level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         /*     TODO - пока не используются, потом будет отдельный расчет
@@ -657,7 +657,7 @@ impl ModelCached {
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
             let thread_name = format!("{}.balance_strength gaseous code:{}", &self.dbg, cargo.code);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
@@ -697,7 +697,7 @@ impl ModelCached {
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
             let thread_name = format!("{}.balance_strength bulk code:{}", &self.dbg, cargo.code);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let volume_bounded = if let Some(compartment) =
@@ -733,7 +733,7 @@ impl ModelCached {
             };
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -792,7 +792,7 @@ impl ModelCached {
                     let results_ = liquid_results.clone();
                     let thread_name =
                         format!("{}.balance_strength liquid code:{}", &self.dbg, cargo.code);
-                    log::trace!("Starting thread {thread_name}");
+               //     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let volume_bounded = compartment_bounded
@@ -825,7 +825,7 @@ impl ModelCached {
                 let results_ = hull_results.clone();
                 let displacement_bounded = displacement_bounded.clone();
                 let thread_name = format!("{}.balance_strength displacement_bounded", &self.dbg);
-                log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
                         results_.push(displacement_bounded.read().get(trim, draught));
@@ -842,7 +842,7 @@ impl ModelCached {
                     Err(err) => errors.push(err),
                 };
                 for task in tasks {
-                    log::trace!("join thread {}", task.name());
+               //     log::trace!("join thread {}", task.name());
                     if let Err(err) = task.join() {
                         let error = error.pass_with("task join", err.to_string());
                         log::error!("{}", error);
@@ -1150,7 +1150,7 @@ impl ModelCached {
     ) -> Result<DsoResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "dso");
-        let (mut dso, mut entry_angle, mut flooding_angle) = self
+        let (dso, entry_angle, flooding_angle) = self
             .dso_surface_moment(
                 query,
                 heel,
@@ -1163,46 +1163,6 @@ impl ModelCached {
                 deck_angle_point,
             )
             .map_err(|err| error.pass(err))?;
-        // плечо для нулевого угла
-        let lever_zero = dso
-            .iter()
-            .find(|(a, _)| *a == 0.)
-            .ok_or(error.err("calculate lever_zero error!"))?
-            .1;
-        // знак статического угла крена
-        // если крен на левый борт то переворачиваем диаграммы
-        let heel = if lever_zero > 0. {
-            let reverse = |mut v: Vec<(f64, f64)>| -> Vec<(f64, f64)> {
-                v = v.into_iter().map(|(a, v)| (-a, -v)).collect();
-                v.sort_by(|(a1, _), (a2, _)| {
-                    a1.partial_cmp(a2)
-                        .expect("LeverDiagram calculate error: sort!")
-                });
-                v
-            };
-            dso = reverse(dso);
-            entry_angle = reverse(entry_angle);
-            flooding_angle = reverse(flooding_angle);
-            -heel
-        } else {
-            heel
-        };
-        // Поиск входа в воду отверстий и палубы как пересечения с 0
-        let find_zero_angle = |v: Vec<(f64, f64)>| -> Result<f64, Error> {
-            let v: Vec<_> = v
-                .into_iter()
-                .filter(|&(a, _v)| a >= 0.)
-                .map(|(a, v)| (v, a))
-                .collect();
-            Curve::new_linear(&v)
-                .map_err(|err| error.pass(err))?
-                .value(0.)
-                .map_err(|err| error.pass(err))
-        };
-        let entry_angle =
-            find_zero_angle(entry_angle).map_err(|err| error.pass_with("entry_angle", err))?;
-        let flooding_angle = find_zero_angle(flooding_angle)
-            .map_err(|err| error.pass_with("flooding_angle", err))?;
         Ok(DsoResult {
             dso,
             entry_angle,
@@ -1607,7 +1567,7 @@ impl ModelCached {
             let epsilon = epsilon;
             let results_ = task_results.clone();
             let thread_name = format!("{}.process_bulk code:{code}", &self.dbg);
-            log::trace!("Starting thread {thread_name}");
+        //    log::trace!("Starting thread {thread_name}");
             if let Some(hold_compartment) = self.hold_compartments.get(&code) {
                 let hold_compartment = Arc::clone(hold_compartment);
                 let handle = scheduler
@@ -1623,6 +1583,7 @@ impl ModelCached {
                             cargo.assignment_id,
                             cargo.assigment_type,
                             cargo.mass,
+                            cargo.stowage_factor,
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
@@ -1654,6 +1615,7 @@ impl ModelCached {
                             cargo.assignment_id,
                             cargo.assigment_type,
                             cargo.mass,
+                            cargo.stowage_factor,
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
@@ -1669,7 +1631,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1734,7 +1696,7 @@ impl ModelCached {
                     let error_ = error.clone();
                     let compartment = compartment.clone();
                     let thread_name = format!("{}.process_liquid code:{}", &self.dbg, code);
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1783,7 +1745,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+         //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1863,7 +1825,7 @@ impl ModelCached {
                     let compartment = compartment.clone();
                     let thread_name =
                         format!("{}.moment_liquid_dso_abs_moment code:{}", &self.dbg, code);
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1902,7 +1864,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+         //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1967,7 +1929,7 @@ impl ModelCached {
                         "{}.moment_liquid_dso_surface_moment code:{}",
                         &self.dbg, code
                     );
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -2002,7 +1964,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -2054,7 +2016,7 @@ impl ModelCached {
                     let _error = error.clone();
                     let thread_name =
                         format!("{}.calc_damaged_compartments code:{}", &self.dbg, code);
-                    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             task_results.push((code, compartment.read().get(heel, trim, draught)));
@@ -2084,7 +2046,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+        //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
