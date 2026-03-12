@@ -1,16 +1,7 @@
 use crate::{
     algorithm::{
         context::context_access::ContextRead,
-        entities::Bounds,
-        eval::{
-            seakeeping::{
-                impacts_high_waves::{
-                    impacts_high_waves_ctx::ImpactsHighWavesCtx,
-                    impacts_high_waves_eval::ImpactsHighWavesEval,
-                },
-                period_excitement::period_excitement_ctx::PeriodExcitementCtx,
-            },
-        },
+        entities::{Bounds, data::Voyage}, eval::seakeeping::eval::{impacts_high_waves::{impacts_high_waves_ctx::ImpactsHighWavesCtx, impacts_high_waves_eval::ImpactsHighWavesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
@@ -56,16 +47,12 @@ fn impacts_high_waves() {
             0.0,
             10.0,
             vec![
-                (135.0, 18.24335495461293),
-                (135.0, 18.34376411754142),
-                (135.0, 18.44417328046991),
-                (135.0, 18.544582443398404),
-                (135.0, 18.644991606326894),
-                (135.0, 18.745400769255383),
-                (135.0, 18.845809932183876),
-                (135.0, 18.946219095112365),
-                (135.0, 19.046628258040858),
-                (135.0, 19.14703742096935),
+                (224.99999999999997, 28.183862084533555), 
+                (224.99999999999997, 22.761767286395028), 
+                (224.89999999999998, 18.21159747479397), 
+                (135.0, 18.24335495461293), 
+                (135.0, 28.08345292160507), 
+                (221.2, 26.486715991910295)
             ],
         ),
         (
@@ -73,28 +60,34 @@ fn impacts_high_waves() {
             0.0,
             1.0,
             vec![
-                (135.0, 1.824335495461293),
-                (135.0, 1.834376411754142),
-                (135.0, 1.844417328046991),
-                (135.0, 1.8544582443398403),
-                (135.0, 1.8644991606326893),
-                (135.0, 1.8745400769255385),
-                (135.0, 1.8845809932183877),
-                (135.0, 1.8946219095112367),
-                (135.0, 1.9046628258040859),
-                (135.0, 1.914703742096935),
+                (224.99999999999997, 2.8183862084533557), 
+                (224.99999999999997, 2.065317486489671), 
+                (224.89999999999998, 1.821159747479397), 
+                (135.0, 1.8243354954612927), 
+                (135.0, 2.808345292160507), 
+                (224.49999999999997, 2.794109702087563)
             ],
         ),
     ];
     for (step, course_angle, period_excitement, target) in test_data.iter() {
-        let mut initial_data = InitialCtx::new(
+        let mut initial = InitialCtx::new(
             "0",
             "Unit-test",
             Bounds::from_min_max(0., 100., 20).unwrap(),
         );
-        initial_data.course_angle = Some(*course_angle);
+        initial.voyage = Some(Voyage {
+            density: 1.025,
+            operational_speed: 12.,
+            icing_type: "none".to_owned(),
+            icing_timber_type: "full".to_owned(),
+            area: Some("sea".to_owned()),
+            course_angle: *course_angle,
+            wave_heading_angle: 90.,
+            wave_length: 10.,
+            current_speed: 10.,
+        });
         let mut ctx = MocEval {
-            ctx: Context::new(initial_data),
+            ctx: Context::new(initial),
         };
         ctx.ctx = ctx
             .ctx
@@ -103,17 +96,17 @@ fn impacts_high_waves() {
                 period_excitement: *period_excitement,
             })
             .unwrap();
-        let result = ImpactsHighWavesEval::new("Test", ctx).eval(());
+        let result = ImpactsHighWavesEval::new("impacts_high_waves", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ImpactsHighWavesCtx>::read(&ctx)
                     .impacts_high_waves
                     .clone();
                 assert!(
-                    result[0..10] == *target,
+                    result[0..result.len()] == *target,
                     "step {} \nresult: {:?}\ntarget: {:?}",
                     step,
-                    &result[0..10],
+                    &result[0..result.len()],
                     target
                 );
             }

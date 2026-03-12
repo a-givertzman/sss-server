@@ -1,14 +1,12 @@
-use crate::algorithm::eval::parameters::ParameterID;
-use crate::algorithm::eval::seakeeping::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
-use crate::prelude::{ContextParamsRead, ContextWrite};
-use crate::kernel::{
-        Eval, 
-        types::eval_result::EvalResult
-    };
-use sal_core::{
-    dbg::Dbg, 
-    error::Error
-};
+use sal_core::dbg::Dbg;
+
+use crate::algorithm::eval::seakeeping::eval::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
+use crate::algorithm::eval::seakeeping::eval::roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
+use crate::kernel::Eval;
+use crate::kernel::types::eval_result::EvalResult;
+use crate::prelude::ContextParamsRead;
+use crate::prelude::ContextRead;
+use crate::prelude::ContextWrite;
 ///
 /// Расчет [основной зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub struct MainResonantZoneEval {
@@ -20,7 +18,10 @@ pub struct MainResonantZoneEval {
 impl MainResonantZoneEval {
     ///
     /// Новый экземпляр [MainResonantZoneEval]
-    pub fn new(parent: impl Into<String>, ctx: impl Eval<(), EvalResult> + Send + Sync + 'static) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent, "MainResonantZoneEval");
         Self {
             dbg,
@@ -32,10 +33,9 @@ impl MainResonantZoneEval {
 //
 impl Eval<(), EvalResult> for MainResonantZoneEval {
     fn eval(&self, _: ()) -> EvalResult {
-        let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let roll_frequency = 1.0/ctx.read_params(ParameterID::RollPeriod).max(f64::MIN);
+                let roll_frequency = ctx.read_params(crate::algorithm::eval::parameters::ParameterID::RollPeriod);
                 let left_side = 0.7 * roll_frequency;
                 let right_side = 1.3 * roll_frequency;
                 let result = MainResonantZoneCtx {
@@ -44,16 +44,7 @@ impl Eval<(), EvalResult> for MainResonantZoneEval {
                 };
                 ctx.write(result)
             }
-            Err(err) => Err(error.pass_with("Read context error", err)),
+            Err(err) => Err(err),
         }
-    }
-}
-//
-//
-impl std::fmt::Debug for MainResonantZoneEval {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MainResonantZoneEval")
-            .field("dbg", &self.dbg)
-            .finish()
     }
 }

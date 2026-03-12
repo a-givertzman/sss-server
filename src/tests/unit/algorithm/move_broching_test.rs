@@ -2,12 +2,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead,
         entities::{Bounds, data::Voyage},
-        eval::{
-            seakeeping::move_broching_filter::{
-                move_broching_filter_ctx::MoveBrochingFilterCtx,
-                move_broching_filter_eval::MoveBrochingFilterEval,
-            },
-        },
+        eval::seakeeping::eval::move_broching_filter::{move_broching_filter_ctx::MoveBrochingFilterCtx, move_broching_filter_eval::MoveBrochingFilterEval},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, InitialCtx},
@@ -75,21 +70,24 @@ fn move_broching_filter() {
             "Unit-test",
             Bounds::from_min_max(0., 100., 20).unwrap(),
         );
-        initial.course_angle = Some(*course_angle);
-        let mut ship_params = HashMap::new();
-        ship_params.insert("LBP".to_owned(), *length_lbp);
-        initial.ship_parameters = Some(ship_params);
         initial.voyage = Some(Voyage {
             density: 1.025,
             operational_speed: *vmax,
             icing_type: "none".to_owned(),
             icing_timber_type: "full".to_owned(),
             area: Some("sea".to_owned()),
-        });
+            course_angle: *course_angle,
+            wave_heading_angle: 90.,
+            wave_length: 10.,
+            current_speed: 10.,
+        }); 
+        let mut ship_params = HashMap::new();
+        ship_params.insert("LBP".to_owned(), *length_lbp);
+        initial.ship_parameters = Some(ship_params);
         let ctx = MocEval {
             ctx: Context::new(initial),
         };
-        let result = MoveBrochingFilterEval::new("Test", ctx).eval(());
+        let result = MoveBrochingFilterEval::new("move_broching_filter", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<MoveBrochingFilterCtx>::read(&ctx)

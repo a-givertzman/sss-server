@@ -1,14 +1,6 @@
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::{
-            seakeeping::{
-                apparent_frequencies::{
-                    apparent_frequencies_ctx::ApparentFrequenciesCtx,
-                    apparent_frequencies_eval::ApparentFrequenciesEval,
-                },
-                period_excitement::period_excitement_ctx::PeriodExcitementCtx,
-            },
-        }
+        context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::seakeeping::eval::{apparent_frequencies::{apparent_frequencies_ctx::ApparentFrequenciesCtx, apparent_frequencies_eval::ApparentFrequenciesEval}, period_excitement::period_excitement_ctx::PeriodExcitementCtx}
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
@@ -96,6 +88,10 @@ fn apparent_frequencies() {
             icing_type: "none".to_owned(),
             icing_timber_type: "full".to_owned(),
             area: Some("sea".to_owned()),
+            course_angle: 90.,
+            wave_heading_angle: 90.,
+            wave_length: 10.,
+            current_speed: 10.,
         });
         let mut ctx = MocEval {
             ctx: Context::new(initial),
@@ -107,7 +103,7 @@ fn apparent_frequencies() {
                 period_excitement: *period_excitement,
             })
             .unwrap();
-        let result = ApparentFrequenciesEval::new("Test", ctx).eval(());
+        let result = ApparentFrequenciesEval::new("apparent_frequencies", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let result = ContextRead::<ApparentFrequenciesCtx>::read(&ctx)

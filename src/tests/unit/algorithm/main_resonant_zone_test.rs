@@ -1,9 +1,10 @@
 use crate::{
     algorithm::{
         context::context_access::ContextRead, entities::Bounds, eval::{
-            parameters::ParameterID, seakeeping::main_resonant_zone::{
-                main_resonant_zone_ctx::MainResonantZoneCtx,
-                main_resonant_zone_eval::MainResonantZoneEval,
+            parameters::ParameterID, 
+            seakeeping::eval::main_resonant_zone::{
+                main_resonant_zone_ctx::MainResonantZoneCtx, 
+                main_resonant_zone_eval::MainResonantZoneEval
             }
         }
     },
@@ -60,7 +61,7 @@ fn main_resonant_zone() {
             )),
         };
         ctx.ctx.write_params(ParameterID::RollPeriod, 1./roll_frequency);
-        let result = MainResonantZoneEval::new("Test", ctx).eval(());
+        let result = MainResonantZoneEval::new("main_resonant_zone", ctx).eval(());
         match result {
             Ok(ctx) => {
                 let left_side_result = ContextRead::<MainResonantZoneCtx>::read(&ctx)

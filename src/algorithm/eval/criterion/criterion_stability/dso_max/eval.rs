@@ -40,7 +40,7 @@ impl Eval<Zg, EvalResult> for DSOMaxEval {
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
-                    .expect("DSOMaxEval eval error: no ship_parameters");
+                    .ok_or(error.err("no ship_parameters"))?;
                 let ship_length = *ship_parameters
                     .get("LBP")
                     .ok_or(error.err("No LBP in ship_parameters"))?;

@@ -1,21 +1,15 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{        
-        seakeeping::apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
-        seakeeping::impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
-        seakeeping::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, 
-        seakeeping::main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, 
-        seakeeping::move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, 
-        parameters::Parameters, 
-        seakeeping::parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
-        seakeeping::parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
-        seakeeping::period_excitement::period_excitement_ctx::PeriodExcitementCtx, 
+        criterion::*, 
         icing_timber::ctx::IcingTimberCtx,
         icing_timber_bound::ctx::IcingTimberBoundCtx,
-        stability::*,
-        strength::*, 
-        criterion::*, 
-        *,
+        parameters::Parameters,
+        seakeeping::eval::{
+            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, hitting_zones::hitting_point_ctx::HittingZonesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
+        }, 
+        stability::*, 
+        strength::*, *
     },
     initial::initial_ctx::InitialCtx,
 };
@@ -78,6 +72,10 @@ pub struct Context {
     pub(super) windage: Option<WindageCtx>,
     /// Период собственных бортовых колебаний судна
     pub(super) roll_period: Option<RollingPeriodCtx>,
+    /// Частоты собственных бортовых колебаний судна
+    pub(super) roll_frequency: Option<RollingFrequencyCtx>,
+    /// Расчет пересечения с зонами резонанса
+    pub(super) hitiing_zones: Option<HittingZonesCtx>,
     /// Амплитуда качки судна  
     pub(super) roll_amplitude: Option<RollingAmplitudeCtx>,
     /// Критерий погоды К
@@ -126,8 +124,8 @@ pub struct Context {
     pub(super) criterion_draught: Option<CriterionDraughtCtx>,
     /// Расчет уровня заглубления для координат отметок заглубления на корпусе судна
     pub(super) draft_mark: Option<DraftMarkCtx>,
- //   /// Результаты расчета по прочности
-  //  pub(super) result_str: Option<ResultStrCtx>,
+    /// Период волнения Tw в секундах в диапазоне от 1.0 до 15.0 секунд, с шагом 0.1 секунда
+    pub(super) period_excitement: Option<PeriodExcitementCtx>,
     /// Основная зона резонансной бортовой качки
     pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
     /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основого резонанса частот

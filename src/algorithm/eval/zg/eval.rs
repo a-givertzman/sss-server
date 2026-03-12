@@ -57,7 +57,7 @@ impl Eval<(), EvalResult> for ZgEval {
                 let ship_parameters = initial
                     .ship_parameters
                     .as_ref()
-                    .expect("ZgEval eval error: no ship_parameters");
+                    .ok_or(error.err("no ship_parameters"))?;
                 let overall_height = *ship_parameters
                     .get("Overall height up to non-removable parts")
                     .ok_or(error.err("No LBP in ship_parameters"))?;
