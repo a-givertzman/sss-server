@@ -118,8 +118,6 @@ impl Eval<Zg, EvalResult> for CriterionStabilityEval {
                     data.append(&mut ContextRead::<GrainCtx>::read(&ctx).data);
                 }
                 data.push(ContextRead::<MetacentricHeightSubdivisionCtx>::read(&ctx).data);
-                // TODO        HeelMaximumLC, HeelFirstMaximumLC
-                // data.push(CriterionData::new_result(CriterionID::HeelMaximumLC , self.lever_diagram.max_angles(), 1.);
             //    info!("Criterion stability end");
                 let result = CriterionStabilityCtx { data };
                 ctx.write(result)

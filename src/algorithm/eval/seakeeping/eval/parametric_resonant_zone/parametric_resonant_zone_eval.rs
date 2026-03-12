@@ -3,13 +3,12 @@ use sal_core::dbg::Dbg;
 use crate::{
     algorithm::eval::seakeeping::eval::{
         parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx,
-        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
     },
     kernel::{
         Eval, 
         types::eval_result::EvalResult
     }, 
-    prelude::{ContextParamsRead, ContextRead, ContextWrite}
+    prelude::{ContextParamsRead, ContextWrite}
 };
 ///
 /// Расчет [параметрической зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)

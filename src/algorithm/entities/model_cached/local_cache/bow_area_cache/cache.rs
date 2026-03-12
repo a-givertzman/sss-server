@@ -15,7 +15,6 @@ use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
 };
-/// TODO
 /// Pre-calculated cache for bow area cache
 /// contains keys: [draught]
 /// values:[area]
@@ -34,7 +33,6 @@ impl BowAreaCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
-    /// TODO - panic
     pub fn new(
         parent: &Dbg,
         voxels: Option<Vec<(f64, Vec<(f64, f64)>)>>,

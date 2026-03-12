@@ -175,15 +175,6 @@ impl Eval<(), EvalResult> for ResultStrEval {
                 results.add_results("limit_high_bending_moment", &bm_max);
                 results.add_results("percent_bending_moment", &bm_percent);
                 results.add_results("status_bending_moment", &bm_status);
-                /* TODO - что тут надо вывести?
-                                log::info!("ResultStr shear_force:{:.3}", result.iter().sum::<f64>());
-                                log::trace!(
-                                    "ResultStr result_distr:{}",
-                                    result
-                                        .iter()
-                                        .fold(String::new(), |s, v| s + &format!("{:.3} ", v))
-                                );
-                */
                 send_values(
                     &self.dbg,
                     &ship_id,

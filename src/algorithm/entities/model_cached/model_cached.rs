@@ -32,7 +32,6 @@ use std::{collections::HashMap, fmt::Display, path::PathBuf};
 /// Структура для ввода данных расчета равновесного положения корпуса судна.
 #[derive(Debug, Clone)]
 pub(crate) struct FloatingPositionQuery {
-    // TODO - переименовать, тут лежат общие данные по судну - груз и т.п.
     /// Плотность забортной воды
     pub water_density: f64,
     /// масса судна порожнем и грузов размещенных на судне:
@@ -208,7 +207,6 @@ impl ModelCached {
                 .map(|f| f.path())
                 .collect(),
             Err(err) => {
-                // TODO: подумать, что делать при неправильном имени файла
                 log::error!(
                     "{}",
                     error.pass_with(
@@ -530,7 +528,8 @@ impl ModelCached {
                 errors.push((("compartment ".to_owned() + name), error));
             }
         }
-        /*   TODO    for (name, compartment) in &mut self.damaged_compartments {
+        /*  TODO - пока не используются, потом будет отдельный расчет
+         for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }

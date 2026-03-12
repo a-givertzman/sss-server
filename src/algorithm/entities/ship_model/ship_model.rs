@@ -25,11 +25,8 @@ use std::{fmt::Debug, sync::Arc};
 ///
 ///
 pub struct ShipModel {
-    //   txid: usize,
-    //   name: Name,
     dbg: Dbg,
     ship_id: String,
-    //   ship_file_name: String, // TODO - read by  ship_id
     project_id: String,
     bounds: Option<Bounds>,
     horisontal_area_str: Option<Vec<f64>>,
@@ -41,7 +38,6 @@ pub struct ShipModel {
     opening: Option<Vec<Position>>,
     deck_angle_point: Option<Vec<Position>>,
     model_cached: ModelCached,
-    //    timeout: Duration,
     api_client: Arc<ApiClient>,
 }
 //
@@ -50,7 +46,6 @@ impl ShipModel {
     ///
     /// Default timeout to await `recv`` operation, 300 ms
     //   const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
-    /// TODO
     /// Returns [ShipModel] new instance
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
@@ -86,9 +81,7 @@ impl ShipModel {
             api_client,
         }
     }
-    /// TODO - Doc
-    /// TODO - сделать что-то с Bounds, они нужны в модели и в контексте
-    /// ПО идее их должен читать контекст, но модель инициализируется первее
+    /// 
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
         self.grain_moments = Some(
@@ -115,8 +108,6 @@ impl ShipModel {
             )
             .map_err(|err| error.pass(err))?,
         );
-        // TODO переделать, пока не понятно в какой момент должны читаться объемы
-        // возможно их надо пересчитывать каждый расчет
         let compartments_max = compartments_max(
             &self.ship_id,
             &self.project_id,
@@ -451,74 +442,6 @@ fn get_physical_bounds(
     let bounds = Bounds::from_array(&physical_frames, 0.).map_err(|err| error.pass(err))?;
     Ok(bounds)
 }
-// временные функции пока непонятно как работать с базой при изменении данных
-// TODO - перенести все в контекст
-/*
-///
-/// Получение шпаций, вероятно не нужно, шпации будут считаться из физических фреймов
-fn get_bounds(
-    api_client: &ApiClient,
-    ship_id: &str,
-    project_id: String,
-    qnt_bounds: usize,
-) -> Result<Bounds, Error> {
-    let error = Error::new("ShipModel", "get_bounds");
-    let data = api_client.fetch(&format!(
-            "SELECT index, start_x, end_x FROM computed_frame_space WHERE qnt_bounds = {qnt_bounds} AND ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
-        ));
-    let bounds = match data {
-        Ok(data) => {
-            // если шпации для разбиения на qnt_bounds есть, значит есть кэш для этого разбиения - читаем их
-            match ComputedFrameDataArray::parse(&data) {
-                Ok(data) => data.data(),
-                Err(err) => return Err(error.pass_with("parse error", err)),
-            }
-        }
-        Err(err) => return Err(err),
-        // если шпаций для qnt_bounds нет,
-        // значит нет кэшей для такого разбиения и надо их пересчитать
-        /*    {
-           // TODO: если шпаций для qnt_bounds нет, значит создаем такое разбиение и считаем кэш
-            let data = api_client.fetch(&format!(
-                "SELECT pos_x, frame_index as index FROM physical_frame WHERE ship_id={ship_id} AND project_id IS NOT DISTINCT FROM {project_id} ORDER BY index ASC;"
-            ));
-            match data {
-                Ok(data) => {
-                    let physical_frames = match PhysicalFrameArray::parse(&data) {
-                        Ok(data) => data.data(),
-                        Err(err2) => {
-                            return Err(error.pass(format!(
-                                "error: {err1}, physical_frames parse error: {err2}"
-                            )));
-                        }
-                    };
-                    if let (Some(bow_x), Some(stern_x)) =
-                        (physical_frames.first(), physical_frames.last())
-                    {
-                        return match Bounds::from_min_max(stern_x.1, bow_x.1, qnt_bounds) {
-                            Ok(bounds) => Ok(bounds),
-                            Err(err2) => {
-                                return Err(error
-                                    .pass(format!("error: {err1}, create_bounds error: {err2}")));
-                            }
-                        };
-                    } else {
-                        return Err(error.pass(format!("error: {err1}, can't get bow_x, stern_x!")));
-                    };
-                }
-                Err(err2) => {
-                    return Err(error.pass(format!("error: {err1}, physical_frames error: {err2}")));
-                }
-            };
-        }*/
-    };
-    let bounds: Bounds = match Bounds::from_frames(&bounds) {
-        Ok(data) => data,
-        Err(err) => return Err(error.pass(err)),
-    };
-    Ok(bounds)
-}
-*/
 /// Чтение данных горизонтальных поверхностей для прочности из базы
 fn horisontal_area_str(
     ship_id: &str,

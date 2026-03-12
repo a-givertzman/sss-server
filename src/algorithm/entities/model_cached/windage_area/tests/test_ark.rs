@@ -60,8 +60,8 @@ fn calculated_windage_area_ark() {
     let epsilon_p = 0.01; //1%
     let epsilon_abs = 0.01; //1см
     let target = [
-        [0., 0., 1871.534, 63.109], // TODO
-        [0., 2., 1619.008, 62501.799], // TODO
+        [0., 0., 1871.534, 63.109], 
+        [0., 2., 1619.008, 62501.799], 
     ];
     for target in target {
         let mut key = [None; 4];

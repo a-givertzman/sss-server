@@ -42,7 +42,6 @@ impl DisplacementCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
-    /// TODO - panic
     pub fn new(
         parent: &Dbg,
         shape: Arc<RwLock<DisplacementShape>>,
@@ -119,7 +118,6 @@ impl DisplacementCache {
 impl LocalCache for DisplacementCache {
     //
     fn calculate(&mut self) -> Vec<Error> {
-        //   dbg!("DisplacementCache calculate begin");
         let error = Error::new(&self.dbg, "calculate");
         let (data, mut errors) = super::build_cache::BuildDisplacementCache::new(
             &self.dbg,
@@ -145,7 +143,6 @@ impl LocalCache for DisplacementCache {
         if let Err(err) = save(&self.dbg, &self.cache_path, data) {
             errors.push(error.pass_with("save data", err));
         }
-        //    dbg!("DisplacementCache calculate end");
         errors
     }
     //

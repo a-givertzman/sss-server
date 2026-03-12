@@ -16,7 +16,6 @@ use std::path::PathBuf;
 ///
 ///
 /// Площадь парусности корпуса и конструкций
-/// TODO: не зависит от крена и дифферента, поэтому не кэш, возможно надо переработать
 pub struct WindageArea {
     dbg: Dbg,
     cache_dir: PathBuf,
@@ -57,7 +56,7 @@ impl WindageArea {
             thread_pool,
         }
     }
-    /// TODO - doc
+    /// пересчет для заданных значений
     pub fn rebuild(&mut self, bounds: &Bounds, lbp: f64) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "calculate");
         let shape = self.shape.read();

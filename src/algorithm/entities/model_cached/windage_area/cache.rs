@@ -32,7 +32,6 @@ impl BowAreaCache {
     ///
     /// Creates a new instance.
     /// - cache_dir - folder contains all cache files
-    /// TODO - panic
     pub fn new(
         parent: &Dbg,
         draught_min: f64,

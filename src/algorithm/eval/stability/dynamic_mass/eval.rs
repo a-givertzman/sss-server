@@ -69,7 +69,6 @@ impl Eval<(), EvalResult> for DynamicMassStabEval {
                     .into_iter()
                     .filter(|v| v.mass > 0.)
                     .collect::<Vec<_>>();
-                // TODO: bulkhead - перенести в другое место в базе
                 let (unit, bulkhead): (Vec<_>, Vec<_>) = unit
                     .into_iter()
                     .partition(|v| v.cargo_type != UnitCargoType::GrainBulkhead);
