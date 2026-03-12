@@ -390,7 +390,7 @@ impl ModelCached {
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(
         &mut self,
-        compartments_volume_max: HashMap<String, f64>,
+        compartments_max: HashMap<String, (Option<f64>, f64)>,
         bounds: &Bounds,
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
@@ -403,11 +403,11 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let volume_max = compartments_volume_max
+            let (level_max, volume_max) = compartments_max
                 .get(name)
                 .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
             guard
-                .calc_coeff(*volume_max)
+                .calc_coeff(*volume_max, *level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         /*     TODO - пока не используются, потом будет отдельный расчет
@@ -1150,7 +1150,7 @@ impl ModelCached {
     ) -> Result<DsoResult, Error> {
         //   let time = std::time::Instant::now();
         let error = Error::new(&self.dbg, "dso");
-        let (mut dso, mut entry_angle, mut flooding_angle) = self
+        let (dso, entry_angle, flooding_angle) = self
             .dso_surface_moment(
                 query,
                 heel,
@@ -1583,6 +1583,7 @@ impl ModelCached {
                             cargo.assignment_id,
                             cargo.assigment_type,
                             cargo.mass,
+                            cargo.stowage_factor,
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,
@@ -1614,6 +1615,7 @@ impl ModelCached {
                             cargo.assignment_id,
                             cargo.assigment_type,
                             cargo.mass,
+                            cargo.stowage_factor,
                             compartment_result.volume_center,
                             cargo.shiftable,
                             compartment_result.level,

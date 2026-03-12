@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct Voyage {
     /// плотность воды
     pub density: f64,
-    /// Эксплуатационная скорость судна, m/s
+    /// Эксплуатационная скорость судна, м/с
     pub operational_speed: f64,
     /// Тип облединения корпуса судна
     pub icing_type: String,

@@ -246,20 +246,7 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                     .zip(result.ddo.iter())
                     .map(|((a1, v1), (_, v2))| (*a1, *v1, *v2))
                     .collect::<Vec<_>>();
-                send_stability_diagram(
-                    &self.dbg,
-                    &ship_id,
-                    &project_id,
-                    &self.api_client,
-                    raw_diagram,
-                    transformed_diagram,
-                )
-                .map_err(|err| error.pass(err))?;
-
-                ctx.write_params(ParameterID::Roll, heel);
-                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, result.entry_angle);
-                ctx.write_params(ParameterID::AngleOfDownFlooding, result.flooding_angle);
-                /*            log::info!(
+                log::info!(
                     "LeverDiagram theta_max:{}\n max_angles [angle l]:{}\n entry_angle:{}\n flooding_angle:{}\n diagram [angle dso ddo]:{}\n",
                     result.theta_max,
                     result
@@ -271,11 +258,23 @@ impl Eval<Zg, EvalResult> for LeverDiagramEval {
                         )),
                     result.entry_angle,
                     result.flooding_angle,
-                    diagram.iter().fold(String::new(), |s, v| s + &format!(
+                    transformed_diagram.iter().fold(String::new(), |s, v| s + &format!(
                         "\n{:.3} {:.3} {:.3}",
                         v.0, v.1, v.2
                     )),
-                );*/
+                );
+                send_stability_diagram(
+                    &self.dbg,
+                    &ship_id,
+                    &project_id,
+                    &self.api_client,
+                    raw_diagram,
+                    transformed_diagram,
+                )
+                .map_err(|err| error.pass(err))?;
+                ctx.write_params(ParameterID::Roll, heel);
+                ctx.write_params(ParameterID::OpenDeckEdgeImmersionAngle, result.entry_angle);
+                ctx.write_params(ParameterID::AngleOfDownFlooding, result.flooding_angle);
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),

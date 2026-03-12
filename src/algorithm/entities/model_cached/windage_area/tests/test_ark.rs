@@ -40,8 +40,8 @@ fn calculated_windage_area_ark() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
     let dbg = Dbg::new("ShipModel", "calculated_windage_area_ark");
-    let model_path = "src/assets/ark.stl";
-    let additionals_path = "src/assets/ark_additionals/";
+    let model_path = "assets/ark.stl";
+    let additionals_path = "assets/ark_additionals/";
     let cache_dir = "src/algorithm/entities/cache/tests/";
     let center_coord = Some(Position::new(59.195, 0., 0.));
     let mut shape = AreaShape::new_uninit(&dbg, model_path.into(), Some(additionals_path.into()), center_coord, 1000.);

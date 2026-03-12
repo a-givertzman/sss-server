@@ -24,6 +24,8 @@ pub struct CompartmentCache {
     level_step_qnt: usize,
     /// Максимальный объем отсека из БД (Нетто)
     volume_max: Option<f64>,
+    /// Максимальный уровень в отсеке из БД (Нетто)
+    level_max: Option<f64>,
     /// коэффициент проницаемости
     coeff: Option<f64>,
     /// Model representation used for cache calculation.
@@ -57,6 +59,7 @@ impl CompartmentCache {
             trim_steps,
             level_step_qnt,
             volume_max: None,
+            level_max: None,
             coeff: None,
             cache: None,
             cache_dir: cache_dir.as_ref().join(compartment_id),
@@ -66,10 +69,11 @@ impl CompartmentCache {
         }
     }
     /// Расчет коэффициента проницаемости
-    pub fn calc_coeff(&mut self, volume_max: f64) -> Result<(), Error> {
+    pub fn calc_coeff(&mut self, volume_max: f64, level_max: Option<f64>) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "calc_coeff");
         let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.disp(3).1;
         self.volume_max = Some(volume_max);
+        self.level_max = level_max;
         self.coeff = Some(if volume_brutto > 0. {
             volume_max / volume_brutto
         } else {
@@ -249,11 +253,15 @@ impl CompartmentCache {
         );*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+        let level_max = *self.level_max.as_ref().ok_or(error.pass("no level_max"))?;
+        let volume_max = self.volume_max.as_ref().ok_or(error.pass("no volume_max"))? / coeff;    
         let (level, result) = get_from_volume(
             &self.dbg,
             cache,
             &[heel, trim],
             volume / coeff,
+            Some(level_max),
+            Some(volume_max), 
             3,
             epsilon,
         ).map_err(|err| error.pass(err))?;
@@ -261,7 +269,7 @@ impl CompartmentCache {
             heel,
             trim,
             level,
-            volume: result[0] * coeff,
+            volume,
             volume_center: Position::new(result[1], result[2], result[3]),
             inertia_trans_x: result[4] * coeff,
             inertia_long_y: result[5] * coeff,
@@ -283,7 +291,9 @@ impl CompartmentCache {
         );*/
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let query = [heel, trim];
-        let (level, result) = get_from_level(&self.dbg, cache, &query, level, 3)
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;
+        let volume_max = self.volume_max.as_ref().ok_or(error.pass("no volume_max"))? / coeff;   
+        let result = get_from_level(&self.dbg, cache, &query, level, Some(volume_max), 3)
             .map_err(|err| error.pass_with("get_from_level", err))?;
         let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?;        
         Ok(CompartmentCacheResult {
@@ -318,6 +328,10 @@ impl CompartmentCache {
             bounds,
             Arc::clone(&self.thread_pool),
         ))
+    }
+    //
+    pub fn level_max(&self) -> Option<f64> {
+        self.level_max.clone()
     }
     //
     pub fn volume_max(&self) -> Option<f64> {

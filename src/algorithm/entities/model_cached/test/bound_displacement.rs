@@ -834,7 +834,7 @@ fn bound_displacement_sofia() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
     test_duration.run().unwrap();
     let cache_dir: PathBuf = "src/algorithm/entities/model_cached/test/sofia".into();
-    let model_dir: PathBuf = "src/assets/model/sofia".into();
+    let model_dir: PathBuf = "assets/model/sofia".into();
     let model_center_coord = Position::new(65.250, 0., 0.);
     let bounds = Bounds::from_array(&PHYSICAL_FRAMES, model_center_coord.x()).unwrap();
     let thread_pool = ThreadPool::new(&dbg, Some(20));

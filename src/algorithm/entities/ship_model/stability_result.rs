@@ -125,6 +125,8 @@ pub struct BulkResult {
     pub level: f64,
     /// Объем груза в отсеке
     pub volume: f64,
+    /// Средний удельный погрузочный объем, м^3/т
+    pub stowage_factor: f64,
     /// Момент смещения зерна
     pub grain_moment: f64,
 }
@@ -136,6 +138,7 @@ impl BulkResult {
         assignment_id: usize,
         assigment_type: AssignmentType, 
         mass: f64,
+        stowage_factor: f64,
         mass_shift: Position,
         shiftable: bool,
         level: f64,
@@ -146,6 +149,7 @@ impl BulkResult {
             assignment_id,
             assigment_type, 
             mass,
+            stowage_factor,            
             mass_shift,
             shiftable,
             level,

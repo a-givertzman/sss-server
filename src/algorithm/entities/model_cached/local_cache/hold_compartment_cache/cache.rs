@@ -41,26 +41,30 @@ impl HoldCompartmentCache {
         let (level_min, level_max) = {
             let (mut level_min, mut level_max) = (f64::MAX, f64::MIN);
             for compartment in compartments.iter() {
-                let (current_level_min, current_level_max) = compartment
-                    .read()
-                    .cache()
-                    .ok_or(error.err("no cache"))?
-                    .disp(level_index);
-                level_min = level_min.min(current_level_min);
-                level_max = level_max.max(current_level_max);
+                let compartment = compartment.read();
+                let mut current_level_max = compartment.level_max();
+                if current_level_max.is_none() {
+                    let cache = compartment
+                        .cache()
+                        .ok_or(error.err("no cache"))?;
+                    current_level_max = Some(cache.disp(level_index).1);
+                }
+                level_max = level_max.max(current_level_max.unwrap());
             }
-            (level_min, level_max)
+            (0., level_max)
         };
         let (volume_min, volume_max) = {
             let (mut volume_min, mut volume_max) = (0., 0.);
             for compartment in compartments.iter() {
-                let (current_volume_min, current_volume_max) = compartment
-                    .read()
-                    .cache()
-                    .ok_or(error.err("no cache"))?
-                    .disp(volume_index);
-                volume_min += current_volume_min;
-                volume_max += current_volume_max;
+                let compartment = compartment.read();
+                let mut current_volume_max = compartment.volume_max();
+                if current_volume_max.is_none() {
+                    let cache = compartment
+                        .cache()
+                        .ok_or(error.err("no cache"))?;
+                    current_volume_max = Some(cache.disp(volume_index).1);
+                }
+                volume_max += current_volume_max.unwrap();
             }
             (volume_min, volume_max)
         };
@@ -161,7 +165,7 @@ impl HoldCompartmentCache {
                 let next_level = (level + step * delta.signum())
                     .min(self.level_max)
                     .max(self.level_min);
-            /*    println!(
+        /*        println!(
                     "local_cashe {} get_volume i:{i} heel:{heel} trim:{trim} level:{level} res_volume:{} trg_volume:{volume}",
                     self.dbg, result.volume
                 );*/
