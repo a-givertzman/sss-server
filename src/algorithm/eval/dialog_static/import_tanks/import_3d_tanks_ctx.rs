@@ -1,4 +1,4 @@
-use crate::algorithm::eval::entities::compartment_corner_points::CompartmentCornerPoints;
+use crate::algorithm::eval::import_tanks::entities::compartment_corner_points::CompartmentCornerPoints;
 ///
 /// Координаты каждого блока 3D отсека
 /// из файла `DialogStatic`

@@ -1,9 +1,9 @@
+use std::path::PathBuf;
 #[cfg(test)]
 use std::{
     sync::Once, 
     time::Duration
 };
-use std::path::PathBuf;
 use parry3d_f64::shape::TriMesh;
 use sal_core::error::Error;
 use testing::stuff::max_test_duration::TestDuration;
@@ -17,16 +17,15 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            Zg, 
-            import_model::{
-                convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_eval::ConvertSurfaceOuterToTrimeshEval, 
-                import_model_initial_points::import_model_initial_points_eval::ImportModelInitialPointsEval
-            }, 
-            import_tanks::{
-                convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx, 
-                convert_tanks_to_trimesh_eval::ConvertTanksToTrimeshEval, 
-                import_3d_tanks_eval::Import3DTanksEval
-            } 
+            Zg, import_model::{
+                convert_surface_outer_to_trimesh::{
+                    convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, 
+                    convert_surface_outer_to_trimesh_eval::ConvertSurfaceOuterToTrimeshEval
+                }, 
+                import_model_initial_points::{
+                    import_model_initial_points_eval::ImportModelInitialPointsEval, 
+                    }
+                }
         }
     }, 
     kernel::{
@@ -98,54 +97,66 @@ fn init_each() -> () {}
 ///
 /// Testing [convert_to_trimesh]
 #[test]
-fn convert_to_trimesh() {
+fn convert_surface_outer_to_trimesh() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
-    log::debug!("Starting convert_to_trimesh test");
-    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(6000));
+    log::debug!("Starting convert_surface_outer_to_trimesh test");
+    let test_duration = TestDuration::new("ConvertSurfaceOuterToTrimesh", Duration::from_secs(6000));
     test_duration.run().unwrap();
+    let error_percent = 1.0;
     let test_data = [
+        // (
+        //    1, 
+        //    "unboxes_АРК_2023",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
+        //    12068.8268,
+        // ),
         (
-            1,
-            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\tanks.txt",
-            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
+           2, 
+           "APK_2023",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
+           2363.6901869983108,
         ),
+        // (
+        //    3,
+        //    "sophia",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
+        //    21360.5678,
+        // ),
+        // (
+        //    4, 
+        //    "katamaran",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
+        //    1986.66182,
+        // ),
     ];
-    for (step, path_3d_tanks, path_3d_model) in test_data.iter() {
-        log::debug!("Step {}: processing {}", step, path_3d_tanks);
+    for (step, ship_name, path_3d_model, target) in test_data.iter() {
+        log::debug!("Step {}: processing {}", step, path_3d_model);
         let mut initial_data = InitialCtx::new(0, "Unit-test");
-        initial_data.path_3d_tanks = path_3d_tanks.to_string();
         initial_data.path_3d_model = path_3d_model.to_string();
         let ctx = MocEval {
             ctx: Context::new(initial_data),
         };
-        let result = ConvertTanksToTrimeshEval::new(
-            "Test", 
-            Import3DTanksEval::new(
-                "Test", 
-                ConvertSurfaceOuterToTrimeshEval::new(
-                    "Test", 
-                    ImportModelInitialPointsEval::new(
-                        "Test", 
-                        ctx
-                    )
-                )
-            )
-        ).eval(Zg::empty());
-        match result {
+        match ConvertSurfaceOuterToTrimeshEval::new("Test", ImportModelInitialPointsEval::new("Test", ctx))
+            .eval(Zg::empty()) {
             Ok(ctx) => {
-                let result = ContextRead::<ConvertTanksToTrimeshCtx>::read(&ctx).clone();
-                match result.tank {
-                    Some(tanks) => {
-                        if tanks.vertices().len() > 0 {
-                            let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks.stl"));
-                            if let Err(e) = write_stl(&path, &tanks) {
-                                log::error!("Failed to write nasal mesh {}", e);
-                            }
+                match ContextRead::<ConvertSurfaceOuterToTrimeshCtx>::read(&ctx).clone().result.clone() {
+                    Some(surface_outer_body) => {
+                        let mut result = 0.0;
+                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/{}.stl", ship_name));
+                        if let Err(e) = write_stl(&path, &surface_outer_body) {
+                            log::error!("Failed to write nasal mesh {}", e);
                         }
+                        result += volume(&surface_outer_body);
+                        let current_error = (result - target).abs() / ((result + target) / 2.0);
+                        log::debug!("Result volume: {:?}", result);
+                        log::debug!("Target volume: {:?}", target);
+                        assert!(current_error <= error_percent, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                     },
-                    None => log::warn!("Error to create tanks")
+                    None => {
+                        log::debug!("Error to calculate TriMesh from model: {}", path_3d_model);
+                    },
                 }
             },
             Err(err) => {

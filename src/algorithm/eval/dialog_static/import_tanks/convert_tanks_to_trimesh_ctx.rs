@@ -4,5 +4,5 @@ use parry3d_f64::shape::TriMesh;
 /// в тип данных TriMesh
 #[derive(Debug, Clone)]
 pub struct ConvertTanksToTrimeshCtx {
-    pub compartment_corner_points: Option<TriMesh>,
+    pub tank: Option<TriMesh>,
 }

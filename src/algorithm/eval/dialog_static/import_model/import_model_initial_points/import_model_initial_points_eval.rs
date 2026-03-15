@@ -1,11 +1,17 @@
-use sal_core::{dbg::Dbg, error::Error};
-use core::panic;
+use nalgebra::{
+    Const, 
+    OPoint
+};
+use sal_core::{
+    dbg::Dbg, 
+    error::Error
+};
+use std::collections::HashMap;
 use std::fs;
-use crate::algorithm::eval::entities::diametrical_buttocks::DiametricalButtocks;
-use crate::algorithm::eval::entities::surface_outer_body::SurfaceOuterBody;
-use crate::algorithm::eval::entities::surface_superstructure::SurfaceSuperstructure;
-use crate::algorithm::eval::import_model::import_3d_model_ctx::Import3DModelCtx;
-use crate::main;
+use crate::algorithm::eval::import_model::import_model_initial_points::import_model_initial_points_ctx::{
+    ImportModelInitialPointsCtx, 
+    SurfaceOuterBody
+};
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef, 
@@ -24,17 +30,17 @@ use crate::{
 };
 ///
 /// Парсер координат 3D модели из файла ДиалогСтатика
-pub struct Import3DModelEval {
+pub struct ImportModelInitialPointsEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<Zg, EvalResult> + Send + Sync>,
 }
 //
 //
-impl Import3DModelEval {
+impl ImportModelInitialPointsEval {
     ///
-    /// Новый экземпляр [Import3DModelEval]
+    /// Новый экземпляр [ImportModelInitialPointsEval]
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
-        let dbg = Dbg::new(parent, "Import3DModelEval");
+        let dbg = Dbg::new(parent, "ImportModelInitialPointsEval");
         Self {
             dbg,
             ctx: Box::new(ctx),
@@ -42,10 +48,11 @@ impl Import3DModelEval {
     }
     ///
     /// Парсинг диаметрального батокса 
-    fn parsing_diametrical_buttocks(&self, model_3d: Vec<f64>) -> (usize, DiametricalButtocks, DiametricalButtocks) {
-        let mut stern_block= DiametricalButtocks::new();
+    /// - `model_3d` - считанные сырые точки модели
+    fn parsing_diametrical_buttocks(&self, model_3d: Vec<f64>) -> (usize, Vec<(f64, f64, f64)>, Vec<(f64, f64, f64)>) {
+        let mut stern_block= Vec::new();
         let mut flag = 0;
-        let mut nasal_block= DiametricalButtocks::new();
+        let mut nasal_block= Vec::new();
         let mut i = 0;
         while i < model_3d.len() - 3 {
             if flag == 2 { break; }
@@ -58,15 +65,17 @@ impl Import3DModelEval {
                         break;
                     }
                     if flag == 0 {
-                        stern_block.coordinates.push(
+                        stern_block.push(
                             (
+                                0.0,
                                 z,
                                 x,
                             )
                         );
                     } else if flag == 1 {
-                        nasal_block.coordinates.push(
+                        nasal_block.push(
                             (
+                                0.0,
                                 z,
                                 x,
                             )
@@ -81,9 +90,13 @@ impl Import3DModelEval {
     }
     ///
     /// Парсинг поверхности наружного корпуса
+    /// - `position` - индекс старта для распределения точек по блокам
+    /// - `model_3d` - считанные сырые точки модели
+    /// - `main_decks_positions` - индекс главной палубы (ГП)
     fn parsing_surface_outer_body(&self, position: usize, model_3d: Vec<f64>, main_decks_positions: Vec<usize>) -> (usize, SurfaceOuterBody) {
         let mut surface_outer_body_coords: Vec<Vec<(f64, f64, f64)>> = Vec::new();
         let mut main_decks: Vec<usize> = Vec::new();
+        let mut main_points: HashMap<usize, Vec<OPoint<f64, Const<3>>>> = HashMap::new();
         let mut i = position;
         let mut flag_main = false;
         let mut flag = 0;
@@ -173,7 +186,9 @@ impl Import3DModelEval {
     }
     ///
     /// Парсинг поверхности надстройки
-    fn parsing_surface_superstructure(&self, position: usize, model_3d: Vec<f64>) -> SurfaceSuperstructure {
+    /// - `model_3d` - считанные сырые точки модели
+    /// - `main_decks_positions` - индекс главной палубы (ГП)
+    fn parsing_surface_superstructure(&self, position: usize, model_3d: Vec<f64>) -> Vec<Vec<(f64, f64, f64)>> {
         let mut surface_superstructure_coords: Vec<Vec<(f64, f64, f64)>> = Vec::new();
         let mut i = position;
         let mut flag = 0;
@@ -225,12 +240,12 @@ impl Import3DModelEval {
             }
             i += 1;
         }
-        return SurfaceSuperstructure { coordinates: surface_superstructure_coords };
+        return surface_superstructure_coords;
     }
 }
 //
 //
-impl Eval<Zg, EvalResult> for Import3DModelEval {
+impl Eval<Zg, EvalResult> for ImportModelInitialPointsEval {
     fn eval(&self, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(z_g_fix) {
@@ -258,12 +273,14 @@ impl Eval<Zg, EvalResult> for Import3DModelEval {
                 let (position, stern_block, nasal_block) = self.parsing_diametrical_buttocks(filtered_coords.clone());
                 let (position, surface_outer_body) = self.parsing_surface_outer_body(position, filtered_coords.clone(), main_deck_indexes);
                 let surface_superstructure = self.parsing_surface_superstructure(position, filtered_coords);
-                ctx.write(Import3DModelCtx {
-                    stern_block: stern_block,
-                    nasal_block: nasal_block,
-                    surface_outer_body,
-                    surface_superstructure: surface_superstructure,
-                })
+                ctx.write(
+                    ImportModelInitialPointsCtx {
+                        stern_block: stern_block,
+                        nasal_block: nasal_block,
+                        surface_outer_body,
+                        surface_superstructure: surface_superstructure,
+                    }
+                )
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
         }
@@ -271,9 +288,9 @@ impl Eval<Zg, EvalResult> for Import3DModelEval {
 }
 //
 //
-impl std::fmt::Debug for Import3DModelEval {
+impl std::fmt::Debug for ImportModelInitialPointsEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Import3DModelEval")
+        f.debug_struct("ImportModelInitialPointsEval")
             .field("dbg", &self.dbg)
             .finish()
     }

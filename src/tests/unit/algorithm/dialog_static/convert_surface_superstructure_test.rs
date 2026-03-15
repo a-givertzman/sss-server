@@ -17,11 +17,14 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            Zg, import_model::{
-                convert_model_to_trimesh_ctx::ConvertModelToTrimeshCtx, 
-                convert_model_to_trimesh_eval::ConvertModelToTrimeshEval, 
-                import_3d_model_eval::Import3DModelEval
-            }, 
+            Zg, 
+            import_model::{
+                convert_surface_superstructure_to_trimesh::{
+                    convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, 
+                    convert_surface_superstructure_to_trimesh_eval::ConvertSurfaceSuperStructureToTrimeshEval
+                }, 
+                import_model_initial_points::import_model_initial_points_eval::ImportModelInitialPointsEval
+            }
         }
     }, 
     kernel::{
@@ -93,12 +96,12 @@ fn init_each() -> () {}
 ///
 /// Testing [convert_to_trimesh]
 #[test]
-fn convert_model_to_trimesh() {
+fn convert_surface_outer_to_trimesh() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
-    log::debug!("Starting convert_model_to_trimesh test");
-    let test_duration = TestDuration::new("ConvertModelToTrimesh", Duration::from_secs(6000));
+    log::debug!("Starting convert_surface_outer_to_trimesh test");
+    let test_duration = TestDuration::new("ConvertSurfaceOuterToTrimesh", Duration::from_secs(6000));
     test_duration.run().unwrap();
     let error_percent = 1.0;
     let test_data = [
@@ -108,24 +111,24 @@ fn convert_model_to_trimesh() {
         //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
         //    12068.8268,
         // ),
-        // (
-        //    2, 
-        //    "APK_2023",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
-        //    2363.6901869983108,
-        // ),
+        (
+           2, 
+           "APK_2023",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
+           2363.6901869983108,
+        ),
         // (
         //    3,
         //    "sophia",
         //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
         //    21360.5678,
         // ),
-        (
-           4, 
-           "katamaran",
-           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
-           1986.66182,
-        ),
+        // (
+        //    4, 
+        //    "katamaran",
+        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
+        //    1986.66182,
+        // ),
     ];
     for (step, ship_name, path_3d_model, target) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
@@ -134,10 +137,10 @@ fn convert_model_to_trimesh() {
         let ctx = MocEval {
             ctx: Context::new(initial_data),
         };
-        match ConvertModelToTrimeshEval::new("Test", Import3DModelEval::new("Test", ctx))
+        match ConvertSurfaceSuperStructureToTrimeshEval::new("Test", ImportModelInitialPointsEval::new("Test", ctx))
             .eval(Zg::empty()) {
             Ok(ctx) => {
-                match ContextRead::<ConvertModelToTrimeshCtx>::read(&ctx).clone().surface_outer_body.clone() {
+                match ContextRead::<ConvertSurfaceSuperStructureToTrimeshCtx>::read(&ctx).clone().result.clone() {
                     Some(surface_outer_body) => {
                         let mut result = 0.0;
                         let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/{}.stl", ship_name));

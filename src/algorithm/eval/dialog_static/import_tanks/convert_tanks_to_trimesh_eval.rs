@@ -1,11 +1,9 @@
 use std::io::Write;
 use std::path::PathBuf;
-
 use boolmesh::prelude::{
     self, 
     Manifold
 };
-use csgrs::mesh::Mesh;
 use nalgebra::{
     Const, 
     OPoint
@@ -24,7 +22,7 @@ use sal_core::{
     error::Error
 };
 use crate::algorithm::context::context_access::ContextRead;
-use crate::algorithm::eval::import_model::convert_model_to_trimesh_ctx::ConvertModelToTrimeshCtx;
+use crate::algorithm::eval::import_model::convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx;
 use crate::algorithm::eval::import_tanks::convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx;
 use crate::algorithm::eval::import_tanks::import_3d_tanks_ctx::Import3DTanksCtx;
 use crate::{
@@ -356,7 +354,48 @@ impl ConvertTanksToTrimeshEval {
     ///
     /// Подгон отсеков под модель корабля
     fn substract_ship_model(&self, ship_model: TriMesh, tanks: Vec<TriMesh>) -> Option<TriMesh> {
-        None
+        let mut full_tanks = None;
+        for tank in tanks {
+            match self.create_manifold(tank.vertices(), tank.indices()) {
+                Ok(mani) => {
+                    if full_tanks.is_none() {
+                        full_tanks = Some(mani)
+                    } else {
+                        match compute_boolean(&mani, &full_tanks.unwrap(), prelude::OpType::Add) {
+                            Ok(res) => {
+                                full_tanks = Some(res);
+                            },
+                            Err(e) => panic!("{:?}", e),
+                        }
+                    }
+                },
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+        match self.create_manifold(ship_model.vertices(), ship_model.indices()) {
+            Ok(mani) => {
+                match compute_boolean(&full_tanks.unwrap(), &mani, prelude::OpType::Subtract) {
+                    Ok(res) => {
+                        full_tanks = Some(res);
+                    },
+                    Err(e) => panic!("{:?}", e),
+                }
+            },
+            Err(e) => panic!("{:?}", e),
+        }            
+        match self.manifold_to_trimesh(full_tanks.unwrap()) {
+            Ok(mut trimesh) => {
+                let _ = trimesh.set_flags(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
+                let _ = trimesh.set_flags(TriMeshFlags::DELETE_DUPLICATE_TRIANGLES);
+                let _ = trimesh.set_flags(TriMeshFlags::DELETE_DEGENERATE_TRIANGLES);
+                let _ = trimesh.set_flags(TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES);
+                let _ = trimesh.set_flags(TriMeshFlags::FIX_INTERNAL_EDGES);
+                let _ = trimesh.set_flags(TriMeshFlags::ORIENTED);
+                Some(trimesh)
+            },
+            Err(e) => panic!("{:?}", e),
+
+        }
     }
 }
 //
@@ -367,14 +406,14 @@ impl Eval<Zg, EvalResult> for ConvertTanksToTrimeshEval {
         match self.ctx.eval(z_g_fix) {
             Ok(ctx) => {
                 let tanks_3d = ContextRead::<Import3DTanksCtx>::read(&ctx).clone();
-                let model_3d = ContextRead::<ConvertModelToTrimeshCtx>::read(&ctx).clone();
-                // let result = self.substract_ship_model(
-                //     model_3d.surface_outer_body.unwrap(), 
-                //     self.get_vertices_indeces(tanks_3d)
-                // );
+                let model_3d = ContextRead::<ConvertSurfaceOuterToTrimeshCtx>::read(&ctx).clone();
+                let result = self.substract_ship_model(
+                    model_3d.result.expect("Error to get result of `ConvertSurfaceOuterToTrimeshCtx`"), 
+                    self.get_vertices_indeces(tanks_3d)
+                );
                 ctx.write(
                     ConvertTanksToTrimeshCtx {
-                        compartment_corner_points: None,
+                        tank: result,
                     }
                 )
             }

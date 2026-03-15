@@ -1,7 +1,6 @@
 use sal_core::{dbg::Dbg, error::Error};
-use core::panic;
 use std::fs;
-use crate::algorithm::eval::entities::compartment_corner_points::CompartmentCornerPoints;
+use crate::algorithm::eval::import_tanks::entities::compartment_corner_points::CompartmentCornerPoints;
 use crate::algorithm::eval::import_tanks::import_3d_tanks_ctx::Import3DTanksCtx;
 use crate::{
     algorithm::{

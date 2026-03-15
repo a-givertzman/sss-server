@@ -13,10 +13,7 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            Zg, import_model::{
-                import_3d_model_ctx::Import3DModelCtx, 
-                import_3d_model_eval::Import3DModelEval
-            }
+            Zg, import_model::import_model_initial_points::{import_model_initial_points_eval::ImportModelInitialPointsEval, import_model_initial_points_ctx::ImportModelInitialPointsCtx}
         }
     }, 
     kernel::{
@@ -55,9 +52,13 @@ fn import_3d_model() {
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
+        // (
+        //     1,
+        //     "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\vessel_surface_APK_2023"
+        // ),
         (
-            1,
-            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\vessel_surface_APK_2023"
+            2,
+            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\Судовая_поверхность_теоретическая_АРК_плюс_ГП"
         ),
     ];
     for (step, path_3d_model) in test_data.iter() {
@@ -71,10 +72,10 @@ fn import_3d_model() {
                 initial_data
             ),
         };
-        let result = Import3DModelEval::new("Test", ctx).eval(Zg::empty());
+        let result = ImportModelInitialPointsEval::new("Test", ctx).eval(Zg::empty());
         match result {
             Ok(ctx) => {
-                let result = ContextRead::<Import3DModelCtx>::read(&ctx).clone();
+                let result = ContextRead::<ImportModelInitialPointsCtx>::read(&ctx).clone();
             },
             Err(err) => panic!("step {} \nerror: {:#?}", step, err),
 

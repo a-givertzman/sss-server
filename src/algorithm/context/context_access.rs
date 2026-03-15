@@ -5,23 +5,20 @@ use crate::algorithm::{
         apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
         impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
         import_model::{
-            convert_model_to_trimesh_ctx::ConvertModelToTrimeshCtx, 
-            import_3d_model_ctx::Import3DModelCtx
-        }, 
-        import_tanks::{
-            import_3d_tanks_ctx::Import3DTanksCtx,
-            convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx
+            convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx, convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, convert_surface_superstructure_to_trimesh::convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, import_model_initial_points::import_model_initial_points_ctx::ImportModelInitialPointsCtx
         },
+        import_tanks::{
+            convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx, 
+            import_3d_tanks_ctx::Import3DTanksCtx
+        }, 
         main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, 
         main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, 
-        move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, 
-        parameters::*, 
+        move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::*, 
         parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, 
         parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, 
-        period_excitement::period_excitement_ctx::PeriodExcitementCtx, 
-        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, 
-        vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, 
-        *
+        period_excitement::period_excitement_ctx::PeriodExcitementCtx,
+        roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx,
+        vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *
     }, 
     initial::initial_ctx::InitialCtx
 };
@@ -624,27 +621,27 @@ impl ContextRead<DraftMarkCtx> for Context {
     }
 }
 //
-impl ContextWrite<Import3DModelCtx> for Context {
-    fn write(mut self, value: Import3DModelCtx) -> Result<Self, Error> {
+impl ContextWrite<ImportModelInitialPointsCtx> for Context {
+    fn write(mut self, value: ImportModelInitialPointsCtx) -> Result<Self, Error> {
         self.import_3d_model = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<Import3DModelCtx> for Context {
-    fn read(&self) -> Import3DModelCtx {
+impl ContextRead<ImportModelInitialPointsCtx> for Context {
+    fn read(&self) -> ImportModelInitialPointsCtx {
         self.import_3d_model.clone().unwrap()
     }
 }
 //
-impl ContextWrite<ConvertModelToTrimeshCtx> for Context {
-    fn write(mut self, value: ConvertModelToTrimeshCtx) -> Result<Self, Error> {
-        self.converted_3d_model = Some(value);
+impl ContextWrite<ConvertSurfaceOuterToTrimeshCtx> for Context {
+    fn write(mut self, value: ConvertSurfaceOuterToTrimeshCtx) -> Result<Self, Error> {
+        self.converted_surface_outer = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<ConvertModelToTrimeshCtx> for Context {
-    fn read(&self) -> ConvertModelToTrimeshCtx {
-        self.converted_3d_model.clone().unwrap()
+impl ContextRead<ConvertSurfaceOuterToTrimeshCtx> for Context {
+    fn read(&self) -> ConvertSurfaceOuterToTrimeshCtx {
+        self.converted_surface_outer.clone().unwrap()
     }
 }
 //
@@ -671,8 +668,30 @@ impl ContextRead<ConvertTanksToTrimeshCtx> for Context {
         self.converted_3d_tanks.clone().unwrap()
     }
 }
-
-
+//
+impl ContextWrite<ConvertSurfaceSuperStructureToTrimeshCtx> for Context {
+    fn write(mut self, value: ConvertSurfaceSuperStructureToTrimeshCtx) -> Result<Self, Error> {
+        self.converted_surface_superstructure = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ConvertSurfaceSuperStructureToTrimeshCtx> for Context {
+    fn read(&self) -> ConvertSurfaceSuperStructureToTrimeshCtx {
+        self.converted_surface_superstructure.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ConvertDiametricalButtocksToTrimeshCtx> for Context {
+    fn write(mut self, value: ConvertDiametricalButtocksToTrimeshCtx) -> Result<Self, Error> {
+        self.converted_diametrical_buttocks = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ConvertDiametricalButtocksToTrimeshCtx> for Context {
+    fn read(&self) -> ConvertDiametricalButtocksToTrimeshCtx {
+        self.converted_diametrical_buttocks.clone().unwrap()
+    }
+}
 
 
 
