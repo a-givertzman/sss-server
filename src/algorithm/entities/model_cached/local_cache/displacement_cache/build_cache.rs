@@ -94,7 +94,6 @@ impl BuildDisplacementCache {
                 let shape = shape.clone();
                 let thread_name =
                     format!("{}.build aabb {draught}", &self.dbg);
-                log::info!("thread_name Starting thread");
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
                         let guard = shape.read();
@@ -102,6 +101,7 @@ impl BuildDisplacementCache {
                         Ok(())
                     })
                     .map_err(|err| {
+                        log::error!("{}", format!("thread error:{}", err.to_string()));
                         error.pass_with(
                             format!("spawn task aabb draught:{draught}"),
                             err.to_string(),
@@ -125,7 +125,7 @@ impl BuildDisplacementCache {
                     let thread_name =
                         format!("BuildDisplacementCache displacement {draught} {heel} {trim}");
                     log::info!("{}.build | Starting thread {thread_name}", &self.dbg);
-                //    println!("Starting thread {thread_name}");
+                   // println!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let guard = shape.read();
@@ -140,6 +140,7 @@ impl BuildDisplacementCache {
                             Ok(())
                         })
                         .map_err(|err| {
+                            log::error!("{}", format!("thread error:{}", err.to_string()));
                             error.pass_with(
                                 format!(
                                     "spawn task draught:{} heel:{} trim:{}",
@@ -156,7 +157,7 @@ impl BuildDisplacementCache {
             }
         }
         for task in tasks {
-            log::trace!("join thread {}", task.name());
+            log::trace!("{}.build | join thread {}", &self.dbg, task.name());
             if let Err(err) = task.join() {
                 pass("task join", err);
             }
