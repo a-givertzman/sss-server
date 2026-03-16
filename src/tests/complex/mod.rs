@@ -1,2 +1,3 @@
+mod dialog_statica_complex;
 mod main_parametric_resonant_complex;
 mod seakeeping_complex;
