@@ -17,5 +17,5 @@ Communication between SSS-Client and SSS-Server based on events over TCP/IP
 
 - [API Reference](src/server/README.md)
 
-- sss tag: release_2_fix_hold_trigger
+- sss tag: release_2_0.0.11
 - sss-captain-report tag: release_2_0.0.7
