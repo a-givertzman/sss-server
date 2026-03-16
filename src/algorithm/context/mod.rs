@@ -5,7 +5,7 @@
 //!
 //! ## Example of using
 //! ```rust
-//! use crate::{algorithm::context::{context::Context, ctx_result::CtxResult}
+//! use crate::algorithm::context::context::Context
 //! use crate::kernel::initial_ctx::initial_ctx::InitialCtx
 //! let path = #"....";
 //! let context = Contex::new(InitialCtx::new(Storage::new(path))).eval();
@@ -13,7 +13,6 @@
 //! ```
 pub mod context_access;
 pub mod context;
-pub mod ctx_result;
 ///
 /// TODO: To be moved to the better place
 pub mod testing_ctx;

@@ -1,63 +1,46 @@
-use coco::Stack;
-use futures::future::BoxFuture;
-use super::sync::link::Link;
+use sal_sync::sync::Owner;
+use crate::kernel::sync::Link;
+
 ///
 /// Used for declarative `Rrequest` implementation
 /// 
 /// Example:
 /// ```ignore
 /// let math = AlgoSecond::new(
-///     link: switch.link(),
-///     req: Request<In, Out>::new(async |val: In, link: Link| -> Out {
+///     req: Request<T>::new(op: |ctx: Context, link: Link| -> T {
 ///         // Query: Some Struct comtains all neccessary info and implements `Serialize`
 ///         let query = QueryStruct::new();
 ///         // Reply: Returns `T`, implements `Deserialize`
-///         (link.req(query).await, link)
+///         let reply = link.req(query)
+///         // Returning received reply and link
+///         (reply, link)
 ///     }),
 ///     eval: AlgFirst::new(initial),
 /// )
 /// ```
-pub struct Request<In, T> {
-    link: Stack<Link>,
-    op: Box<dyn AsyncFn<In, T> + Send + Sync>,
+pub struct Request<In, Out> {
+    link: Owner<Link>,
+    op: Box<dyn Fn(In, Link) -> (Out, Link)>,
 }
 //
 //
-impl<In, T> Request<In, T> {
+impl<In, Out> Request<In, Out> {
     ///
     /// Returns [Request] new instance
     /// - `link` - `Link` - communication entity
     /// - `op` - the body of the request
-    pub fn new(link: Link, op: impl AsyncFn<In, T> + Send + Sync + 'static) -> Self {
-        let stack = Stack::new();
-        stack.push(link);
+    pub fn new(link: Link, op: impl Fn(In, Link) -> (Out, Link) + Send + Sync + 'static) -> Self {
         Self {
-            link: stack,
+            link: Owner::new(link),
             op: Box::new(op),
         }
     }
     ///
     /// Performs the request defined in the `op`
-    pub async fn fetch(&self, val: In) -> T {
-        let link = self.link.pop().unwrap();
-        let (result, link) = self.op.eval(val, link).await;
-        self.link.push(link);
+    pub fn fetch(&self, val: In) -> Out {
+        let link = self.link.take().unwrap();
+        let (result, link) = (self.op)(val, link);
+        self.link.replace(link);
         result
-    }
-}
-///
-/// Async callback closure
-pub trait AsyncFn<In, Out> {
-    fn eval(&self, ctx: In, link: Link) -> BoxFuture<'_, (Out, Link)>;
-}
-//
-//
-impl<T, F, In, Out> AsyncFn<In, Out> for T
-where
-    T: Fn(In, Link) -> F,
-    F: std::future::Future<Output = (Out, Link)> + Send + 'static,
-{
-    fn eval(&self, val: In, link: Link) -> BoxFuture<'_, (Out, Link)> {
-        Box::pin(self(val, link))
     }
 }

@@ -3,8 +3,29 @@ use std::{
     iter::Sum,
     ops::{Add, AddAssign, Sub},
 };
+use bincode::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 //
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Encode, PartialEq)]
+pub struct Point3 {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+//
+impl TryFrom<Point3> for Position {
+    type Error = String;
+    fn try_from(data: Point3) -> Result<Self, Self::Error> {
+        Ok(Position {
+            x: data.x,
+            y: data.y,
+            z: data.z,
+        })
+    }
+}
+//
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
+#[serde(try_from = "Point3")]
 pub struct Position {
     x: f64,
     y: f64,
@@ -34,6 +55,10 @@ impl Position {
     pub fn z(&self) -> f64 {
         self.z
     }
+    //
+    pub fn values(&self) -> [f64; 3] {
+        [self.x, self.y, self.z]
+    }   
     //
     #[allow(unused)]
     pub fn len(&self) -> f64 {
@@ -74,5 +99,11 @@ impl AddAssign for Position {
             y: self.y + other.y,
             z: self.z + other.z,
         };
+    }
+}
+//
+impl Into<[f64; 3]> for Position {
+    fn into(self) -> [f64; 3] {
+        [self.x, self.y, self.z]
     }
 }

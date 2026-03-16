@@ -25,8 +25,7 @@ mod app {
     fn init_each() {}
     ///
     /// Testing such functionality / behavior
-    #[tokio::test(flavor = "multi_thread")]
-    async fn new() {
+    fn new() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
