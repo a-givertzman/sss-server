@@ -8,7 +8,9 @@ pub mod bound;
 pub mod pos_shift;
 pub mod liquid;
 pub mod bounds;
-
+pub mod build_wall;
+pub mod points_manipulation;
+pub mod is_generate;
 #[allow(unused)]
 pub use vec::integral_sum::IntegralSum as IntegralSum;
 #[allow(unused)]
@@ -18,6 +20,7 @@ pub use vec::integral::Integral as Integral;
 pub use vec::*;
 pub use position_2d::*;
 pub use position::*;
+pub mod resample_line;
 pub use moment::*;
 pub use curve::*;
 pub use bound::*;

@@ -6,5 +6,5 @@ use parry3d_f64::shape::TriMesh;
 #[derive(Debug, Clone)]
 pub struct ConvertDiametricalButtocksToTrimeshCtx {
     pub stern_buttocks: Option<TriMesh>,
-    pub nasal_buttocks: Option<TriMesh>, 
+    pub bow_buttocks: Option<TriMesh>, 
 }

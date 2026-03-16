@@ -1,5 +1,3 @@
-use std::io::Write;
-use std::path::PathBuf;
 use boolmesh::prelude::{
     self, 
     Manifold
@@ -12,16 +10,15 @@ use boolmesh::{
     self, 
     compute_boolean
 };
-use parry3d_f64::math::Point;
 use parry3d_f64::shape::{
     TriMesh, 
-    TriMeshFlags
 };
 use sal_core::{
     dbg::Dbg, 
     error::Error
 };
 use crate::algorithm::context::context_access::ContextRead;
+use crate::algorithm::entities::points_manipulation::IntoPoints;
 use crate::algorithm::eval::import_model::convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx;
 use crate::algorithm::eval::import_tanks::convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx;
 use crate::algorithm::eval::import_tanks::import_3d_tanks_ctx::Import3DTanksCtx;
@@ -33,43 +30,6 @@ use crate::{
     },
     prelude::ContextWrite,
 };
-///
-/// Write data to .stl file
-pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
-    let error = Error::new("Shape", "write_stl");
-    let (result, empty_normals): (Vec<_>, Vec<_>) = mesh
-        .triangles()
-        .map(|t| (t.normal(), t))
-        .partition(|(n, _)| n.is_some());
-    if !empty_normals.is_empty() {
-        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
-    }
-    let triangles: Vec<_> = result
-        .into_iter()
-        .map(|(n, t)| {
-            let n = n.unwrap();
-            let normal = stl_io::Vector([n[0] as f32, n[1] as f32, n[2] as f32]);
-            let vertices = [
-                stl_io::Vector([t.a[0] as f32, t.a[1] as f32, t.a[2] as f32]),
-                stl_io::Vector([t.b[0] as f32, t.b[1] as f32, t.b[2] as f32]),
-                stl_io::Vector([t.c[0] as f32, t.c[1] as f32, t.c[2] as f32]),
-            ];
-            stl_io::Triangle { normal, vertices }
-        })
-        .collect();
-    let mut binary_stl = Vec::<u8>::new();
-    stl_io::write_stl(&mut binary_stl, triangles.iter())
-        .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
-    let mut buffer = std::fs::File::create(&path).map_err(|err| {
-        error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
-    })?;
-    buffer.write_all(&binary_stl).map_err(|err| {
-        error.pass_with(
-            format!("buffer.write_all, path:{:?}", path),
-            err.to_string(),
-        )
-    })
-}
 ///
 /// Преобразование координат 3D модели в тип данных TriMesh
 pub struct ConvertTanksToTrimeshEval {
@@ -84,20 +44,6 @@ impl ConvertTanksToTrimeshEval {
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "ConvertTanksToTrimeshEval");
         Self { dbg, ctx: Box::new(ctx) }
-    }
-    ///
-    /// Преобразование координат в набор точек [Point]
-    fn convert_to_points_vec(
-        &self,
-        x: f64,
-        vec_z_y: Vec<(f64,f64)>, 
-    ) -> Vec<Point<f64>>{
-        let mut frame: Vec<Point<f64>> = Vec::new();
-        for (y, z) in vec_z_y {
-            let point = Point::new(x, -y, z);
-            frame.push(point);
-        }
-        return frame;
     }
     ///
     /// Соединение точек из
@@ -272,8 +218,8 @@ impl ConvertTanksToTrimeshEval {
             let mut indices = Vec::new();
             let x1 = comp_corner.coordinates_x1.0;
             let x2 = comp_corner.coordinates_x2.0;
-            let points_x1 = self.convert_to_points_vec(x1, comp_corner.coordinates_x1.1.clone());
-            let points_x2 = self.convert_to_points_vec(x2, comp_corner.coordinates_x2.1.clone());
+            let points_x1 = (x1, comp_corner.coordinates_x1.1.clone()).into_points();
+            let points_x2 = (x2, comp_corner.coordinates_x2.1.clone()).into_points();
             if x1 < x2 {
                 self.connect_points(&mut vertices, &mut indices, &points_x1, &points_x2, true);
             } else {

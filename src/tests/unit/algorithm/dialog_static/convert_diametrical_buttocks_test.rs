@@ -132,18 +132,18 @@ fn convert_diametrical_buttocks_to_trimesh() {
                     Some(stern_buttocks) => {
                         let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/stern_buttocks_{}.stl", ship_name));
                         if let Err(e) = write_stl(&path, &stern_buttocks) {
-                            log::error!("Failed to write nasal mesh {}", e);
+                            log::error!("Failed to write bow mesh {}", e);
                         }
                     },
                     None => {
                         log::debug!("Error to calculate TriMesh from model: {}", path_3d_model);
                     },
                 }
-                match ContextRead::<ConvertDiametricalButtocksToTrimeshCtx>::read(&ctx).clone().nasal_buttocks.clone() {
-                    Some(nasal_buttocks) => {
-                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/nasal_buttocks_{}.stl", ship_name));
-                        if let Err(e) = write_stl(&path, &nasal_buttocks) {
-                            log::error!("Failed to write nasal mesh {}", e);
+                match ContextRead::<ConvertDiametricalButtocksToTrimeshCtx>::read(&ctx).clone().bow_buttocks.clone() {
+                    Some(bow_buttocks) => {
+                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/bow_buttocks_{}.stl", ship_name));
+                        if let Err(e) = write_stl(&path, &bow_buttocks) {
+                            log::error!("Failed to write bow mesh {}", e);
                         }
                     },
                     None => {

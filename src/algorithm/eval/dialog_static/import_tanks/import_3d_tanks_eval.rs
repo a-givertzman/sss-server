@@ -38,6 +38,7 @@ impl Import3DTanksEval {
     }
     ///
     /// Парсинг координат угловых точек переборок отсеков
+    /// - `model_3d` - координаты импортируемой модели
     fn parsing_compartment_corner_points(&self, model_3d: &Vec<f64>) -> (Vec<CompartmentCornerPoints>, usize) {
         let mut result: Vec<CompartmentCornerPoints> = Vec::new();
         let mut i = 0;
@@ -91,8 +92,11 @@ impl Import3DTanksEval {
         return (result, i);
     }
     ///
-    /// Парсинг названий отсеков 
-    fn parsing_compartment_names(&self, position: usize, model_3d: &Vec<f64>) -> Vec<f64> {
+    /// Парсинг индексов отсеков
+    /// которые требуют отзеркаливания
+    /// - `position` -  индекс начала парсинга в [model_3d]
+    /// - `model_3d` - координаты импортируемой модели
+    fn parsing_compartment_id_to_reverse(&self, position: usize, model_3d: &Vec<f64>) -> Vec<f64> {
         let mut result = Vec::new();
         let mut i = position + 2;
         while i < model_3d.len() - 2 {
@@ -100,26 +104,6 @@ impl Import3DTanksEval {
                 result.push(model_3d[i]);
             }
             i += 1;
-            // if model_3d[i + 1] == -999.0 && model_3d[i + 2] == -999.0 { // конец блока
-            //     break;
-            // } else if model_3d[i + 1] == -999.0 { // конец подблока
-            //     i += 2;
-            //     continue;
-            // } else if model_3d[i] == 999.0 {
-            //     if model_3d[i + 1] == -999.0 && model_3d[i + 2] == -999.0 { // конец блока
-            //         break;
-            //     } else if model_3d[i + 1] == -999.0 { // конец подблока
-            //         i += 2;
-            //         continue;
-            //     }
-            //     result.push(model_3d[i + 1]);
-            //     println!("{:?}", model_3d[i + 1]);
-            //     i += 2;
-            // } else { // порядковый номер отсека
-            //     result.push(model_3d[i + 1]);
-            //     println!("{:?}", model_3d[i + 1]);
-            //     i += 2;
-            // }
         }
         result
     }
@@ -146,7 +130,7 @@ impl Eval<Zg, EvalResult> for Import3DTanksEval {
                 )
                 .collect();
                 let  (mut compartment_corner_points, postion) = self.parsing_compartment_corner_points(&filtered_coords);
-                let  compartment_id_to_reverse = self.parsing_compartment_names(postion, &filtered_coords);
+                let  compartment_id_to_reverse = self.parsing_compartment_id_to_reverse(postion, &filtered_coords);
                 compartment_corner_points.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
                 ctx.write(
                     Import3DTanksCtx {

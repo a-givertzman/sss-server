@@ -145,7 +145,7 @@ fn convert_surface_outer_to_trimesh() {
                         let mut result = 0.0;
                         let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/{}.stl", ship_name));
                         if let Err(e) = write_stl(&path, &surface_outer_body) {
-                            log::error!("Failed to write nasal mesh {}", e);
+                            log::error!("Failed to write bow mesh {}", e);
                         }
                         result += volume(&surface_outer_body);
                         let current_error = (result - target).abs() / ((result + target) / 2.0);

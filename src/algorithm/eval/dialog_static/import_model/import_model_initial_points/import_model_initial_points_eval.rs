@@ -52,7 +52,7 @@ impl ImportModelInitialPointsEval {
     fn parsing_diametrical_buttocks(&self, model_3d: Vec<f64>) -> (usize, Vec<(f64, f64, f64)>, Vec<(f64, f64, f64)>) {
         let mut stern_block= Vec::new();
         let mut flag = 0;
-        let mut nasal_block= Vec::new();
+        let mut bow_block= Vec::new();
         let mut i = 0;
         while i < model_3d.len() - 3 {
             if flag == 2 { break; }
@@ -74,7 +74,7 @@ impl ImportModelInitialPointsEval {
                             )
                         );
                     } else if flag == 1 {
-                        nasal_block.push(
+                        bow_block.push(
                             (
                                 x,
                                 z,
@@ -87,7 +87,7 @@ impl ImportModelInitialPointsEval {
             }
             i += 1;
         }
-        return (i, stern_block, nasal_block);
+        return (i, stern_block, bow_block);
     }
     ///
     /// Парсинг поверхности наружного корпуса
@@ -271,13 +271,13 @@ impl Eval<Zg, EvalResult> for ImportModelInitialPointsEval {
                 }
                 )
                 .collect();
-                let (position, stern_block, nasal_block) = self.parsing_diametrical_buttocks(filtered_coords.clone());
+                let (position, stern_block, bow_block) = self.parsing_diametrical_buttocks(filtered_coords.clone());
                 let (position, surface_outer_body) = self.parsing_surface_outer_body(position, filtered_coords.clone(), main_deck_indexes);
                 let surface_superstructure = self.parsing_surface_superstructure(position, filtered_coords);
                 ctx.write(
                     ImportModelInitialPointsCtx {
                         stern_block: stern_block,
-                        nasal_block: nasal_block,
+                        bow_block: bow_block,
                         surface_outer_body,
                         surface_superstructure: surface_superstructure,
                     }

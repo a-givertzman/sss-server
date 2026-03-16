@@ -141,7 +141,7 @@ fn convert_tanks_to_trimesh() {
                         if tanks.vertices().len() > 0 {
                             let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks.stl"));
                             if let Err(e) = write_stl(&path, &tanks) {
-                                log::error!("Failed to write nasal mesh {}", e);
+                                log::error!("Failed to write bow mesh {}", e);
                             }
                         }
                     },
