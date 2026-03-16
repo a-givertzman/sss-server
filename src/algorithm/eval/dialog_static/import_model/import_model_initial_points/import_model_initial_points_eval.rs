@@ -67,17 +67,18 @@ impl ImportModelInitialPointsEval {
                     if flag == 0 {
                         stern_block.push(
                             (
-                                0.0,
-                                z,
                                 x,
+                                z,
+                                0.0,
+
                             )
                         );
                     } else if flag == 1 {
                         nasal_block.push(
                             (
-                                0.0,
-                                z,
                                 x,
+                                z,
+                                0.0,
                             )
                         );
                     }

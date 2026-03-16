@@ -1,3 +1,8 @@
+use std::fs::File;
+use std::io::{
+    BufWriter,
+    Write
+};
 use nalgebra::{
     Const, 
     OPoint
@@ -12,6 +17,7 @@ use sal_core::{
     error::Error
 };
 use crate::algorithm::context::context_access::ContextRead;
+use crate::algorithm::eval::import_model::convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx;
 use crate::algorithm::eval::import_model::convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx;
 use crate::algorithm::eval::import_model::import_model_initial_points::import_model_initial_points_ctx::ImportModelInitialPointsCtx;
 use crate::{
@@ -166,7 +172,7 @@ impl ConvertSurfaceOuterToTrimeshEval {
         }
         let x1 = base;
         let x2 = base + n as u32;
-        for i in 0..n {
+        for i in 0..n - 1 {
             let next = (i + 1) % n;
             let a = x1 + i as u32;
             let b = x1 + next as u32;
@@ -473,6 +479,7 @@ impl ConvertSurfaceOuterToTrimeshEval {
             let mut base_point = None;
             for i in 0..raw_prev_p.len() {
                 if raw_next_p[i] != raw_prev_p[i] {
+                    println!("{:?}", i - 1);
                     base_point = Some(raw_prev_p[i - 1]);
                     break;
                 }
@@ -503,6 +510,16 @@ impl ConvertSurfaceOuterToTrimeshEval {
         (points_substract, result)
     }
     ///
+    /// Сохранение точек
+    fn save_points_to_txt(points: &[Point<f64>], path: &str) -> std::io::Result<()> {
+        let file = File::create(path)?;
+        let mut writer = BufWriter::new(file);
+        for p in points {
+            writeln!(writer, "{:.6} {:.6} {:.6}", p.x, p.y, p.z)?;
+        }
+        Ok(())
+    }
+    ///
     /// Создание и индексирование вершин
     /// - `tanks_3d` - набор блоков координат отсеков
     /// - `target_points` - кол-во точек на шпангоут для интерполяции
@@ -516,6 +533,7 @@ impl ConvertSurfaceOuterToTrimeshEval {
         let mut flag_last_main_deck = false; // мы сейчас внутри диапазона main_deck
         let mut last_lower_gapped: Option<Vec<OPoint<f64, Const<3>>>> = None;
         let mut first = Vec::new();
+        let mut last = Vec::new();
         for i in 0..tanks_3d.surface_outer_body.coordinates.len() {
             let frame: &Vec<(f64, f64, f64)> = &tanks_3d.surface_outer_body.coordinates[i];
             let points_vec = self.convert_to_points_vec(frame);
@@ -539,6 +557,8 @@ impl ConvertSurfaceOuterToTrimeshEval {
             };
             if i == 0 {
                 first = points.clone();
+            } else if i == tanks_3d.surface_outer_body.coordinates.len() - 1 {
+                last = points.clone();
             }
             let opoints: Vec<_> = points.iter().map(|p| OPoint::<f64, Const<3>>::new(p.x, p.y, p.z)).collect();
             // первый фрейм после main_deck (переход main_deck: true -> false)
@@ -566,7 +586,8 @@ impl ConvertSurfaceOuterToTrimeshEval {
                         let mut wall_vert = Vec::new();
                         wall_vert.extend_from_slice(&ress.0.to_vec());
                         let mut wall_ind = Vec::new();
-                        self.build_wall(true, 0 as u32, &mut wall_ind, &mut wall_vert, &ress.0.to_vec(),  ress.0.len() - 1); // нос
+                        self.build_wall(true, 0 as u32, &mut wall_ind, &mut wall_vert, &ress.0.to_vec(),  ress.0.len() - 1);
+                        self.mirror_vert_ind(&mut wall_vert, &mut wall_ind, &[]);
                         walls_diff_y.push(TriMesh::new(wall_vert, wall_ind).expect("Error to build wall"));
                     }
                     mirror_mask.extend(std::iter::repeat(!is_main_deck).take(target_points));
@@ -591,14 +612,17 @@ impl ConvertSurfaceOuterToTrimeshEval {
             prev_points = Some(opoints);
         }
         self.build_wall(false, 0, &mut all_indices, &mut all_vertices, &first.to_vec(), first.len()); // корма
-        let last_start = all_vertices.len() - target_points - 1;
-        if let Some(last) = all_vertices.clone().get(last_start..) {
-            self.build_wall(true, last_start as u32, &mut all_indices, &mut all_vertices, &last.to_vec(),  last.len() - 1); // нос
-        }
+        self.build_wall(true, (all_vertices.len() - last.len()) as u32, &mut all_indices, &mut all_vertices, &last.to_vec(),  last.len() - 1); // нос
+        self.mirror_vert_ind(&mut all_vertices, &mut all_indices, &mirror_mask);
         match TriMesh::new(all_vertices, all_indices) {
             Ok(mut ship_model) => {
                 for wall in walls_diff_y {
                     ship_model.append(&wall);
+                }
+                if !main_deck.is_empty() {
+                    let main_deck = self.connect_main_deck(main_deck, target_points);
+                    ship_model.append(&main_deck);
+
                 }
                 let _ = ship_model.set_flags(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
                 let _ = ship_model.set_flags(TriMeshFlags::DELETE_DUPLICATE_TRIANGLES);
@@ -606,22 +630,6 @@ impl ConvertSurfaceOuterToTrimeshEval {
                 let _ = ship_model.set_flags(TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES);
                 let _ = ship_model.set_flags(TriMeshFlags::FIX_INTERNAL_EDGES);
                 let _ = ship_model.set_flags(TriMeshFlags::ORIENTED);
-                if !main_deck.is_empty() {
-                    let mut main_deck = self.connect_main_deck(main_deck, target_points);
-                    let _ = main_deck.set_flags(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
-                    let _ = main_deck.set_flags(TriMeshFlags::DELETE_DUPLICATE_TRIANGLES);
-                    let _ = main_deck.set_flags(TriMeshFlags::DELETE_DEGENERATE_TRIANGLES);
-                    let _ = main_deck.set_flags(TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES);
-                    let _ = main_deck.set_flags(TriMeshFlags::FIX_INTERNAL_EDGES);
-                    let _ = main_deck.set_flags(TriMeshFlags::ORIENTED);
-                    ship_model.append(&main_deck);
-                    let _ = ship_model.set_flags(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
-                    let _ = ship_model.set_flags(TriMeshFlags::DELETE_DUPLICATE_TRIANGLES);
-                    let _ = ship_model.set_flags(TriMeshFlags::DELETE_DEGENERATE_TRIANGLES);
-                    let _ = ship_model.set_flags(TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES);
-                    let _ = ship_model.set_flags(TriMeshFlags::FIX_INTERNAL_EDGES);
-                    let _ = ship_model.set_flags(TriMeshFlags::ORIENTED);
-                }
                 Some(ship_model)
             },
             Err(e) => panic!("Error to create ship model: {}",e ),

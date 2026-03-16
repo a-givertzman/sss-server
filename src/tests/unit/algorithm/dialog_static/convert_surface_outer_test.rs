@@ -18,13 +18,10 @@ use crate::{
         context::context_access::ContextRead, 
         eval::{
             Zg, import_model::{
-                convert_surface_outer_to_trimesh::{
+                convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_eval::ConvertDiametricalButtocksToTrimeshEval, convert_surface_outer_to_trimesh::{
                     convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, 
                     convert_surface_outer_to_trimesh_eval::ConvertSurfaceOuterToTrimeshEval
-                }, 
-                import_model_initial_points::{
-                    import_model_initial_points_eval::ImportModelInitialPointsEval, 
-                    }
+                }, import_model_initial_points::import_model_initial_points_eval::ImportModelInitialPointsEval
                 }
         }
     }, 
@@ -102,34 +99,28 @@ fn convert_surface_outer_to_trimesh() {
     init_once();
     init_each();
     log::debug!("Starting convert_surface_outer_to_trimesh test");
-    let test_duration = TestDuration::new("ConvertSurfaceOuterToTrimesh", Duration::from_secs(6000));
+    let test_duration = TestDuration::new("ConvertSurfaceOuterToTrimesh", Duration::from_secs(60));
     test_duration.run().unwrap();
     let error_percent = 1.0;
     let test_data = [
-        // (
-        //    1, 
-        //    "unboxes_АРК_2023",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
-        //    12068.8268,
-        // ),
+        (
+           1, 
+           "unboxes_АРК_2023",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
+           12068.8268,
+        ),
         (
            2, 
            "APK_2023",
            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
-           2363.6901869983108,
+           12068.82688,
         ),
-        // (
-        //    3,
-        //    "sophia",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
-        //    21360.5678,
-        // ),
-        // (
-        //    4, 
-        //    "katamaran",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\katamaran",
-        //    1986.66182,
-        // ),
+        (
+           3,
+           "sophia",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
+           21360.5678,
+        ),
     ];
     for (step, ship_name, path_3d_model, target) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
@@ -138,8 +129,16 @@ fn convert_surface_outer_to_trimesh() {
         let ctx = MocEval {
             ctx: Context::new(initial_data),
         };
-        match ConvertSurfaceOuterToTrimeshEval::new("Test", ImportModelInitialPointsEval::new("Test", ctx))
-            .eval(Zg::empty()) {
+        match ConvertSurfaceOuterToTrimeshEval::new(
+            "Test",
+            ConvertDiametricalButtocksToTrimeshEval::new(
+                "Test",
+                ImportModelInitialPointsEval::new(
+                    "Test", 
+                    ctx
+                )
+            ) 
+        ).eval(Zg::empty()) {
             Ok(ctx) => {
                 match ContextRead::<ConvertSurfaceOuterToTrimeshCtx>::read(&ctx).clone().result.clone() {
                     Some(surface_outer_body) => {

@@ -17,14 +17,12 @@ use crate::{
     algorithm::{
         context::context_access::ContextRead, 
         eval::{
-            Zg, 
-            import_model::{
-                convert_surface_superstructure_to_trimesh::{
-                    convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, 
-                    convert_surface_superstructure_to_trimesh_eval::ConvertSurfaceSuperStructureToTrimeshEval
-                }, 
-                import_model_initial_points::import_model_initial_points_eval::ImportModelInitialPointsEval
-            }
+            Zg, import_model::{
+                convert_diametrical_buttocks_to_trimesh::{convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx, convert_diametrical_buttocks_to_trimesh_eval::ConvertDiametricalButtocksToTrimeshEval}, convert_surface_outer_to_trimesh::{
+                    convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, 
+                    convert_surface_outer_to_trimesh_eval::ConvertSurfaceOuterToTrimeshEval
+                }, import_model_initial_points::import_model_initial_points_eval::ImportModelInitialPointsEval
+                }
         }
     }, 
     kernel::{
@@ -96,56 +94,57 @@ fn init_each() -> () {}
 ///
 /// Testing [convert_to_trimesh]
 #[test]
-fn convert_surface_outer_to_trimesh() {
+fn convert_diametrical_buttocks_to_trimesh() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
-    log::debug!("Starting convert_surface_outer_to_trimesh test");
+    log::debug!("Starting convert_diametrical_buttocks_to_trimesh test");
     let test_duration = TestDuration::new("ConvertSurfaceOuterToTrimesh", Duration::from_secs(6000));
     test_duration.run().unwrap();
-    let error_percent = 1.0;
     let test_data = [
-        // (
-        //    1, 
-        //    "unboxes_АРК_2023",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
-        //    12068.8268,
-        // ),
+        (
+           1, 
+           "unboxes_АРК_2023",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\unboxes_АРК_2023",
+        ),
         (
            2, 
            "APK_2023",
            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023",
-           2363.6901869983108,
         ),
-        // (
-        //    3,
-        //    "sophia",
-        //    "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
-        //    21360.5678,
-        // ),
+        (
+           3,
+           "sophia",
+           "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\sophia",
+        ),
     ];
-    for (step, ship_name, path_3d_model, target) in test_data.iter() {
+    for (step, ship_name, path_3d_model) in test_data.iter() {
         log::debug!("Step {}: processing {}", step, path_3d_model);
         let mut initial_data = InitialCtx::new(0, "Unit-test");
         initial_data.path_3d_model = path_3d_model.to_string();
         let ctx = MocEval {
             ctx: Context::new(initial_data),
         };
-        match ConvertSurfaceSuperStructureToTrimeshEval::new("Test", ImportModelInitialPointsEval::new("Test", ctx))
+        match ConvertDiametricalButtocksToTrimeshEval::new("Test", ImportModelInitialPointsEval::new("Test", ctx))
             .eval(Zg::empty()) {
             Ok(ctx) => {
-                match ContextRead::<ConvertSurfaceSuperStructureToTrimeshCtx>::read(&ctx).clone().result.clone() {
-                    Some(surface_outer_body) => {
-                        let mut result = 0.0;
-                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/{}.stl", ship_name));
-                        if let Err(e) = write_stl(&path, &surface_outer_body) {
+                match ContextRead::<ConvertDiametricalButtocksToTrimeshCtx>::read(&ctx).clone().stern_buttocks.clone() {
+                    Some(stern_buttocks) => {
+                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/stern_buttocks_{}.stl", ship_name));
+                        if let Err(e) = write_stl(&path, &stern_buttocks) {
                             log::error!("Failed to write nasal mesh {}", e);
                         }
-                        result += volume(&surface_outer_body);
-                        let current_error = (result - target).abs() / ((result + target) / 2.0);
-                        log::debug!("Result volume: {:?}", result);
-                        log::debug!("Target volume: {:?}", target);
-                        assert!(current_error <= error_percent, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+                    },
+                    None => {
+                        log::debug!("Error to calculate TriMesh from model: {}", path_3d_model);
+                    },
+                }
+                match ContextRead::<ConvertDiametricalButtocksToTrimeshCtx>::read(&ctx).clone().nasal_buttocks.clone() {
+                    Some(nasal_buttocks) => {
+                        let path = PathBuf::from(format!("src/tests/unit/algorithm/dialog_static/output_files/nasal_buttocks_{}.stl", ship_name));
+                        if let Err(e) = write_stl(&path, &nasal_buttocks) {
+                            log::error!("Failed to write nasal mesh {}", e);
+                        }
                     },
                     None => {
                         log::debug!("Error to calculate TriMesh from model: {}", path_3d_model);

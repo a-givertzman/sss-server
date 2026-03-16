@@ -118,7 +118,17 @@ impl ConvertDiametricalButtocksToTrimeshEval {
         nasal_vertices.extend_from_slice(&nasal_points);
         let mut nasal_indices = Vec::new();
         self.build_wall(false, 0, &mut nasal_indices, &mut nasal_vertices, &nasal_points, nasal_points.len());
-        (None, None)
+        let mut stern_buttocks = None;
+        let mut nasal_buttocks = None;
+        match TriMesh::new(stern_vertices, stern_indices) {
+            Ok(res) => stern_buttocks = Some(res),
+            Err(e) => log::error!("Error to create stern buttocks: {:?}", e),
+        }
+        match TriMesh::new(nasal_vertices, nasal_indices) {
+            Ok(res) => nasal_buttocks = Some(res),
+            Err(e) => log::error!("Error to create nasal buttocks: {:?}", e),
+        }
+        (stern_buttocks, nasal_buttocks)
     }
 }
 //

@@ -98,7 +98,7 @@ fn init_each() -> () {}
 ///
 /// Testing [convert_to_trimesh]
 #[test]
-fn convert_to_trimesh() {
+fn convert_tanks_to_trimesh() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();

@@ -52,10 +52,10 @@ fn import_3d_model() {
     let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
-        // (
-        //     1,
-        //     "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\vessel_surface_APK_2023"
-        // ),
+        (
+            1,
+            "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\APK_2023"
+        ),
         (
             2,
             "src\\tests\\unit\\algorithm\\dialog_static\\test_files\\Судовая_поверхность_теоретическая_АРК_плюс_ГП"

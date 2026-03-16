@@ -356,46 +356,16 @@ impl ConvertTanksToTrimeshEval {
     fn substract_ship_model(&self, ship_model: TriMesh, tanks: Vec<TriMesh>) -> Option<TriMesh> {
         let mut full_tanks = None;
         for tank in tanks {
-            match self.create_manifold(tank.vertices(), tank.indices()) {
-                Ok(mani) => {
-                    if full_tanks.is_none() {
-                        full_tanks = Some(mani)
-                    } else {
-                        match compute_boolean(&mani, &full_tanks.unwrap(), prelude::OpType::Add) {
-                            Ok(res) => {
-                                full_tanks = Some(res);
-                            },
-                            Err(e) => panic!("{:?}", e),
-                        }
-                    }
-                },
-                Err(e) => panic!("{:?}", e),
+            if full_tanks.is_none() {
+                full_tanks = Some(tank);
+            } else {
+                let mut new_tank = full_tanks.clone().unwrap();
+                new_tank.append(&tank);
+                full_tanks = Some(new_tank);
             }
         }
-        match self.create_manifold(ship_model.vertices(), ship_model.indices()) {
-            Ok(mani) => {
-                match compute_boolean(&full_tanks.unwrap(), &mani, prelude::OpType::Subtract) {
-                    Ok(res) => {
-                        full_tanks = Some(res);
-                    },
-                    Err(e) => panic!("{:?}", e),
-                }
-            },
-            Err(e) => panic!("{:?}", e),
-        }            
-        match self.manifold_to_trimesh(full_tanks.unwrap()) {
-            Ok(mut trimesh) => {
-                let _ = trimesh.set_flags(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
-                let _ = trimesh.set_flags(TriMeshFlags::DELETE_DUPLICATE_TRIANGLES);
-                let _ = trimesh.set_flags(TriMeshFlags::DELETE_DEGENERATE_TRIANGLES);
-                let _ = trimesh.set_flags(TriMeshFlags::DELETE_BAD_TOPOLOGY_TRIANGLES);
-                let _ = trimesh.set_flags(TriMeshFlags::FIX_INTERNAL_EDGES);
-                let _ = trimesh.set_flags(TriMeshFlags::ORIENTED);
-                Some(trimesh)
-            },
-            Err(e) => panic!("{:?}", e),
-
-        }
+        //TODO! СДЕЛАТЬ БУЛЕВСКУЮ ОПЕРАЦИЮ "SUBSTRACT" ДЛЯ TANKS BY !SHIP_MODEL
+        full_tanks
     }
 }
 //
