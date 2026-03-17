@@ -34,7 +34,6 @@ impl Eval<(), EvalResult> for PeriodExcitementEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let period_excitement_ctx: PeriodExcitementCtx = ContextRead::read(&ctx);
                 let initial = ContextReadRef::<InitialCtx>::read_ref(&ctx);
                 let voyage = initial
                     .voyage
