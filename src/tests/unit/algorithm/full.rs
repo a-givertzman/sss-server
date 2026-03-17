@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{algorithm::eval::{
         criterion::{
             CriterionDraughtEval, CriterionStabilityEval, acceleration::eval::AccelerationEval, bow_board::eval::BowBoardEval, circulation::eval::CirculationEval, dso_angle_max::eval::DSOAngleMaxEval, dso_area::eval::DSOAreaEval, dso_icing_max::eval::DSOIcingMaxEval, dso_max::eval::DSOMaxEval, dso_timber_max::eval::DSOTimberMaxEval, eval::ResultCriterionEval, grain::eval::GrainEval, load_line::eval::LoadLineEval, metacentric_height_subdivision::eval::MetacentricHeightSubdivisionEval, min_metacentric_height::eval::MinMetacentricHeightEval, reserve_buoyncy::eval::ReserveBuoyncyEval, screw::eval::ScrewEval, static_angle::eval::StaticAngleEval, wheather::eval::WheatherEval
-        }, draft_mark::eval::DraftMarkEval, icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, seakeeping::eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval}, stability::{
+        }, draft_mark::eval::DraftMarkEval, icing_coeff::eval::IcingCoeffEval, icing_timber::eval::IcingTimberEval, icing_timber_bound::eval::IcingTimberBoundEval, seakeeping::{entities::send_result::SendSeakeepingResult, eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, hitting_zones::hitting_point_eval::HittingZonesEval, main_resonant_zone::main_resonant_zone_eval::MainResonantZoneEval, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval}}, stability::{
             balance::eval::StabilityBalanceEval, dynamic_mass::eval::DynamicMassStabEval, icing::eval::IcingStabEval, lever_diagram::eval::LeverDiagramEval, metacentric_height::eval::MetacentricHeightEval, roll_amplitude::eval::RollingAmplitudeEval, roll_period::eval::RollingPeriodEval, static_mass::eval::StaticMassStabEval, wind::eval::WindEval, windage::eval::WindageEval
         }, strength::{
             area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassStrEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval,
@@ -271,24 +271,29 @@ fn full() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         );  
-       
-        let ctx = ParametricResonantZoneSpeedFilterEval::new(
+        let ctx = SendSeakeepingResult::new(
+            &dbg, 
+            Arc::clone(&api_client),
+            HittingZonesEval::new(
                 &dbg,
-                MainResonantZoneSpeedFilterEval::new(
+                ParametricResonantZoneSpeedFilterEval::new(
                     &dbg,
-                    ApparentFrequenciesEval::new(
+                    MainResonantZoneSpeedFilterEval::new(
                         &dbg,
-                        PeriodExcitementEval::new(
+                        ApparentFrequenciesEval::new(
                             &dbg,
-                            MainResonantZoneEval::new(
+                            PeriodExcitementEval::new(
                                 &dbg,
-                                ParametricResonantZoneEval::new(&dbg, ctx),
+                                MainResonantZoneEval::new(
+                                    &dbg,
+                                    ParametricResonantZoneEval::new(&dbg, ctx),
+                                ),
                             ),
                         ),
                     ),
-                ),
-            );
-
+                )
+            )
+        );
     ctx.eval(()).unwrap();   
     Ok(())
 }

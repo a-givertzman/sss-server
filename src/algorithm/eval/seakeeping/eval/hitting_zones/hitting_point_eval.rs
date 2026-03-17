@@ -1,6 +1,5 @@
 use sal_core::{dbg::Dbg, error::Error};
-use std::collections::HashMap;
-
+use std::{collections::HashMap, sync::Arc};
 use crate::{
     algorithm::eval::seakeeping::{
         entities::graham::graham::GrahamScan,
@@ -11,9 +10,17 @@ use crate::{
             move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx,
             parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx,
         },
-    },
-    kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextRead, ContextReadRef, ContextWrite, InitialCtx},
+    }, 
+    infrostructure::ApiClient, 
+    kernel::{
+        Eval, types::eval_result::EvalResult
+    }, 
+    prelude::{
+        ContextRead, 
+        ContextReadRef, 
+        ContextWrite, 
+        InitialCtx
+    }
 };
 ///
 /// Расчет пересечения с зонами резонанса

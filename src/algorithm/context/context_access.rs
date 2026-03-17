@@ -716,4 +716,9 @@ impl ContextRead<DraftMarkCtx> for Context {
         self.draft_mark.clone().unwrap()
     }
 }
-
+// mock for seakeeping sending result
+impl ContextWrite<()> for Context {
+    fn write(self, _: ()) -> Result<Self, Error> {
+        Result::Ok(self)
+    }
+}
