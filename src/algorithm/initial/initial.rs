@@ -14,10 +14,10 @@ use crate::algorithm::entities::data::{
 };
 use crate::algorithm::entities::data::{ShipArray, ShipParametersArray, VoyageArray};
 use crate::kernel::types::eval_result::EvalResult;
+use crate::prelude::*;
 use crate::{
     algorithm::context::{
         context::Context,
-        context_access::{ContextReadRef, ContextWrite},
     },
     infrostructure::ApiClient,
     kernel::Eval,
@@ -115,7 +115,7 @@ impl Eval<(), EvalResult> for Initial {
         let icing = IcingArray::parse(
             &self
                 .api_client
-                .fetch(&format!("SELECT key, value FROM icing;"))
+                .fetch("SELECT key, value FROM icing;")
                 .map_err(|err| error.pass_with("icing fetch", err))?,
         )
         .map_err(|err| error.pass_with("icing parse", err))?;
@@ -288,35 +288,35 @@ impl Eval<(), EvalResult> for Initial {
         let multipler_x1 = MultiplerX1Array::parse(
             &self
                 .api_client
-                .fetch(&format!("SELECT key, value FROM multipler_x1;"))
+                .fetch("SELECT key, value FROM multipler_x1;")
                 .map_err(|err| error.pass_with("multipler_x1 fetch", err))?,
         )
         .map_err(|err| error.pass_with("multipler_x1 parse", err))?;
         let multipler_x2 = MultiplerX2Array::parse(
             &self
                 .api_client
-                .fetch(&format!("SELECT key, value FROM multipler_x2;"))
+                .fetch("SELECT key, value FROM multipler_x2;")
                 .map_err(|err| error.pass_with("multipler_x2 fetch", err))?,
         )
         .map_err(|err| error.pass_with("multipler_x2 parse", err))?;
         let multipler_s = MultiplerSArray::parse(
             &self
                 .api_client
-                .fetch(&format!("SELECT area, t, s FROM multipler_s;"))
+                .fetch("SELECT area, t, s FROM multipler_s;")
                 .map_err(|err| error.pass_with("multipler_s fetch", err))?,
         )
         .map_err(|err| error.pass_with("multipler_s parse", err))?;
         let coefficient_k = CoefficientKArray::parse(
             &self
                 .api_client
-                .fetch(&format!("SELECT key, value FROM coefficient_k;"))
+                .fetch("SELECT key, value FROM coefficient_k;")
                 .map_err(|err| error.pass_with("coefficient_k fetch", err))?,
         )
         .map_err(|err| error.pass_with("coefficient_k parse", err))?;
         let coefficient_k_theta = CoefficientKThetaArray::parse(
             &self
                 .api_client
-                .fetch(&format!("SELECT key, value FROM coefficient_k_theta;"))
+                .fetch("SELECT key, value FROM coefficient_k_theta;")
                 .map_err(|err| error.pass_with("coefficient_k_theta fetch", err))?,
         )
         .map_err(|err| error.pass_with("coefficient_k_theta parse", err))?;

@@ -42,12 +42,10 @@ impl LoadBulkData {
         }
         let volume = if let Some(volume) = self.volume {
             volume
+        } else if let Some(stowage_factor) = self.stowage_factor {
+            self.mass * stowage_factor
         } else {
-            if let Some(stowage_factor) = self.stowage_factor {
-                self.mass * stowage_factor
-            } else {
-                return None;
-            }
+            return None;
         };
         let stowage_factor = if let Some(stowage_factor) = self.stowage_factor {
             stowage_factor

@@ -65,7 +65,7 @@ impl<T: PartialOrd> Cache<T> {
             .map(|i| {
                 // выбираем столбец по его индексу
                 let mut data: Vec<_> = vals.iter().map(|v| v[i].clone()).collect();
-                data.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                data.sort_by(|a, b| a.partial_cmp(b).unwrap());
                 data.dedup();
                 data
             })
@@ -168,13 +168,13 @@ impl Cache<f64> {
                     return vec![*keys.last().unwrap()];
                 }
                 // пара значений, между которыми попадает ключ
-                let low_index = keys.partition_point(|x| x < &key);
+                let low_index = keys.partition_point(|x| x < key);
                 assert!(
                     keys.len() > low_index,
                     "{}",
                     format!("{:?}, low_index:{low_index} key:{key}", keys)
                 );
-                return vec![keys[low_index - 1], keys[low_index]];
+                vec![keys[low_index - 1], keys[low_index]]
             })
             .collect();
     //    println!("pairs: {:?}", pairs);
@@ -183,7 +183,7 @@ impl Cache<f64> {
             .iter()
             .filter(|v| {
                 for (c, v) in pairs.iter().zip(v.iter()) {
-                    if !c.contains(&v) {
+                    if !c.contains(v) {
                         return false;
                     }
                 }
@@ -199,7 +199,7 @@ impl Cache<f64> {
                 let mut data: Vec<_> = data.iter().map(|v| v[i]).collect();
                 data.sort_by(|a, b| a.partial_cmp(b).unwrap());
                 data.dedup();
-                debug_assert!(data.len() > 0);
+                debug_assert!(!data.is_empty());
                 if data.len() == 1 {
                     debug_assert_eq!(
                         key,
@@ -234,7 +234,7 @@ impl Cache<f64> {
                         let (key, delta) = k.unwrap();
          //                 let k = ((key - data) as f64).abs() / delta;
          //                println!("multipler key:{:?} delta:{:?} data:{:?} k:{:?}", key, delta, data, k);  
-                        acc * (1. - ((key - data) as f64).abs() / delta)
+                        acc * (1. - (key - data).abs() / delta)
                     });
                 // перемножаем каждое значение в строке на коэффициент строки, это будет
                 // вклад значения строки по этому индексу в итоговое значение
@@ -242,11 +242,11 @@ impl Cache<f64> {
             })
             .collect::<Vec<_>>();
         // последовательно суммируем вклад строк по каждому индексу
-        let result = (query.len()..result[0].len())
-            .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
-            .collect::<Vec<_>>();
+        
   //      dbg!(query, &result);
-        result
+        (query.len()..result[0].len())
+            .map(|i| result.iter().map(|v| v[i]).sum::<f64>())
+            .collect::<Vec<_>>()
     }
     /*  /// Максимальное значение по индексу
     pub fn value_disp(&self, index: usize) -> (f64, f64) {
@@ -327,8 +327,8 @@ impl Cache<f64> {
             )
         });
         assert!(keys.len() > index);
-        assert!(keys[index].len() > 0);
+        assert!(!keys[index].is_empty());
         let keys = &keys[index];
-        (keys.first().unwrap().clone(), keys.last().unwrap().clone())
+        (*keys.first().unwrap(), *keys.last().unwrap())
     }
 }

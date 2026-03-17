@@ -60,7 +60,7 @@ impl Eval<(), EvalResult> for LoadLineEval {
                             result.push(CriterionData::new_result(criterion_id, z_fix, z_target))
                         }
                         Err(e) => {
-                            log::error!("load_line criterion_id error: {}", e.to_string())
+                            log::error!("load_line criterion_id error: {}", e)
                         }
                     }
                 }

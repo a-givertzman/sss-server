@@ -1,13 +1,12 @@
 use crate::algorithm::eval::stability::IcingStabCtx;
 use crate::algorithm::eval::stability::static_mass::ctx::StaticMassStabCtx;
-use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{Moment, Position};
 use crate::algorithm::eval::{WettingCtx};
-use crate::prelude::ContextRead;
+use crate::prelude::*;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -78,8 +77,7 @@ impl Eval<(), EvalResult> for StaticMassStabEval {
                         .filter(|v| {
                             v.cargo_type == UnitCargoType::GrainBulkhead && v.bound_x().is_ok()
                         })
-                        .map(|v| v.bound_x().unwrap().center())
-                        .flatten()
+                        .filter_map(|v| v.bound_x().unwrap().center())
                         .collect();
                     let (mass_unit, moment_unit) = unit
                         .iter()

@@ -1,10 +1,10 @@
 use crate::kernel::Eval;
+use crate::prelude::ContextReadRef;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
         entities::data::{loads::UnitCargoType, stability::{NavigationArea, ship_type::ShipType}},
         eval::zg::Zg,
-    }, kernel::{types::eval_result::EvalResult}, prelude::{ContextWrite, InitialCtx},
+    }, kernel::{types::eval_result::EvalResult}, prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::eval::icing_coeff::ctx::IcingCoeffCtx;
@@ -55,7 +55,7 @@ impl Eval<Zg, EvalResult> for CriterionStabilityEval {
                     .unit
                     .as_ref()
                     .ok_or(error.err("initial.unit no data"))?
-                    .into_iter()
+                    .iter()
                     .any(|v| v.cargo_type == UnitCargoType::Container);
                 let loads: StaticMassStabCtx = ctx.read();
                 let have_grain = !loads.bulk.is_empty();

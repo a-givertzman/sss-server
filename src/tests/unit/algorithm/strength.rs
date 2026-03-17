@@ -8,7 +8,7 @@ use crate::{algorithm::eval::{
         }, strength::{
             area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassStrEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval,
         }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
-    }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery};
+    }};
 use crate::app::app::App;
 use crate::conf::Conf;
 use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -21,7 +21,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use crate::{algorithm::entities::ship_model::ship_model::ShipModel, infrostructure::{DevStream, SelectDevDoc, SelectDevInfo}, kernel::Eval, server::{Content, Cot, DevConf, DevStreamConf, QueryId, SelectAct, SelectContent, SelectCot, SelectReq, Server}};
 use crate::algorithm::entities::model_cached::{self};
-use crate::prelude::{Context, Initial, InitialCtx};
+use crate::prelude::*;
 ///
 /// Application entry point
 #[test]

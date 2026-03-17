@@ -76,19 +76,17 @@ impl Server {
                                     }
                                     let keys: Vec<String> = connections.iter().map(|e| e.key().clone()).collect();
                                     for key in keys {
-                                        if let Some(con) =  connections.get(&key) {
-                                            if con.value().is_finished() {
+                                        if let Some(con) =  connections.get(&key)
+                                            && con.value().is_finished() {
                                                 con.exit();
                                                 connections.remove(&key);
                                             }
-                                        }
                                     }
                                 }
-                                Err(err) => if !exit.load(Ordering::Acquire) {
-                                    if err.kind() != ErrorKind::WouldBlock {
+                                Err(err) => if !exit.load(Ordering::Acquire)
+                                    && err.kind() != ErrorKind::WouldBlock {
                                         log::warn!("{dbg}.run | Can't get incoming TcpStream, error: {:?}", err)
                                     }
-                                }
                             }
                             if exit.load(Ordering::Acquire) {
                                 break 'main;

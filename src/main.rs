@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
     dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
     dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
-    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+    dso_angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
     dso_angles.dedup();
     let model_cached = model_cached::ModelCached::new(
         &dbg,

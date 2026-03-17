@@ -7,11 +7,10 @@ use crate::kernel::types::Arc;
 use crate::prelude::{ContextParamsRead, ContextReadRef, InitialCtx};
 use crate::{
     algorithm::{
-        context::context_access::ContextRead,
         eval::{IcingCoeffCtx, parameters::ParameterID, zg::Zg},
     },
     kernel::types::eval_result::EvalResult,
-    prelude::ContextWrite,
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::sync::RwLock;

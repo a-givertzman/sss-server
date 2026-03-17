@@ -49,7 +49,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
         let error = Error::new(&dbg, "eval");
         let link = link.ok_or(error.err("Can't get Link"))?;
         let in_progress = self.in_progress.clone();
-        let exit = self.exit.clone();
+        let _exit = self.exit.clone();
         let query = extract!(&req.query, Query::Calculus).cloned()
             .map_err(|_| error.err(format!("Query::DeviceInfo expected, but found {:?}", req.query_id)))?;
         //
@@ -75,7 +75,7 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
             //
             // Generate and return reply to the request
             let response = match ctx.eval(query.clone()) {
-                Ok(ctx) => {
+                Ok(_ctx) => {
                     in_progress.store(false, Ordering::Release);
                     //
                     // Do required operations with the Context

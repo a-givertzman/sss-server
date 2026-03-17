@@ -44,7 +44,7 @@ impl Eval<Zg, EvalResult> for MinMetacentricHeightEval {
                 let have_grain = !loads.bulk.is_empty();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
-                        .into_iter()
+                        .iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
                     None => {

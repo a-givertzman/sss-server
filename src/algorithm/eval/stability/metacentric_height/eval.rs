@@ -4,14 +4,9 @@ use crate::algorithm::eval::stability::{MetacentricHeightCtx, StabilityBalanceCt
 use crate::algorithm::eval::zg::Zg;
 use crate::kernel::Eval;
 use crate::{
-    algorithm::{
-        context::context_access::{
-            ContextParamsRead, ContextParamsWrite, ContextRead, ContextReadRef,
-        },
-        entities::data::loads::AssignmentType,
-    },
+    algorithm::entities::data::loads::AssignmentType,
     kernel::types::{Arc, RwLock, eval_result::EvalResult},
-    prelude::{Context, ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -164,7 +159,7 @@ impl Eval<Zg, EvalResult> for MetacentricHeightEval {
             Some(ctx) => self.calc(ctx, z_g_fix),
             None => match self.ctx.eval(()) {
                 Ok(ctx) => {
-                    *self.context.write() = Some(ctx.clone());
+                    *self.context.write() = Some(Context::clone(&ctx));
                     self.calc(ctx, Zg(None))
                 }
                 Err(err) => Err(error.pass_with("Read context error", err)),

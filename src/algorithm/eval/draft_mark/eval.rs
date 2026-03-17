@@ -1,12 +1,9 @@
 use super::DraftMarkResult;
-use crate::algorithm::context::context_access::ContextParamsWrite;
 use crate::algorithm::entities::{Curve, Draught, ICurve};
 use crate::algorithm::eval::{DraftMarkCtx, parameters::ParameterID};
 use crate::{
-    algorithm::context::context_access::ContextReadRef,
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::ContextWrite,
-    prelude::InitialCtx,
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -52,7 +49,7 @@ impl Eval<(), EvalResult> for DraftMarkEval {
                             v.x(),
                             v.y(),
                             v.z(),
-                            v.z() - draught.value(&v),
+                            v.z() - draught.value(v),
                         ));
                     }
                     z_fix.sort_by(|a, b| {

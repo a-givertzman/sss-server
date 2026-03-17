@@ -25,9 +25,11 @@ use serde::{Serialize, Deserialize};
 /// - `ReqErr` - Rquest | Error reply
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 #[repr(u8)]
+#[derive(Default)]
 pub enum Cot {
     #[serde(rename = "Inf")]
     #[serde(alias = "inf", alias = "Inf", alias = "INF")]
+    #[default]
     Inf = 0b00000010,
     #[serde(rename = "Act")]
     #[serde(alias = "act", alias = "Act", alias = "ACT")]
@@ -119,11 +121,6 @@ impl Cot {
 
 //
 // 
-impl Default for Cot {
-    fn default() -> Self {
-        Self::Inf
-    }
-}
 //
 // 
 impl AsRef<str> for Cot {

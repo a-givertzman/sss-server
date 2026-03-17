@@ -1,8 +1,8 @@
 use super::ctx::BendingMomentCtx;
 use crate::{
-    algorithm::{context::context_access::ContextReadRef, eval::strength::ShearForceCtx},
+    algorithm::eval::strength::ShearForceCtx,
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextRead, ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
