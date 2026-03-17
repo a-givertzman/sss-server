@@ -139,7 +139,7 @@ impl Clusterization {
     ///
     /// нахождение разрыва между подзонами
     fn find_gap(&self, mut points_on_line: Vec<(f64,f64)>, delta: f64) -> Option<((f64,f64),(f64,f64))> {
-        if points_on_line.len() <= 0 {
+        if points_on_line.is_empty() {
             return None;
         }
         points_on_line.sort_by(
