@@ -191,7 +191,7 @@ fn full() -> Result<(), Box<dyn std::error::Error>> {
                     IcingStabEval::new(
                         &dbg,
                         Arc::clone(&ship_model),                                        
-        WettingEval::new(
+        Box::new(WettingEval::new(
             &dbg,
             IcingTimberEval::new(
                 &dbg,
@@ -210,7 +210,7 @@ fn full() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                 ),
             ),
-        ),
+        )),
                                         ),
                                     ),
                                 ),

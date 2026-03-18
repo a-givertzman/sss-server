@@ -133,7 +133,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                     IcingStabEval::new(
                         &dbg,
                         Arc::clone(&self.ship_model),                
-        WettingEval::new(
+        Box::new(WettingEval::new(
             &dbg,
             IcingTimberEval::new(
                 &dbg,
@@ -156,7 +156,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                     ),
                 ),
             ),
-        ),
+        )),
                                         ),
                                     ),
                                 ),
