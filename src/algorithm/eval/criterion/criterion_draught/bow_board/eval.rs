@@ -4,6 +4,7 @@ use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
 };
+use sal_core::*;
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критерия высоты на носовом перпендикуляре

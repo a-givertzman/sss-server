@@ -1,5 +1,4 @@
-use sal_core::error::Error;
-
+pub use sal_core::*;
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{        
@@ -15,21 +14,6 @@ use crate::algorithm::{
     },
     initial::initial_ctx::InitialCtx,
 };
-
-/// Provides restricted write access to the [Context] members
-pub trait ContextWrite<T> {
-    fn write(self, value: T) -> Result<Context, Error>;
-}
-///
-/// Provides simple read access to the [Context] members
-pub trait ContextReadRef<T> {
-    fn read_ref(&self) -> &T;
-}
-///
-/// Provides simple read access to the [Context] members
-pub trait ContextRead<T> {
-    fn read(&self) -> T;
-}
 ///
 /// Provides restricted write access to the [Context].[Parameters] members
 pub trait ContextParamsWrite {
@@ -41,11 +25,6 @@ pub trait ContextParamsRead {
     fn read_params(&self, key: ParameterID) -> f64;
 }
 //
-impl ContextReadRef<Parameters> for Context {
-    fn read_ref(&self) -> &Parameters {
-        &self.parameters
-    }
-}
 impl ContextParamsWrite for Context {
     fn write_params(&mut self, id: ParameterID, value: f64) {
         self.parameters.add(id, value);
@@ -60,7 +39,7 @@ impl ContextParamsRead for Context {
     }
 }
 
-sal_core::define_context! {
+define_context! {
     pub struct Context {
         parameters: Parameters,
         
