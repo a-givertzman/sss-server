@@ -235,7 +235,7 @@ impl CompartmentCache {
             result.inertia_trans_x = inertia_trans_x;
         }
         //    println!("compartment_cashe {} get_for_dso ok: heel:{heel} volume:{volume} result.volume:{} y:{}", self.dbg, result.volume, result.volume_center.y());
-        return Ok(result);
+        Ok(result)
     }    
     /// Получение значения из кэша для заданных условий для расчета равновесного положения
     /// https://github.com/a-givertzman/sss/blob/master/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md\
@@ -314,11 +314,10 @@ impl CompartmentCache {
         bounds: Bounds,
         level_step: f64,
     ) -> Result<CompartmentBoundCache, Error> {
-        let volume_max = self
+        let volume_max = *self
             .volume_max
             .as_ref()
-            .ok_or(Error::new(self.dbg(), "build_bounded").err("no volume_max"))?
-            .clone();
+            .ok_or(Error::new(self.dbg(), "build_bounded").err("no volume_max"))?;
         Ok(CompartmentBoundCache::new(
             &self.dbg,
             self.shape.clone(),
@@ -331,11 +330,11 @@ impl CompartmentCache {
     }
     //
     pub fn level_max(&self) -> Option<f64> {
-        self.level_max.clone()
+        self.level_max
     }
     //
     pub fn volume_max(&self) -> Option<f64> {
-        self.volume_max.clone()
+        self.volume_max
     }
 }
 //

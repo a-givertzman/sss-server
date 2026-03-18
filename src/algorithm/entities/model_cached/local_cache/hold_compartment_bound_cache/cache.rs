@@ -84,11 +84,10 @@ impl HoldCompartmentBoundCache {
                 //           println!("jydfhsh get ok {} {_i} {values_sum} {volume} {epsilon}", &self.dbg);
                 return Ok(values);
             }
-            if let Some(last_delta) = last_delta {
-                if last_delta.signum() != delta.signum() {
+            if let Some(last_delta) = last_delta
+                && last_delta.signum() != delta.signum() {
                     delta_draugth = -delta_draugth / 3.;
                 }
-            }
             draugth += delta_draugth;
             last_delta = Some(delta);
         }

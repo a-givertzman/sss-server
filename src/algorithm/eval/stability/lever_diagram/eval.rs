@@ -9,9 +9,9 @@ use crate::kernel::Eval;
 use crate::kernel::types::Arc;
 use crate::prelude::{ContextParamsWrite, ContextReadRef, InitialCtx};
 use crate::{
-    algorithm::{context::context_access::ContextRead, entities::math::curve::*, eval::zg::Zg},
+    algorithm::{entities::math::curve::*, eval::zg::Zg},
     kernel::types::eval_result::EvalResult,
-    prelude::ContextWrite,
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::sync::RwLock;

@@ -1,6 +1,5 @@
 use crate::{
     algorithm::{
-        context::context_access::ContextReadRef,
         entities::{
             AddVec, Bound, Bounds,
             data::loads::{AssignmentType, UnitCargoType},
@@ -11,7 +10,7 @@ use crate::{
         },
     },
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextRead, ContextWrite, InitialCtx},
+    prelude::*,
 };
 use core::f64;
 use sal_core::{dbg::Dbg, error::Error};
@@ -110,13 +109,13 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                     for (assigment_type, values) in bounded_cargo {
                         match assigment_type {
                             AssignmentType::Ballast => vec_ballast
-                                .add_vec(&values)
+                                .add_vec(values)
                                 .map_err(|err| error.pass_with("vec_ballast.add", err))?,
                             AssignmentType::Stores => vec_store
-                                .add_vec(&values)
+                                .add_vec(values)
                                 .map_err(|err| error.pass_with("vec_store.add", err))?,
                             AssignmentType::CargoLoad => vec_cargo
-                                .add_vec(&values)
+                                .add_vec(values)
                                 .map_err(|err| error.pass_with("vec_cargo.add", err))?,
                             AssignmentType::Unspecified => (),
                         }

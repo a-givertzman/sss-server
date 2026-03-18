@@ -96,11 +96,10 @@ impl LocalCache for BowAreaCache {
         };
         let mut draught_array: Vec<f64> = voxels
             .iter()
-            .map(|(_, v)| v.iter().map(|(z, _)| *z).collect::<Vec<f64>>())
-            .flatten()
+            .flat_map(|(_, v)| v.iter().map(|(z, _)| *z).collect::<Vec<f64>>())
             .collect();
         draught_array.push(0.);
-        draught_array.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        draught_array.sort_by(|a, b| a.partial_cmp(b).unwrap());
         draught_array.dedup();
         let trim_array: Vec<_> = (-40..=40).map(|v| v as f64).collect();
         let voxels = Arc::new(voxels);
@@ -162,11 +161,11 @@ impl LocalCache for BowAreaCache {
     }
     //
     fn exit(&self) {
-        ()
+        
     }
     //
     fn clear_exit(&self) {
-        ()
+        
     }
     //
     fn dbg(&self) -> &Dbg {

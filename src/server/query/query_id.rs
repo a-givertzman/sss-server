@@ -40,8 +40,8 @@ impl QueryId {
 }
 //
 //
-impl Into<u32> for QueryId {
-    fn into(self) -> u32 {
-        self as u32
+impl From<QueryId> for u32 {
+    fn from(val: QueryId) -> Self {
+        val as u32
     }
 }

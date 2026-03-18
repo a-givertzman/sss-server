@@ -13,4 +13,3 @@ pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
 pub use link_sender::LinkSend;
 pub use hub::Hub;
 pub use link::Link;
-pub use switch::Switch;

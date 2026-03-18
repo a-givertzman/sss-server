@@ -62,8 +62,7 @@ impl Eval<(), EvalResult> for ImpactsHighWavesEval {
                     .ok_or(error.err("voyage error: no data!"))?;
                 let course_angle = voyage.course_angle;
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx)
-                    .period_excitement
-                    .clone();
+                    .period_excitement;
                 let course_angle_of_wave: Vec<f64> =
                     (1350..=2250).map(|x| x as f64 / 10.0).collect();
                 let vessel_speed = Self::vessel_speed();

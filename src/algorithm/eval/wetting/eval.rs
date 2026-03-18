@@ -1,12 +1,11 @@
 //! Учет намокания груза
-use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment, Position};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::kernel::Eval;
 use crate::prelude::ContextParamsWrite;
 use crate::{
     kernel::{types::eval_result::EvalResult},
-    prelude::{ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use crate::algorithm::eval::wetting::ctx::WettingCtx;
@@ -64,10 +63,7 @@ impl Eval<(), EvalResult> for WettingEval {
                                     return (0., Position::zero());
                                 }
                             };
-                            let permeability = match v.permeability {
-                                Some(v) => v,
-                                None => 0.,
-                            };
+                            let permeability = v.permeability.unwrap_or(0.);
                             (
                                 res_mass + v.mass * permeability,
                                 res_moment + Moment::from_pos(mass_shift, v.mass * permeability),

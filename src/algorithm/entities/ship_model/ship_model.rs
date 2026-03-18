@@ -76,7 +76,7 @@ impl ShipModel {
             grain_moments: None,
             opening: None,
             deck_angle_point: None,
-            model_cached: model_cached,
+            model_cached,
             //    timeout: Self::DEFAULT_TIMEOUT,
             api_client,
         }
@@ -288,11 +288,9 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "static_area_h");
         let area = self
             .horisontal_area_stab
-            .clone()
             .ok_or(error.err("no horisontal_area_stab"))?;
         let shift = self
             .horisontal_area_shift
-            .clone()
             .ok_or(error.err("no horisontal_area_shift"))?;
         Ok((area, shift))
     }
@@ -302,11 +300,9 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "static_area_v");
         let area = self
             .windage_area_stab
-            .clone()
             .ok_or(error.err("no windage_area_stab"))?;
         let moment = self
             .windage_area_moment
-            .clone()
             .ok_or(error.err("no windage_area_moment"))?;
         Ok((area, moment))
     }
@@ -487,7 +483,7 @@ fn grain_moments(
         .iter()
         .map(|(code, v)| (code.clone(), Curve::new_linear(v)))
         .collect();
-    if let Some(error_data) = data.iter().filter(|v| v.1.is_err()).next() {
+    if let Some(error_data) = data.iter().find(|v| v.1.is_err()) {
         error_data
             .1
             .clone()

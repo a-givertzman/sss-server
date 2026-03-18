@@ -11,7 +11,7 @@
 //! let context = Contex::new(InitialCtx::new(Storage::new(path))).eval();
 //! println!("Initial data: {}", context.initial);
 //! ```
-pub mod context_access;
+//pub mod context_access;
 pub mod context;
 ///
 /// TODO: To be moved to the better place

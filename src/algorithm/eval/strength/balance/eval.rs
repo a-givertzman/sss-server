@@ -1,6 +1,5 @@
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
         entities::ship_model::{BalanceStrengthQuery, ship_model::ShipModel},
         eval::{parameters::ParameterID, strength::StaticMassStrCtx},
     },
@@ -8,7 +7,7 @@ use crate::{
         Eval,
         types::{RwLock, eval_result::EvalResult},
     },
-    prelude::{ContextParamsRead, ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 use std::sync::Arc;

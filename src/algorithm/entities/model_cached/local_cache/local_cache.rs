@@ -84,7 +84,7 @@ pub(crate) trait LocalCache {
     fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "init");
         let vals = read(self.dbg(), &self.cache_path())
-            .map_err(|err| error.pass_with(format!("read cache data error"), err))?;
+            .map_err(|err| error.pass_with("read cache data error".to_string(), err))?;
         let cache = Cache::new(self.dbg());
         cache
             .init(vals)
@@ -123,7 +123,7 @@ pub fn get_from_volume(
         let result = cache
             .values_disp(&query)
             .first()
-            .ok_or(error.err(format!("no result!")))?
+            .ok_or(error.err("no result!".to_string()))?
             .to_vec();
         (0., result)
     } else if volume >= volume_max {
@@ -134,7 +134,7 @@ pub fn get_from_volume(
         let result = cache
             .values_disp(&query)
             .first()
-            .ok_or(error.err(format!("no result!")))?
+            .ok_or(error.err("no result!".to_string()))?
             .to_vec();
         (level_max, result)
     } else {
@@ -151,7 +151,7 @@ pub fn get_from_volume(
             assert!(result.len() > volume_index);
             let delta = volume - result[volume_index - query.len()];
             if last_delta_signum != delta.signum() {
-                step = step * 0.3;
+                step *= 0.3;
                 last_delta_signum = delta.signum();
             }
             let next_level = (level + step * delta.signum())
@@ -201,7 +201,7 @@ pub fn get_from_level(
         cache
             .values_disp(&query)
             .first()
-            .ok_or(error.err(format!("no result!")))?
+            .ok_or(error.err("no result!".to_string()))?
             .to_vec()
     } else if level >= level_max {
         // целевое значение на верхней границе диапазона, сразу берем значение
@@ -210,7 +210,7 @@ pub fn get_from_level(
         cache
             .values_disp(&query)
             .first()
-            .ok_or(error.err(format!("no result!")))?
+            .ok_or(error.err("no result!".to_string()))?
             .to_vec()
     } else {
         let mut query: Vec<_> = query.to_vec();

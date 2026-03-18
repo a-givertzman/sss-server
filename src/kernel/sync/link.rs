@@ -123,7 +123,7 @@ impl Link {
         let dbg = self.name.join();
         let send = self.send.clone();
         let recv = self.recv.take().unwrap();
-        let timeout = self.timeout;
+        let _timeout = self.timeout;
         let config = self.bincode_config;
         let exit = self.exit.clone();
         log::debug!("{}.listen | Starting...", dbg);
@@ -134,17 +134,14 @@ impl Link {
                         log::trace!("{}.listen | Received query: {:#?}", dbg, query);
                         match bincode::decode_from_slice(&query, config) {
                             Ok((query, _)) => {
-                                match (op)(query) {
-                                    Some(reply) => {
-                                        match bincode::encode_to_vec(&reply, config) {
-                                            Ok(reply) => if let Err(err) = send.send(reply) {
-                                                let err = error.pass_with("Send reply error", err.to_string());
-                                                log::error!("{}", err);
-                                            }
-                                            Err(err) => log::warn!("{}.listen | Encode error: {:#?}", dbg, err),
+                                if let Some(reply) = (op)(query) {
+                                    match bincode::encode_to_vec(&reply, config) {
+                                        Ok(reply) => if let Err(err) = send.send(reply) {
+                                            let err = error.pass_with("Send reply error", err.to_string());
+                                            log::error!("{}", err);
                                         }
+                                        Err(err) => log::warn!("{}.listen | Encode error: {:#?}", dbg, err),
                                     }
-                                    None => {}
                                 }
                             },
                             Err(err) => log::warn!("{}.listen | Decode error: {:#?}", dbg, err),
@@ -188,7 +185,7 @@ impl Link {
                             match bincode::decode_from_slice(&query, self.bincode_config) {
                                 Ok((query, _)) => {
                                     log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
-                                    return Ok(Some(query))
+                                    Ok(Some(query))
                                 }
                                 Err(err) => Err(
                                     error.pass_with("Decode error", err.to_string()),
@@ -220,7 +217,7 @@ impl Link {
                     match bincode::decode_from_slice(&query, self.bincode_config) {
                         Ok((query, _)) => {
                             log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
-                            return Ok(Some(query))
+                            Ok(Some(query))
                         }
                         Err(err) => Err(
                             error.pass_with("Decode error", err.to_string()),
@@ -252,7 +249,7 @@ impl Link {
                     match bincode::decode_from_slice(&query, self.bincode_config) {
                         Ok((query, _)) => {
                             log::trace!("{}.recv | Received query: {:#?}", self.name, query);
-                            return Ok(query)
+                            Ok(query)
                         }
                         Err(err) => Err(
                             error.pass_with("Decode error", err.to_string()),

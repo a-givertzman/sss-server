@@ -1,4 +1,3 @@
-use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
 use crate::algorithm::entities::{AddVec, Bound, Bounds};
 use crate::algorithm::eval::WettingCtx;
@@ -7,7 +6,7 @@ use crate::algorithm::eval::strength::static_mass::ctx::StaticMassStrCtx;
 use crate::prelude::ContextRead;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 
@@ -80,8 +79,7 @@ impl Eval<(), EvalResult> for StaticMassStrEval {
                 let grain_bulkhead: Vec<_> = unit
                     .iter()
                     .filter(|v| v.cargo_type == UnitCargoType::GrainBulkhead && v.bound_x().is_ok())
-                    .map(|v| v.bound_x().unwrap().center())
-                    .flatten()
+                    .filter_map(|v| v.bound_x().unwrap().center())
                     .collect();
 /*
                 let (mass_unit, shift_unit, grain_bulkhead) = {

@@ -2,9 +2,9 @@ use crate::algorithm::entities::Moment;
 use crate::algorithm::eval::UnitAreaCtx;
 use crate::kernel::Eval;
 use crate::{
-    algorithm::{context::context_access::ContextReadRef, entities::Bound},
+    algorithm::entities::Bound,
     kernel::types::eval_result::EvalResult,
-    prelude::{ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -48,11 +48,11 @@ impl Eval<(), EvalResult> for UnitAreaEval {
                 let min_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x1)
-                    .min_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .min_by(|a, b| a.partial_cmp(b).unwrap());
                 let max_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x2)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .max_by(|a, b| a.partial_cmp(b).unwrap());
                 // Если есть границы грузов ищем распределения площадей грузов
                 let units_bound = if let (Some(min_x), Some(max_x)) = (min_x, max_x) {
                     // Диапазон грузов по оси Х
@@ -74,7 +74,7 @@ impl Eval<(), EvalResult> for UnitAreaEval {
                     let mut distr_v = Vec::new();  // Распределение площади парусности палубного груза по шпациям, м^2
                     let unit: Vec<_> = unit.iter().filter(|v| v.windage_area.is_some()).collect();
                     // Перебираем шпации и ищем площадь попавшую в текущую шпацию
-                    for (_i, bound_x) in bounds.iter().enumerate() {
+                    for bound_x in bounds.iter() {
                         let mut current_area = 0.;
                         let mut current_moment_x = 0.;
                         let mut current_moment_z = 0.;

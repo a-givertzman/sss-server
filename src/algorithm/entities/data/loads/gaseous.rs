@@ -57,7 +57,7 @@ impl LoadGaseousData {
         } else {
             return Err(error.err("no mass_shift_z and bound_z2"));
         };
-        return Ok(Position::new(center_x, center_y, center_z));        
+        Ok(Position::new(center_x, center_y, center_z))
     }
 }
 

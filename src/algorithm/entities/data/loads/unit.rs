@@ -130,7 +130,7 @@ impl LoadUnitData {
         if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
             match Bound::new(self_bound_x1, self_bound_x2) {
                 Ok(data) => Ok(data),
-                Err(e) => return Err(error.pass(e)),
+                Err(e) => Err(error.pass(e)),
             }
         } else {
             Err(error.err("no bounds!"))
@@ -141,16 +141,14 @@ impl LoadUnitData {
         let error = Error::new("LoadUnitData", "mass_shift");
         let center_x =  if let Some(x) = self.mass_shift_x {
             x
-        } else {
-            if let Ok(bound_x) = self.bound_x() {
-                if let Some(x) = bound_x.center() {
-                    x
-                } else {
-                    return Err(error.err("no bound_x.center()"));
-                }
+        } else if let Ok(bound_x) = self.bound_x() {
+            if let Some(x) = bound_x.center() {
+                x
             } else {
-                return Err(error.err("no mass_shift_x and bound_x"));
+                return Err(error.err("no bound_x.center()"));
             }
+        } else {
+            return Err(error.err("no mass_shift_x and bound_x"));
         };
         let center_y =  if let Some(v) = self.mass_shift_y {
             v
@@ -182,7 +180,7 @@ impl LoadUnitData {
             };
             z1 + (z2 - z1) / 2.
         };
-        return Ok(Position::new(center_x, center_y, center_z));        
+        Ok(Position::new(center_x, center_y, center_z))
     }
 }
 /// Массив данных по грузам

@@ -103,8 +103,8 @@ impl AreaShape {
         };
         // разбиваем поверхность полученного над водой объема на воксели
         let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
-            &mesh.vertices(),
-            &mesh.indices(),
+            mesh.vertices(),
+            mesh.indices(),
             self.resolution,
             parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
             false,

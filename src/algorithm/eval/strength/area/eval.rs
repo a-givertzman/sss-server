@@ -3,7 +3,6 @@ use crate::algorithm::eval::icing_timber_bound::ctx::IcingTimberBoundCtx;
 use crate::algorithm::eval::strength::AreaStrCtx;
 use crate::{
     algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
         entities::{
             Bound, data::loads::UnitCargoType, ship_model::ship_model::ShipModel,
         },
@@ -12,7 +11,7 @@ use crate::{
         Eval,
         types::{Arc, RwLock, eval_result::EvalResult},
     },
-    prelude::{ContextWrite, InitialCtx},
+    prelude::*,
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -49,7 +48,7 @@ impl Eval<(), EvalResult> for AreaStrEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
-                        .into_iter()
+                        .iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
                     None => return Err(error.err("Read unit error: no data!")),
@@ -88,11 +87,11 @@ impl Eval<(), EvalResult> for AreaStrEval {
                 let min_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x1)
-                    .min_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .min_by(|a, b| a.partial_cmp(b).unwrap());
                 let max_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x2)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .max_by(|a, b| a.partial_cmp(b).unwrap());
                 // Если есть границы грузов ищем распределения площадей грузов
                 let units_bound = if let (Some(min_x), Some(max_x)) = (min_x, max_x) {
                     // Диапазон грузов по оси Х

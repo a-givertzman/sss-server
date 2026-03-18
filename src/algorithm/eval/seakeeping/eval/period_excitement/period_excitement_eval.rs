@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use crate::{
     algorithm::eval::seakeeping::eval::period_excitement::period_excitement_ctx::PeriodExcitementCtx,
     kernel::{Eval, types::eval_result::EvalResult},
-    prelude::{ContextRead, ContextReadRef, ContextWrite, InitialCtx},
+    prelude::*,
 };
 ///
 /// Расчет [периода волнения](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#порядок-расчета)
@@ -34,11 +34,6 @@ impl Eval<(), EvalResult> for PeriodExcitementEval {
         let error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let period_excitement_ctx =
-                    ContextReadRef::<Option<PeriodExcitementCtx>>::read_ref(&ctx);
-                if period_excitement_ctx.is_some() {
-                    return Ok(ctx);
-                }
                 let initial = ContextReadRef::<InitialCtx>::read_ref(&ctx);
                 let voyage = initial
                     .voyage

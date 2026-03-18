@@ -6,4 +6,3 @@ mod query;
 
 pub(crate) use api::*;
 pub(crate) use api_handlers::*;
-pub(crate) use query::*;

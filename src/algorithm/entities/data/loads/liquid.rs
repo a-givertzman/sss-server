@@ -44,21 +44,17 @@ impl LoadLiquidData {
     pub fn data(&self) -> Option<LiquidData> {
         let volume = if let Some(volume) = self.volume {
             volume
+        } else if let Some(density) = self.density && density > 0. {
+            self.mass / density
         } else {
-            if let Some(density) = self.density && density > 0. {
-                self.mass / density
-            } else {
-                return None;
-            }
+            return None;
         };
         let density = if let Some(density) = self.density {
             density
+        } else if self.mass > 0. {
+            volume / self.mass
         } else {
-            if self.mass > 0. {
-                volume / self.mass
-            } else {
-                return None;
-            }
+            return None;
         };
         Some(LiquidData {
             assignment_id:  self.assignment_id,

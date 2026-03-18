@@ -86,9 +86,9 @@ impl AreaCache {
         let cache = self.cache.as_ref().ok_or(error.pass("no cache"))?;
         let query = [self.draught_min];
         let result_min = cache.get(&query);
-        let av_cs_dmin = result_min[2];
-        let mv_x_cs_dmin = result_min[0];
-        let mv_z_cs_dmin = result_min[1];
+        let _av_cs_dmin = result_min[2];
+        let _mv_x_cs_dmin = result_min[0];
+        let _mv_z_cs_dmin = result_min[1];
         Ok((
             result_min[2],
             result_min[0],
@@ -119,16 +119,14 @@ impl LocalCache for AreaCache {
         };
         let mut draught_array: Vec<f64> = voxels
             .iter()
-            .map(|(_, v)| v.iter().map(|(z, _)| *z).collect::<Vec<f64>>())
-            .flatten()
+            .flat_map(|(_, v)| v.iter().map(|(z, _)| *z).collect::<Vec<f64>>())
             .collect();
         draught_array.push(0.);
-        draught_array.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        draught_array.sort_by(|a, b| a.partial_cmp(b).unwrap());
         draught_array.dedup();
         let data: Vec<(f64, f64, f64)> = voxels
             .iter()
-            .map(|(x, v)| v.iter().map(|(z, a)| (*x, *z, *a)).collect::<Vec<_>>())
-            .flatten()
+            .flat_map(|(x, v)| v.iter().map(|(z, a)| (*x, *z, *a)).collect::<Vec<_>>())
             .collect::<Vec<_>>();
         let data = Arc::new(data);
         let mut tasks: VecDeque<JoinHandle<_>> = VecDeque::new();
@@ -203,11 +201,11 @@ impl LocalCache for AreaCache {
     }
     //
     fn exit(&self) {
-        ()
+        
     }
     //
     fn clear_exit(&self) {
-        ()
+        
     }
     //
     fn dbg(&self) -> &Dbg {
