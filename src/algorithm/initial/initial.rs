@@ -79,7 +79,6 @@ impl Eval<(), EvalResult> for Initial {
         };
         let navigation_area = NavigationArea::from_str(&ship.navigation_area)
             .map_err(|e| error.pass_with("navigation_area", e))?;
-        dbg!("kjdsfdsklfnskla", &ship.ship_type);
         let ship_type =
             ShipType::from_str(&ship.ship_type).map_err(|e| error.pass_with("ship_type", e))?;
         let voyage = VoyageArray::parse(
