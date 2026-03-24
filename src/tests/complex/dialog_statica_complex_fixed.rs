@@ -38,9 +38,9 @@ pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
         .triangles()
         .map(|t| (t.normal(), t))
         .partition(|(n, _)| n.is_some());
-    if !empty_normals.is_empty() {
+  /*  if !empty_normals.is_empty() {
         return Err(error.err(format!("calculate normal error, path:{:?}", path)));
-    }
+    }*/
     let triangles: Vec<_> = result
         .into_iter()
         .map(|(n, t)| {
