@@ -2082,3 +2082,43 @@ impl ModelCached {
         Ok(result)
     }
 }
+//
+#[cfg(test)]
+impl ModelCached {
+    /// Создает пустую заглушку ModelCached для тестов
+    pub fn mock_empty() -> Self {
+        // Создаем пустой ThreadPool (или имитируем его)
+        let thread_pool = Arc::new(ThreadPool::new("ModelCached::mock_empty", None)); 
+        
+        // Создаем пустую форму парусности
+        let windage_shape = Arc::new(RwLock::new(AreaShape::new_uninit()));
+
+        Self {
+            dbg: Dbg::new("test", "ModelCachedMock"),
+            ship_length_lbp: 100.0,
+            model_x: 0.0,
+            draught_min: 0.0,
+            hull_draught_step: 0.1,
+            bounds_level_step: 0.1,
+            cache_dir: PathBuf::from("/tmp"),
+            dso_angles: vec![],
+            
+            // Инициализируем пустые IndexMap
+            displacement_shapes: IndexMap::new(),
+            windage_shape,
+            
+            // Кэши (предполагаем, что у них есть метод new или Default)
+            displacement: DisplacementCache::default(),
+            compartments: IndexMap::new(),
+            hold_compartments: IndexMap::new(),
+            damaged_compartments: IndexMap::new(),
+            windage_area: WindageArea::default(),
+            
+            displacement_bounded: IndexMap::new(),
+            compartments_bounded: IndexMap::new(),
+            hold_compartments_bounded: IndexMap::new(),
+            
+            thread_pool,
+        }
+    }
+}

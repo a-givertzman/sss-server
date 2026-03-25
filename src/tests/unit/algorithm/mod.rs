@@ -1,12 +1,8 @@
-//mod data;
 mod cache;
-mod data;
 mod apparent_frequencies_test;
 //mod models; // перенес тесты в папку с крейтом из-за проблем с видимостью методов
-//mod fake_initial;
 //mod fake_model_link;
-//mod fake_ship_model;
-//mod icing;
+mod icing;
 mod impacts_high_waves_test;
 //mod loads;
 mod main_resonant_zone_speed_filter_test;

@@ -47,7 +47,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
                 let unit_area: UnitAreaCtx = ctx.read();
                 let (av_cs_dmin, mv_cs_dmin) = match self.model.read().static_area_v() {
                     Ok((area, moment)) => (area, moment),
-                    Err(err) => return Err(error.pass_with("model.static_area_h", err)),
+                    Err(err) => return Err(error.pass_with("model.static_area_v", err)),
                 };                
                 let (a_ice_hdeck, a_ice_shift) = match self.model.read().static_area_h() {
                     Ok((area, moment)) => (area, moment),

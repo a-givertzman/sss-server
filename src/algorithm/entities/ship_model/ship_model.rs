@@ -574,3 +574,27 @@ fn opening(
     .map_err(|err| error.pass_with("parse", err))?;
     Ok(data.data())
 }
+
+
+#[cfg(test)]
+impl ShipModel {
+    /// Создает "фейковую" модель судна для тестов физики
+    pub fn create_test_fake(area_h: f64, pos_h: Position, area_v: f64, mom_v: Moment) -> Self {
+        Self {
+            dbg: sal_core::dbg::Dbg::new("test", "FakeShip"),
+            ship_id: "fake".into(),
+            project_id: "fake".into(),
+            horisontal_area_stab: Some(area_h),
+            horisontal_area_shift: Some(pos_h),
+            windage_area_stab: Some(area_v),
+            windage_area_moment: Some(mom_v),
+            bounds: None,
+            horisontal_area_str: None,
+            grain_moments: None,
+            opening: None,
+            deck_angle_point: None,
+            model_cached: crate::algorithm::entities::model_cached::ModelCached::default(),
+            api_client: std::sync::Arc::new(unsafe { std::mem::zeroed() }),
+        }
+    }
+}
