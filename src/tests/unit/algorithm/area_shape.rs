@@ -9,7 +9,7 @@ mod tests {
     use testing::stuff::max_test_duration::TestDuration;
     //  #[ignore = "too slow, run only in release mode"]
     #[test]
-    fn shape_windage_area() {
+    fn area_shape_windage() {
         DebugSession::new()
             .filter(LogLevel::Debug)
             .module("api_tools", LogLevel::Error)
