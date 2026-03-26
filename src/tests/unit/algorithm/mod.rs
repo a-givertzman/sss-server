@@ -24,6 +24,5 @@ mod bounds;
 mod draught;
 mod strength;
 mod full;
-mod build_caches;
 
 mod cache_single;

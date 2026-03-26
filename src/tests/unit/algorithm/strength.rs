@@ -59,7 +59,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
             model_dir,
             cache_dir,
             model_scale: 1000.,
-            midel_x: model_x,
+            model_x,
             hull_heel_steps: vec![
                 -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1., -0.5, -0.2, 0., 
                 0.2, 0.5, 1., 2., 5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,

@@ -12,7 +12,7 @@ pub struct ModelCachedConf {
     pub model_scale: f64,
     /// Hull
     /// Waterline initial position in 3D space (midel).
-    pub midel_x: f64,
+    pub model_x: f64,
     /// Ship length between perpendiculars
     pub ship_length_lbp: f64,
     /// Minimal draught
