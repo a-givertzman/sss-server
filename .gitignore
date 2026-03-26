@@ -33,5 +33,6 @@ desktop.ini
 
 # too heavy
 assets/model/sofia/additionals/*
+assets/model/sofia/hull*
 src/algorithm/entities/model_cached/test/sofia/*
 

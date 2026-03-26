@@ -177,7 +177,7 @@ impl ModelCached {
         let error = Error::new(&dbg, "new");
         let mut displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>> =
             IndexMap::new();
-        let model_x = Some(conf.model_x);
+        let model_x = Some(conf.midel_x);
         let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
             &dbg,
             conf.model_dir.clone().join(PathBuf::from("hull.stl")),
@@ -265,7 +265,7 @@ impl ModelCached {
                 let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
                     &dbg,
                     path.clone(),
-                    Some(conf.model_x),
+                    Some(conf.midel_x),
                     conf.model_scale,
                 )));
                 displacement_shapes.insert(name.clone() + "_damaged", shape.clone());
@@ -292,7 +292,7 @@ impl ModelCached {
         let model_cached = Self {
             dbg: dbg.clone(),
             ship_length_lbp: conf.ship_length_lbp,
-            model_x: conf.model_x,
+            model_x: conf.midel_x,
             draught_min: conf.draught_min,
             hull_draught_step: conf.hull_draught_step,
             bounds_level_step: conf.bounds_level_step,
@@ -514,6 +514,95 @@ impl ModelCached {
     /// Internally it creates worker threads while building.
     /// The result error is a collection of all failed worker errors joined by '\n'.
     #[allow(dead_code)]
+    pub fn rebuild_hull(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        log::info!("rebuild_hull begin");
+        let error = Error::new(&self.dbg, "rebuild_hull");
+        let mut errors = Vec::new();
+        // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
+        if let Err(error) = self.displacement.rebuild() {
+            errors.push(("displacement".to_owned(), error));
+        }
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let mut displacement_bound = DisplacementBoundCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir.clone().join("disp_bounded"),
+            self.bounds_level_step,
+            self.model_x,
+            bounds.clone(),
+            Arc::clone(&self.thread_pool),
+        );
+        displacement_bound
+            .rebuild()
+            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_hull",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }
+        log::info!("rebuild_hull finish");
+        Ok(())
+    }
+    //
+    #[allow(dead_code)]
+    pub fn rebuild_compartments(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error: Error = Error::new(&self.dbg, "rebuild_compartments");
+        let mut errors = Vec::new();
+        for (name, compartment) in &mut self.compartments {
+            //        println!("model_cached rebuild compartment:{name}");
+            if let Err(error) = compartment.write().rebuild() {
+                errors.push((("compartment ".to_owned() + name), error));
+            }
+        }
+        let mut cache_map = IndexMap::new();
+        for (code, compartment) in &self.compartments {
+            //      println!("model_cached build_bounded compartment:{code}");
+            let mut compartment_bounded = compartment
+                .read()
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
+            compartment_bounded
+                .rebuild()
+                .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
+            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
+        }             
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
+        /*  TODO - пока не используются, потом будет отдельный расчет
+         for (name, compartment) in &mut self.damaged_compartments {
+            if let Err(error) = compartment.write().rebuild() {
+                errors.push((("damaged_compartment ".to_owned() + name), error));
+            }
+        }*/          
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_hull",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }        
+        Ok(())
+    }
+    //
+    #[allow(dead_code)]
+    pub fn rebuild_windage(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error: Error = Error::new(&self.dbg, "rebuild_windage");
+        self.windage_area
+            .rebuild(bounds, self.ship_length_lbp)
+            .map_err(|err| error.pass_with("windage_area.rebuild", err))?; 
+        Ok(())
+    }    
+    //
+    #[allow(dead_code)]
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         log::info!("rebuild_caches begin");
         let error = Error::new(&self.dbg, "rebuild_caches");
@@ -585,7 +674,7 @@ impl ModelCached {
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
         Ok(())
-    }
+    }    
     //
     pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "body_size");
