@@ -25,7 +25,7 @@ use std::{
 pub struct FakeShipModel {
     txid: usize,
     name: Name,
-    ship_id: usize,
+    ship_id: &str,
     project_id: String,
     n_parts: usize,
     clients_tx: Sender<(String, Sender<Reply>, Receiver<Query>)>,
@@ -48,7 +48,7 @@ impl ShipModel {
     /// - `exit` - exit signal for `recv_query` method
     pub fn new(
         parent: impl Into<String>,
-        ship_id: usize,
+        ship_id: &str,
         project_id: String,
         n_parts: usize,
         api_client: ApiClient,
@@ -111,7 +111,7 @@ impl IShipModel for FakeShipModel {
         let n_parts = self.n_parts;
         let bounds = match get_bounds(&api_client, ship_id, project_id, n_parts) {
             Ok(data) => data,
-            Err(err) => return Err(Error::new().(format!("ShipModel get_bounds error: {err}"))),
+            Err(err) => return Err(Error::new(format!("ShipModel get_bounds error: {err}"))),
         };
         let handle = thread::Builder::new().name(dbg.clone()).spawn(move || {
             log::debug!("{}.run | Locals | Start", dbg);
@@ -206,9 +206,9 @@ impl Debug for ShipModel {
 }
 ///
 fn get_bounds(
+    ship_id: &str,
+    project_id: &str,
     api_client: &ApiClient,
-    ship_id: usize,
-    project_id: String,
     n_parts: usize,
 ) -> Result<Bounds, Error> {
     let data = api_client.fetch(&format!(
@@ -219,7 +219,7 @@ fn get_bounds(
             // TODO: если шпации для разбиения на n_parts есть, значит есть кэш для этого разбиения - читаем их 
             match ComputedFrameDataArray::parse(&data) {
                 Ok(data) => data.data(),
-                Err(err) => return Err(Error::new().(format!("ShipModel get_bounds parse error: {err}"))),
+                Err(err) => return Err(Error::new(format!("ShipModel get_bounds parse error: {err}"))),
             }
         },
         Err(err1) => { 
@@ -231,23 +231,23 @@ fn get_bounds(
                 Ok(data) => {
                     let physical_frames = match PhysicalFrameArray::parse(&data) {
                         Ok(data) => data.data(),
-                        Err(err2) => return Err(Error::new().(format!("ShipModel get_bounds error: {err1}, physical_frames parse error: {err2}"))),
+                        Err(err2) => return Err(Error::new(format!("ShipModel get_bounds error: {err1}, physical_frames parse error: {err2}"))),
                     };
                     if let (Some(bow_x), Some(stern_x)) = (physical_frames.first(), physical_frames.last()) {
                         return match Bounds::from_min_max(stern_x.1, bow_x.1, n_parts) {
                             Ok(bounds) => Ok(bounds),
                             Err(err2) => {
-                                return Err(Error::new().(format!(
+                                return Err(Error::new(format!(
                                     "ShipModel get_bounds error: {err1}, create_bounds error: {err2}"
                                 )))
                             }
                         };
                     } else {
-                        return Err(Error::new().(format!("ShipModel get_bounds error: {err1}, can't get bow_x, stern_x!")));
+                        return Err(Error::new(format!("ShipModel get_bounds error: {err1}, can't get bow_x, stern_x!")));
                     };
                 }
                 Err(err2) => {
-                    return Err(Error::new().(format!(
+                    return Err(Error::new(format!(
                         "ShipModel get_bounds error: {err1}, physical_frames error: {err2}"
                     )))
                 }
@@ -256,7 +256,7 @@ fn get_bounds(
     };
     let bounds: Bounds = match Bounds::from_frames(&bounds) {
         Ok(data) => data,
-        Err(err) => return Err(Error::new().(format!("ShipModel get_bounds error: {err}"))),
+        Err(err) => return Err(Error::new(format!("ShipModel get_bounds error: {err}"))),
     };
     Ok(bounds)
 }

@@ -1,3 +1,4 @@
+//mod data;
 mod cache;
 mod data;
 mod apparent_frequencies_test;
@@ -14,7 +15,14 @@ mod move_broching_test;
 mod parametric_resonant_zone_speed_filter_test;
 mod parametric_resonant_zone_test;
 mod period_excitement_test;
-mod roll_frequency_test;
 //mod strength_area;
 //mod wetting;
-mod shape;
+//mod displacement_shape;
+//mod area_shape;
+mod bound;
+mod bounds;
+mod draught;
+mod strength;
+mod full;
+
+mod cache_single;

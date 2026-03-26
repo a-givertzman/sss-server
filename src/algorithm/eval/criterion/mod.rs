@@ -4,19 +4,16 @@ use strum_macros::FromRepr;
 use sal_core::error::Error;
 use std::fmt::Debug;
 
-pub mod criterion_draught_eval;
-pub mod criterion_stability_eval;
-pub mod parameters;
+mod criterion_stability;
+pub use criterion_stability::ctx::CriterionStabilityCtx;
+pub use criterion_stability::*;
 
-pub use criterion_stability_eval::criterion_stability_eval::CriterionStabilityEval;
-pub use criterion_stability_eval::criterion_stability_ctx::CriterionStabilityCtx;
-pub use criterion_stability_eval::*;
+mod criterion_draught;
+pub use criterion_draught::ctx::CriterionDraughtCtx;
+pub use criterion_draught::*;
 
-pub use criterion_draught_eval::criterion_draught_eval::CriterionDraughtEval;
-pub use criterion_draught_eval::criterion_draught_ctx::CriterionDraughtCtx;
-pub use criterion_draught_eval::*;
-
-
+mod result;
+pub use result::*;
 
 #[derive(Hash, Eq, PartialEq, FromRepr)]
 pub enum CriterionID {

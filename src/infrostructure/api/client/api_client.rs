@@ -1,6 +1,12 @@
-use api_tools::client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest};
+use api_tools::client::{
+    api_query::{
+        ApiQuery, 
+        ApiQueryKind, 
+        ApiQuerySql
+    }, 
+    api_request::ApiRequest
+};
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Provides access to the API Server
 #[derive(Debug, Clone)]

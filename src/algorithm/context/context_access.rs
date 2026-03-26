@@ -1,6 +1,21 @@
-use sal_core::error::Error;
 use super::context::Context;
-use crate::algorithm::{eval::{apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parameters::*, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx, vessel_max_speed::vessel_max_speed_ctx::VesselMaxSpeedCtx, *}, initial::initial_ctx::InitialCtx};
+use crate::algorithm::{
+    context::testing_ctx::TestingCtx,
+    eval::{
+        criterion::*,
+        icing_timber::ctx::IcingTimberCtx,
+        icing_timber_bound::ctx::IcingTimberBoundCtx,
+        parameters::*,
+        seakeeping::eval::{
+            apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, hitting_zones::hitting_point_ctx::HittingZonesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
+        },
+        stability::*,
+        strength::*,
+        *,
+    },
+    initial::initial_ctx::InitialCtx,
+};
+use sal_core::error::Error;
 ///
 /// Provides restricted write access to the [Context] members
 pub trait ContextWrite<T> {
@@ -28,36 +43,24 @@ pub trait ContextParamsRead {
 }
 
 //
-impl ContextWrite<Parameters> for Context {
-    fn write(mut self, value: Parameters) -> Result<Self, Error> {
-        self.parameters = Some(value);
-        Result::Ok(self)
-    }
-}
 impl ContextReadRef<Parameters> for Context {
     fn read_ref(&self) -> &Parameters {
-        self.parameters
-            .as_ref()
-            .unwrap()
+        &self.parameters
     }
 }
 impl ContextParamsWrite for Context {
     fn write_params(&mut self, id: ParameterID, value: f64) {
-        match &mut self.parameters {
-            Some(params) => {
-                params.add(id, value);
-            }
-            None => panic!("Context.write | Parameters - is not initialised yet, id: {:?}", id)
-        };
+        self.parameters.add(id, value);
     }
 }
 impl ContextParamsRead for Context {
     fn read_params(&self, id: ParameterID) -> f64 {
-        let params: &Parameters  = self.read_ref();
-        params.get(id).expect(&format!("Context.read | Id '{:?}' - is not found", id))
+        let params: &Parameters = self.read_ref();
+        params
+            .get(id)
+            .expect(&format!("Context.read | Id '{:?}' - is not found", id))
     }
 }
-//
 //
 impl ContextWrite<InitialCtx> for Context {
     fn write(mut self, value: InitialCtx) -> Result<Self, Error> {
@@ -84,39 +87,63 @@ impl ContextRead<ApparentFrequenciesCtx> for Context {
     }
 }
 //
-impl ContextWrite<StrengthAreaCtx> for Context {
-    fn write(mut self, value: StrengthAreaCtx) -> Result<Self, Error> {
-        self.strength_area = Some(value);
+impl ContextWrite<TestingCtx> for Context {
+    fn write(mut self, value: TestingCtx) -> Result<Self, Error> {
+        self.testing = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<StrengthAreaCtx> for Context {
-    fn read(&self) -> StrengthAreaCtx {
-        self.strength_area.clone().unwrap()
+impl ContextReadRef<Option<TestingCtx>> for Context {
+    fn read_ref(&self) -> &Option<TestingCtx> {
+        &self.testing
     }
 }
 //
-impl ContextWrite<IcingStabCtx> for Context {
-    fn write(mut self, value: IcingStabCtx) -> Result<Self, Error> {
-        self.icing_stab = Some(value);
+impl ContextWrite<IcingCoeffCtx> for Context {
+    fn write(mut self, value: IcingCoeffCtx) -> Result<Self, Error> {
+        self.icing_coeff = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<IcingStabCtx> for Context {
-    fn read(&self) -> IcingStabCtx {
-        self.icing_stab.clone().unwrap()
+impl ContextRead<IcingCoeffCtx> for Context {
+    fn read(&self) -> IcingCoeffCtx {
+        self.icing_coeff.clone().unwrap()
     }
 }
 //
-impl ContextWrite<IcingCtx> for Context {
-    fn write(mut self, value: IcingCtx) -> Result<Self, Error> {
-        self.icing = Some(value);
+impl ContextWrite<IcingTimberBoundCtx> for Context {
+    fn write(mut self, value: IcingTimberBoundCtx) -> Result<Self, Error> {
+        self.icing_timber_bound = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<IcingCtx> for Context {
-    fn read(&self) -> IcingCtx {
-        self.icing.clone().unwrap()
+impl ContextRead<IcingTimberBoundCtx> for Context {
+    fn read(&self) -> IcingTimberBoundCtx {
+        self.icing_timber_bound.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<IcingTimberCtx> for Context {
+    fn write(mut self, value: IcingTimberCtx) -> Result<Self, Error> {
+        self.icing_timber = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<IcingTimberCtx> for Context {
+    fn read(&self) -> IcingTimberCtx {
+        self.icing_timber.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<UnitAreaCtx> for Context {
+    fn write(mut self, value: UnitAreaCtx) -> Result<Self, Error> {
+        self.unit_area = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<UnitAreaCtx> for Context {
+    fn read(&self) -> UnitAreaCtx {
+        self.unit_area.clone().unwrap()
     }
 }
 //
@@ -132,27 +159,99 @@ impl ContextRead<WettingCtx> for Context {
     }
 }
 //
-impl ContextWrite<VesselMaxSpeedCtx> for Context {
-    fn write(mut self, value: VesselMaxSpeedCtx) -> Result<Self, Error> {
-        self.vmax = Some(value);
+impl ContextWrite<AreaStrCtx> for Context {
+    fn write(mut self, value: AreaStrCtx) -> Result<Self, Error> {
+        self.area_str = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<VesselMaxSpeedCtx> for Context {
-    fn read(&self) -> VesselMaxSpeedCtx {
-        self.vmax.clone().unwrap()
+impl ContextRead<AreaStrCtx> for Context {
+    fn read(&self) -> AreaStrCtx {
+        self.area_str.clone().unwrap()
     }
 }
 //
-impl ContextWrite<LoadsCtx> for Context {
-    fn write(mut self, value: LoadsCtx) -> Result<Self, Error> {
-        self.loads = Some(value);
+impl ContextWrite<IcingStrCtx> for Context {
+    fn write(mut self, value: IcingStrCtx) -> Result<Self, Error> {
+        self.icing_str = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<LoadsCtx> for Context {
-    fn read(&self) -> LoadsCtx {
-        self.loads.clone().unwrap()
+impl ContextRead<IcingStrCtx> for Context {
+    fn read(&self) -> IcingStrCtx {
+        self.icing_str.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<StaticMassStrCtx> for Context {
+    fn write(mut self, value: StaticMassStrCtx) -> Result<Self, Error> {
+        self.static_mass_str = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<StaticMassStrCtx> for Context {
+    fn read(&self) -> StaticMassStrCtx {
+        self.static_mass_str.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<StrengthBalanceCtx> for Context {
+    fn write(mut self, value: StrengthBalanceCtx) -> Result<Self, Error> {
+        self.strength_balance = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<StrengthBalanceCtx> for Context {
+    fn read(&self) -> StrengthBalanceCtx {
+        self.strength_balance.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<DynamicMassCtx> for Context {
+    fn write(mut self, value: DynamicMassCtx) -> Result<Self, Error> {
+        self.dynamic_mass = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<DynamicMassCtx> for Context {
+    fn read(&self) -> DynamicMassCtx {
+        self.dynamic_mass.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<TotalForceCtx> for Context {
+    fn write(mut self, value: TotalForceCtx) -> Result<Self, Error> {
+        self.total_force = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<TotalForceCtx> for Context {
+    fn read(&self) -> TotalForceCtx {
+        self.total_force.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<ShearForceCtx> for Context {
+    fn write(mut self, value: ShearForceCtx) -> Result<Self, Error> {
+        self.shear_force = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<ShearForceCtx> for Context {
+    fn read(&self) -> ShearForceCtx {
+        self.shear_force.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<BendingMomentCtx> for Context {
+    fn write(mut self, value: BendingMomentCtx) -> Result<Self, Error> {
+        self.bending_moment = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<BendingMomentCtx> for Context {
+    fn read(&self) -> BendingMomentCtx {
+        self.bending_moment.clone().unwrap()
     }
 }
 //
@@ -180,15 +279,15 @@ impl ContextRead<MainResonantZoneSpeedFilterCtx> for Context {
     }
 }
 //
-impl ContextWrite<IcingTimberCtx> for Context {
-    fn write(mut self, value: IcingTimberCtx) -> Result<Self, Error> {
-        self.icing_timber = Some(value);
+impl ContextWrite<IcingStabCtx> for Context {
+    fn write(mut self, value: IcingStabCtx) -> Result<Self, Error> {
+        self.icing_stab = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<IcingTimberCtx> for Context {
-    fn read(&self) -> IcingTimberCtx {
-        self.icing_timber.clone().unwrap()
+impl ContextRead<IcingStabCtx> for Context {
+    fn read(&self) -> IcingStabCtx {
+        self.icing_stab.clone().unwrap()
     }
 }
 //
@@ -204,27 +303,27 @@ impl ContextRead<ImpactsHighWavesCtx> for Context {
     }
 }
 //
-impl ContextWrite<BalanceCtx> for Context {
-    fn write(mut self, value: BalanceCtx) -> Result<Self, Error> {
-        self.balance = Some(value);
+impl ContextWrite<StaticMassStabCtx> for Context {
+    fn write(mut self, value: StaticMassStabCtx) -> Result<Self, Error> {
+        self.static_mass_stab = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<BalanceCtx> for Context {
-    fn read(&self) -> BalanceCtx {
-        self.balance.clone().unwrap()
+impl ContextRead<StaticMassStabCtx> for Context {
+    fn read(&self) -> StaticMassStabCtx {
+        self.static_mass_stab.clone().unwrap()
     }
 }
 //
-impl ContextWrite<StabilityAreaCtx> for Context {
-    fn write(mut self, value: StabilityAreaCtx) -> Result<Self, Error> {
-        self.stability_area = Some(value);
+impl ContextWrite<StabilityBalanceCtx> for Context {
+    fn write(mut self, value: StabilityBalanceCtx) -> Result<Self, Error> {
+        self.stability_balance = Some(value);
         Result::Ok(self)
     }
 }
-impl ContextRead<StabilityAreaCtx> for Context {
-    fn read(&self) -> StabilityAreaCtx {
-        self.stability_area.clone().unwrap()
+impl ContextRead<StabilityBalanceCtx> for Context {
+    fn read(&self) -> StabilityBalanceCtx {
+        self.stability_balance.clone().unwrap()
     }
 }
 //
@@ -309,6 +408,18 @@ impl ContextWrite<RollingFrequencyCtx> for Context {
 impl ContextRead<RollingFrequencyCtx> for Context {
     fn read(&self) -> RollingFrequencyCtx {
         self.roll_frequency.clone().unwrap()
+    }
+}
+//
+impl ContextWrite<HittingZonesCtx> for Context {
+    fn write(mut self, value: HittingZonesCtx) -> Result<Self, Error> {
+        self.hitiing_zones = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<HittingZonesCtx> for Context {
+    fn read(&self) -> HittingZonesCtx {
+        self.hitiing_zones.clone().unwrap()
     }
 }
 //
@@ -474,6 +585,11 @@ impl ContextWrite<PeriodExcitementCtx> for Context {
         Result::Ok(self)
     }
 }
+impl ContextReadRef<Option<PeriodExcitementCtx>> for Context {
+    fn read_ref(&self) -> &Option<PeriodExcitementCtx> {
+        &self.period_exctiment
+    }
+}
 impl ContextRead<PeriodExcitementCtx> for Context {
     fn read(&self) -> PeriodExcitementCtx {
         self.period_exctiment.clone().unwrap()
@@ -575,6 +691,7 @@ impl ContextRead<CriterionDraughtCtx> for Context {
         self.criterion_draught.clone().unwrap()
     }
 }
+
 //
 impl ContextWrite<ZgCtx> for Context {
     fn write(mut self, value: ZgCtx) -> Result<Self, Error> {
@@ -599,11 +716,9 @@ impl ContextRead<DraftMarkCtx> for Context {
         self.draft_mark.clone().unwrap()
     }
 }
-
-
-
-
-
-
-
-
+// mock for seakeeping sending result
+impl ContextWrite<()> for Context {
+    fn write(self, _: ()) -> Result<Self, Error> {
+        Result::Ok(self)
+    }
+}

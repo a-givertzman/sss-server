@@ -8,7 +8,6 @@ mod recalculation_course_angular {
     use debugging::session::debug_session::{
         DebugSession, 
         LogLevel, 
-        Backtrace
     };
 
     use crate::algorithm::entities::recalculation_course_angular::RecalculationCourseAngular;
@@ -30,7 +29,12 @@ mod recalculation_course_angular {
     /// Testing `to_northeastern`
     #[test]
     fn to_northeastern() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new()
+            .filter(LogLevel::Info)
+            .module("api_tools", LogLevel::Error)
+            .module("sal_sync", LogLevel::Error)
+            .module("ena", LogLevel::Error)
+            .init();
         init_once();
         init_each();
         log::debug!("");
@@ -70,7 +74,12 @@ mod recalculation_course_angular {
     /// Testing `to_course_angle`
     #[test]
     fn to_course_angle() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new()
+            .filter(LogLevel::Info)
+            .module("api_tools", LogLevel::Error)
+            .module("sal_sync", LogLevel::Error)
+            .module("ena", LogLevel::Error)
+            .init();
         init_once();
         init_each();
         log::debug!("");

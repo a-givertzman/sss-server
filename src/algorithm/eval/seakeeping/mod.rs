@@ -1,10 +1,2 @@
-pub mod apparent_frequencies;
-pub mod impacts_high_waves;
-pub mod main_resonant_zone;
-pub mod main_resonant_zone_speed_filter;
-pub mod move_broching_filter;
-pub mod parametric_resonant_zone;
-pub mod parametric_resonant_zone_speed_filter;
-pub mod period_excitement;
-pub mod roll_frequency_eval;
-pub mod vessel_max_speed;
+pub mod eval;
+pub mod entities;

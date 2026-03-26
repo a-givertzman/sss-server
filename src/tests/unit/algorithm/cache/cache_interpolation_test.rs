@@ -1,6 +1,6 @@
 use crate::algorithm::entities::{cache::*, vec};
 #[cfg(test)]
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 /// Test successfull initializing of [Cache] instance.
 #[test]
 fn cache_interpolation() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = Dbg::new("cache cache", "cache_interpolation");
@@ -43,17 +43,17 @@ fn cache_interpolation() {
     ];
     let cache = Cache::new(&dbg);
     let _ = cache.init(test_data);
-    let target = vec![0.0, 0.0, 10.0];
-    let result = cache.get(&[Some(0.0), Some(0.0), None]);
+    let target = vec![10.0];
+    let result = cache.get(&[0.0, 0.0]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
-    let target = vec![0.0, 0.5, 15.];
-    let result = cache.get(&[Some(0.0), Some(0.5), None]);
+    let target = vec![15.];
+    let result = cache.get(&[0.0, 0.5]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
-    let target = vec![1.0, 0.5, 20.];
-    let result = cache.get(&[Some(1.0), Some(0.5), None]);
+    let target = vec![20.];
+    let result = cache.get(&[1.0, 0.5]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
-    let target = vec![-0.5, 0.5, 12.5];
-    let result = cache.get(&[Some(-0.5), Some(0.5), None]);
+    let target = vec![12.5];
+    let result = cache.get(&[-0.5, 0.5]);
     assert_eq!(target, result, "target={:?} result={:?}", target, result);
     test_duration.exit();
 }

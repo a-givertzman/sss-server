@@ -1,5 +1,4 @@
 pub(crate) mod area_h_str;
-pub(crate) mod area_v_str;
 pub(crate) mod ship;
 pub(crate) mod ship_parameters;
 pub(crate) mod voyage;

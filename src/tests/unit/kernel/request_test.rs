@@ -3,7 +3,7 @@
 mod request {
     use std::{sync::Once, time::Duration};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         algorithm::{context::{context::Context, testing_ctx::{MokUserReplyTestCtx, TestingCtx}}, initial::initial_ctx::InitialCtx},
         kernel::{request::Request, sync::Link},
@@ -25,7 +25,7 @@ mod request {
     ///
     /// Testing 'Request::fetch'
     fn basic() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::debug!("");
