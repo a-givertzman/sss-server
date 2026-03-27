@@ -114,3 +114,34 @@ pub fn volume(mesh: &TriMesh) -> f64 {
     let inv_mass = parry3d_f64::shape::Shape::mass_properties(mesh, 1.).inv_mass;
     if inv_mass > 0. { 1. / inv_mass } else { 0. }
 }
+/// Быстрый расчет по треугольникам
+pub fn triangle_submerged_volume(tri: &parry3d_f64::shape::Triangle, z_w: f64) -> f64 {
+    let p = [tri.a, tri.b, tri.c];
+    
+    // Быстрые проверки
+    if p[0].z >= z_w && p[1].z >= z_w && p[2].z >= z_w { return 0.0; }
+    if p[0].z <= z_w && p[1].z <= z_w && p[2].z <= z_w {
+        return p[0].coords.cross(&p[1].coords).dot(&p[2].coords) / 6.0;
+    }
+
+    // Sutherland-Hodgman клиппинг для одного треугольника и одной плоскости
+    let mut poly = Vec::with_capacity(4);
+    for i in 0..3 {
+        let a = p[i];
+        let b = p[(i + 1) % 3];
+        if a.z <= z_w { poly.push(a); }
+        if (a.z < z_w && b.z > z_w) || (a.z > z_w && b.z < z_w) {
+            let t = (z_w - a.z) / (b.z - a.z);
+            poly.push(a + (b - a) * t);
+        }
+    }
+
+    // Объем многогранника через веер треугольников
+    let mut v = 0.0;
+    if poly.len() >= 3 {
+        for i in 1..poly.len() - 1 {
+            v += poly[0].coords.cross(&poly[i].coords).dot(&poly[i+1].coords) / 6.0;
+        }
+    }
+    v
+}
