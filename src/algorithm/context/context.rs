@@ -4,7 +4,10 @@ use crate::algorithm::{
         apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx,
         impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx,
         import_model::{
-            convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx, convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, convert_surface_superstructure_to_trimesh::convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, convert_to_trimesh::ctx::ConvertToTrimeshCtx, import_model_initial_points::import_model_initial_points_ctx::ImportModelInitialPointsCtx
+            convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx, 
+            convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, 
+            convert_surface_superstructure_to_trimesh::convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, 
+            import_model_initial_points::import_model_initial_points_ctx::ImportModelInitialPointsCtx
         },
         import_tanks::{
             convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx, import_3d_tanks_ctx::Import3DTanksCtx
@@ -125,9 +128,6 @@ pub struct Context {
     pub(super) import_3d_tanks: Option<Import3DTanksCtx>,
     /// Конвентированные 3D отсеки импортированные из Диалог Статика
     pub(super) converted_3d_tanks: Option<ConvertTanksToTrimeshCtx>,
-
-    pub(super) converted_to_trimesh: Option<ConvertToTrimeshCtx>,
-
     ///
     /// Uset for testing only
     #[allow(dead_code)]

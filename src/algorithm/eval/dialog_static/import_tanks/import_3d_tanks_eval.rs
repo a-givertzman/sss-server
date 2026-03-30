@@ -68,8 +68,8 @@ impl Import3DTanksEval {
                 for i in (0..pair_count - 1).step_by(2) {
                     tmp.push(
                         (
-                            current_vertices[i + 1],
-                            current_vertices[i]
+                            current_vertices[i],
+                            current_vertices[i + 1]
                         )
                     );
                 }
@@ -80,8 +80,8 @@ impl Import3DTanksEval {
                 for i in (pair_count..current_vertices.len()).step_by(2) {
                     tmp.push(
                         (
-                            current_vertices[i + 1],
-                            current_vertices[i]
+                            current_vertices[i],
+                            current_vertices[i + 1]
                         )
                     );
                 }

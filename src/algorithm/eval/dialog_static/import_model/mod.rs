@@ -1,6 +1,5 @@
 pub mod convert_diametrical_buttocks_to_trimesh;
 pub mod convert_surface_outer_to_trimesh;
 pub mod convert_surface_superstructure_to_trimesh;
-pub mod convert_to_trimesh;
 pub mod import_model_initial_points;
  

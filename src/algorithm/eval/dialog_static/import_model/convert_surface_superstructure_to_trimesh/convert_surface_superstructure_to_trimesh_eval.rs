@@ -79,7 +79,7 @@ impl ConvertSurfaceSuperStructureToTrimeshEval {
                     continue;
                 } else {
                     if let Some(prev) = &prev_points {
-                        PointsManipulations::connect_points(
+                        PointsManipulations::connect_points_for_ship(
                             &mut all_vertices,
                             &mut all_indices,
                             prev,

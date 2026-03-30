@@ -19,7 +19,9 @@ use crate::{
         eval::{
             Zg, 
             import_model::{
-                convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_eval::ConvertSurfaceOuterToTrimeshEval, 
+                convert_surface_outer_to_trimesh::{
+                    convert_surface_outer_to_trimesh_eval::ConvertSurfaceOuterToTrimeshEval
+                },
                 import_model_initial_points::import_model_initial_points_eval::ImportModelInitialPointsEval
             }, 
             import_tanks::{
@@ -103,7 +105,7 @@ fn convert_tanks_to_trimesh() {
     init_once();
     init_each();
     log::debug!("Starting convert_to_trimesh test");
-    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(6000));
+    let test_duration = TestDuration::new("ConvertToTrimesh", Duration::from_secs(60));
     test_duration.run().unwrap();
     let test_data = [
         (
@@ -138,12 +140,15 @@ fn convert_tanks_to_trimesh() {
                 let result = ContextRead::<ConvertTanksToTrimeshCtx>::read(&ctx).clone();
                 match result.tank {
                     Some(tanks) => {
-                        if tanks.vertices().len() > 0 {
-                            let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks.stl"));
-                            if let Err(e) = write_stl(&path, &tanks) {
-                                log::error!("Failed to write bow mesh {}", e);
+                        for i in 0..tanks.len() {
+                            if tanks[i].vertices().len() > 0 {
+                                let path = PathBuf::from(format!("src\\tests\\unit\\algorithm\\dialog_static\\output_files\\tanks_{}.stl", i));
+                                if let Err(e) = write_stl(&path, &tanks[i]) {
+                                    log::error!("Failed to write bow mesh {}", e);
+                                }
                             }
                         }
+
                     },
                     None => log::warn!("Error to create tanks")
                 }

@@ -5,7 +5,10 @@ use crate::algorithm::{
         apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, 
         impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, 
         import_model::{
-            convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx, convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, convert_surface_superstructure_to_trimesh::convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, convert_to_trimesh::ctx::ConvertToTrimeshCtx, import_model_initial_points::import_model_initial_points_ctx::ImportModelInitialPointsCtx
+            convert_diametrical_buttocks_to_trimesh::convert_diametrical_buttocks_to_trimesh_ctx::ConvertDiametricalButtocksToTrimeshCtx, 
+            convert_surface_outer_to_trimesh::convert_surface_outer_to_trimesh_ctx::ConvertSurfaceOuterToTrimeshCtx, 
+            convert_surface_superstructure_to_trimesh::convert_surface_superstructure_to_trimesh_ctx::ConvertSurfaceSuperStructureToTrimeshCtx, 
+            import_model_initial_points::import_model_initial_points_ctx::ImportModelInitialPointsCtx
         },
         import_tanks::{
             convert_tanks_to_trimesh_ctx::ConvertTanksToTrimeshCtx, 
@@ -692,19 +695,6 @@ impl ContextRead<ConvertDiametricalButtocksToTrimeshCtx> for Context {
         self.converted_diametrical_buttocks.clone().unwrap()
     }
 }
-//
-impl ContextWrite<ConvertToTrimeshCtx> for Context {
-    fn write(mut self, value: ConvertToTrimeshCtx) -> Result<Self, Error> {
-        self.converted_to_trimesh = Some(value);
-        Result::Ok(self)
-    }
-}
-impl ContextRead<ConvertToTrimeshCtx> for Context {
-    fn read(&self) -> ConvertToTrimeshCtx {
-        self.converted_to_trimesh.clone().unwrap()
-    }
-}
-
 
 
 
