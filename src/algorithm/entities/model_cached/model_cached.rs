@@ -517,11 +517,11 @@ impl ModelCached {
     pub fn rebuild_hull(&mut self, bounds: &Bounds) -> Result<(), Error> {
         log::info!("rebuild_hull begin");
         let error = Error::new(&self.dbg, "rebuild_hull");
-        let mut errors = Vec::new();
+    //    let mut errors = Vec::new();
         // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
+      /*  if let Err(error) = self.displacement.rebuild() {
             errors.push(("displacement".to_owned(), error));
-        }
+        }*/
         let displacement_shape = self
             .displacement_shapes
             .get("hull")
@@ -540,14 +540,14 @@ impl ModelCached {
             .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
         self.displacement_bounded
             .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-        if !errors.is_empty() {
+  /*      if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_hull",
                 errors.iter().fold(String::new(), |acc, (key, err)| {
                     format!("{acc}\n\tIn cache {:?} was error: {err}", key)
                 }),
             ));
-        }
+        }*/
         log::info!("rebuild_hull finish");
         Ok(())
     }

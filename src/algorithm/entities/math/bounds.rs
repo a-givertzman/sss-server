@@ -95,14 +95,14 @@ impl Bounds {
         Self::new(values)
     }
     /// Вспомогательный конструктор
-    pub fn from_array(array: &[f64], midel_x: f64) -> Result<Self, Error> {
+    pub fn from_array(array: &[f64], shift: f64) -> Result<Self, Error> {
         let error = Error::new("Bounds", "from_array");
         if array.len() <= 1 {
             return Err(error.err("array.len() <= 1"));
         }
         let mut last = array[0];
         let frames: Vec<_> = (1..array.len()).map(|i| {
-            let res = (last - midel_x, array[i] - midel_x);
+            let res = (last - shift, array[i] - shift);
             last = array[i];
             res
         }).collect();

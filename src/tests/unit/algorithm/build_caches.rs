@@ -15,7 +15,7 @@ use crate::algorithm::entities::model_cached::{self};
 #[test]
 fn build_caches() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()
-        .filter(LogLevel::Trace)
+        .filter(LogLevel::Warn)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)
@@ -47,7 +47,7 @@ fn build_caches() -> Result<(), Box<dyn std::error::Error>> {
         127.1, 127.7, 128.3, 128.9, 129.5, 130.1, 130.7, 131.3, 131.9, 132.5, 133.1, 133.7, 134.3,
         134.9, 135.5,
     ];   
-    let bounds = Bounds::from_array(&physical_frames, midel_x).unwrap();
+    let bounds = Bounds::from_array(&physical_frames, 0.).unwrap();
     let cache_dir: PathBuf = ("assets/cache/".to_owned() + &model_name).into();
     let model_dir: PathBuf = ("assets/model/".to_owned() + &model_name).into();
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));  

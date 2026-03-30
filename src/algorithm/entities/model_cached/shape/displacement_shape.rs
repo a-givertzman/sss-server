@@ -108,17 +108,90 @@ impl DisplacementShape {
                 epsilon = epsilon * 10.;
                 continue;
             }
+            {
+                // фикс нормалей на гранях, они должны всегда смотреть наружу
+                let check_x =
+                    |p: &Point3<f64>, bound_x: f64| -> bool { (p.x - bound_x).abs() <= epsilon };
+                let check_x3 =
+                    |p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>, bound_x: f64| -> bool {
+                        check_x(p1, bound_x) && check_x(p2, bound_x) && check_x(p3, bound_x)
+                    };
+                let check_x3_min = |p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>| -> bool {
+                    check_x3(p1, p2, p3, bound_x_min)
+                };
+                let check_x3_max = |p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>| -> bool {
+                    check_x3(p1, p2, p3, bound_x_max)
+                };
+                let (mut indices, vertices) = (mesh.indices().to_vec(), mesh.vertices());
+                for triangle_indices in indices.iter_mut() {
+                    let v0 = vertices[triangle_indices[0] as usize];
+                    let v1 = vertices[triangle_indices[1] as usize];
+                    let v2 = vertices[triangle_indices[2] as usize];
+                    if check_x3_min(&v0, &v1, &v2) {
+                        let side1 = v1 - v0;
+                        let side2 = v2 - v0;
+                        let current_normal = side1.cross(&side2);
+                        if current_normal.dot(&Vector3::new(-1., 0., 0.)) <= 0.0 {
+                            triangle_indices.swap(0, 1);
+                        }
+                    }
+                    if check_x3_max(&v0, &v1, &v2) {
+                        let side1 = v1 - v0;
+                        let side2 = v2 - v0;
+                        let current_normal = side1.cross(&side2);
+                        if current_normal.dot(&Vector3::new(1., 0., 0.)) <= 0.0 {
+                            triangle_indices.swap(0, 1);
+                        }
+                    }
+                }
+                mesh = match TriMesh::new(vertices.to_vec(), indices) {
+                    Ok(mesh) => mesh,
+                    Err(e) => {
+                        return Err(
+                            error.pass_with("mesh.intersection_with_local_cuboid", e.to_string())
+                        );
+                    }
+                };
+            }
+            if let Err(error) = mesh
+                .set_flags(TriMeshFlags::all())
+                .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
+            {
+                let error = format!(
+                    "{} part error: set_flags, rebuild!, x:{position_x}, epsilon:{}, error: {}",
+                    self.dbg, epsilon, error
+                );
+                log::warn!("{error}");
+                src_mesh = &mesh;
+                epsilon = epsilon * 10.;
+                continue;
+            }
+            let (_, empty_normals): (Vec<_>, Vec<_>) = mesh
+                .triangles()
+                .map(|t| (t.normal(), t))
+                .partition(|(n, _)| n.is_some());
+            if !empty_normals.is_empty() {
+                let error = format!(
+                    "{} part error: empty normal, rebuild!, x:{position_x}, epsilon:{}",
+                    self.dbg, epsilon
+                );
+                log::warn!("{error}");
+                src_mesh = &mesh;
+                epsilon = epsilon * 10.;
+                continue;
+            }
             break;
         }
-        if let Err(error) = mesh
-            .set_flags(TriMeshFlags::all())
-            .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
-        {
-            log::error!("{}", error);
-        }
-        //  let filename = format!("{:.1}, {:.1}.stl", bound.start().unwrap() + 65.25,  bound.end().unwrap() + 65.25,);
-        //  let cache_dir: PathBuf = ("src/algorithm/entities/model_cached/test/sofia/disp_bounded/195/stl/".to_owned() + &filename).into();
-        //  super::write_stl(&cache_dir, &mesh);
+     /*   // TODO - remove
+        let filename = format!(
+            "{:.1}, {:.1}.stl",
+            bound.start().unwrap(),
+            bound.end().unwrap(),
+        );
+        let cache_dir: PathBuf =
+            ("src/tests/unit/algorithm/cache/assets/disp_bounded/stl/".to_owned() + &filename)
+                .into();
+        super::write_stl(&cache_dir, &mesh).unwrap();*/
         Ok(Some(Self::new(
             &self.dbg,
             Some(mesh),
