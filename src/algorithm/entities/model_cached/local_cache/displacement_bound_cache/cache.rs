@@ -2,7 +2,7 @@ use crate::{
     algorithm::entities::{
         Bounds,
         cache::Cache,
-        model_cached::{DisplacementShape, read, save},
+        model_cached::{BoundShape, DisplacementShape, read, save},
     },
     kernel::types::{Arc, RwLock},
 };
@@ -25,7 +25,7 @@ pub struct DisplacementBoundCache {
     bounds: Bounds,
     ///
     /// Model representation used for cache calculation.
-    shape: Arc<RwLock<DisplacementShape>>,
+    shape: Arc<RwLock<BoundShape>>,
     ///
     /// Cache read from `self.file_path`.
     caches: OnceLock<Vec<(f64, Option<Cache<f64>>)>>,
@@ -40,7 +40,7 @@ impl DisplacementBoundCache {
     /// - cache_dir - folder contains all cache files
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<DisplacementShape>>,
+        shape: Arc<RwLock<BoundShape>>,
         cache_dir: PathBuf,
         level_step: f64,
         center_x: f64,

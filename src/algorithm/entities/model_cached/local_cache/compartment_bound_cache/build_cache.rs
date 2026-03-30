@@ -9,14 +9,14 @@ use std::{
 };
 
 use crate::{
-    algorithm::entities::{Bounds, model_cached::DisplacementShape},
+    algorithm::entities::{Bounds, model_cached::BoundShape},
     kernel::types::{Arc, RwLock},
 };
 ///
 /// Provides logic to calculate and store cache used by [super::CompartmentBoundCache].
 pub struct BuildCompartmentBoundCache {
     dbg: Dbg,
-    shape: Arc<RwLock<DisplacementShape>>,
+    shape: Arc<RwLock<BoundShape>>,
     level_step: f64,
     bounds: Bounds,
     thread_pool: Arc<ThreadPool>,
@@ -30,7 +30,7 @@ impl BuildCompartmentBoundCache {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<DisplacementShape>>,
+        shape: Arc<RwLock<BoundShape>>,
         level_step: f64,
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
@@ -113,7 +113,7 @@ impl BuildCompartmentBoundCache {
             errors.push(error);
         };
         let shape: std::sync::Arc<
-            parking_lot::lock_api::RwLock<parking_lot::RawRwLock, DisplacementShape>,
+            parking_lot::lock_api::RwLock<parking_lot::RawRwLock, BoundShape>,
         > = self.shape.clone();
         let scheduler = self.thread_pool.scheduler();
         for bound in self.bounds.iter() {
