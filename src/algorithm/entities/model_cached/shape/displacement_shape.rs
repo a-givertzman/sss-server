@@ -1,6 +1,7 @@
 use log::Log;
 use nalgebra::*;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
+use parry3d_f64::bounding_volume::aabb::*;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
@@ -67,25 +68,45 @@ impl DisplacementShape {
         let half_size_x = bound.length().ok_or(error.err("no bound.length"))? / 2.;
         let position_x = bound.center().ok_or(error.err("no bound.center"))?;
 
-        let mut src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+        let src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
 
-        let aabb = AABB::new(
+        // AABB расширен по Y и Z, но строго ограничен по X
+        let aabb = Aabb::new(
             Point3::new(position_x - half_size_x, -1e8, -1e8),
             Point3::new(position_x + half_size_x, 1e8, 1e8)
         );
 
-        // 2. Быстрая выборка индексов через BVH (встроено в Parry)
-        let mut indices = Vec::new();
-        src_mesh.bvh().intersect_aabb(&aabb, &mut indices);
+        let indices: Vec<u32> = src_mesh.bvh().intersect_aabb(&aabb).collect();
 
         if indices.is_empty() {
             return Ok(None);
         }
 
+        let mesh_indices = src_mesh.indices();
+        let vertices = src_mesh.vertices();
+        let mut is_flipped = Vec::with_capacity(indices.len());
+
+        for &tri_idx in &indices {
+            let tri = mesh_indices[tri_idx as usize];
+            // Безопасное извлечение вершин
+            let v0 = vertices[tri[0] as usize];
+            let v1 = vertices[tri[1] as usize];
+            let v2 = vertices[tri[2] as usize];
+
+            let normal_x = (v1.y - v0.y) * (v2.z - v0.z) - (v1.z - v0.z) * (v2.y - v0.y);
+            let tri_center_x = (v0.x + v1.x + v2.x) / 3.0;
+            let dir_from_center = tri_center_x - position_x;
+
+            // Если нормаль и вектор от центра сегмента смотрят в разные стороны — флипаем
+            is_flipped.push(normal_x * dir_from_center < 0.0);
+        }
+
+        // 4. Передаем все данные в BoundShape
         Ok(Some(BoundShape::new(
-            self.dbg,
-            &self.mesh,
+            &self.dbg,
+            &Arc::new(self.mesh.clone()), // Убедитесь, что self.mesh это Option<TriMesh>
             indices,
+            is_flipped, // Добавьте это поле в конструктор BoundShape
             position_x,
             self.epsilon,
         )))
