@@ -1,14 +1,16 @@
 use log::Log;
 use nalgebra::*;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
+use parry3d_f64::bounding_volume::aabb::*;
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::algorithm::entities::model_cached::shape::utils;
-use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
+use crate::algorithm::entities::model_cached::{BoundShape, Shape, compartment_center, load_stl};
 use crate::algorithm::entities::{Bound, Position};
+use crate::kernel::types::Arc;
 
 #[derive(Clone)]
 pub struct DisplacementShape {
@@ -61,145 +63,52 @@ impl DisplacementShape {
         Self::new(parent, None, Some(path), model_x, scale, 0.0001, 10000)
     }
     /// часть меша, пападающая в bound
-    pub fn part(&self, bound: &Bound) -> Result<Option<Self>, Error> {
-        let error = Error::new(&self.dbg, "split");
+    pub fn part(&self, bound: &Bound) -> Result<Option<BoundShape>, Error> {
+        let error = Error::new(&self.dbg, "part");
         let half_size_x = bound.length().ok_or(error.err("no bound.length"))? / 2.;
-        //  let center_x = self.center.unwrap_or(Point3::new(0., 0., 0.)).x;
-        //  let position_x = bound.center().ok_or(error.err("no bound.center"))? + center_x;
         let position_x = bound.center().ok_or(error.err("no bound.center"))?;
-        let cuboid = Cuboid::new(Vector3::new(half_size_x, 100000., 100000.));
-        let mut src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
-        let mut mesh;
-        let mut epsilon = self.epsilon;
-        loop {
-            // TODO костыль для фикса бага: иногда меш вырезается не целиком.
-            // Тут проверяется что баунд вырезанного меша не превышает шаблон
-            let result = src_mesh.intersection_with_local_cuboid(
-                false,
-                &cuboid,
-                &Isometry::from_parts(
-                    Translation3::new(position_x, 0., 0.),
-                    UnitQuaternion::identity(),
-                ),
-                false,
-                epsilon,
-            );
-            mesh = match result {
-                Ok(mesh) => match mesh {
-                    Some(mesh) => mesh,
-                    None => return Ok(None),
-                },
-                Err(e) => {
-                    return Err(
-                        error.pass_with("mesh.intersection_with_local_cuboid", e.to_string())
-                    );
-                }
-            };
-            let aabb = mesh.aabb(&Isometry::identity());
-            let bound_x_min = position_x - half_size_x;
-            let bound_x_max = position_x + half_size_x;
-            if aabb.mins.x + epsilon < bound_x_min || aabb.maxs.x - epsilon > bound_x_max {
-                let error = format!(
-                    "{} part error: wrong aabb, rebuild! x:{position_x} b_min:{bound_x_min} b_max:{bound_x_max} aabb.min:{} aabb.max:{} epsilon:{}",
-                    self.dbg, aabb.mins.x, aabb.maxs.x, epsilon
-                );
-                log::warn!("{error}");
-                src_mesh = &mesh;
-                epsilon = epsilon * 10.;
-                continue;
-            }
-            {
-                // фикс нормалей на гранях, они должны всегда смотреть наружу
-                let check_x =
-                    |p: &Point3<f64>, bound_x: f64| -> bool { (p.x - bound_x).abs() <= epsilon };
-                let check_x3 =
-                    |p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>, bound_x: f64| -> bool {
-                        check_x(p1, bound_x) && check_x(p2, bound_x) && check_x(p3, bound_x)
-                    };
-                let check_x3_min = |p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>| -> bool {
-                    check_x3(p1, p2, p3, bound_x_min)
-                };
-                let check_x3_max = |p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>| -> bool {
-                    check_x3(p1, p2, p3, bound_x_max)
-                };
-                let (mut indices, vertices) = (mesh.indices().to_vec(), mesh.vertices());
-                for triangle_indices in indices.iter_mut() {
-                    let v0 = vertices[triangle_indices[0] as usize];
-                    let v1 = vertices[triangle_indices[1] as usize];
-                    let v2 = vertices[triangle_indices[2] as usize];
-                    if check_x3_min(&v0, &v1, &v2) {
-                        let side1 = v1 - v0;
-                        let side2 = v2 - v0;
-                        let current_normal = side1.cross(&side2);
-                        if current_normal.dot(&Vector3::new(-1., 0., 0.)) <= 0.0 {
-                            triangle_indices.swap(0, 1);
-                        }
-                    }
-                    if check_x3_max(&v0, &v1, &v2) {
-                        let side1 = v1 - v0;
-                        let side2 = v2 - v0;
-                        let current_normal = side1.cross(&side2);
-                        if current_normal.dot(&Vector3::new(1., 0., 0.)) <= 0.0 {
-                            triangle_indices.swap(0, 1);
-                        }
-                    }
-                }
-                mesh = match TriMesh::new(vertices.to_vec(), indices) {
-                    Ok(mesh) => mesh,
-                    Err(e) => {
-                        return Err(
-                            error.pass_with("mesh.intersection_with_local_cuboid", e.to_string())
-                        );
-                    }
-                };
-            }
-            if let Err(error) = mesh
-                .set_flags(TriMeshFlags::all())
-                .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
-            {
-                let error = format!(
-                    "{} part error: set_flags, rebuild!, x:{position_x}, epsilon:{}, error: {}",
-                    self.dbg, epsilon, error
-                );
-                log::warn!("{error}");
-                src_mesh = &mesh;
-                epsilon = epsilon * 10.;
-                continue;
-            }
-            let (_, empty_normals): (Vec<_>, Vec<_>) = mesh
-                .triangles()
-                .map(|t| (t.normal(), t))
-                .partition(|(n, _)| n.is_some());
-            if !empty_normals.is_empty() {
-                let error = format!(
-                    "{} part error: empty normal, rebuild!, x:{position_x}, epsilon:{}",
-                    self.dbg, epsilon
-                );
-                log::warn!("{error}");
-                src_mesh = &mesh;
-                epsilon = epsilon * 10.;
-                continue;
-            }
-            break;
-        }
-     /*   // TODO - remove
-        let filename = format!(
-            "{:.1}, {:.1}.stl",
-            bound.start().unwrap(),
-            bound.end().unwrap(),
+
+        let src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+
+        // AABB расширен по Y и Z, но строго ограничен по X
+        let aabb = Aabb::new(
+            Point3::new(position_x - half_size_x, -1e8, -1e8),
+            Point3::new(position_x + half_size_x, 1e8, 1e8)
         );
-        let cache_dir: PathBuf =
-            ("src/tests/unit/algorithm/cache/assets/disp_bounded/stl/".to_owned() + &filename)
-                .into();
-        super::write_stl(&cache_dir, &mesh).unwrap();*/
-        Ok(Some(Self::new(
+
+        let indices: Vec<u32> = src_mesh.bvh().intersect_aabb(&aabb).collect();
+
+        if indices.is_empty() {
+            return Ok(None);
+        }
+
+        let mesh_indices = src_mesh.indices();
+        let vertices = src_mesh.vertices();
+        let mut is_flipped = Vec::with_capacity(indices.len());
+
+        for &tri_idx in &indices {
+            let tri = mesh_indices[tri_idx as usize];
+            // Безопасное извлечение вершин
+            let v0 = vertices[tri[0] as usize];
+            let v1 = vertices[tri[1] as usize];
+            let v2 = vertices[tri[2] as usize];
+
+            let normal_x = (v1.y - v0.y) * (v2.z - v0.z) - (v1.z - v0.z) * (v2.y - v0.y);
+            let tri_center_x = (v0.x + v1.x + v2.x) / 3.0;
+            let dir_from_center = tri_center_x - position_x;
+
+            // Если нормаль и вектор от центра сегмента смотрят в разные стороны — флипаем
+            is_flipped.push(normal_x * dir_from_center < 0.0);
+        }
+
+        // 4. Передаем все данные в BoundShape
+        Ok(Some(BoundShape::new(
             &self.dbg,
-            Some(mesh),
-            None,
-            Some(position_x),
-            1.,
-            epsilon,
-            self.resolution,
+            &Arc::new(self.mesh.clone()), // Убедитесь, что self.mesh это Option<TriMesh>
+            indices,
+            is_flipped, // Добавьте это поле в конструктор BoundShape
+            position_x,
+            self.epsilon,
         )))
     }
     ///

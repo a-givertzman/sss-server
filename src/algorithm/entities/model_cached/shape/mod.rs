@@ -3,10 +3,12 @@
 mod area_shape;
 mod displacement_shape;
 mod utils;
+mod bound_shape;
 
 pub(crate) use area_shape::*;
 pub(crate) use displacement_shape::*;
 pub(crate) use utils::*;
+pub(crate) use bound_shape::*;
 
 use nalgebra::*;
 use parry3d_f64::bounding_volume::Aabb;
