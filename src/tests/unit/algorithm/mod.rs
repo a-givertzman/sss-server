@@ -1,7 +1,5 @@
 mod cache;
 mod apparent_frequencies_test;
-//mod models; // перенес тесты в папку с крейтом из-за проблем с видимостью методов
-//mod fake_model_link;
 mod icing;
 mod impacts_high_waves_test;
 //mod loads;
@@ -12,7 +10,7 @@ mod parametric_resonant_zone_speed_filter_test;
 mod parametric_resonant_zone_test;
 mod period_excitement_test;
 //mod strength_area;
-//mod wetting;
+mod wetting;
 mod displacement_shape;
 mod area_shape;
 mod bound;

@@ -1,15 +1,15 @@
 //! Учет намокания груза
 use crate::algorithm::context::context_access::ContextReadRef;
-use crate::algorithm::entities::{Bound, Moment, Position};
+use crate::algorithm::entities::{Bound, Moment};
 use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::wetting::ctx::WettingCtx;
 use crate::kernel::Eval;
 use crate::prelude::ContextParamsWrite;
 use crate::{
-    kernel::{types::eval_result::EvalResult},
+    kernel::types::eval_result::EvalResult,
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use crate::algorithm::eval::wetting::ctx::WettingCtx;
 
 ///
 /// Учет намокания палубного груза.  
@@ -54,6 +54,10 @@ impl Eval<(), EvalResult> for WettingEval {
                 let (mass, moment) =
                     unit.iter()
                         .fold((0., Moment::zero()), |(res_mass, res_moment), v| {
+                            let permeability = v.permeability.unwrap_or(0.0);
+                            if permeability <= 0.0 || v.mass <= 0.0 {
+                                return (res_mass, res_moment);
+                            }
                             let mass_shift = match v.mass_shift() {
                                 Ok(v) => v,
                                 Err(err) => {
@@ -61,58 +65,53 @@ impl Eval<(), EvalResult> for WettingEval {
                                         "{}",
                                         error.pass_with(format!("{:?} mass_shift", v), err)
                                     );
-                                    return (0., Position::zero());
+                                    return (res_mass, res_moment);
                                 }
                             };
-                            let permeability = match v.permeability {
-                                Some(v) => v,
-                                None => 0.,
-                            };
+                            let wetting_mass = v.mass * permeability;
                             (
-                                res_mass + v.mass * permeability,
-                                res_moment + Moment::from_pos(mass_shift, v.mass * permeability),
+                                res_mass + wetting_mass,
+                                res_moment + Moment::from_pos(mass_shift, wetting_mass),
                             )
                         });
                 let mass_array = bounds
                     .iter()
                     .map(|b| {
                         unit.iter()
-                            .filter(|u| u.bound_x1.is_some() && u.bound_x2.is_some())
                             .map(|u| {
-                                (
-                                    Bound::new(u.bound_x1.unwrap(), u.bound_x2.unwrap()).ok(),
-                                    u.mass,
-                                    u.permeability.unwrap_or(0.),
-                                )
-                            })
-                            .filter(|(bound, mass, permeability)| {
-                                bound.is_some() && *mass > 0. && *permeability > 0.
-                            })
-                            .map(|(bound, mass, permeability)| {
-                                bound.unwrap().part_ratio(b).unwrap_or(0.) * mass * permeability
+                                let permeability = u.permeability.unwrap_or(0.0);
+                                // Если груз не намокает или не имеет массы, его вклад в шпацию = 0
+                                if u.mass <= 0.0 || permeability <= 0.0 {
+                                    return 0.0;
+                                }
+                                // проверяем наличие границ x1 и x2
+                                if let (Some(x1), Some(x2)) = (u.bound_x1, u.bound_x2) {
+                                    // Пытаемся создать отрезок распределения груза
+                                    if let Ok(cargo_bound) = Bound::new(x1, x2) {
+                                        // Вычисляем долю попадания груза в текущую шпацию `b`
+                                        let ratio = cargo_bound.part_ratio(b).unwrap_or(0.0);
+                                        return ratio * u.mass * permeability;
+                                    }
+                                }
+                                // Если границ нет (например, это точечный груз на палубе),
+                                // то его вклад в распределение по длинам опускается.
+                                0.0
                             })
                             .sum()
                     })
                     .collect();
-                let mass_shift = if mass > 0. {
-                    moment.scale(1. / mass)
-                } else {
-                    Position::zero()
-                };
+                let mass_shift = moment.to_pos(mass);
                 let result = WettingCtx {
                     mass,
                     moment,
                     mass_values: mass_array,
                 };
-                log::info!(
-                    "Wetting mass:{:.3} mass_shift:{}",
-                    mass, mass_shift.print()
-                );
+                log::info!("Wetting mass:{:.3} mass_shift:{}", mass, mass_shift.print());
 
                 ctx.write_params(ParameterID::MassWetting, mass);
                 ctx.write_params(ParameterID::MassWettingX, mass_shift.x());
                 ctx.write_params(ParameterID::MassWettingY, mass_shift.y());
-                ctx.write_params(ParameterID::MassWettingZ, mass_shift.z());    
+                ctx.write_params(ParameterID::MassWettingZ, mass_shift.z());
                 ctx.write(result)
             }
             Err(err) => Err(error.pass_with("Read context error", err)),
