@@ -50,7 +50,7 @@ impl Eval<(), EvalResult> for IcingStabEval {
                     Err(err) => return Err(error.pass_with("model.static_area_v", err)),
                 };                
                 let (a_ice_hdeck, a_ice_shift) = match self.model.read().static_area_h() {
-                    Ok((area, moment)) => (area, moment),
+                    Ok((area, position)) => (area, position),
                     Err(err) => return Err(error.pass_with("model.static_area_h", err)),
                 };  
                 // Масса льда на площади парусности          

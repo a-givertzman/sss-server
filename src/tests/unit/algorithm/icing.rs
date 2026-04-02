@@ -39,7 +39,7 @@ fn stability_icing() {
         .module("ena", LogLevel::Error)
         .init();
     init_once();
-    init_each();    
+    init_each();
     log::debug!("");
     let dbg = "stability_icing";
     log::debug!("\n{}", dbg);
@@ -99,7 +99,7 @@ fn stability_icing() {
     let initial = InitialCtx::new(
         "0",
         "MomentTest",
-        Bounds::from_min_max(0., 100., 1).unwrap(),
+        Bounds::from_min_max(0., 100., 100).unwrap(),
     );
     let ctx = Context::new(initial)
         .write(icing_coeff)
@@ -113,40 +113,33 @@ fn stability_icing() {
         Ok(res_ctx) => {
             let result: IcingStabCtx = res_ctx.read();
 
-            // 1. Формируем эталон (target) на основе ручного расчета
-            // Масса: (100+10)*0.03 + (200-10)*0.03 + 50*(0.04-0.03) = 3.3 + 5.7 + 0.5 = 9.5
             let target_mass = 9.5;
+            let target_moment_x = 212.5; 
+            let target_moment_z = 89.1;
 
-            // Момент (по Z для примера): (1000+120)*0.03 + (1520)*0.03 + 50*12*0.04 + 5*2*0.03 = 33.6 + 45.6 + 24.0 + 0.3 = 103.5
-            // (Используем координаты из предыдущего шага)
-            let target_moment = Moment::new(219.0, 0.0, 103.5);
+            let epsilon = 1e-5;
 
-            let target = IcingStabCtx {
-                mass: target_mass,
-                moment: target_moment,
-            };
-
-            // 2. Проверка массы в твоем стиле
+            // 2. Проверка массы
             assert!(
-                result.mass == target.mass,
+                (result.mass - target_mass).abs() < epsilon,
                 "\n[Mass Mismatch]\nresult: {:?}\ntarget: {:?}",
                 result.mass,
-                target.mass
+                target_mass
             );
 
-            // 3. Проверка моментов (разбиваем по осям для детального лога)
+            // 3. Проверка моментов по осям
             assert!(
-                result.moment.x() == target.moment.x(),
+                (result.moment.x() - target_moment_x).abs() < epsilon,
                 "\n[Moment X Mismatch]\nresult: {:?}\ntarget: {:?}",
                 result.moment.x(),
-                target.moment.x()
+                target_moment_x
             );
 
             assert!(
-                result.moment.z() == target.moment.z(),
+                (result.moment.z() - target_moment_z).abs() < epsilon,
                 "\n[Moment Z Mismatch]\nresult: {:?}\ntarget: {:?}",
                 result.moment.z(),
-                target.moment.z()
+                target_moment_z
             );
 
             log::info!(

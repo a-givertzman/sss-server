@@ -2088,9 +2088,6 @@ impl ModelCached {
     pub fn mock_empty() -> Self {
         let dbg = Dbg::new("test", "ModelCachedMock");
 
-        // Создаем пустой ThreadPool (или имитируем его)
-        let thread_pool = Arc::new(ThreadPool::new("ModelCached::mock_empty", None));
-
         // Создаем пустую форму парусности
         let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(
             100,
@@ -2117,7 +2114,7 @@ impl ModelCached {
             displacement_bounded: IndexMap::new(),
             compartments_bounded: IndexMap::new(),
             hold_compartments_bounded: IndexMap::new(),
-            thread_pool,
+            thread_pool: Arc::new(ThreadPool::new("ModelCached::mock_empty", None)),
         }
     }
 }

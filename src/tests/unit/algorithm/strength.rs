@@ -24,6 +24,7 @@ use crate::algorithm::entities::model_cached::{self};
 use crate::prelude::{Context, Initial, InitialCtx};
 ///
 /// Application entry point
+#[ignore = "required db"]
 #[test]
 fn strength() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()

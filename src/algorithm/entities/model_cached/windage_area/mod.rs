@@ -5,7 +5,7 @@ use crate::{
     algorithm::entities::{
         Bounds,
         model_cached::{
-            AreaCache, AreaData, AreaResult, AreaShape, BowAreaCache, LocalCache, Shape
+            AreaCache, AreaData, AreaResult, AreaShape, BowAreaCache, LocalCache, Shape,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -261,15 +261,12 @@ impl WindageArea {
     /// Создает "фейковый" объект парусности для тестов.
     /// Позволяет передать уже готовые (замоканные) кэши и значения,
     /// чтобы не производить тяжелые расчеты и дисковые операции.
-    pub fn create_test_fake(
-        draught_min: f64,
-        values: Option<Vec<f64>>,
-    ) -> Self {
+    pub fn create_test_fake(draught_min: f64, values: Option<Vec<f64>>) -> Self {
         Self {
             dbg: sal_core::dbg::Dbg::new("test", "FakeWindageArea"),
-            cache_dir: PathBuf::from("/tmp/test_windage_cache"),           
-            shape: Arc::new(RwLock::new(unsafe { std::mem::zeroed() })),
-            thread_pool: Arc::new(unsafe { std::mem::zeroed() }),            
+            cache_dir: PathBuf::from("/tmp/test_windage_cache"),
+            shape: Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.))),
+            thread_pool: Arc::new(ThreadPool::new("WindageArea::mock_empty", None)),
             windage_area: None,
             bow_area: None,
             values,
@@ -285,10 +282,10 @@ impl WindageArea {
         Self {
             dbg: sal_core::dbg::Dbg::new("test", "SimpleMockWindageArea"),
             cache_dir: PathBuf::from("/tmp/test_windage_cache"),
-            shape: Arc::new(RwLock::new(unsafe { std::mem::zeroed() })),
-            thread_pool: Arc::new(unsafe { std::mem::zeroed() }),            
+            shape: Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.))),
+            thread_pool: Arc::new(ThreadPool::new("WindageArea::mock_empty", None)),
             windage_area: None,
-            bow_area: None,   
+            bow_area: None,
             values: Some(mock_values),
             draught_min: 1.,
         }
