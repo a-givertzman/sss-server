@@ -15,7 +15,7 @@ use crate::algorithm::entities::model_cached::{self};
 #[test]
 fn build_caches() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()
-        .filter(LogLevel::Warn)
+        .filter(LogLevel::Trace)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)
