@@ -598,4 +598,32 @@ impl ShipModel {
             api_client: std::sync::Arc::new(ApiClient::new(dbg, "".to_owned(), "".to_owned(), "".to_owned())),
         }
     }
+    /// Создает "фейковую" модель судна для тестов прочности.
+    /// Позволяет жестко задать базовые эпюры площадей корпуса по шпациям.
+    pub fn create_test_fake_strength(area_v: Vec<f64>, area_h: Vec<f64>) -> Self {
+        let dbg = sal_core::dbg::Dbg::new("test", "FakeStrengthShip");        
+        // 1. Создаем мок кэша и прокидываем в него вектор парусности.
+        let model_cached = crate::algorithm::entities::model_cached::ModelCached::mock_with_strength_areas(area_v);
+        Self {
+            dbg: dbg.clone(),
+            ship_id: "fake_strength".into(),
+            project_id: "fake_strength".into(),            
+            horisontal_area_stab: None,
+            horisontal_area_shift: None,
+            windage_area_stab: None,
+            windage_area_moment: None,            
+            bounds: None,
+            horisontal_area_str: Some(area_h),            
+            grain_moments: None,
+            opening: None,
+            deck_angle_point: None,            
+            model_cached,            
+            api_client: std::sync::Arc::new(ApiClient::new(
+                dbg, 
+                "".to_owned(), 
+                "".to_owned(), 
+                "".to_owned()
+            )),
+        }
+    }
 }

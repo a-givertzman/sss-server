@@ -2117,4 +2117,50 @@ impl ModelCached {
             thread_pool: Arc::new(ThreadPool::new("ModelCached::mock_empty", None)),
         }
     }
+    /// Создает заглушку ModelCached для тестов прочности
+    /// с предустановленным распределением парусности
+    pub fn mock_with_strength_areas(windage_area_str: Vec<f64>) -> Self {
+        let dbg = sal_core::dbg::Dbg::new("test", "ModelCachedMockStrength");
+
+        // 1. Создаем пустую базовую форму парусности
+        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(
+            100,
+            10,
+            1.0,
+        )));
+
+        // 2. Используем ваш метод для создания мока WindageArea
+        // Он запишет переданный вектор в поле values и создаст нужные пустые заглушки
+        let mock_windage = WindageArea::create_simple_mock(windage_area_str);
+
+        Self {
+            dbg: dbg.clone(),
+            ship_length_lbp: 100.0,
+            model_x: 0.0,
+            draught_min: 1.0,
+            hull_draught_step: 0.1,
+            bounds_level_step: 0.1,
+            cache_dir: std::path::PathBuf::from("/tmp"),
+            dso_angles: vec![],
+            displacement_shapes: indexmap::IndexMap::new(),
+            windage_shape,
+            
+            // Используем ваш простой мок гидростатики
+            displacement: DisplacementCache::create_simple_mock(10000.0, 10000.0),
+            
+            compartments: indexmap::IndexMap::new(),
+            hold_compartments: indexmap::IndexMap::new(),
+            damaged_compartments: indexmap::IndexMap::new(),
+            
+            // Записываем наш мок парусности с готовыми значениями!
+            windage_area: mock_windage,
+            
+            displacement_bounded: indexmap::IndexMap::new(),
+            compartments_bounded: indexmap::IndexMap::new(),
+            hold_compartments_bounded: indexmap::IndexMap::new(),
+            
+            // Создаем безопасный пул потоков
+            thread_pool: Arc::new(sal_sync::thread_pool::ThreadPool::new("ModelCached::mock_with_strength_areas", None)),
+        }
+    }
 }

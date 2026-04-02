@@ -88,11 +88,11 @@ impl Eval<(), EvalResult> for AreaStrEval {
                 let min_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x1)
-                    .min_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .min_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
                 let max_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x2)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap());
+                    .max_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
                 // Если есть границы грузов ищем распределения площадей грузов
                 let units_bound = if let (Some(min_x), Some(max_x)) = (min_x, max_x) {
                     // Диапазон грузов по оси Х
@@ -132,10 +132,10 @@ impl Eval<(), EvalResult> for AreaStrEval {
                         let min_z = unit
                             .clone()
                             .filter_map(|v| v.bound_z1)
-                            .min_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                            .min_by(|&a, &b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
                         let max_z = unit
                             .filter_map(|v| v.bound_z2)
-                            .max_by(|&a, &b| a.partial_cmp(&b).unwrap());
+                            .max_by(|&a, &b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
                         // Прибавляем к площади прямоугольник площади грузов
                         if let (Some(min_z), Some(max_z)) = (min_z, max_z) {
                             current_area += bound_x.length().unwrap_or(0.) * (max_z - min_z);
@@ -156,7 +156,14 @@ impl Eval<(), EvalResult> for AreaStrEval {
                     let mut icing_current_area = 0.;
                     let mut full_icing_current_area = 0.;
                     for u in &timber_unit {
-                        full_icing_current_area += u.icing_area.unwrap_or(0.);
+                        let u_icing_area = match u.icing_area(bound_x, &Bound::Full) {
+                            Ok((area, ..)) => area,
+                            Err(err) => {
+                                log::error!("{}", error.pass_with("Read unit horizontal_area error", err).to_string());
+                                continue;
+                            },
+                        };
+                        full_icing_current_area += u_icing_area;
                         match u.icing_area(
                             &bound_x
                                 .intersect(&icing_timber_bound_x)
@@ -169,8 +176,9 @@ impl Eval<(), EvalResult> for AreaStrEval {
                                 icing_delta_timber_moment += delta_moment;
                             }
                             Err(err) => {
-                                return Err(error.pass_with("Read unit horizontal_area error", err));
-                            }
+                                log::error!("{}", error.pass_with("Read unit horizontal_area error", err).to_string());
+                                continue;
+                            },
                         };
                     }
                     timber_icing_h.push(icing_current_area);
