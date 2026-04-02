@@ -265,6 +265,7 @@ impl Cache<f64> {
     }*/
     /// Вектор значений по индексам c условием, возвращает значения только для существующих ключей
     /// ключи не должны содержать индексы значений
+    /// длина query должна соответствовать количеству ключей
     /// Возвращает Vec<(value from index1, value from index2)>
     pub fn values_disp(&self, query: &[Option<f64>]) -> Vec<Vec<f64>> {
         let data = self.table.get().unwrap_or_else(|| {

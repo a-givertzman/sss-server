@@ -580,8 +580,9 @@ fn opening(
 impl ShipModel {
     /// Создает "фейковую" модель судна для тестов физики
     pub fn create_test_fake(area_h: f64, pos_h: Position, area_v: f64, mom_v: Moment) -> Self {
+        let dbg = Dbg::new("test", "FakeShip");
         Self {
-            dbg: sal_core::dbg::Dbg::new("test", "FakeShip"),
+            dbg: dbg.clone(),
             ship_id: "fake".into(),
             project_id: "fake".into(),
             horisontal_area_stab: Some(area_h),
@@ -593,8 +594,8 @@ impl ShipModel {
             grain_moments: None,
             opening: None,
             deck_angle_point: None,
-            model_cached: crate::algorithm::entities::model_cached::ModelCached::default(),
-            api_client: std::sync::Arc::new(unsafe { std::mem::zeroed() }),
+            model_cached: crate::algorithm::entities::model_cached::ModelCached::mock_empty(),
+            api_client: std::sync::Arc::new(ApiClient::new(dbg, "".to_owned(), "".to_owned(), "".to_owned())),
         }
     }
 }

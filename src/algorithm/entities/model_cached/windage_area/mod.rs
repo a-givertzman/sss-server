@@ -255,3 +255,42 @@ fn get_bounds_area(
         .intersect(&src_bounds, &src_values)
         .map_err(|err| error.pass_with("bounds.intersect", err))
 }
+//
+#[cfg(test)]
+impl WindageArea {
+    /// Создает "фейковый" объект парусности для тестов.
+    /// Позволяет передать уже готовые (замоканные) кэши и значения,
+    /// чтобы не производить тяжелые расчеты и дисковые операции.
+    pub fn create_test_fake(
+        draught_min: f64,
+        values: Option<Vec<f64>>,
+    ) -> Self {
+        Self {
+            dbg: sal_core::dbg::Dbg::new("test", "FakeWindageArea"),
+            cache_dir: PathBuf::from("/tmp/test_windage_cache"),           
+            shape: Arc::new(RwLock::new(unsafe { std::mem::zeroed() })),
+            thread_pool: Arc::new(unsafe { std::mem::zeroed() }),            
+            windage_area: None,
+            bow_area: None,
+            values,
+            draught_min,
+        }
+    }
+
+    /// Вспомогательный метод для создания мока с простейшими плоскими ответами.
+    /// Подойдет для интеграционных тестов физики, где просто нужны конкретные цифры парусности.
+    pub fn create_simple_mock(
+        mock_values: Vec<f64>, //распределение площади парусности по шпациям
+    ) -> Self {
+        Self {
+            dbg: sal_core::dbg::Dbg::new("test", "SimpleMockWindageArea"),
+            cache_dir: PathBuf::from("/tmp/test_windage_cache"),
+            shape: Arc::new(RwLock::new(unsafe { std::mem::zeroed() })),
+            thread_pool: Arc::new(unsafe { std::mem::zeroed() }),            
+            windage_area: None,
+            bow_area: None,   
+            values: Some(mock_values),
+            draught_min: 1.,
+        }
+    }
+}
