@@ -18,9 +18,11 @@ pub struct LeverDiagramCtx {
     pub theta_max: f64,
     /// Углы максимумов диаграммы плеч статической остойчивости
     pub max_angles: Vec<(f64, f64)>,
-    ///  Угол входа в воду кромки палубы, градусы
+    /// [Угол входа в воду кромки палубы](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part04_stability/chapter04_deckAnglesSubmergence/chapter04_deckAnglesSubmergence.md),
+    /// градусы
     pub entry_angle: f64,
-    ///  Угол заливания отверстий, градусы
+    /// [Угол заливания отверстий](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part04_stability/chapter03_floodingAngles/chapter03_floodingAngles.md),
+    /// градусы
     pub flooding_angle: f64,
 }
 //

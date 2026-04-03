@@ -68,7 +68,7 @@ impl CompartmentCache {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
-    /// Расчет коэффициента проницаемости
+    /// Расчет [коэффициента проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
     pub fn calc_coeff(&mut self, volume_max: f64, level_max: Option<f64>) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "calc_coeff");
         let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.disp(3).1;

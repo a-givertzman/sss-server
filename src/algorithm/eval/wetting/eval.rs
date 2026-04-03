@@ -1,4 +1,3 @@
-//! Учет намокания груза
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::{Bound, Moment};
 use crate::algorithm::eval::parameters::ParameterID;

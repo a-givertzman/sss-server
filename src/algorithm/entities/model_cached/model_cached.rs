@@ -1006,7 +1006,7 @@ impl ModelCached {
             bow_area,
         })
     }
-    /// Расчет равновесного положения
+    /// Расчет [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
     pub(crate) fn floating_position(
         &self,
         query: FloatingPositionQuery,
@@ -1444,8 +1444,8 @@ impl ModelCached {
         }*/
         Ok((dso, entry_angle, flooding_angle))
     }
-    /// Расчет итерации в расчете равновесного положения и диаграммы
-    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
+    /// Расчет итерации в расчете [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
+    /// и диаграммы. Возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
     fn position(
         &self,
         heel: f64,

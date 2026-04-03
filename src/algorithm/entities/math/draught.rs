@@ -1,10 +1,11 @@
+//! Расчет [осадки в произвольной точке](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter02_draftPoint.md)
 use sal_core::{dbg::Dbg, error::Error};
 
 use crate::{
     algorithm::{entities::Position, eval::parameters::ParameterID},
     prelude::{Context, ContextParamsRead, ContextReadRef, InitialCtx},
 };
-/// Расчет осадки в произвольной точке
+//
 pub struct Draught {
     midel_x: f64,
     draught_mid: f64,

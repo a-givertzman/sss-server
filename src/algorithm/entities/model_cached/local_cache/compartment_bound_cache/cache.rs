@@ -22,7 +22,7 @@ pub struct CompartmentBoundCache {
     cache_path: PathBuf,
     level_step: f64,
     volume_max: f64,
-    /// коэффициент проницаемости
+    /// [коэффициент проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
     coeff: Option<f64>,
     bounds: Bounds,
     /// Model representation used for cache calculation.
@@ -166,7 +166,7 @@ impl CompartmentBoundCache {
             format!("rebuild: {full_error}"),
         ))
     }
-    /// инициализация кэшей заранее посчитанными данными
+    /// Инициализация кэшей заранее посчитанными данными
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg.clone(), "init");
         let mut caches = Vec::new();
