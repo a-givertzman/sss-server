@@ -23,7 +23,7 @@ pub struct ResultStrEval {
 //
 //
 impl ResultStrEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         api_client: Arc<ApiClient>,
@@ -100,16 +100,17 @@ impl Eval<(), EvalResult> for ResultStrEval {
                     "value_mass_sum",
                 ];
                 let add = |name: &str| -> Result<(), Error> {
-                    Ok(results.add_values(name, mass.data.get(name).ok_or(error.err(name))?))
+                    let _: () = results.add_values(name, mass.data.get(name).ok_or(error.err(name))?);
+                    Ok(())
                 };
                 let (_, errors): (Vec<_>, Vec<_>) =
-                    names.into_iter().map(|v| add(v)).partition(Result::is_ok);
+                    names.into_iter().map(add).partition(Result::is_ok);
                 let err_mess = errors
                     .into_iter()
                     .map(Result::unwrap_err)
                     .fold(String::new(), |acc, err| format!("{acc}\n\t error: {err}"));
                 if !err_mess.is_empty() {
-                    log::error!("{}", error.err(&err_mess).to_string());
+                    log::error!("{}", error.err(&err_mess));
                     return Err(error.err(err_mess));
                 }
                 results.add_values("value_displacement", &displacement_mass);
@@ -283,7 +284,7 @@ fn send_results(
         values_list = values_str.join(", ")
     ).to_owned();
   //  println!("{}", &full_sql);
-    api_client.fetch(&full_sql).map_err(|err| error.pass(err))?;
+    api_client.fetch(full_sql).map_err(|err| error.pass(err))?;
     log::info!("send_results end");
     Ok(())
 }

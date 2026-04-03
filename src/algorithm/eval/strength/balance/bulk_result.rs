@@ -1,6 +1,6 @@
 use bincode::{Decode, Encode};
 use crate::algorithm::entities::data::loads::AssignmentType;
-/// TODO: Type doc here
+/// Результат расчета по сыпучим грузам
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct BulkResult {
     /// ID помещения
@@ -10,7 +10,7 @@ pub struct BulkResult {
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,    
 }
-///
+//
 impl BulkResult {
     ///
     pub fn new(

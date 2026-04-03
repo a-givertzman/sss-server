@@ -8,7 +8,7 @@ use crate::{algorithm::eval::{
         }, strength::{
             area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassStrEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval,
         }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
-    }, infrostructure::resonant_zone::resonant_zone::ResonantZoneQuery};
+    }, };
 use crate::app::app::App;
 use crate::conf::Conf;
 use debugging::session::debug_session::{DebugSession, LogLevel};

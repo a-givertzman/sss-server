@@ -40,7 +40,7 @@ impl AreaShape {
     /// * scale - масштаб модели для ее приведения к метрам (1000: модель в мм)
     /// * resolution - точность расчета площади парусности
     /// * voxels - силуэт разбитый на квадратные примитивы - воксели,
-    /// [смещение по х относительно center, [массив координат вокселей по z]]
+    ///  [смещение по х относительно center, [массив координат вокселей по z]]
     /// * voxel_scale - размер вокселя
     pub fn new(
         parent: &Dbg,
@@ -103,8 +103,8 @@ impl AreaShape {
         };
         // разбиваем поверхность полученного над водой объема на воксели
         let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
-            &mesh.vertices(),
-            &mesh.indices(),
+            mesh.vertices(),
+            mesh.indices(),
             self.resolution,
             parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
             false,

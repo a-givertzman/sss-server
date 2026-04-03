@@ -42,7 +42,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
-                        .into_iter()
+                        .iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
                     None => return Err(error.err("Read unit error: no data!")),
@@ -105,7 +105,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                                 return Err(error.pass_with("Read unit horizontal_area error", err));
                             }
                         };
-                        match u.icing_area(&bound_x, &Bound::Full) {
+                        match u.icing_area(bound_x, &Bound::Full) {
                             Ok((area, _, _)) => {
                                 full_current_area += area;
                             }

@@ -47,7 +47,7 @@ impl CompartmentBoundCache {
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("CompartmentBoundCache"));
+        let dbg = Dbg::new(parent, "CompartmentBoundCache".to_string());
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
@@ -95,11 +95,10 @@ impl CompartmentBoundCache {
                 values.mul_single(coeff);
                 return Ok(values);
             }
-            if let Some(last_delta) = last_delta {
-                if last_delta.signum() != delta.signum() {
+            if let Some(last_delta) = last_delta
+                && last_delta.signum() != delta.signum() {
                     delta_draugth = -delta_draugth / 3.;
                 }
-            }
             draugth += delta_draugth;
             last_delta = Some(delta);
         }

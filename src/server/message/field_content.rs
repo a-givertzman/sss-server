@@ -91,10 +91,10 @@ impl TryFrom<&[u8]> for Content {
         }
     }
 }
-impl Into<u8> for Content {
+impl From<Content> for u8 {
     ///
     /// Returns u8 representation of the [MessageKind]
-    fn into(self) -> u8 {
-        self as u8
+    fn from(val: Content) -> Self {
+        val as u8
     }
 }

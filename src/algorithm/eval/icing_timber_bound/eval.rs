@@ -15,7 +15,7 @@ pub struct IcingTimberBoundEval {
 //
 //
 impl IcingTimberBoundEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

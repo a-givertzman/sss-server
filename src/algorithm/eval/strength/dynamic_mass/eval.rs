@@ -26,7 +26,7 @@ pub struct DynamicMassStrEval {
 //
 //
 impl DynamicMassStrEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -110,13 +110,13 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                     for (assigment_type, values) in bounded_cargo {
                         match assigment_type {
                             AssignmentType::Ballast => vec_ballast
-                                .add_vec(&values)
+                                .add_vec(values)
                                 .map_err(|err| error.pass_with("vec_ballast.add", err))?,
                             AssignmentType::Stores => vec_store
-                                .add_vec(&values)
+                                .add_vec(values)
                                 .map_err(|err| error.pass_with("vec_store.add", err))?,
                             AssignmentType::CargoLoad => vec_cargo
-                                .add_vec(&values)
+                                .add_vec(values)
                                 .map_err(|err| error.pass_with("vec_cargo.add", err))?,
                             AssignmentType::Unspecified => (),
                         }

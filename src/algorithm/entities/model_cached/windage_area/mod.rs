@@ -47,7 +47,7 @@ impl WindageArea {
         let dbg = Dbg::new(parent, "WindageArea");
         Self {
             dbg,
-            cache_dir: cache_dir,
+            cache_dir,
             shape,
             windage_area: None,
             bow_area: None,
@@ -201,7 +201,8 @@ fn get_bow_area(
     let len_start_h = len_start + voxel_scale / 2.;
     let len_end_l = len_end - voxel_scale / 2.;
     let len_end_h = len_end + voxel_scale / 2.;
-    let result = voxels
+    
+    voxels
         .iter()
         .filter(|&&(x, _)| x > len_start_l && x < len_end_h)
         .map(|&(x, ref v)| {
@@ -217,8 +218,7 @@ fn get_bow_area(
             };
             (x - center_x, v)
         })
-        .collect();
-    result
+        .collect()
 }
 /// Пересчет вокселей в распределение суммарных площадей по х
 fn get_bounds_area(
@@ -237,7 +237,7 @@ fn get_bounds_area(
             let a = v.iter().map(|(_, a)| a).sum();
             area_sum += a;
             moment_x += x * a;
-            v.into_iter().for_each(|(z, a)| moment_z += a * z);
+            v.iter().for_each(|(z, a)| moment_z += a * z);
             (x, a)
         })
         .collect();

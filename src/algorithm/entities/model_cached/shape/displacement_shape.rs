@@ -1,10 +1,8 @@
-use log::Log;
 use nalgebra::*;
 use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
-use std::time::Duration;
 
 use crate::algorithm::entities::model_cached::shape::utils;
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
@@ -105,7 +103,7 @@ impl DisplacementShape {
                 );
                 log::warn!("{error}");
                 src_mesh = &mesh;
-                epsilon = epsilon * 10.;
+                epsilon *= 10.;
                 continue;
             }
             break;
@@ -169,7 +167,7 @@ impl DisplacementShape {
                     mesh
                 }
                 parry3d_f64::query::SplitResult::Negative => {
-                    return Ok(super::properties(&src_mesh, 1.));
+                    return Ok(super::properties(src_mesh, 1.));
                 }
                 parry3d_f64::query::SplitResult::Positive => {
                     let center = self.center.ok_or(error.err("no center"))?;
@@ -190,7 +188,7 @@ impl DisplacementShape {
                 );
                 log::warn!("{error}");
                 src_mesh = &mesh;
-                epsilon = epsilon * 2.;
+                epsilon *= 2.;
                 continue;
             }
             break;
@@ -291,7 +289,7 @@ impl DisplacementShape {
         if let Some(full_mesh) = self.mesh.as_ref() {
             //    let (vertices, indices) = (full_mesh.vertices().to_vec(), full_mesh.indices().to_vec());
             //    let full_mesh = TriMesh::with_flags(vertices, indices, TriMeshFlags::all()).unwrap();
-            let full_volume = utils::volume(&full_mesh);
+            let full_volume = utils::volume(full_mesh);
             let mut current_step = step / 30.; // сначала идем с маленьким шагом
             // на маленьких осадках кривая не линейная
             let mut draught = draught_min + current_step;
@@ -346,7 +344,7 @@ impl DisplacementShape {
                 draught,
                 self.epsilon,
             );
-        return match result {
+        match result {
             parry3d_f64::query::IntersectResult::Intersect(polyline) => {
                 let vertices: Vec<_> = polyline
                     .vertices()
@@ -367,7 +365,7 @@ impl DisplacementShape {
             }
             parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
             parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
-        };
+        }
     }
     ///
     /// Расчет [момента инерции свободной поверхности жидкости](https://github.com/a-givertzman/sss/blob/cdef1e9a2133adeb2fe8abcda6229b206c28493c/design/algorithm/part04_stability/chapter01_initialStability/chapter01_initialStability.md#%D0%B2%D0%BB%D0%B8%D1%8F%D0%BD%D0%B8%D0%B5-%D1%81%D0%B2%D0%BE%D0%B1%D0%BE%D0%B4%D0%BD%D0%BE%D0%B9-%D0%BF%D0%BE%D0%B2%D0%B5%D1%80%D1%85%D0%BD%D0%BE%D1%81%D1%82%D0%B8)
@@ -389,7 +387,7 @@ impl DisplacementShape {
                 let vertices: Vec<_> = polyline
                     .vertices()
                     .iter()
-                    .map(|p| position.transform_point(&p))
+                    .map(|p| position.transform_point(p))
                     .map(|p| {
                         min_x = min_x.min(p.x);
                         max_x = max_x.max(p.x);
@@ -452,7 +450,7 @@ impl DisplacementShape {
                     .iter()
                     .fold((0., 0.), |(i_x, i_y), voxel| {
                         (
-                            i_x + y_array[voxel.coords.y as usize].clone(),
+                            i_x + y_array[voxel.coords.y as usize],
                             i_y + x_array[voxel.coords.x as usize],
                         )
                     });
@@ -464,11 +462,11 @@ impl DisplacementShape {
             parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
         }
     }
-    ///
+    //
     pub fn save(&self, path: &PathBuf) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "save");
         let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
-        super::write_stl(path, &mesh).map_err(|err| error.pass_with("write_stl", err))
+        super::write_stl(path, mesh).map_err(|err| error.pass_with("write_stl", err))
     }
 }
 

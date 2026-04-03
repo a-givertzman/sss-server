@@ -1,7 +1,6 @@
 use bincode::{Decode, Encode};
 use super::{bulk_result::BulkResult, liquid_result::LiquidResult, gaseous_result::GaseousResult};
-
-///
+//
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct StrengthBalanceCtx {
     /// Сыпучий груз для которого центр массы и распределение зависит от 

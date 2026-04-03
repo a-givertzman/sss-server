@@ -15,7 +15,7 @@ pub struct CriterionDraughtEval {
 //
 //
 impl CriterionDraughtEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

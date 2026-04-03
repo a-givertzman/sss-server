@@ -20,7 +20,7 @@ pub struct StaticMassStrEval {
 //
 //
 impl StaticMassStrEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -31,8 +31,6 @@ impl StaticMassStrEval {
             ctx: Box::new(ctx),
         }
     }
-    //
-    //
 }
 impl Eval<(), EvalResult> for StaticMassStrEval {
     fn eval(&self, _: ()) -> EvalResult {
@@ -80,8 +78,7 @@ impl Eval<(), EvalResult> for StaticMassStrEval {
                 let grain_bulkhead: Vec<_> = unit
                     .iter()
                     .filter(|v| v.cargo_type == UnitCargoType::GrainBulkhead && v.bound_x().is_ok())
-                    .map(|v| v.bound_x().unwrap().center())
-                    .flatten()
+                    .filter_map(|v| v.bound_x().unwrap().center())
                     .collect();
 /*
                 let (mass_unit, shift_unit, grain_bulkhead) = {

@@ -20,7 +20,7 @@ pub struct CriterionStabilityEval {
 //
 //
 impl CriterionStabilityEval {
-    ///
+    //
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "CriterionStabilityEval");
         Self {
@@ -55,7 +55,7 @@ impl Eval<Zg, EvalResult> for CriterionStabilityEval {
                     .unit
                     .as_ref()
                     .ok_or(error.err("initial.unit no data"))?
-                    .into_iter()
+                    .iter()
                     .any(|v| v.cargo_type == UnitCargoType::Container);
                 let loads: StaticMassStabCtx = ctx.read();
                 let have_grain = !loads.bulk.is_empty();

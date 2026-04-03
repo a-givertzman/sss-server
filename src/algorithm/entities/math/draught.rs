@@ -44,8 +44,8 @@ impl Draught {
     //
     pub fn value(&self, p: &Position) -> f64 {
         let d_zi = p.y() * self.tg_h + (p.x() - self.midel_x) * self.tg_t / self.cos_h;
-        let z_fix = self.draught_mid + d_zi;
+        
       //  println!("p:{} d_zi:{d_zi} z_fix:{z_fix}", p.print());
-        z_fix
+        self.draught_mid + d_zi
     }
 }

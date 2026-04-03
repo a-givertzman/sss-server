@@ -24,7 +24,7 @@ impl<FieldIn, FieldOut, Out> SizedField<FieldIn, FieldOut, Out> {
             field: Box::new(field),
             field_data: None,
             remainder: vec![],
-            dbg: Dbg::new(parent, format!("SizedField")),
+            dbg: Dbg::new(parent, "SizedField".to_string()),
         }
     }
     ///

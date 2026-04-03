@@ -26,7 +26,7 @@ pub struct WindageEval {
 //
 //
 impl WindageEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         model: Arc<RwLock<ShipModel>>,

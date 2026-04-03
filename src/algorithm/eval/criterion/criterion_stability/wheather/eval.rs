@@ -16,7 +16,7 @@ pub struct WheatherEval {
 //
 //
 impl WheatherEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
@@ -41,18 +41,16 @@ impl Eval<Zg, EvalResult> for WheatherEval {
                 let rolling_amplitude: RollingAmplitudeCtx = ctx.read();
                 let l_w1 = wind.arm_wind_static;
                 let l_w2 = wind.arm_wind_dynamic;
-                let theta_w1 = lever_diagram
+                let theta_w1 = *lever_diagram
                     .angle(l_w1)
                     .map_err(|e| error.pass_with("theta_w1", e))?
                     .first()
-                    .ok_or(error.err("No angle for l_w1"))?
-                    .clone();
-                let sunset_angle = lever_diagram
+                    .ok_or(error.err("No angle for l_w1"))?;
+                let sunset_angle = *lever_diagram
                     .angle(0.)
                     .map_err(|e| error.pass_with("sunset_angle", e))?
                     .get(1)
-                    .unwrap_or(&90.)
-                    .clone();
+                    .unwrap_or(&90.);
                 let theta_w2: f64 = 50.;
                 let theta_f = flooding_angle;
                 let l_w2_angles = lever_diagram

@@ -30,7 +30,7 @@ impl PhysicalFrameArray {
             .data.into_iter()
             .map(|v| v.pos_x)
             .collect();
-        data.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        data.sort_by(|a, b| a.partial_cmp(b).unwrap());
         data 
     }
 }

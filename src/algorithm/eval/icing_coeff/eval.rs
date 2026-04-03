@@ -14,7 +14,7 @@ pub struct IcingCoeffEval {
 //
 //
 impl IcingCoeffEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

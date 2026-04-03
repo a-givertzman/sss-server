@@ -130,7 +130,7 @@ impl LoadUnitData {
         if let (Some(self_bound_x1), Some(self_bound_x2)) = (self.bound_x1, self.bound_x2) {
             match Bound::new(self_bound_x1, self_bound_x2) {
                 Ok(data) => Ok(data),
-                Err(e) => return Err(error.pass(e)),
+                Err(e) => Err(error.pass(e)),
             }
         } else {
             Err(error.err("no bounds!"))
@@ -182,7 +182,7 @@ impl LoadUnitData {
             };
             z1 + (z2 - z1) / 2.
         };
-        return Ok(Position::new(center_x, center_y, center_z));        
+        Ok(Position::new(center_x, center_y, center_z))
     }
 }
 /// Массив данных по грузам

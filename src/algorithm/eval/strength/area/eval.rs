@@ -25,7 +25,7 @@ pub struct AreaStrEval {
 //
 //
 impl AreaStrEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         model: Arc<RwLock<ShipModel>>,
@@ -49,7 +49,7 @@ impl Eval<(), EvalResult> for AreaStrEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
-                        .into_iter()
+                        .iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
                     None => return Err(error.err("Read unit error: no data!")),
@@ -88,11 +88,11 @@ impl Eval<(), EvalResult> for AreaStrEval {
                 let min_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x1)
-                    .min_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
+                    .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
                 let max_x = unit
                     .iter()
                     .filter_map(|v| v.bound_x2)
-                    .max_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
+                    .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
                 // Если есть границы грузов ищем распределения площадей грузов
                 let units_bound = if let (Some(min_x), Some(max_x)) = (min_x, max_x) {
                     // Диапазон грузов по оси Х
@@ -159,7 +159,7 @@ impl Eval<(), EvalResult> for AreaStrEval {
                         let u_icing_area = match u.icing_area(bound_x, &Bound::Full) {
                             Ok((area, ..)) => area,
                             Err(err) => {
-                                log::error!("{}", error.pass_with("Read unit horizontal_area error", err).to_string());
+                                log::error!("{}", error.pass_with("Read unit horizontal_area error", err));
                                 continue;
                             },
                         };
@@ -176,7 +176,7 @@ impl Eval<(), EvalResult> for AreaStrEval {
                                 icing_delta_timber_moment += delta_moment;
                             }
                             Err(err) => {
-                                log::error!("{}", error.pass_with("Read unit horizontal_area error", err).to_string());
+                                log::error!("{}", error.pass_with("Read unit horizontal_area error", err));
                                 continue;
                             },
                         };

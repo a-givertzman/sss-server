@@ -226,7 +226,7 @@ impl BuildCompartmentCache {
            let max_inertia_trans_x = current_vec
                 .iter()
                 .map(|v| v[7])
-                .max_by(|a, b| a.partial_cmp(&b).unwrap())
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap(); 
             current_vec.iter_mut().for_each(|v| {
                     v[9] = max_inertia_trans_x;

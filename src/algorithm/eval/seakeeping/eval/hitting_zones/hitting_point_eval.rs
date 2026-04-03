@@ -1,5 +1,5 @@
 use sal_core::{dbg::Dbg, error::Error};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use crate::{
     algorithm::eval::seakeeping::{
         entities::graham::graham::GrahamScan,
@@ -11,7 +11,6 @@ use crate::{
             parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx,
         },
     }, 
-    infrostructure::ApiClient, 
     kernel::{
         Eval, types::eval_result::EvalResult
     }, 

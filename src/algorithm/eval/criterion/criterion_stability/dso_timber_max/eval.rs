@@ -15,7 +15,7 @@ pub struct DSOTimberMaxEval {
 //
 //
 impl DSOTimberMaxEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,

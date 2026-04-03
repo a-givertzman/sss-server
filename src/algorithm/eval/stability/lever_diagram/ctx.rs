@@ -83,7 +83,7 @@ impl LeverDiagramCtx {
             .last()
             .ok_or(Error::new(
                 "LeverDiagram",
-                format!("dso_lever_max segment error: no values!"),
+                "dso_lever_max segment error: no values!".to_string(),
             ))?
             .1)
     }
@@ -131,9 +131,7 @@ pub(crate) fn angle(
                 step = -step / 2.;
                 last_delta_moment = delta_moment;
             }
-            angle = (angle + step)
-                .min(MAX_LEVER_ANGLE_CALC)
-                .max(-MAX_LEVER_ANGLE_CALC);
+            angle = (angle + step).clamp(-MAX_LEVER_ANGLE_CALC, MAX_LEVER_ANGLE_CALC);
         }
         Ok(angle)
     };

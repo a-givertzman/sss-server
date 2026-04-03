@@ -77,7 +77,7 @@ impl Connection {
                         |dbg, bytes| {
                             match QueryId::from_be_bytes(bytes) {
                                 Ok(query) => Ok(query),
-                                Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with(format!("Can't parse 'Query' u32 filed"), err)),
+                                Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with("Can't parse 'Query' u32 filed".to_string(), err)),
                             }
                         },
                         FixedField::new(        // Cot | u8
@@ -172,11 +172,10 @@ impl Connection {
                                         }),
                                     }),
                                 };
-                                if let Some(response) = response {
-                                    if let Err(err) = link.send(Event::from(&dbg, response)) {
+                                if let Some(response) = response
+                                    && let Err(err) = link.send(Event::from(&dbg, response)) {
                                         log::warn!("{dbg}.run | Can't send reply: {:?}", err);
                                     }
-                                }
                             }
                             Err(err) => {
                                 log::trace!("{dbg}.run | parse error: {:?}", err)
@@ -207,7 +206,7 @@ impl Connection {
     fn send(&self, stream: &TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "send");
-        let stream = stream.try_clone().map_err(|err| error.pass_with(format!("Can't clone stream"), err.to_string()))?;
+        let stream = stream.try_clone().map_err(|err| error.pass_with("Can't clone stream".to_string(), err.to_string()))?;
         let exit = self.exit.clone();
         let handle = hub.listen::<Event<QueryId>, Option<()>>(self.scheduler.clone(), move |event: Event<QueryId>, _| {
             let mut w_stream = BufWriter::new(&stream);
@@ -246,7 +245,7 @@ impl Connection {
     fn parse_err(dbg: &Dbg, input: std::io::Error) -> IsConnected<(), Error> {
         // log::warn!("{}.parse_err | error reading from socket: {:?}", dbg, input);
         // log::warn!("{}.parse_err | error kind: {:?}", dbg, input.kind());
-        let err = Error::new(dbg, "parse_err").pass(&input.to_string());
+        let err = Error::new(dbg, "parse_err").pass(input.to_string());
         match input.kind() {
             // std::io::ErrorKind::NotFound => todo!(),
             std::io::ErrorKind::PermissionDenied => IsConnected::Closed(err),

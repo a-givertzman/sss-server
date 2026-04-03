@@ -39,7 +39,7 @@ impl HoldCompartmentCache {
         let level_index = 2;
         let volume_index = 3;
         let (level_min, level_max) = {
-            let (mut level_min, mut level_max) = (f64::MAX, f64::MIN);
+            let (_level_min, mut level_max) = (f64::MAX, f64::MIN);
             for compartment in compartments.iter() {
                 let compartment = compartment.read();
                 let mut current_level_max = compartment.level_max();
@@ -54,7 +54,7 @@ impl HoldCompartmentCache {
             (0., level_max)
         };
         let (volume_min, volume_max) = {
-            let (mut volume_min, mut volume_max) = (0., 0.);
+            let (volume_min, mut volume_max) = (0., 0.);
             for compartment in compartments.iter() {
                 let compartment = compartment.read();
                 let mut current_volume_max = compartment.volume_max();
@@ -159,7 +159,7 @@ impl HoldCompartmentCache {
                 let result = calc_res(level)?;
                 let delta = volume - result.volume;
                 if last_delta_signum != delta.signum() {
-                    step = step * 0.3;
+                    step *= 0.3;
                     last_delta_signum = delta.signum();
                 }
                 let next_level = (level + step * delta.signum())

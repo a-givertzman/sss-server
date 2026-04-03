@@ -21,7 +21,7 @@ pub struct IcingStrEval {
 //
 //
 impl IcingStrEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         model: Arc<RwLock<ShipModel>>,
