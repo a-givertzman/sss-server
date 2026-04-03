@@ -1,6 +1,7 @@
 mod cache;
 mod apparent_frequencies_test;
-mod icing;
+mod stability_icing;
+mod strength_icing;
 mod impacts_high_waves_test;
 //mod loads;
 mod main_resonant_zone_speed_filter_test;

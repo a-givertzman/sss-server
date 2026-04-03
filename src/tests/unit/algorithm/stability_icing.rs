@@ -108,7 +108,7 @@ fn stability_icing() {
         .unwrap()
         .write(unit_area)
         .expect("Failed to build context for test");
-    let evaluator = IcingStabEval::new("test", model, MocEval { ctx });
+    let evaluator = IcingStabEval::new("test", model, MockEval { ctx });
     match evaluator.eval(()) {
         Ok(res_ctx) => {
             let result: IcingStabCtx = res_ctx.read();
@@ -153,12 +153,12 @@ fn stability_icing() {
 }
 
 #[derive(Debug, Clone)]
-struct MocEval {
+struct MockEval {
     pub ctx: Context,
 }
 //
 //
-impl Eval<(), EvalResult> for MocEval {
+impl Eval<(), EvalResult> for MockEval {
     fn eval(&self, _: ()) -> EvalResult {
         Result::Ok(self.ctx.clone())
     }
