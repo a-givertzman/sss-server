@@ -5,7 +5,6 @@ use crate::{
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Коэффициенты для расчета обледенения судна
 pub struct IcingCoeffEval {

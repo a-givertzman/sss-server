@@ -1,3 +1,5 @@
+//! Учет [обледенения судна](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter02_icing.md) 
+//! для расчета прочности
 use crate::algorithm::context::context_access::{ContextRead, ContextReadRef};
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
 use crate::algorithm::eval::strength::IcingStrCtx;
@@ -9,9 +11,8 @@ use crate::{
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
-///
-/// Учет обледенения судна для расчета прочности
+//
+//
 pub struct IcingStrEval {
     dbg: Dbg,
     model: Arc<RwLock<ShipModel>>,

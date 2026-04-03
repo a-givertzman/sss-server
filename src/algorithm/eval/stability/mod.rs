@@ -1,4 +1,4 @@
-//! Entities implemented the Eval trate
+//! Расчет остойчивости судна.
 pub mod icing;
 pub mod static_mass;
 pub mod balance;

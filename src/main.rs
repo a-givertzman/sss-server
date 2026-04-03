@@ -1,4 +1,4 @@
-// #![feature(try_trait_v2)]
+#![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 mod algorithm;
 mod app;
 mod conf;

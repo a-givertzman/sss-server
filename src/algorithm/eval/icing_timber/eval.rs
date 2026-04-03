@@ -12,16 +12,15 @@ use crate::{
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-///
-/// Расчет площади обледенения горизонтальных поверхностей палубного лесного груза
+//
 pub struct IcingTimberEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
-//
-//
+/// Площади горизонтальных поверхностей и
+/// площади парусности судна для расчета остойчивости
 impl IcingTimberEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

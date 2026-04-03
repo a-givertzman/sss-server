@@ -6,7 +6,6 @@ use crate::{
     prelude::{InitialCtx, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Ограничение горизонтальной площади обледенения палубного груза - леса
 pub struct IcingTimberBoundEval {

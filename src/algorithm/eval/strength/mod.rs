@@ -1,4 +1,4 @@
-//! Entities implemented the Eval trate
+//! [Расчет прочности судна](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)
 pub mod area;
 pub mod icing;
 pub mod static_mass;

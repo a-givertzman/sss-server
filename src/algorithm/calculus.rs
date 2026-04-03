@@ -23,7 +23,7 @@ use crate::{algorithm::{entities::ship_model::ship_model::ShipModel,
 };
 
 ///
-/// Evaluates entair ship calculations
+/// [Evaluates entair ship calculations](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part01_general/chapter03_calcProcedure.md)
 pub struct Calculus {
     dbg: Dbg,
     conf: Conf,

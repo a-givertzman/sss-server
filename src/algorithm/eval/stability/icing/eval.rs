@@ -12,7 +12,7 @@ use crate::{
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Учет обледенения судна [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part02_mass/chapter02_icing.md]
+/// Учет обледенения судна
 pub struct IcingStabEval {
     dbg: Dbg,
     model: Arc<RwLock<ShipModel>>,
