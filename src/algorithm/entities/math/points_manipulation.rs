@@ -1,5 +1,7 @@
-use nalgebra::{Const, OPoint};
-use parry3d_f64::math::Point;
+use boolmesh::{compute_boolean, prelude::{self, Manifold}};
+use nalgebra::{Const, OPoint, Point3};
+use parry3d_f64::{math::Point, shape::{TriMesh, TriMeshFlags}};
+use sal_core::error::Error;
 
 use crate::algorithm::entities::{is_generate::is_degenerate, resample_line::resample_line};
 ///
@@ -12,7 +14,7 @@ pub trait IntoPoints {
 impl IntoPoints for &[(f64, f64, f64)] {
     fn into_points(self) -> Vec<Point<f64>> {
         self.iter()
-            .map(|&(x, y, z)| Point::new(x, z, y))
+            .map(|&(x, y, z)| Point::new(x, y, z))
             .collect()
     }
 }
@@ -23,7 +25,7 @@ impl IntoPoints for (f64, Vec<(f64, f64)>) {
         let (x, points) = self;
         points
             .into_iter()
-            .map(|(z, y)| Point::new(x, -y, z))
+            .map(|(z, y)| Point::new(x, y, z))
             .collect()
     }
 }
@@ -48,6 +50,22 @@ impl PointsManipulations {
     /// в вектор [Point]
     pub fn convert<T: IntoPoints>(input: T) -> Vec<Point<f64>> {
         input.into_points()
+    }
+    ///
+    /// Отзеркаливание TriMesh по Y
+    pub fn mirror_mesh_y(mesh: &TriMesh) -> TriMesh {
+        let mirrored_vertices: Vec<Point3<f64>> = mesh.vertices()
+            .iter()
+            .map(|p| Point3::new(p.x, -p.y, p.z))
+            .collect();
+        let mirrored_indices: Vec<[u32; 3]> = mesh.indices()
+            .iter()
+            .map(|[a, b, c]| [*a, *c, *b])
+            .collect();
+        let mut new_mesh = TriMesh::new(mirrored_vertices, mirrored_indices)
+            .expect("Error to mirror mesh");
+        let _ = new_mesh.set_flags(TriMeshFlags::all());
+        new_mesh
     }
     ///
     /// Разбиение сэмпла пополам
@@ -168,7 +186,7 @@ impl PointsManipulations {
     /// - `indices` - набор индексов вершин 3D фигуры
     /// - `points_x1` - первый блок точек для соединения
     /// - `points_x2` - второй блок точек для соединения
-    pub fn connect_points(
+    pub fn connect_points_for_ship(
         vertices: &mut Vec<OPoint<f64, Const<3>>>,
         indices: &mut Vec<[u32; 3]>,
         points_x1: &[OPoint<f64, Const<3>>],
@@ -305,5 +323,248 @@ impl PointsManipulations {
             result.extend_from_slice(&next_p[start..next_p.len()]);
         }
         (points_substract, result)
+    }
+    ///
+    /// Создание [Manifold]
+    /// - `vertices` - вершины фигуры
+    /// - `indices` - массив индексов треугольников фигуры
+    fn create_manifold(vertices: &[OPoint<f64, Const<3>>], indices: &[[u32; 3]]) -> Result<Manifold,Error> {
+        let mut all_coords = Vec::new();
+        for point in vertices {
+            all_coords.push(point.x);
+            all_coords.push(point.y);
+            all_coords.push(point.z);
+        }
+        let mut all_indx = Vec::new();
+        for triangle_indx in indices {
+            for indx in triangle_indx {
+                all_indx.push(*indx as usize);
+            }
+        }
+        match Manifold::new(&all_coords, &all_indx) {
+            Ok(manifold) => {
+                return Ok(manifold)
+            },
+            Err(e) => return Err(e.into()),
+        }
+    }    
+    ///
+    /// Сложение двух meshes
+    pub fn add_trimeshes(last_figure: &TriMesh, curr_figure: &TriMesh) -> Result<TriMesh, Error> {
+        match Self::create_manifold(last_figure.vertices(), last_figure.indices()) {
+            Ok(last_manifold) => {
+                match Self::create_manifold(curr_figure.vertices(), curr_figure.indices()) {
+                    Ok(curr_manifold) => {
+                        match compute_boolean(&last_manifold, &curr_manifold, prelude::OpType::Add) {
+                            Ok(add_res) => {
+                                match Self::manifold_to_trimesh(add_res) {
+                                    Ok(mut add_trimesh) => {
+                                        let _ = add_trimesh.set_flags(TriMeshFlags::all());
+                                        Ok(add_trimesh)
+                                    },
+                                    Err(e) => return Err(e.into()),
+                                }
+                            },
+                            Err(e) => return Err(e.into()),
+                        }
+                    },
+                    Err(e) => return Err(e.into()),
+                }
+            },
+            Err(e) => return Err(e.into()),
+        }
+    }
+    ///
+    /// Отзеркаливание по Y и сложение с исходной фигурой
+    pub fn mirror_y(last_figure: &TriMesh) -> Result<TriMesh, Error> {
+        let mirrored_vertices: Vec<OPoint<f64, Const<3>>> = last_figure
+            .vertices()
+            .iter()
+            .map(|v| {
+                OPoint::<f64, Const<3>>::new(v.x, -v.y, v.z)
+            })
+        .collect();
+        let mirrored_indices: Vec<[u32; 3]> = last_figure.indices()
+            .iter()
+            .map(|[a, b, c]| [*a, *c, *b]) // Инвертируем порядок обхода
+        .collect();
+        match TriMesh::new(mirrored_vertices, mirrored_indices) {
+            Ok(mirrored_trimesh) => {
+                match Self::create_manifold(last_figure.vertices(), last_figure.indices()) {
+                    Ok(manifold_original) => {
+                        match Self::create_manifold(mirrored_trimesh.vertices(), mirrored_trimesh.indices()) {
+                            Ok(manifold_mirrored) => {
+                                match compute_boolean(&manifold_original, &manifold_mirrored, prelude::OpType::Add) {
+                                    Ok(combined_manifold) => {
+                                        match Self::manifold_to_trimesh(combined_manifold) {
+                                            Ok(mut combined_trimesh) => {
+                                                let _ = combined_trimesh.set_flags(TriMeshFlags::all());
+                                                Ok(combined_trimesh)
+                                            },
+                                            Err(e) => { log::error!("Failed to convert combined manifold to trimesh: {}", e); return Err(e); }
+                                        }
+                                    },
+                                    Err(e) => { log::error!("Failed to combine original and mirrored: {}", e); return Err(e.into()); }
+                                }
+                            },
+                            Err(e) => { log::error!("Failed to create manifold from mirrored: {}", e); return Err(e); }
+                        }
+                    },
+                    Err(e) => { log::error!("Failed to create manifold from original: {}", e); return Err(e); }
+                }
+            },
+            Err(e) => {
+                log::error!("Failed to create mirrored TriMesh: {}", e);
+                return Err("Failed to create mirrored TriMesh".into());
+            }
+        }
+    }
+    ///
+    /// Вычитание двух meshes
+    pub fn substract_trimeshes(last_figure: &TriMesh, curr_figure: &TriMesh) -> Result<TriMesh, Error> {
+        match Self::create_manifold(last_figure.vertices(), last_figure.indices()) {
+            Ok(last_manifold) => {
+                match Self::create_manifold(curr_figure.vertices(), curr_figure.indices()) {
+                    Ok(curr_manifold) => {
+                        match compute_boolean(&last_manifold, &curr_manifold, prelude::OpType::Subtract) {
+                            Ok(add_res) => {
+                                match Self::manifold_to_trimesh(add_res) {
+                                    Ok(mut sub_trimesh) => {
+                                        let _ = sub_trimesh.set_flags(TriMeshFlags::all());
+                                        Ok(sub_trimesh)
+                                    },
+                                    Err(_) => todo!(),
+                                }
+                            },
+                            Err(e) => return Err(e.into()),
+                        }
+                    },
+                    Err(e) => return Err(e.into()),
+                }
+            },
+            Err(e) => return Err(e.into()),
+        }
+    }
+    ///
+    /// Соединение точек из
+    /// двух блоков координат
+    /// - `vertices` - набор вершин 3D фигуры
+    /// - `indices` - набор индексов вершин 3D фигуры
+    /// - `points_x1` - первый блок точек для соединения
+    /// - `points_x2` - второй блок точек для соединения
+    pub fn connect_points_for_tanks(
+        vertices: &mut Vec<OPoint<f64, Const<3>>>,
+        indices: &mut Vec<[u32; 3]>,
+        points_x1: &[OPoint<f64, Const<3>>],
+        points_x2: &[OPoint<f64, Const<3>>],
+        reverse: bool,
+    ) {
+        assert!(points_x1.len() >= 3);
+        assert_eq!(points_x1.len(), points_x2.len());
+        let n = points_x1.len();
+        let mut count_dublicats = 0;
+        let base = vertices.len() as u32;
+        for point in points_x1 {
+            if !vertices.contains(point) {
+                vertices.push(*point);
+            } else {
+                count_dublicats += 1;
+            }
+        }
+        for point in points_x2 {
+            if !vertices.contains(point) {
+                vertices.push(*point);
+            }
+        }
+        let x1 = base;
+        let x2 = base + (n - count_dublicats) as u32;
+        // боковые торцы
+        for i in 0..(n - count_dublicats) {
+            let next = (i + 1) % (n - count_dublicats);
+            let a = x1 + i as u32;
+            let b = x1 + next as u32;
+            let c = x2 + next as u32;
+            let d = x2 + i as u32;
+            if reverse {
+                indices.push([a, c, b]);
+                indices.push([a, d, c]);
+            } else {
+                indices.push([a, b, c]);
+                indices.push([a, c, d]);
+            }
+        }
+        // стенка x1
+        for i in 1..(n - count_dublicats) - 1 {
+            if reverse {
+                indices.push([
+                    x1,
+                    x1 + i as u32,
+                    x1 + i as u32 + 1,
+                ]);
+            } else {
+                indices.push([
+                    x1,
+                    x1 + i as u32 + 1,
+                    x1 + i as u32,
+                ]);
+            }
+        }
+        // стенка x2
+        for i in 1..(n - count_dublicats) - 1 {
+            if reverse {
+                indices.push([
+                    x2,
+                    x2 + i as u32 + 1,
+                    x2 + i as u32,
+                ]);
+            } else {
+                indices.push([
+                    x2,
+                    x2 + i as u32,
+                    x2 + i as u32 + 1,
+                ]);
+            }
+        }
+    }
+    ///
+    /// Пересечение двух meshes
+    pub fn intersection_trimeshes(last_figure: &TriMesh, curr_figure: &TriMesh) -> Result<TriMesh, Error> {
+        match Self::create_manifold(last_figure.vertices(), last_figure.indices()) {
+            Ok(last_manifold) => {
+                match Self::create_manifold(curr_figure.vertices(), curr_figure.indices()) {
+                    Ok(curr_manifold) => {
+                        match compute_boolean(&last_manifold, &curr_manifold, prelude::OpType::Intersect) {
+                            Ok(add_res) => {
+                                match Self::manifold_to_trimesh(add_res) {
+                                    Ok(mut sub_trimesh) => {
+                                        let _ = sub_trimesh.set_flags(TriMeshFlags::all());
+                                        Ok(sub_trimesh)
+                                    },
+                                    Err(_) => todo!(),
+                                }
+                            },
+                            Err(e) => return Err(e.into()),
+                        }
+                    },
+                    Err(e) => return Err(e.into()),
+                }
+            },
+            Err(e) => return Err(e.into()),
+        }
+    }
+    ///
+    /// Преобразование [Manifold] в [TriMesh]
+    /// - `manifold` - [Manifold] для преобразования
+    fn manifold_to_trimesh(manifold: Manifold) -> Result<TriMesh, Error> {
+        let vertices: Vec<OPoint<f64, Const<3>>> =
+            manifold.ps.iter()
+                .map(|p| OPoint::<f64, Const<3>>::new(p.x, p.y, p.z))
+                .collect();
+        let indices: Vec<[u32; 3]> =
+            manifold.get_indices().iter()
+                .map(|t| [t[0] as u32, t[1] as u32, t[2] as u32])
+                .collect();
+        TriMesh::new(vertices, indices)
+            .map_err(|e| e.to_string().into())
     }
 }

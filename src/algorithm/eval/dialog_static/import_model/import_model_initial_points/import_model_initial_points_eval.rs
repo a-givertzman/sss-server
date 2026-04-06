@@ -97,7 +97,7 @@ impl ImportModelInitialPointsEval {
     fn parsing_surface_outer_body(&self, position: usize, model_3d: Vec<f64>, main_decks_positions: Vec<usize>) -> (usize, SurfaceOuterBody) {
         let mut surface_outer_body_coords: Vec<Vec<(f64, f64, f64)>> = Vec::new();
         let mut main_decks: Vec<usize> = Vec::new();
-        let mut main_points: HashMap<usize, Vec<OPoint<f64, Const<3>>>> = HashMap::new();
+        let main_points: HashMap<usize, Vec<OPoint<f64, Const<3>>>> = HashMap::new();
         let mut i = position;
         let mut flag_main = false;
         let mut flag = 0;
@@ -167,7 +167,7 @@ impl ImportModelInitialPointsEval {
                         i += 3;
                         continue;
                     }
-                    current_vertices.push((current_frame, z, y));
+                    current_vertices.push((current_frame, y, z));
                     i += 2;
                     if i >= model_3d.len() {
                         flag += 1;
