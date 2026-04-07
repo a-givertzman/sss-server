@@ -492,19 +492,101 @@ impl ModelCached {
         Ok(())
     }
     ///
-    ///
-    /// Generates and reload the internal caches.
-    ///
-    /// The field `caches` contains cache keys to update.
-    /// Remaining it empty builds and reloads all the caches.
-    ///
-    /// Note that it may take some time to complete
-    /// due to the size of datasets and algorithm complexity.
-    ///
-    /// # Errors
-    /// Internally it creates worker threads while building.
-    /// The result error is a collection of all failed worker errors joined by '\n'.
+    /// Пересчет кэшей корпуса
     #[allow(dead_code)]
+    pub fn rebuild_hull(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        log::info!("rebuild_hull begin");
+        let error = Error::new(&self.dbg, "rebuild_hull");
+        let mut errors = Vec::new();
+        // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
+        if let Err(error) = self.displacement.rebuild() {
+            errors.push(("displacement".to_owned(), error));
+        }
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let mut displacement_bound = DisplacementBoundCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir.clone().join("disp_bounded"),
+            self.bounds_level_step,
+            self.model_x,
+            bounds.clone(),
+            Arc::clone(&self.thread_pool),
+        );
+        displacement_bound
+            .rebuild()
+            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+        self.windage_area
+            .rebuild(bounds, self.ship_length_lbp)
+            .map_err(|err| error.pass_with("windage_area.rebuild", err))?;         
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_hull",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }
+        log::info!("rebuild_hull finish");
+        Ok(())
+    }
+    ///  Пересчет кэшей отсеков
+    #[allow(dead_code)]
+    pub fn rebuild_compartments(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error: Error = Error::new(&self.dbg, "rebuild_compartments");
+        let mut errors = Vec::new();
+        for (name, compartment) in &mut self.compartments {
+            //        println!("model_cached rebuild compartment:{name}");
+            if let Err(error) = compartment.write().rebuild() {
+                errors.push((("compartment ".to_owned() + name), error));
+            }
+        }
+        let mut cache_map = IndexMap::new();
+        for (code, compartment) in &self.compartments {
+            //      println!("model_cached build_bounded compartment:{code}");
+            let mut compartment_bounded = compartment
+                .read()
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
+            compartment_bounded
+                .rebuild()
+                .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
+            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
+        }             
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
+        /*  TODO - пока не используются, потом будет отдельный расчет
+         for (name, compartment) in &mut self.damaged_compartments {
+            if let Err(error) = compartment.write().rebuild() {
+                errors.push((("damaged_compartment ".to_owned() + name), error));
+            }
+        }*/          
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_hull",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }        
+        Ok(())
+    }
+    ///
+    /// Пересчет кэшей боковой поверхности корпуса
+    #[allow(dead_code)]
+    pub fn rebuild_windage(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error: Error = Error::new(&self.dbg, "rebuild_windage");
+        self.windage_area
+            .rebuild(bounds, self.ship_length_lbp)
+            .map_err(|err| error.pass_with("windage_area.rebuild", err))?; 
+        Ok(())
+    }    
+    ///  Пересчет кэшей без шпаций
+    #[allow(dead_code)]    
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         log::info!("rebuild_caches begin");
         let error = Error::new(&self.dbg, "rebuild_caches");
@@ -536,7 +618,7 @@ impl ModelCached {
         log::info!("rebuild_caches finish");
         Ok(())
     }
-    //
+    ///   Пересчет кэшей со шпациями
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
