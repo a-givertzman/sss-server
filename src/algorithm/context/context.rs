@@ -1,15 +1,9 @@
 use super::testing_ctx::TestingCtx;
 use crate::algorithm::{
     eval::{        
-        criterion::*, 
-        icing_timber::ctx::IcingTimberCtx,
-        icing_timber_bound::ctx::IcingTimberBoundCtx,
-        parameters::Parameters,
-        seakeeping::eval::{
+        criterion::*, icing_timber::ctx::IcingTimberCtx, icing_timber_bound::ctx::IcingTimberBoundCtx, parameters::Parameters, room_element_report::room_element_report_ctx::RoomElementReportCtx, seakeeping::eval::{
             apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, hitting_zones::hitting_point_ctx::HittingZonesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
-        }, 
-        stability::*, 
-        strength::*, *
+        }, stability::*, strength::*, *
     },
     initial::initial_ctx::InitialCtx,
 };
@@ -130,6 +124,8 @@ pub struct Context {
     pub(super) main_resonant_zone: Option<MainResonantZoneCtx>,
     /// Массив скоростей хода, при которых кажущаяся частота волнения находится в диапазоне основого резонанса частот
     pub(super) main_resonant_zone_speed_filter: Option<MainResonantZoneSpeedFilterCtx>,
+    /// Сформированный отчёт по "Элементы помещений"
+    pub(super) room_element_report: Option<RoomElementReportCtx>,
     ///
     /// Uset for testing only
     #[allow(dead_code)]
