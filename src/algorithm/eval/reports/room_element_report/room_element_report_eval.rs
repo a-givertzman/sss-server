@@ -222,6 +222,76 @@ impl Eval<(), EvalResult> for RoomElementReportEval {
                                     .text("11")
                                 )
                             )
+                            .el(tr(), |sixth_row| sixth_row
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                            )
+                            .el(tr(), |sixth_row| sixth_row
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                                .el(th(), |th| th
+                                    .text("")
+                                )
+                            )                            
                         )
                     )
                 );
