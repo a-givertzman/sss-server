@@ -24,7 +24,7 @@ use crate::algorithm::entities::model_cached::{self};
 use crate::prelude::{Context, Initial, InitialCtx};
 ///
 /// Application entry point
-#[ignore = "required db"]
+//#[ignore = "required db"]
 #[test]
 fn full() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()
@@ -49,9 +49,7 @@ fn full() -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir: PathBuf = ("assets/cache/".to_owned() + &model_name).into();
     let model_dir: PathBuf = ("assets/model/".to_owned() + &model_name).into();
     let thread_pool = Arc::new(ThreadPool::new(&dbg, Some(conf.thread_pool.size)));  
-    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
-    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
-    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
+    let mut dso_angles: Vec<_> = (-120..=120).map(|v| (v as f64) * 0.5 as f64).collect();
     dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
     dso_angles.dedup();    
     let model_cached = model_cached::ModelCached::new(
