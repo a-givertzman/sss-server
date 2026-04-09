@@ -104,9 +104,9 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                     }
                     let strength_balance: StrengthBalanceCtx = ctx.read();
                     let mut bounded_cargo = Vec::new();
-                    bounded_cargo.append(&mut strength_balance.gaseous.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
-                    bounded_cargo.append(&mut strength_balance.bulk.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
-                    bounded_cargo.append(&mut strength_balance.liquid.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
+                    strength_balance.gaseous.iter().for_each(|v| bounded_cargo.push((v.assigment_type, &v.mass_values)));
+                    strength_balance.bulk.iter().for_each(|v| bounded_cargo.push((v.assigment_type, &v.mass_values)));
+                    strength_balance.liquid.iter().for_each(|v| bounded_cargo.push((v.assigment_type, &v.mass_values)));
                     for (assigment_type, values) in bounded_cargo {
                         match assigment_type {
                             AssignmentType::Ballast => vec_ballast
