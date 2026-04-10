@@ -1,6 +1,10 @@
+use std::{io::Write, path::PathBuf};
+
 use html_builder::{Document, colspan, rowspan, table, th, thead, tr};
-use sal_core::dbg::Dbg;
-use crate::{algorithm::eval::room_element_report::room_element_report_ctx::RoomElementReportCtx, kernel::{
+use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
+use parry3d_f64::{bounding_volume::Aabb, math::{Isometry, Vector}, shape::{Shape, TriMesh}};
+use sal_core::{dbg::Dbg, error::Error};
+use crate::{algorithm::{entities::model_cached::{rotate, square, volume}, eval::room_element_report::room_element_report_ctx::RoomElementReportCtx}, kernel::{
     Eval, 
     types::eval_result::EvalResult
 }, prelude::ContextWrite};
@@ -10,6 +14,7 @@ use crate::{algorithm::eval::room_element_report::room_element_report_ctx::RoomE
 pub struct RoomElementReportEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
+    tank: TriMesh,
 }
 //
 //
@@ -19,11 +24,13 @@ impl RoomElementReportEval {
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
+        tank: TriMesh
     ) -> Self {
         let dbg = Dbg::new(parent, "RoomElementReportEval");
         Self {
             dbg,
             ctx: Box::new(ctx),
+            tank
         }
     }
     fn create_base_table(
@@ -106,7 +113,7 @@ impl RoomElementReportEval {
                     .el(tr(), |first_row| first_row
                         .el(th(), |th| th
                             .attr(colspan(), "2")
-                            .text("Крен, {градус")
+                            .text("Крен, [град]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "1")
@@ -116,7 +123,7 @@ impl RoomElementReportEval {
                     .el(tr(), |second_row| second_row
                         .el(th(), |th| th
                             .attr(colspan(), "2")
-                            .text("Дифферент, градус")
+                            .text("Дифферент, [град]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "1")
@@ -130,7 +137,7 @@ impl RoomElementReportEval {
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "3")
-                            .text("Объём, м³")
+                            .text("Объём, [м³]")
                         )
                         .el(th(), |th| th
                             .attr(colspan(), "3")
@@ -144,27 +151,27 @@ impl RoomElementReportEval {
                     .el(tr(), |fourth_row| fourth_row
                         .el(th(), |th| th
                             .attr(rowspan(), "2")
-                            .text("от нижней точки помещения, м")
+                            .text("от нижней точки помещения, [м]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "2")
-                            .text("от основной плоскости, м")
+                            .text("от ОП, [м]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "2")
-                            .text("X, м")
+                            .text("X, [м]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "2")
-                            .text("Y, м")
+                            .text("Y, [м]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "2")
-                            .text("Z, м")
+                            .text("Z, [м]")
                         )
                         .el(th(), |th| th
                             .attr(rowspan(), "2")
-                            .text("Площадь, м²")
+                            .text("Площадь, [м²]")
                         )
                         .el(th(), |th| th
                             .attr(colspan(), "2")
@@ -177,16 +184,16 @@ impl RoomElementReportEval {
                     )
                     .el(tr(), |fifth_row| fifth_row
                         .el(th(), |th| th
-                            .text("X, м")
+                            .text("X, [м]")
                         )
                         .el(th(), |th| th
-                            .text("Y, м")
+                            .text("Y, [м]")
                         )
                         .el(th(), |th| th
-                            .text("IX, м⁴")
+                            .text("IX, [м⁴]")
                         )
                         .el(th(), |th| th
-                            .text("IY, м⁴")
+                            .text("IY, [м⁴]")
                         )
                     )
                     .el(tr(), |sixth_row| sixth_row
@@ -231,49 +238,112 @@ impl RoomElementReportEval {
     ///
     /// Добавление результатов расчётов в таблицу 2
     /// по шагу уровня заполняемости
-    fn solve_table_2(doc: Document, level: f64, level_step: f64) -> Document {
+    fn solve_table_2(
+        init_tank_aabb: Aabb,
+        tank: TriMesh,
+        doc: Document, 
+        level: f64, 
+        level_step: f64
+    ) -> Document {
+        let figure_aabb = tank.compute_local_aabb();
         let mut result = doc;
         let mut curr_level = 0.0;
+        match write_stl(&PathBuf::from("src\\tests\\unit\\algorithm\\reports\\tank.stl"), &tank) {
+            Ok(_) =>  {},
+            Err(_) => {},
+        }
         while curr_level < level {
+            let z_to_cut = curr_level + figure_aabb.mins.z;
+            match tank.split(&Isometry::identity(), &Vector::z_axis(), z_to_cut, 1e-6) {
+                parry3d_f64::query::SplitResult::Pair(a, _) => {
+                    match write_stl(&PathBuf::from("src\\tests\\unit\\algorithm\\reports\\splited_mesh.stl"), &a) {
+                        Ok(_) =>  {},
+                        Err(_) => {},
+                    }
+                },
+                parry3d_f64::query::SplitResult::Negative => {
+
+                },
+                parry3d_f64::query::SplitResult::Positive => {
+
+                },
+            }
             result = result.el(tr(), |row| row
                 .el(th(), |th| th
-                    .text("")
+                    .text(figure_aabb.maxs.y - figure_aabb.mins.y) // от нижней точки помещения, [м]
                 )
                 .el(th(), |th| th
-                    .text("")
+                    .text(figure_aabb.maxs.y - figure_aabb.mins.y + (figure_aabb.mins.y  - init_tank_aabb.mins.y).abs()) // от ОП, [м]
                 )
                 .el(th(), |th| th
-                    .text("")
+                    .text(volume(&tank)) // Объём, [м³]
+                ) // Координаты центра объёма
+                .el(th(), |th| th
+                    .text(figure_aabb.center().x) // X, [м]
                 )
                 .el(th(), |th| th
-                    .text("")
+                    .text(figure_aabb.center().y) // Y, [м]
                 )
                 .el(th(), |th| th
-                    .text("")
+                    .text(figure_aabb.center().z) // Z, [м]
                 )
                 .el(th(), |th| th
-                    .text("")
+                    .text(square(&tank)) // Площадь, [м²]
+                ) // Координаты центра площади
+                .el(th(), |th| th
+                    .text("") // X, [м]
                 )
                 .el(th(), |th| th
-                    .text("")
+                    .text("") // Y, [м]
+                ) // Момент инерции
+                .el(th(), |th| th
+                    .text("") // IX, [м⁴]
                 )
                 .el(th(), |th| th
-                    .text("")
-                )
-                .el(th(), |th| th
-                    .text("")
-                )
-                .el(th(), |th| th
-                    .text("")
-                )
-                .el(th(), |th| th
-                    .text("")
+                    .text("") // IY, [м⁴]
                 )
             );
             curr_level += level_step
         }
         result
     }
+}
+///
+/// Write data to .stl file
+pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
+    let error = Error::new("Shape", "write_stl");
+    let (result, empty_normals): (Vec<_>, Vec<_>) = mesh
+        .triangles()
+        .map(|t| (t.normal(), t))
+        .partition(|(n, _)| n.is_some());
+    if !empty_normals.is_empty() {
+        return Err(error.err(format!("calculate normal error, path:{:?}", path)));
+    }
+    let triangles: Vec<_> = result
+        .into_iter()
+        .map(|(n, t)| {
+            let n = n.unwrap();
+            let normal = stl_io::Vector([n[0] as f32, n[1] as f32, n[2] as f32]);
+            let vertices = [
+                stl_io::Vector([t.a[0] as f32, t.a[1] as f32, t.a[2] as f32]),
+                stl_io::Vector([t.b[0] as f32, t.b[1] as f32, t.b[2] as f32]),
+                stl_io::Vector([t.c[0] as f32, t.c[1] as f32, t.c[2] as f32]),
+            ];
+            stl_io::Triangle { normal, vertices }
+        })
+        .collect();
+    let mut binary_stl = Vec::<u8>::new();
+    stl_io::write_stl(&mut binary_stl, triangles.iter())
+        .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
+    let mut buffer = std::fs::File::create(&path).map_err(|err| {
+        error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
+    })?;
+    buffer.write_all(&binary_stl).map_err(|err| {
+        error.pass_with(
+            format!("buffer.write_all, path:{:?}", path),
+            err.to_string(),
+        )
+    })
 }
 //
 //
@@ -286,13 +356,17 @@ impl Eval<(), EvalResult> for RoomElementReportEval {
                 let type_tank = String::new();
                 let location_area = 0;
                 let permeability_coefficient = 0.0;
-                let tilt = 0.0;
-                let trim = 0.0;
-                let level = 0.0; // уровень заполняемости 
-                let level_step = 0.0; // шаг уровня заполняемости 
+                let tilt = 90.0 * 3.14 / 180.0;
+                let trim = 0.0 * 3.14 / 180.0;
+                let level = 5.0; // уровень заполняемости 
+                let level_step = 1.0; // шаг уровня заполняемости
+                let init_tank_aabb = self.tank.compute_local_aabb();
+                let tank_rotated = rotate(&self.tank, 0.0, tilt, trim);
                 ctx.write(
                     RoomElementReportCtx {
                         result: Self::solve_table_2(
+                            init_tank_aabb,
+                            tank_rotated,
                             Self::create_base_table(
                                 id_tank, 
                                 name_tank, 
@@ -301,8 +375,8 @@ impl Eval<(), EvalResult> for RoomElementReportEval {
                                 permeability_coefficient, 
                                 tilt, 
                                 trim
-                            ), 
-                            level, 
+                            ),
+                            level,
                             level_step
                         ).build(),
                     }
