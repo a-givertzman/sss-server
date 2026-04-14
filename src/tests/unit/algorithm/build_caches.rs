@@ -88,7 +88,8 @@ fn build_caches() -> Result<(), Box<dyn std::error::Error>> {
     )
     .unwrap();
     model_cached.reload_shapes().unwrap();
-    model_cached.rebuild_hull(&bounds).unwrap();
+ //   model_cached.rebuild_hull(&bounds).unwrap();
+    model_cached.rebuild_windage(&bounds).unwrap();
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);
     Ok(())
