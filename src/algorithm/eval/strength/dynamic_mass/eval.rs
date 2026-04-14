@@ -113,28 +113,28 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                     let mut gaseous: Vec<_> = strength_balance
                         .gaseous
                         .iter()
-                        .map(|v| (v.assigment_type, &v.mass_values)).collect();
+                        .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
                     bounded_cargo.append(&mut gaseous);
                     let mut bulk: Vec<_> = strength_balance
                         .bulk
                         .iter()
-                        .map(|v| (v.assigment_type, &v.mass_values)).collect();
+                        .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
                     bounded_cargo.append(&mut bulk);
                     let mut liquid: Vec<_> = strength_balance
                         .liquid
                         .iter()
-                        .map(|v| (v.assigment_type, &v.mass_values)).collect();
+                        .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
                     bounded_cargo.append(&mut liquid);
                     for (assigment_type, values) in bounded_cargo {
                         match assigment_type {
                             AssignmentType::Ballast => bounded_ballast
-                                .add_vec(values)
+                                .add_vec(&values)
                                 .map_err(|err| error.pass_with("vec_ballast.add", err))?,
                             AssignmentType::Stores => bounded_store
-                                .add_vec(values)
+                                .add_vec(&values)
                                 .map_err(|err| error.pass_with("vec_store.add", err))?,
                             AssignmentType::CargoLoad => bounded_load
-                                .add_vec(values)
+                                .add_vec(&values)
                                 .map_err(|err| error.pass_with("vec_cargo.add", err))?,
                             AssignmentType::Unspecified => (),
                         }
