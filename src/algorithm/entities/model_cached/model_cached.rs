@@ -544,17 +544,18 @@ impl ModelCached {
         compartments_max: HashMap<String, (Option<f64>, f64)>,
     ) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_compartments");
-        /*     let mut errors = Vec::new();
-        for (name, compartment) in &mut self.compartments {
-              //        println!("model_cached rebuild compartment:{name}");
-              if let Err(error) = compartment.write().rebuild() {
-                  errors.push((("compartment ".to_owned() + name), error));
-              }
-          }*/
+        let mut errors = Vec::new();
         let mut cache_map = IndexMap::new();
-        for (name, compartment) in &self.compartments {
-            //      println!("model_cached build_bounded compartment:{code}");
+        for (name, compartment) in &mut self.compartments {
+            //        println!("model_cached rebuild compartment:{name}");
             let mut guard = compartment.write();
+            if let Err(error) = guard.rebuild() {
+                errors.push((("compartment ".to_owned() + name), error));
+            }
+            //   }
+            //  for (name, compartment) in &self.compartments {
+            //      println!("model_cached build_bounded compartment:{code}");
+            //        guard.init().map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
             let (level_max, volume_max) = compartments_max
                 .get(name)
                 .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
@@ -577,15 +578,15 @@ impl ModelCached {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
         }*/
-        /*    if !errors.is_empty() {
-                return Err(error.pass_with(
-                    "rebuild_compartments",
-                    errors.iter().fold(String::new(), |acc, (key, err)| {
-                        format!("{acc}\n\tIn cache {:?} was error: {err}", key)
-                    }),
-                ));
-            }
-        */
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_compartments",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }
+
         Ok(())
     }
     ///
