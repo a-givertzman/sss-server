@@ -113,7 +113,7 @@ pub(crate) fn compartment_center(mesh: &TriMesh) -> Point3<f64> {
     let aabb: Aabb = mesh.local_aabb();
     Point3::new(properties.local_com.x, properties.local_com.y, aabb.mins.z)
 }
-
+///
 /// Расчет положения корпуса
 pub fn position(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> Isometry3<f64> {
     let heel_rad = heel.to_radians();
@@ -128,4 +128,14 @@ pub fn position(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> Iso
     let point = rotation.transform_point(&center);
     let translation = Translation3::new(-point.x, -point.y, -point.z);
     Isometry::from_parts(translation, rotation)
+}
+///
+/// Расчёт положения нижний точки корпуса
+pub fn transform_point(p: &Point3<f64>, heel: f64, trim: f64) -> Point3<f64> {
+    let heel_rad = heel.to_radians();
+    let trim_rad = trim.to_radians();
+    let heel_rot = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), heel_rad);
+    let transformed_x = heel_rot.transform_vector(&Vector3::y_axis());
+    let trim_rot = UnitQuaternion::from_axis_angle(&UnitVector3::new_normalize(transformed_x), trim_rad);
+    (heel_rot * trim_rot).transform_point(p)
 }

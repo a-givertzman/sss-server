@@ -253,7 +253,86 @@ impl DisplacementShape {
         Ok(super::properties(&mesh, 0.5 / hdz))
     }
     ///
-    /// Полный размер модели (длинна, ширина, высота, минимальная высота)
+    /// Размер модели по ватерлинии (длина, ширина, высота, минимальная высота)
+    pub fn draught_size(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught: f64,
+    ) -> Result<(f64, f64, f64, f64), Error> {
+        let error = Error::new(&self.dbg, "displacement");
+        let position = self
+            .position(heel, trim, draught)
+            .map_err(|err| error.pass_with("self.position", err))?;
+        let mut src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+        let src_aabb = src_mesh.aabb(&Isometry::identity());
+        let mut mesh;
+        let mut epsilon = self.epsilon;
+        loop {
+            let result = src_mesh.split(&position, &Vector::z_axis(), 0., self.epsilon);
+            mesh = match result {
+                parry3d_f64::query::SplitResult::Pair(mut mesh, _) => {
+                    if let Err(error) = mesh
+                        .set_flags(TriMeshFlags::all())
+                        .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
+                    {
+                        log::error!("{}", error);
+                    }
+                    mesh
+                }
+                parry3d_f64::query::SplitResult::Negative => {
+                    return Ok((
+                         (src_aabb.maxs.x - src_aabb.mins.x),
+                        (src_aabb.maxs.y - src_aabb.mins.y),
+                        (src_aabb.maxs.z - src_aabb.mins.z),
+                        src_aabb.mins.z,
+                    ));
+                }
+                parry3d_f64::query::SplitResult::Positive => {
+                    return Ok((
+                        0.0,
+                        0.0,
+                        0.0,
+                        position.rotation.coords[2],
+                    ));
+                }
+            };
+            let aabb = mesh.aabb(&Isometry::identity());
+            if aabb.mins.x + epsilon < src_aabb.mins.x
+                || aabb.maxs.x - epsilon > src_aabb.maxs.x
+                || aabb.mins.y + epsilon < src_aabb.mins.y
+                || aabb.maxs.y - epsilon > src_aabb.maxs.y
+                || aabb.mins.z + epsilon < src_aabb.mins.z
+                || aabb.maxs.z - epsilon > src_aabb.maxs.z
+            {
+                let error = format!(
+                    "{} part error: wrong aabb, rebuild! epsilon:{epsilon} src_aabb:{:?} res_aabb:{:?}",
+                    self.dbg, src_aabb, aabb
+                );
+                log::warn!("{error}");
+                src_mesh = &mesh;
+                epsilon = epsilon * 2.;
+                continue;
+            }
+            break;
+        }
+        if let Err(error) = mesh
+            .set_flags(TriMeshFlags::all())
+            .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
+        {
+            log::error!("{}", error);
+        }
+        let aabb = mesh
+            .aabb(&Isometry::identity());
+        Ok((
+            (aabb.maxs.x - aabb.mins.x),
+            (aabb.maxs.y - aabb.mins.y),
+            (aabb.maxs.z - aabb.mins.z),
+            aabb.mins.z,
+        ))
+    }
+    ///
+    /// Полный размер модели (длина, ширина, высота, минимальная высота)
     pub fn size(&self) -> Result<(f64, f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "size");
         let aabb = self

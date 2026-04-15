@@ -54,16 +54,17 @@ mod tests_eval {
         log::debug!("");
         let dbg = "eval";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(1000));
         test_duration.run().unwrap();
         let test_data = [
             (
                 1,
                 5,
-                "D:\\work_projects\\sss-server\\src\\tests\\unit\\algorithm\\reports\\test_files\\tanks_1.stl"
+                "D:\\work_projects\\sss-server\\src\\tests\\unit\\algorithm\\reports\\test_files\\tanks_1.stl",
+                "D:\\work_projects\\sss-server\\src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
             )
         ];
-        for (step, id_tank, tank_path) in test_data.iter() {
+        for (step, id_tank, tank_path, style_path) in test_data.iter() {
             let mut initial = InitialCtx::new(
                 "0",
                 "Unit-test",
@@ -77,7 +78,8 @@ mod tests_eval {
                     match RoomElementReportEval::new(
                         "dbg", 
                         ctx,
-                        tank
+                        tank,
+                        PathBuf::from(style_path)
                     ).eval(()) {
                         Ok(ctx) => {
                             let result = ContextRead::<RoomElementReportCtx>::read(&ctx).result;
