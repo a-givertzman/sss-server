@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use crate::algorithm::entities::Bounds;
 use crate::app::app::App;
 use crate::conf::Conf;
@@ -87,8 +87,11 @@ fn build_caches() -> Result<(), Box<dyn std::error::Error>> {
         Arc::clone(&thread_pool),
     )
     .unwrap();
+    let compartments_max: HashMap<String, (Option<f64>, f64)> = HashMap::new();
+    compartments_max.insert(k, v);
     model_cached.reload_shapes().unwrap();
-    model_cached.rebuild_hull(&bounds).unwrap();
+    model_cached.rebuild_compartments(&bounds, compartments_max).unwrap();
+ //   model_cached.rebuild_hull(&bounds).unwrap();
  //   model_cached.rebuild_windage(&bounds).unwrap();
   //  let res = model_cached.init();                     dbg!(&res);
   //  let res = model_cached.init_bounded(&bounds);      dbg!(&res);

@@ -1,86 +1,254 @@
-solid CATIA STL
-  facet normal  0.000000e+00 -1.000000e+00  0.000000e+00
+solid OBJECT
+  facet normal 0 0 -1
     outer loop
-      vertex  9.500000e+03  3.930000e+03  6.313000e+03
-      vertex  1.090000e+04  3.930000e+03  6.313000e+03
-      vertex  9.500000e+03  3.930000e+03  9.650000e+03
+      vertex 9500 4590 6313
+      vertex 10200 3930 6313
+      vertex 9500 3930 6313
     endloop
   endfacet
-  facet normal  0.000000e+00 -1.000000e+00  0.000000e+00
+  facet normal 0 -0 -1
     outer loop
-      vertex  9.500000e+03  3.930000e+03  9.650000e+03
-      vertex  1.090000e+04  3.930000e+03  6.313000e+03
-      vertex  1.090000e+04  3.930000e+03  9.650000e+03
+      vertex 9500 4590 6313
+      vertex 9500 5250 6313
+      vertex 10200 5250 6313
     endloop
   endfacet
-  facet normal  1.000000e+00  0.000000e+00  0.000000e+00
+  facet normal 0 -0 -1
     outer loop
-      vertex  1.090000e+04  3.930000e+03  6.313000e+03
-      vertex  1.090000e+04  5.250000e+03  6.313000e+03
-      vertex  1.090000e+04  3.930000e+03  9.650000e+03
+      vertex 10900 4590 6313
+      vertex 10200 3930 6313
+      vertex 9500 4590 6313
     endloop
   endfacet
-  facet normal  1.000000e+00  -0.000000e+00  0.000000e+00
+  facet normal -0 0 -1
     outer loop
-      vertex  1.090000e+04  3.930000e+03  9.650000e+03
-      vertex  1.090000e+04  5.250000e+03  6.313000e+03
-      vertex  1.090000e+04  5.250000e+03  9.650000e+03
+      vertex 9500 4590 6313
+      vertex 10200 5250 6313
+      vertex 10900 4590 6313
     endloop
   endfacet
-  facet normal  0.000000e+00  1.000000e+00  0.000000e+00
+  facet normal -0 -0 -1
     outer loop
-      vertex  1.090000e+04  5.250000e+03  6.313000e+03
-      vertex  9.500000e+03  5.250000e+03  6.313000e+03
-      vertex  1.090000e+04  5.250000e+03  9.650000e+03
+      vertex 10900 4590 6313
+      vertex 10200 5250 6313
+      vertex 10900 5250 6313
     endloop
   endfacet
-  facet normal  0.000000e+00  1.000000e+00  0.000000e+00
+  facet normal -0 -0 -1
     outer loop
-      vertex  1.090000e+04  5.250000e+03  9.650000e+03
-      vertex  9.500000e+03  5.250000e+03  6.313000e+03
-      vertex  9.500000e+03  5.250000e+03  9.650000e+03
+      vertex 10900 3930 6313
+      vertex 10200 3930 6313
+      vertex 10900 4590 6313
     endloop
   endfacet
-  facet normal -1.000000e+00  0.000000e+00  0.000000e+00
+  facet normal -0 -0 1
     outer loop
-      vertex  9.500000e+03  5.250000e+03  6.313000e+03
-      vertex  9.500000e+03  3.930000e+03  6.313000e+03
-      vertex  9.500000e+03  5.250000e+03  9.650000e+03
+      vertex 9500 4590 9643
+      vertex 9500 3930 9643
+      vertex 10200 3930 9643
     endloop
   endfacet
-  facet normal -1.000000e+00  -0.000000e+00  0.000000e+00
+  facet normal -0 0 1
     outer loop
-      vertex  9.500000e+03  5.250000e+03  9.650000e+03
-      vertex  9.500000e+03  3.930000e+03  6.313000e+03
-      vertex  9.500000e+03  3.930000e+03  9.650000e+03
+      vertex 9500 4590 9643
+      vertex 10200 5250 9643
+      vertex 9500 5250 9643
     endloop
   endfacet
-  facet normal  0.000000e+00  0.000000e+00  1.000000e+00
+  facet normal 0 -0 1
     outer loop
-      vertex  9.500000e+03  3.930000e+03  9.650000e+03
-      vertex  1.090000e+04  3.930000e+03  9.650000e+03
-      vertex  9.500000e+03  5.250000e+03  9.650000e+03
+      vertex 10900 4590 9643
+      vertex 9500 4590 9643
+      vertex 10200 3930 9643
     endloop
   endfacet
-  facet normal  -0.000000e+00  0.000000e+00  1.000000e+00
+  facet normal -0 0 1
     outer loop
-      vertex  9.500000e+03  5.250000e+03  9.650000e+03
-      vertex  1.090000e+04  3.930000e+03  9.650000e+03
-      vertex  1.090000e+04  5.250000e+03  9.650000e+03
+      vertex 9500 4590 9643
+      vertex 10900 4590 9643
+      vertex 10200 5250 9643
     endloop
   endfacet
-  facet normal  0.000000e+00  0.000000e+00 -1.000000e+00
+  facet normal 0 0 1
     outer loop
-      vertex  9.500000e+03  3.930000e+03  6.313000e+03
-      vertex  9.500000e+03  5.250000e+03  6.313000e+03
-      vertex  1.090000e+04  3.930000e+03  6.313000e+03
+      vertex 10900 4590 9643
+      vertex 10900 5250 9643
+      vertex 10200 5250 9643
     endloop
   endfacet
-  facet normal  0.000000e+00  0.000000e+00 -1.000000e+00
+  facet normal 0 0 1
     outer loop
-      vertex  1.090000e+04  3.930000e+03  6.313000e+03
-      vertex  9.500000e+03  5.250000e+03  6.313000e+03
-      vertex  1.090000e+04  5.250000e+03  6.313000e+03
+      vertex 10900 3930 9643
+      vertex 10900 4590 9643
+      vertex 10200 3930 9643
     endloop
   endfacet
-endsolid CATIA STL
+  facet normal 0 1 0
+    outer loop
+      vertex 9500 5250 7978
+      vertex 10900 5250 7978
+      vertex 10200 5250 6313
+    endloop
+  endfacet
+  facet normal 0 1 -0
+    outer loop
+      vertex 10200 5250 6313
+      vertex 10900 5250 7978
+      vertex 10900 5250 6313
+    endloop
+  endfacet
+  facet normal -0 1 0
+    outer loop
+      vertex 9500 5250 7978
+      vertex 10200 5250 6313
+      vertex 9500 5250 6313
+    endloop
+  endfacet
+  facet normal -0 1 0
+    outer loop
+      vertex 10200 5250 9643
+      vertex 9500 5250 7978
+      vertex 9500 5250 9643
+    endloop
+  endfacet
+  facet normal 0 1 0
+    outer loop
+      vertex 10200 5250 9643
+      vertex 10900 5250 9643
+      vertex 10900 5250 7978
+    endloop
+  endfacet
+  facet normal 0 1 -0
+    outer loop
+      vertex 9500 5250 7978
+      vertex 10200 5250 9643
+      vertex 10900 5250 7978
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 10900 3930 7978
+      vertex 9500 3930 7978
+      vertex 10200 3930 6313
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 10200 3930 6313
+      vertex 9500 3930 7978
+      vertex 9500 3930 6313
+    endloop
+  endfacet
+  facet normal -0 -1 0
+    outer loop
+      vertex 10900 3930 7978
+      vertex 10200 3930 6313
+      vertex 10900 3930 6313
+    endloop
+  endfacet
+  facet normal -0 -1 -0
+    outer loop
+      vertex 10200 3930 9643
+      vertex 10900 3930 7978
+      vertex 10900 3930 9643
+    endloop
+  endfacet
+  facet normal 0 -1 -0
+    outer loop
+      vertex 10200 3930 9643
+      vertex 9500 3930 9643
+      vertex 9500 3930 7978
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 10900 3930 7978
+      vertex 10200 3930 9643
+      vertex 9500 3930 7978
+    endloop
+  endfacet
+  facet normal 1 0 -0
+    outer loop
+      vertex 10900 4590 6313
+      vertex 10900 5250 6313
+      vertex 10900 5250 7978
+    endloop
+  endfacet
+  facet normal 1 -0 -0
+    outer loop
+      vertex 10900 4590 6313
+      vertex 10900 3930 7978
+      vertex 10900 3930 6313
+    endloop
+  endfacet
+  facet normal 1 0 0
+    outer loop
+      vertex 10900 4590 9643
+      vertex 10900 4590 6313
+      vertex 10900 5250 7978
+    endloop
+  endfacet
+  facet normal 1 0 0
+    outer loop
+      vertex 10900 4590 9643
+      vertex 10900 5250 7978
+      vertex 10900 5250 9643
+    endloop
+  endfacet
+  facet normal 1 -0 -0
+    outer loop
+      vertex 10900 4590 6313
+      vertex 10900 4590 9643
+      vertex 10900 3930 7978
+    endloop
+  endfacet
+  facet normal 1 -0 0
+    outer loop
+      vertex 10900 4590 9643
+      vertex 10900 3930 9643
+      vertex 10900 3930 7978
+    endloop
+  endfacet
+  facet normal -1 0 0
+    outer loop
+      vertex 9500 4590 6313
+      vertex 9500 3930 6313
+      vertex 9500 3930 7978
+    endloop
+  endfacet
+  facet normal -1 -0 0
+    outer loop
+      vertex 9500 4590 6313
+      vertex 9500 5250 7978
+      vertex 9500 5250 6313
+    endloop
+  endfacet
+  facet normal -1 0 -0
+    outer loop
+      vertex 9500 5250 7978
+      vertex 9500 4590 6313
+      vertex 9500 3930 7978
+    endloop
+  endfacet
+  facet normal -1 -0 0
+    outer loop
+      vertex 9500 3930 7978
+      vertex 9500 4590 9643
+      vertex 9500 5250 7978
+    endloop
+  endfacet
+  facet normal -1 -0 -0
+    outer loop
+      vertex 9500 4590 9643
+      vertex 9500 5250 9643
+      vertex 9500 5250 7978
+    endloop
+  endfacet
+  facet normal -1 -0 0
+    outer loop
+      vertex 9500 3930 9643
+      vertex 9500 4590 9643
+      vertex 9500 3930 7978
+    endloop
+  endfacet
+endsolid OBJECT
