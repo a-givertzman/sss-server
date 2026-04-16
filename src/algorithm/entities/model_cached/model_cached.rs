@@ -1053,7 +1053,7 @@ impl ModelCached {
                 moment_const: query.moment_const,
                 bulk: query.bulk.clone(),
                 liquid: query.liquid.clone(),
-                damaged_compartment: Vec::new(),
+                damaged_compartment: query.damaged_compartment.clone(),
                 epsilon,
             })
             .map_err(|err| error.pass_with("self.floating_position", err))?;
