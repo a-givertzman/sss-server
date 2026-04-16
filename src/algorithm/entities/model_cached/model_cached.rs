@@ -554,8 +554,8 @@ impl ModelCached {
         compartments_max: HashMap<String, (Option<f64>, f64)>,
     ) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_compartments");
-        let mut errors = Vec::new();
-        let mut cache_map = IndexMap::new();
+       let mut errors = Vec::new();
+   /*      let mut cache_map = IndexMap::new();
         for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             let mut guard = compartment.write();
@@ -585,7 +585,7 @@ impl ModelCached {
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
-        for (name, compartment) in &mut self.damaged_compartments {
+  */      for (name, compartment) in &mut self.damaged_compartments {
             let mut guard = compartment.write();
             let volume_max = if let Some((_, volume_max)) = compartments_max.get(name) {
                 Some(*volume_max)

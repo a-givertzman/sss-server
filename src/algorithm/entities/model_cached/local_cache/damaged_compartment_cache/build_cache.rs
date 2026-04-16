@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::entities::model_cached::DisplacementShape,
+    algorithm::entities::{Position, model_cached::DisplacementShape},
     kernel::types::{Arc, RwLock},
 };
 ///
@@ -72,6 +72,10 @@ impl BuildDamagedCompartmentCache {
             errors.push(error);
         };
         let shape = self.shape.clone();
+        let (_, center_max) = match shape.read().properties() {
+            Ok((volume_max, center_max)) => (volume_max, center_max),
+            Err(err) => return (vec![], vec![error.pass_with("shape.properties", err)]),
+        };        
         let mut draught_steps = Vec::new();
         let mut draught = self.draught_min;
         loop {
@@ -152,6 +156,28 @@ impl BuildDamagedCompartmentCache {
                     center.z(),
                 ]);
             }
+        }
+        // для пустого объема значения заполняем руками для нормальной интерполяции
+        {
+            // берем значения с ненулевым объемом
+            let mut tmp: Vec<_> = vec_results.iter().filter(|v| v[3] > 0.).collect();
+            // и сортируем чтобы найти значение с минимальными креном/дифферентом и объемом
+            tmp.sort_by(|a, b| {
+                (a[0].abs() * a[3] + a[1].abs() * a[3])
+                    .partial_cmp(&(b[0].abs() * b[3] + b[1].abs() * b[3]))
+                    .unwrap()
+            });
+            let center_min = if let Some(first) = tmp.first() {
+                Position::new(first[4], first[5], 0.)
+            } else {
+                Position::new(center_max.x(), center_max.y(), 0.)
+            };
+            // для пустого объема значения меняем значения
+            vec_results.iter_mut().filter(|v| v[3] == 0.).for_each(|v| {
+                v[4] = center_min.x();
+                v[5] = center_min.y();
+                v[6] = center_min.z();
+            });
         }
         //   dbg!(&results);
         (vec_results, errors)
