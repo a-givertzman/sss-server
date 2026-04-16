@@ -125,7 +125,9 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                         .iter()
                         .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
                     bounded_cargo.append(&mut liquid);
-                    for (assigment_type, values) in bounded_cargo {
+
+
+ /*                   for (assigment_type, values) in bounded_cargo {
                         match assigment_type {
                             AssignmentType::Ballast => bounded_ballast
                                 .add_vec(&values)
@@ -139,7 +141,30 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                             AssignmentType::Unspecified => (),
                         }
                     }
+*/
                     let mut mass_values = bounded_hull.clone();
+                    for (assigment_type, values) in bounded_cargo {
+                        let target_vec = match assigment_type {
+                            AssignmentType::Ballast => &mut bounded_ballast,
+                            AssignmentType::Stores => &mut bounded_store,
+                            AssignmentType::CargoLoad => &mut bounded_load,
+                            AssignmentType::Unspecified => {
+                                mass_values
+                                    .add_vec(&values)
+                                    .map_err(|err| error.pass_with("mass_values.add Unspecified values", err))?;
+                                continue
+                            }
+                        };
+
+                        if target_vec.len() == values.len() {
+                            for (dst, src) in target_vec.iter_mut().zip(values.iter()) {
+                                *dst += *src;
+                            }
+                        } else {
+                            return Err(error.err("target_vec.len() != values.len()"));
+                        }
+                    }
+
                     mass_values
                         .add_vec(&bounded_equipment)
                         .map_err(|err| error.pass_with("mass_values.add vec_equipment", err))?;
