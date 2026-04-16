@@ -69,7 +69,7 @@ impl Eval<(), EvalResult> for StabilityBalanceEval {
                     moment_const: static_mass.moment_const,
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),
-                    damaged_compartment: Vec::new(), //TODO: damaged_compartment, только для аварийного расчета
+                    damaged_compartment: initial.damaged_compartment.clone(), // только для аварийного расчета
                 };
                 let result: BalanceStabilityResult = self
                     .model

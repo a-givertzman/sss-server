@@ -49,6 +49,7 @@ mod main_parametric_resonant_complex {
                 "0",
                 "Unit-test",
                 Bounds::from_min_max(0., 100., 20).unwrap(),
+                Vec::new()
             );
             initial.voyage = Some(Voyage {
                 density: 1.025,

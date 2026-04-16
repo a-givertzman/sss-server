@@ -395,20 +395,30 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let (level_max, volume_max) = compartments_max
-                .get(name)
-                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            let (level_max, volume_max) =
+                if let Some((level_max, volume_max)) = compartments_max.get(name) {
+                    (*level_max, Some(*volume_max))
+                } else {
+                    (None, None)
+                };
             guard
-                .calc_coeff(*volume_max, *level_max)
+                .calc_coeff(volume_max, level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
-        /*     TODO - пока не используются, потом будет отдельный расчет
-        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
-            damaged_compartment
-                .write()
+        for (name, compartment) in self.damaged_compartments.iter_mut() {
+            let mut guard = compartment.write();
+            guard
                 .init()
-                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
-        }*/
+                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?;
+            let volume_max = if let Some((_, volume_max)) = compartments_max.get(name) {
+                Some(*volume_max)
+            } else {
+                None
+            };
+            guard.calc_coeff(volume_max).map_err(|err| {
+                error.pass_with(format!("damaged_compartment:{name}.calc_coeff"), err)
+            })?;
+        }
         self.windage_area
             .init()
             .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
@@ -556,11 +566,14 @@ impl ModelCached {
             //  for (name, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{code}");
             //        guard.init().map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
-            let (level_max, volume_max) = compartments_max
-                .get(name)
-                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            let (level_max, volume_max) =
+                if let Some((level_max, volume_max)) = compartments_max.get(name) {
+                    (*level_max, Some(*volume_max))
+                } else {
+                    (None, None)
+                };
             guard
-                .calc_coeff(*volume_max, *level_max)
+                .calc_coeff(volume_max, level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
             let mut compartment_bounded = guard
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -572,10 +585,19 @@ impl ModelCached {
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
-         for (name, compartment) in &mut self.damaged_compartments {
-            if let Err(error) = compartment.write().rebuild() {
+        for (name, compartment) in &mut self.damaged_compartments {
+            let mut guard = compartment.write();
+            let volume_max = if let Some((_, volume_max)) = compartments_max.get(name) {
+                Some(*volume_max)
+            } else {
+                None
+            };
+            if let Err(error) = guard.rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
+            guard
+                .calc_coeff(volume_max)
+                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
         if !errors.is_empty() {
             return Err(error.pass_with(
@@ -585,7 +607,6 @@ impl ModelCached {
                 }),
             ));
         }
-
         Ok(())
     }
     ///
@@ -598,7 +619,7 @@ impl ModelCached {
             .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
         Ok(())
     }
-    ///  Пересчет кэшей без шпаций
+    /*   ///  Пересчет кэшей без шпаций
     #[allow(dead_code)]
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         log::info!("rebuild_caches begin");
@@ -671,7 +692,7 @@ impl ModelCached {
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
         Ok(())
-    }
+    }*/
     //
     pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "body_size");

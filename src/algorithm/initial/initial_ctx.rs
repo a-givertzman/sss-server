@@ -59,16 +59,20 @@ pub struct InitialCtx {
     pub h_subdivision: Option<Vec<(f64, f64)>>,
     /// Ограничения на максимальную нагрузку на корпус
     pub strength_limits: Option<StrengthLimitDataArray>,
+    /// Номера поврежденных помещений
+    pub damaged_compartment: Vec<String>,    
 }
+//
 impl InitialCtx {
     ///
     /// Struct constructor
     /// - 'ship_id' - the identifier of the ship in the database
-    pub fn new(ship_id: &str, project_id: &str, bounds: Bounds) -> Self {
+    pub fn new(ship_id: &str, project_id: &str, bounds: Bounds, damaged_compartment: Vec<String>) -> Self {
         Self {
             ship_id: ship_id.to_string(),
             project_id: project_id.to_owned(),
             bounds: Some(bounds),
+            damaged_compartment,
             ..Default::default()
         }
     }

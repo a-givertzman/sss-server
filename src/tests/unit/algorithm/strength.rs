@@ -154,14 +154,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                             Arc::clone(&ship_model),
                             MetacentricHeightEval::new(
                                 &dbg,
-        // strength
-  /*      BendingMomentEval::new(
-            &dbg,
-            ShearForceEval::new(
-                &dbg,
-                TotalForceEval::new(
-                    &dbg,                                                        
-    */                
+        // strength          
                 ResultStrEval::new(
                     &dbg,  
                     Arc::clone(&api_client),
@@ -203,7 +196,7 @@ fn strength() -> Result<(), Box<dyn std::error::Error>> {
                             Initial::new(
                                 &dbg,
                                 Arc::clone(&api_client),
-                                Context::new(InitialCtx::new(&ship_id, &project_id, bounds)),
+                                Context::new(InitialCtx::new(&ship_id, &project_id, bounds, Vec::new())),
                             ),
                         ),
                     ),

@@ -19,13 +19,13 @@ pub struct DamagedCompartmentCache {
     cache_path: PathBuf,
     heel_steps: Vec<f64>,
     trim_steps: Vec<f64>,
+    /// коэффициент проницаемости
+    coeff: Option<f64>,    
     draught_min: f64,
     draught_max: f64,
     draught_step: f64,
-    ///
     /// Model representation used for cache calculation.
     shape: Arc<RwLock<DisplacementShape>>,
-    ///
     /// Cache read from `self.file_path`.
     cache: Option<Cache<f64>>,
     thread_pool: Arc<ThreadPool>,
@@ -54,6 +54,7 @@ impl DamagedCompartmentCache {
             shape,
             heel_steps,
             trim_steps,
+            coeff: None,            
             draught_min,
             draught_max,
             draught_step,
@@ -64,6 +65,18 @@ impl DamagedCompartmentCache {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
+    /// Расчет [коэффициента проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
+    pub fn calc_coeff(&mut self, volume_max: Option<f64>) -> Result<(), Error> {
+        let error = Error::new(self.dbg(), "calc_coeff");
+        let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.disp(3).1;
+        self.coeff = Some(if volume_brutto > 0. {
+            volume_max.unwrap_or(volume_brutto) / volume_brutto
+        } else {
+            1.
+        });
+        // println!("compartment_cache calc_coeff {} {:.3} {:.3} {:.3}", self.dbg(), volume_max, volume_brutto, self.coeff.unwrap());
+        Ok(())
+    }  
     /// Return (volume, center of volume)
     pub fn get(&self, heel: f64, trim: f64, draught: f64) -> Result<(f64, Position), Error> {
         let error = Error::new(self.dbg(), "get");
@@ -71,7 +84,8 @@ impl DamagedCompartmentCache {
         let query = [heel, trim];
         let result = get_from_level(&self.dbg, cache, &query, draught, None, 3)
             .map_err(|err| error.pass_with("get_from_level", err))?;
-        Ok((result[0], Position::new(result[1], result[2], result[3])))
+        let coeff = self.coeff.as_ref().ok_or(error.pass("no coeff"))?; 
+        Ok((result[0] * coeff, Position::new(result[1], result[2], result[3])))
     }
 }
 //

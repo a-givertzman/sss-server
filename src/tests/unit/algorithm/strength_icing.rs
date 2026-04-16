@@ -83,7 +83,7 @@ fn strength_icing() {
     );
     let model = Arc::new(RwLock::new(ship));
 
-    let ctx = Context::new(InitialCtx::new("1", "NULL", bounds))
+    let ctx = Context::new(InitialCtx::new("1", "NULL", bounds, Vec::new()))
     .write(icing_coeff)
     .unwrap()
     .write(unit_area)
