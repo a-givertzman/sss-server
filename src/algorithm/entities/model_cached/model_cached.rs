@@ -572,12 +572,11 @@ impl ModelCached {
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
-        /*  TODO - пока не используются, потом будет отдельный расчет
          for (name, compartment) in &mut self.damaged_compartments {
             if let Err(error) = compartment.write().rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }*/
+        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_compartments",
