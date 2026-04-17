@@ -927,6 +927,108 @@ impl ModelCached {
                         Err(err) => errors.push(err),
                     };
                 }
+                // расчет объема и его распределения в поврежденных отсеках
+         /*       let damaged_compartment_results = Arc::new(Stack::new());
+                for code in query.damaged_compartment {                 
+                    let error_ = error.err(format!("damaged_compartment {code} work"));
+                    let density = query.water_density;
+                    match self.compartments.get(&code) {
+                        Some(compartment) => {
+                            let task_results = damaged_compartment_results.clone();
+                            let epsilon = epsilon;
+                            let code = cargo.code.clone();
+                            let cargo = cargo.clone();
+                            let error_ = error.clone();
+                            let compartment = compartment.clone();
+                            let thread_name = format!("{}.process_liquid code:{}", &self.dbg, code);
+                            //    log::trace!("Starting thread {thread_name}");
+                            let handle = scheduler
+                                .spawn_named(thread_name, move || {
+                                    let res = compartment
+                                        .read()
+                                        .get_for_stability(
+                                            heel,
+                                            trim,
+                                            cargo.volume,
+                                            epsilon,
+                                            cargo.use_max_moment,
+                                            cargo.is_cargo_tank,
+                                        )
+                                        .map_err(|err| error_.pass_with("compartment.get", err))?;
+                                    task_results.push((
+                                        code.clone(),
+                                        stability_result::LiquidResult::new(
+                                            code.clone(),
+                                            cargo.assignment_id,
+                                            cargo.assigment_type,
+                                            cargo.mass,
+                                            res.volume_center,
+                                            res.level,
+                                            res.volume,
+                                            res.inertia_trans_x,
+                                            res.inertia_long_y,
+                                            res.max_inertia_trans_x,
+                                        ),
+                                    ));
+                                    Ok(())
+                                })
+                                .map_err(|err| error.pass_with(format!("spawn for {}", cargo.code), err));
+                            match handle {
+                                Ok(task) => tasks.push(task),
+                                Err(err) => {
+                                    let error = error.pass_with(format!("handle for {}", cargo.code), err);
+                                    log::error!("{}", error);
+                                    errors.push(error);
+                                }
+                            };
+                        }
+                        None => {
+                            let error = error.err(format!("no compartment: {}", cargo.code));
+                            log::error!("{}", error);
+                            errors.push(error);
+                        }
+                    }
+
+                    let compartment_bounded = compartments_bounded
+                        .get(&code)
+                        .ok_or(error_.err(format!("compartments_bounded.get no code:{code}")))?
+                        .clone();
+                    let trim = trim;
+
+                    let volume = cargo.volume;
+                    let epsilon = volume * epsilon_mass / mass_sum;
+                    let results_ = liquid_results.clone();
+                    let thread_name =
+                        format!("{}.balance_strength liquid code:{}", &self.dbg, cargo.code);
+                    //     log::trace!("Starting thread {thread_name}");
+                    let handle = scheduler
+                        .spawn_named(thread_name, move || {
+                            let volume_bounded = compartment_bounded
+                                .read()
+                                .get_from_volume(volume, trim, epsilon)
+                                .map_err(|err| {
+                                    error_.pass_with(
+                                        format!("compartment_bounded.get, code:{code}"),
+                                        err,
+                                    )
+                                })?;
+                            //         println!("model_cached code:{code} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                            results_.push(balance::liquid_result::LiquidResult::new(
+                                code,
+                                assigment_type,
+                                cargo_type,
+                                volume_bounded.into_iter().map(|v| v * density).collect(),
+                            ));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with("scheduler.spawn".to_string(), err.to_string())
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => errors.push(err),
+                    };
+                }*/
                 let hull_results = Arc::new(Stack::new());
                 let results_ = hull_results.clone();
                 let displacement_bounded = displacement_bounded.clone();

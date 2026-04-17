@@ -158,6 +158,31 @@ impl BulkResult {
         }
     }
 }
+/// TODO: Type doc here
+#[derive(Debug, Clone, Decode, Encode)]
+pub struct DamagedCompartmentResult {
+    /// Код помещения
+    pub code: String,  
+    /// Объем воды в помещении
+    pub volume: f64,
+    /// Смещение центра объема воды в помещении
+    pub volume_shift: Position, 
+}
+///
+impl DamagedCompartmentResult {
+    ///
+    pub fn new(
+        code: String,
+        volume: f64,
+        volume_shift: Position, 
+    ) -> Self {
+        Self {
+            code,
+            volume,
+            volume_shift, 
+        }
+    }
+}
 
 
 
