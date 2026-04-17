@@ -26,7 +26,7 @@ pub struct DynamicMassStrEval {
 //
 //
 impl DynamicMassStrEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -72,76 +72,94 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                             .unzip();
                     let lightship_bounds = Bounds::new(lightship_bounds)
                         .map_err(|err| error.pass_with("Bounds::new", err))?;
-                    let vec_hull = bounds
+                    let bounded_hull = bounds
                         .intersect(&lightship_bounds, &lightship_values)
                         .map_err(|err| error.pass_with("bounds.intersect", err))?;
-                    let vec_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
-                    let mut vec_bulkhead = Vec::new();
-                    let mut vec_ballast = Vec::new();
-                    let mut vec_store = Vec::new();
-                    let mut vec_cargo = Vec::new();
-                    let vec_icing = ContextRead::<IcingStrCtx>::read(&ctx).mass_values;
-                    let vec_wetting = ContextRead::<WettingCtx>::read(&ctx).mass_values;
-                    // unit грузы представляются в виде прямоугольника, заполненного массой равномерно
-                    for b in bounds.iter() {
-                        vec_bulkhead
-                            .push(bulkhead.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)));
-                        vec_ballast.push(
-                            unit.iter()
-                                .filter(|v| v.assigment_type == AssignmentType::Ballast)
-                                .fold(0., |s, v| s + v.mass(b).unwrap_or(0.)),
-                        );
-                        vec_store.push(
-                            unit.iter()
-                                .filter(|v| v.assigment_type == AssignmentType::Stores)
-                                .fold(0., |s, v| s + v.mass(b).unwrap_or(0.)),
-                        );
-                        vec_cargo.push(
-                            unit.iter()
-                                .filter(|v| v.assigment_type == AssignmentType::CargoLoad)
-                                .fold(0., |s, v| s + v.mass(b).unwrap_or(0.)),
-                        );
-                    }
+                    let bounded_equipment = vec![0.; bounds.len_qnt()]; //    TODO - сейчас в базе нет данных по equipment 
+                    let bounded_icing = ContextRead::<IcingStrCtx>::read(&ctx).mass_values;
+                    let bounded_wetting = ContextRead::<WettingCtx>::read(&ctx).mass_values;
                     let strength_balance: StrengthBalanceCtx = ctx.read();
+                    // unit грузы представляются в виде прямоугольника, заполненного массой равномерно
+                    let ballast: Vec<_> = unit
+                        .iter()
+                        .filter(|v| v.assigment_type == AssignmentType::Ballast)
+                        .collect();
+                    let stores: Vec<_> = unit
+                        .iter()
+                        .filter(|v| v.assigment_type == AssignmentType::Stores)
+                        .collect();
+                    let loads: Vec<_> = unit
+                        .iter()
+                        .filter(|v| v.assigment_type == AssignmentType::CargoLoad)
+                        .collect();
+                    let bounded_bulkhead: Vec<_> = bounds
+                        .iter()
+                        .map(|b| bulkhead.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)))
+                        .collect();
+                    let mut bounded_ballast: Vec<_> = bounds
+                        .iter()
+                        .map(|b| ballast.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)))
+                        .collect();
+                    let mut bounded_store: Vec<_> = bounds
+                        .iter()
+                        .map(|b| stores.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)))
+                        .collect();
+                    let mut bounded_load: Vec<_> = bounds
+                        .iter()
+                        .map(|b| loads.iter().fold(0., |s, v| s + v.mass(b).unwrap_or(0.)))
+                        .collect();
+                    // обработка результатов расчета распределения грузов по шпациям отсеков
                     let mut bounded_cargo = Vec::new();
-                    bounded_cargo.append(&mut strength_balance.gaseous.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
-                    bounded_cargo.append(&mut strength_balance.bulk.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
-                    bounded_cargo.append(&mut strength_balance.liquid.iter().map(|v| (v.assigment_type, &v.mass_values)).collect());
+                    let mut gaseous: Vec<_> = strength_balance
+                        .gaseous
+                        .iter()
+                        .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
+                    bounded_cargo.append(&mut gaseous);
+                    let mut bulk: Vec<_> = strength_balance
+                        .bulk
+                        .iter()
+                        .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
+                    bounded_cargo.append(&mut bulk);
+                    let mut liquid: Vec<_> = strength_balance
+                        .liquid
+                        .iter()
+                        .map(|v| (v.assigment_type, v.mass_values.clone())).collect();
+                    bounded_cargo.append(&mut liquid);
                     for (assigment_type, values) in bounded_cargo {
                         match assigment_type {
-                            AssignmentType::Ballast => vec_ballast
+                            AssignmentType::Ballast => bounded_ballast
                                 .add_vec(&values)
                                 .map_err(|err| error.pass_with("vec_ballast.add", err))?,
-                            AssignmentType::Stores => vec_store
+                            AssignmentType::Stores => bounded_store
                                 .add_vec(&values)
                                 .map_err(|err| error.pass_with("vec_store.add", err))?,
-                            AssignmentType::CargoLoad => vec_cargo
+                            AssignmentType::CargoLoad => bounded_load
                                 .add_vec(&values)
                                 .map_err(|err| error.pass_with("vec_cargo.add", err))?,
                             AssignmentType::Unspecified => (),
                         }
                     }
-                    let mut mass_values = vec_hull.clone();
+                    let mut mass_values = bounded_hull.clone();
                     mass_values
-                        .add_vec(&vec_equipment)
+                        .add_vec(&bounded_equipment)
                         .map_err(|err| error.pass_with("mass_values.add vec_equipment", err))?;
                     mass_values
-                        .add_vec(&vec_bulkhead)
+                        .add_vec(&bounded_bulkhead)
                         .map_err(|err| error.pass_with("mass_values.add vec_bulkhead", err))?;
                     mass_values
-                        .add_vec(&vec_ballast)
+                        .add_vec(&bounded_ballast)
                         .map_err(|err| error.pass_with("mass_values.add vec_ballast", err))?;
                     mass_values
-                        .add_vec(&vec_store)
+                        .add_vec(&bounded_store)
                         .map_err(|err| error.pass_with("mass_values.add vec_store", err))?;
                     mass_values
-                        .add_vec(&vec_cargo)
+                        .add_vec(&bounded_load)
                         .map_err(|err| error.pass_with("mass_values.add vec_cargo", err))?;
                     mass_values
-                        .add_vec(&vec_icing)
+                        .add_vec(&bounded_icing)
                         .map_err(|err| error.pass_with("mass_values.add vec_icing", err))?;
                     mass_values
-                        .add_vec(&vec_wetting)
+                        .add_vec(&bounded_wetting)
                         .map_err(|err| error.pass_with("mass_values.add vec_wetting", err))?;
                     /*             println!("value_mass_hull sum: {} result", vec_hull.iter().sum::<f64>()); // vec_hull.iter().for_each(|b| print!("{:.3} ", b));
                             println!("vec_equipment sum: {} result", vec_equipment.iter().sum::<f64>()); // vec_equipment.iter().for_each(|b| print!("{:.3} ", b));
@@ -153,14 +171,14 @@ impl Eval<(), EvalResult> for DynamicMassStrEval {
                             println!("vec_wetting sum: {} result", vec_wetting.iter().sum::<f64>()); // vec_wetting.iter().for_each(|b| print!("{:.3} ", b));
                     */
                     let mut data = HashMap::new();
-                    data.insert("value_mass_hull".to_owned(), vec_hull);
-                    data.insert("value_mass_equipment".to_owned(), vec_equipment);
-                    data.insert("value_mass_bulkhead".to_owned(), vec_bulkhead);
-                    data.insert("value_mass_ballast".to_owned(), vec_ballast);
-                    data.insert("value_mass_store".to_owned(), vec_store);
-                    data.insert("value_mass_cargo".to_owned(), vec_cargo);
-                    data.insert("value_mass_icing".to_owned(), vec_icing);
-                    data.insert("value_mass_wetting".to_owned(), vec_wetting);
+                    data.insert("value_mass_hull".to_owned(), bounded_hull);
+                    data.insert("value_mass_equipment".to_owned(), bounded_equipment);
+                    data.insert("value_mass_bulkhead".to_owned(), bounded_bulkhead);
+                    data.insert("value_mass_ballast".to_owned(), bounded_ballast);
+                    data.insert("value_mass_store".to_owned(), bounded_store);
+                    data.insert("value_mass_cargo".to_owned(), bounded_load);
+                    data.insert("value_mass_icing".to_owned(), bounded_icing);
+                    data.insert("value_mass_wetting".to_owned(), bounded_wetting);
                     data.insert("value_mass_sum".to_owned(), mass_values.clone());
                     log::info!(
                         "DynamicMass distr qnt:{} result:{}\n",

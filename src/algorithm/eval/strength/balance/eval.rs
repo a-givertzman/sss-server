@@ -23,7 +23,7 @@ pub struct StrengthBalanceEval {
 //
 //
 impl StrengthBalanceEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         model: Arc<RwLock<ShipModel>>,

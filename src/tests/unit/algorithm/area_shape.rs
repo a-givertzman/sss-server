@@ -3,14 +3,19 @@
 mod tests {
     use crate::algorithm::entities::model_cached::AreaShape;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use nalgebra::{Point3, Vector3};
+    use nalgebra::Vector3;
     use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    #[ignore = "too slow, run only in release mode"]
+    //  #[ignore = "too slow, run only in release mode"]
     #[test]
-    fn shape_windage_area() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+    fn area_shape_windage() {
+        DebugSession::new()
+            .filter(LogLevel::Debug)
+            .module("api_tools", LogLevel::Error)
+            .module("sal_sync", LogLevel::Error)
+            .module("ena", LogLevel::Error)
+            .init();
         let self_id = "test shape_aabb";
         println!("{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
@@ -27,9 +32,26 @@ mod tests {
         )
         .ok();
         let epsilon = 0.01;
-        let mut shape = AreaShape::new(&dbg, mesh, None, None, Some(Point3::new(1., 0., 0.)), 1., 2000, None, None);
+        let mut shape = AreaShape::new(
+            &dbg,
+            mesh,
+            None,
+            None,
+            Some(1.),
+            1.,
+            2000,
+            None,
+            Some(0.01),
+            None,
+        );
         shape._voxelize().unwrap();
-        let result: f64 = shape.windage_area_data(-1.).unwrap().iter().map(|(_dx, area)| *area).sum();
+        let result: f64 = shape
+            .windage_area_data()
+            .unwrap()
+            .voxels
+            .iter()
+            .map(|(_dx, area)| area.iter().map(|&v| v.1).sum::<f64>())
+            .sum();
         let target = 1.0;
         assert!(
             (result - target).abs() < epsilon,

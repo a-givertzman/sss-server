@@ -5,7 +5,7 @@ use crate::{
     algorithm::entities::{
         Bounds,
         model_cached::{
-            AreaCache, AreaData, AreaResult, AreaShape, BowAreaCache, LocalCache, Shape
+            AreaCache, AreaData, AreaResult, AreaShape, BowAreaCache, LocalCache, Shape,
         },
     },
     kernel::types::{Arc, RwLock},
@@ -47,7 +47,7 @@ impl WindageArea {
         let dbg = Dbg::new(parent, "WindageArea");
         Self {
             dbg,
-            cache_dir: cache_dir,
+            cache_dir,
             shape,
             windage_area: None,
             bow_area: None,
@@ -201,7 +201,8 @@ fn get_bow_area(
     let len_start_h = len_start + voxel_scale / 2.;
     let len_end_l = len_end - voxel_scale / 2.;
     let len_end_h = len_end + voxel_scale / 2.;
-    let result = voxels
+    
+    voxels
         .iter()
         .filter(|&&(x, _)| x > len_start_l && x < len_end_h)
         .map(|&(x, ref v)| {
@@ -217,8 +218,7 @@ fn get_bow_area(
             };
             (x - center_x, v)
         })
-        .collect();
-    result
+        .collect()
 }
 /// Пересчет вокселей в распределение суммарных площадей по х
 fn get_bounds_area(
@@ -237,7 +237,7 @@ fn get_bounds_area(
             let a = v.iter().map(|(_, a)| a).sum();
             area_sum += a;
             moment_x += x * a;
-            v.into_iter().for_each(|(z, a)| moment_z += a * z);
+            v.iter().for_each(|(z, a)| moment_z += a * z);
             (x, a)
         })
         .collect();
@@ -254,4 +254,40 @@ fn get_bounds_area(
     bounds
         .intersect(&src_bounds, &src_values)
         .map_err(|err| error.pass_with("bounds.intersect", err))
+}
+//
+#[cfg(test)]
+impl WindageArea {
+    /// Создает "фейковый" объект парусности для тестов.
+    /// Позволяет передать уже готовые (замоканные) кэши и значения,
+    /// чтобы не производить тяжелые расчеты и дисковые операции.
+    pub fn create_test_fake(draught_min: f64, values: Option<Vec<f64>>) -> Self {
+        Self {
+            dbg: sal_core::dbg::Dbg::new("test", "FakeWindageArea"),
+            cache_dir: PathBuf::from("/tmp/test_windage_cache"),
+            shape: Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.))),
+            thread_pool: Arc::new(ThreadPool::new("WindageArea::mock_empty", None)),
+            windage_area: None,
+            bow_area: None,
+            values,
+            draught_min,
+        }
+    }
+
+    /// Вспомогательный метод для создания мока с простейшими плоскими ответами.
+    /// Подойдет для интеграционных тестов физики, где просто нужны конкретные цифры парусности.
+    pub fn create_simple_mock(
+        mock_values: Vec<f64>, //распределение площади парусности по шпациям
+    ) -> Self {
+        Self {
+            dbg: sal_core::dbg::Dbg::new("test", "SimpleMockWindageArea"),
+            cache_dir: PathBuf::from("/tmp/test_windage_cache"),
+            shape: Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.))),
+            thread_pool: Arc::new(ThreadPool::new("WindageArea::mock_empty", None)),
+            windage_area: None,
+            bow_area: None,
+            values: Some(mock_values),
+            draught_min: 1.,
+        }
+    }
 }

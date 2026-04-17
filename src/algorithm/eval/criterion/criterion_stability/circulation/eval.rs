@@ -20,7 +20,7 @@ const MS_TO_KNOT: f64 = 1.94384449244;
 //
 //
 impl CirculationEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
@@ -91,27 +91,23 @@ impl Eval<Zg, EvalResult> for CirculationEval {
                     Err(_) => None,
                 };
                 let target = 16.0f64.min(entry_angle / 2.);
-                match angle {
-                    Some(angle) => {
-                        if angle <= target {
-                            log::info!(
-                                "Criterion Circulation ok, angle:{:.3} target:{:.3}",
+                if let Some(angle) = angle
+                    && angle <= target {
+                        log::info!(
+                            "Criterion Circulation ok, angle:{:.3} target:{:.3}",
+                            angle,
+                            target,
+                        );
+                        ctx.write_params(ParameterID::VesselSpeed, v_0*MS_TO_KNOT);
+                        let result = CirculationCtx {
+                            data: CriterionData::new_result(
+                                CriterionID::HeelTurning,
                                 angle,
                                 target,
-                            );
-                            ctx.write_params(ParameterID::VesselSpeed, v_0*MS_TO_KNOT);
-                            let result = CirculationCtx {
-                                data: CriterionData::new_result(
-                                    CriterionID::HeelTurning,
-                                    angle,
-                                    target,
-                                ),
-                            };
-                            return ctx.write(result);
-                        }
+                            ),
+                        };
+                        return ctx.write(result);
                     }
-                    None => (),
-                }
                 let result = match calculate_velocity(target) {
                     Ok(velocity) => {
                         let velocity = velocity*MS_TO_KNOT;

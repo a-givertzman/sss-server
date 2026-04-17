@@ -22,7 +22,7 @@ pub struct CompartmentBoundCache {
     cache_path: PathBuf,
     level_step: f64,
     volume_max: f64,
-    /// коэффициент проницаемости
+    /// [коэффициент проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
     coeff: Option<f64>,
     bounds: Bounds,
     /// Model representation used for cache calculation.
@@ -47,7 +47,7 @@ impl CompartmentBoundCache {
         bounds: Bounds,
         thread_pool: Arc<ThreadPool>,
     ) -> Self {
-        let dbg = Dbg::new(parent, format!("CompartmentBoundCache"));
+        let dbg = Dbg::new(parent, "CompartmentBoundCache".to_string());
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             shape,
@@ -95,11 +95,10 @@ impl CompartmentBoundCache {
                 values.mul_single(coeff);
                 return Ok(values);
             }
-            if let Some(last_delta) = last_delta {
-                if last_delta.signum() != delta.signum() {
+            if let Some(last_delta) = last_delta
+                && last_delta.signum() != delta.signum() {
                     delta_draugth = -delta_draugth / 3.;
                 }
-            }
             draugth += delta_draugth;
             last_delta = Some(delta);
         }
@@ -166,7 +165,7 @@ impl CompartmentBoundCache {
             format!("rebuild: {full_error}"),
         ))
     }
-    /// инициализация кэшей заранее посчитанными данными
+    /// Инициализация кэшей заранее посчитанными данными
     pub fn init(&mut self) -> Result<(), Error> {
         let error = Error::new(self.dbg.clone(), "init");
         let mut caches = Vec::new();

@@ -6,7 +6,6 @@ use crate::{
     prelude::{InitialCtx, ContextWrite},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Ограничение горизонтальной площади обледенения палубного груза - леса
 pub struct IcingTimberBoundEval {
@@ -16,7 +15,7 @@ pub struct IcingTimberBoundEval {
 //
 //
 impl IcingTimberBoundEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

@@ -112,7 +112,8 @@ pub trait AddVec {
     fn add_vec(&mut self, rhs: &Self) -> Result<(), Error>;
 }
 //
-impl AddVec for Vec<f64>  {   
+impl AddVec for Vec<f64>  { 
+    #[inline(never)]  
     fn add_vec(&mut self, rhs: &Self) -> Result<(), Error> {
         if self.len() != rhs.len() {
             return Err(Error::new("AddVec", "add_vec").err("self.len() != rhs.len()"));
@@ -139,6 +140,7 @@ pub trait SubVec {
 }
 //
 impl SubVec for Vec<f64>  {   
+    #[inline(never)]    
     fn sub_vec(&mut self, rhs: &Self) -> Result<(), Error> {
         if self.len() != rhs.len() {
             return Err(Error::new("SubVec", "sub_vec").err("self.len() != rhs.len()"));
@@ -165,7 +167,8 @@ pub trait MultipleVec {
     fn mul_vec(&mut self, rhs: &Self) -> Result<(), Error>;
 }
 //
-impl MultipleVec for Vec<f64>  {   
+impl MultipleVec for Vec<f64>  {  
+    #[inline(never)] 
     fn mul_vec(&mut self, rhs: &Self) -> Result<(), Error> {
         if self.len() != rhs.len() {
             return Err(Error::new("MultipleVec", "mul_vec").err("self.len() != rhs.len()"));
@@ -193,6 +196,7 @@ pub trait DivideVec {
 }
 //
 impl DivideVec for Vec<f64>  {   
+    #[inline(never)]
     fn div_vec(&mut self, rhs: &[f64]) -> Result<(), Error> {
         if self.len() != rhs.len() {
             return Err(Error::new("DivideVec", "div_vec").err("self.len() != rhs.len()"));

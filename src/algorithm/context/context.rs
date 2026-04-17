@@ -48,12 +48,6 @@ pub struct Context {
     pub(super) strength_balance: Option<StrengthBalanceCtx>,
     /// Распределение массы смещаемых грузов судна для прочности
     pub(super) dynamic_mass: Option<DynamicMassCtx>,
-    /// Результирующая нагрузка на шпацию
-    pub(super) total_force: Option<TotalForceCtx>,
-    /// Срезающая сила, действующая на корпус судна
-    pub(super) shear_force: Option<ShearForceCtx>,
-    /// Изгибающий момент
-    pub(super) bending_moment: Option<BendingMomentCtx>,
     /// Учет обледенения судна и груза для остойчивости
     pub(super) icing_stab: Option<IcingStabCtx>,
     /// Расчет массы корпуса и статических грузов судна

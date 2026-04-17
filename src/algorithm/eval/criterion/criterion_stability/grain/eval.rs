@@ -1,7 +1,7 @@
-use crate::algorithm::eval::criterion::*;
-use crate::algorithm::eval::stability::*;
 use crate::algorithm::context::context_access::{ContextParamsRead, ContextParamsWrite};
+use crate::algorithm::eval::criterion::*;
 use crate::algorithm::eval::parameters::ParameterID;
+use crate::algorithm::eval::stability::*;
 use crate::algorithm::eval::zg::Zg;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
@@ -17,7 +17,7 @@ pub struct GrainEval {
 //
 //
 impl GrainEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,
@@ -40,7 +40,7 @@ impl Eval<Zg, EvalResult> for GrainEval {
                 let balance: StabilityBalanceCtx = ctx.read();
                 let m_grain = balance.bulk.iter().map(|v| v.grain_moment).sum();
                 let mass = ctx.read_params(ParameterID::Displacement);
-                let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding); 
+                let flooding_angle = ctx.read_params(ParameterID::AngleOfDownFlooding);
                 let mut results = Vec::new();
                 let lambda_0 = m_grain / mass;
                 // Первая точка апроксимирующей прямой
@@ -114,7 +114,8 @@ impl Eval<Zg, EvalResult> for GrainEval {
                     .map_err(|err| error.pass_with("first_grain_lever", err))?;
                 let second_grain_lever = lambda_0 + delta_ab * second_angle;
                 let grain_area = (first_grain_lever + second_grain_lever)
-                    * (second_angle - theta_grain_angle).to_radians() / 2.;
+                    * (second_angle - theta_grain_angle).to_radians()
+                    / 2.;
                 let result_area = dso_area - grain_area;
                 let theta_grain40 = lever_diagram
                     .lever_moment(second_angle)
@@ -156,17 +157,18 @@ impl Eval<Zg, EvalResult> for GrainEval {
                 );
                 // Остаточная площадь
                 ctx.write_params(ParameterID::GrainArea, result_area);
-                let mut results = Vec::new();
-                results.push(CriterionData::new_result(
-                    CriterionID::HeelGrainDisplacement,
-                    theta_grain_angle,
-                    target_grain_angle,
-                ));
-                results.push(CriterionData::new_result(
-                    CriterionID::AreaLcGrainDisplacement,
-                    result_area,
-                    0.075,
-                ));
+                let results = vec![
+                    CriterionData::new_result(
+                        CriterionID::HeelGrainDisplacement,
+                        theta_grain_angle,
+                        target_grain_angle,
+                    ),
+                    CriterionData::new_result(
+                        CriterionID::AreaLcGrainDisplacement,
+                        result_area,
+                        0.075,
+                    ),
+                ];
                 let result = GrainCtx { data: results };
                 ctx.write(result)
                 // TODO: В случаях, когда палубный груз контейнеров размещается только на крышках грузовых

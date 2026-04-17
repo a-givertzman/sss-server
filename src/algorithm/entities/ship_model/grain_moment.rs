@@ -43,14 +43,13 @@ impl GrainMomentDataArray {
 /// Может состоять из нескольких кривых
 pub struct GrainMoment {
     curves: Vec<Curve<f64>>,
-}
-///
+}///
 impl GrainMoment {
-    ///
+    //
     pub fn new(curves: Vec<Curve<f64>>) -> Self {
         Self { curves }
     }
-    ///
+    //
     pub fn value(&self, key: f64) -> Result<f64, Error> {
         let (values, errors): (Vec<_>, Vec<_>) = self
             .curves
@@ -66,7 +65,7 @@ impl GrainMoment {
         }
         Ok(values.into_iter().flatten().sum())
     }
-    ///
+    //
     pub fn curves(&self) -> Vec<Curve<f64>> {
         self.curves.clone()
     }

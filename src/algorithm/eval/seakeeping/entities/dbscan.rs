@@ -47,11 +47,10 @@ pub fn dbscan(points: &[(f64, f64)], eps: f64, min_points: usize) -> Vec<Vec<(f6
         clusters.push(Vec::new());
     }
     for point in &dbscan_points {
-        if let Some(id) = point.cluster_id {
-            if id > 0 {
+        if let Some(id) = point.cluster_id
+            && id > 0 {
                 clusters[id - 1].push(point.coords);
             }
-        }
     }
     
     // Удаление пустых кластеров

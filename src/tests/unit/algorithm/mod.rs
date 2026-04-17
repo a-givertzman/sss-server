@@ -1,28 +1,23 @@
-//mod data;
 mod cache;
-mod data;
 mod apparent_frequencies_test;
-//mod models; // перенес тесты в папку с крейтом из-за проблем с видимостью методов
-//mod fake_initial;
-//mod fake_model_link;
-//mod fake_ship_model;
-//mod icing;
+mod stability_icing;
+mod strength_icing;
 mod impacts_high_waves_test;
-//mod loads;
 mod main_resonant_zone_speed_filter_test;
 mod main_resonant_zone_test;
 mod move_broching_test;
 mod parametric_resonant_zone_speed_filter_test;
 mod parametric_resonant_zone_test;
 mod period_excitement_test;
-//mod strength_area;
-//mod wetting;
-//mod displacement_shape;
-//mod area_shape;
+mod strength_area;
+mod wetting;
+mod displacement_shape;
+mod area_shape;
 mod bound;
 mod bounds;
 mod draught;
+mod build_caches;
 mod strength;
 mod full;
 
-mod cache_single;
+

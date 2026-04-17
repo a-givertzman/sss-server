@@ -81,15 +81,15 @@ impl AddAssign for Position {
     }
 }
 //
-impl Into<[f64; 3]> for Position {
-    fn into(self) -> [f64; 3] {
-        [self.x, self.y, self.z]
+impl From<Position> for [f64; 3] {
+    fn from(val: Position) -> Self {
+        [val.x, val.y, val.z]
     }
 }
 //
-impl Into<nalgebra::Point3<f64>> for Position {
-    fn into(self) -> nalgebra::Point3<f64> {
-        nalgebra::Point3::new(self.x, self.y, self.z)
+impl From<Position> for nalgebra::Point3<f64> {
+    fn from(val: Position) -> Self {
+        nalgebra::Point3::new(val.x, val.y, val.z)
     }
 }
 //

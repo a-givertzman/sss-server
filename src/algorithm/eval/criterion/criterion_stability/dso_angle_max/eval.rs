@@ -16,7 +16,7 @@ pub struct DSOAngleMaxEval {
 //
 //
 impl DSOAngleMaxEval {
-    ///
+    //
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "DSOAngleMaxEval");
         Self {

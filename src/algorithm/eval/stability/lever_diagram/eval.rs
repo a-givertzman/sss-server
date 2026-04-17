@@ -27,7 +27,7 @@ pub struct LeverDiagramEval {
 //
 //
 impl LeverDiagramEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         api_client: Arc<ApiClient>,

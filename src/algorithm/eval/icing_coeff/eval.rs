@@ -5,7 +5,6 @@ use crate::{
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-
 ///
 /// Коэффициенты для расчета обледенения судна
 pub struct IcingCoeffEval {
@@ -15,7 +14,7 @@ pub struct IcingCoeffEval {
 //
 //
 impl IcingCoeffEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

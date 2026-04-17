@@ -1,6 +1,6 @@
-//! Учет намокания палубного груза
 use crate::algorithm::entities::Moment;
 ///
+/// Учет намокания палубного груза.  
 #[derive(Debug, Clone)]
 pub struct WettingCtx {
     /// Суммарная масса

@@ -30,7 +30,7 @@ impl Query {
     ///
     /// Returns [Query] parsed from JSON `bytes`
     pub fn from_json(bytes: &[u8]) -> Result<Self, Error> {
-        match serde_json::from_slice(&bytes) {
+        match serde_json::from_slice(bytes) {
             Ok(query) => Ok(query),
             Err(err) => Err(Error::new("Query", "from_json").pass(err.to_string())),
         }

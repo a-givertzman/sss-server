@@ -1,3 +1,4 @@
+//! Представление модели судна
 use crate::algorithm::entities::Curve;
 use crate::algorithm::entities::Position;
 use crate::algorithm::entities::data::PointDataArray;
@@ -76,7 +77,7 @@ impl ShipModel {
             grain_moments: None,
             opening: None,
             deck_angle_point: None,
-            model_cached: model_cached,
+            model_cached,
             //    timeout: Self::DEFAULT_TIMEOUT,
             api_client,
         }
@@ -288,11 +289,9 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "static_area_h");
         let area = self
             .horisontal_area_stab
-            .clone()
             .ok_or(error.err("no horisontal_area_stab"))?;
         let shift = self
             .horisontal_area_shift
-            .clone()
             .ok_or(error.err("no horisontal_area_shift"))?;
         Ok((area, shift))
     }
@@ -302,11 +301,9 @@ impl ShipModel {
         let error = Error::new(&self.dbg, "static_area_v");
         let area = self
             .windage_area_stab
-            .clone()
             .ok_or(error.err("no windage_area_stab"))?;
         let moment = self
             .windage_area_moment
-            .clone()
             .ok_or(error.err("no windage_area_moment"))?;
         Ok((area, moment))
     }
@@ -487,7 +484,7 @@ fn grain_moments(
         .iter()
         .map(|(code, v)| (code.clone(), Curve::new_linear(v)))
         .collect();
-    if let Some(error_data) = data.iter().filter(|v| v.1.is_err()).next() {
+    if let Some(error_data) = data.iter().find(|v| v.1.is_err()) {
         error_data
             .1
             .clone()
@@ -573,4 +570,57 @@ fn opening(
     )
     .map_err(|err| error.pass_with("parse", err))?;
     Ok(data.data())
+}
+
+
+#[cfg(test)]
+impl ShipModel {
+    /// Создает "фейковую" модель судна для тестов физики
+    pub fn create_test_fake(area_h: f64, pos_h: Position, area_v: f64, mom_v: Moment) -> Self {
+        let dbg = Dbg::new("test", "FakeShip");
+        Self {
+            dbg: dbg.clone(),
+            ship_id: "fake".into(),
+            project_id: "fake".into(),
+            horisontal_area_stab: Some(area_h),
+            horisontal_area_shift: Some(pos_h),
+            windage_area_stab: Some(area_v),
+            windage_area_moment: Some(mom_v),
+            bounds: None,
+            horisontal_area_str: None,
+            grain_moments: None,
+            opening: None,
+            deck_angle_point: None,
+            model_cached: crate::algorithm::entities::model_cached::ModelCached::mock_empty(),
+            api_client: std::sync::Arc::new(ApiClient::new(dbg, "".to_owned(), "".to_owned(), "".to_owned())),
+        }
+    }
+    /// Создает "фейковую" модель судна для тестов прочности.
+    /// Позволяет жестко задать базовые эпюры площадей корпуса по шпациям.
+    pub fn create_test_fake_strength(area_v: Vec<f64>, area_h: Vec<f64>) -> Self {
+        let dbg = sal_core::dbg::Dbg::new("test", "FakeStrengthShip");        
+        // 1. Создаем мок кэша и прокидываем в него вектор парусности.
+        let model_cached = crate::algorithm::entities::model_cached::ModelCached::mock_with_strength_areas(area_v);
+        Self {
+            dbg: dbg.clone(),
+            ship_id: "fake_strength".into(),
+            project_id: "fake_strength".into(),            
+            horisontal_area_stab: None,
+            horisontal_area_shift: None,
+            windage_area_stab: None,
+            windage_area_moment: None,            
+            bounds: None,
+            horisontal_area_str: Some(area_h),            
+            grain_moments: None,
+            opening: None,
+            deck_angle_point: None,            
+            model_cached,            
+            api_client: std::sync::Arc::new(ApiClient::new(
+                dbg, 
+                "".to_owned(), 
+                "".to_owned(), 
+                "".to_owned()
+            )),
+        }
+    }
 }

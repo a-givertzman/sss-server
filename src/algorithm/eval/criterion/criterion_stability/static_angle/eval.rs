@@ -17,7 +17,7 @@ pub struct StaticAngleEval {
 //
 //
 impl StaticAngleEval {
-    ///
+    //
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "StaticAngleEval");
         Self {
@@ -41,7 +41,7 @@ impl Eval<Zg, EvalResult> for StaticAngleEval {
                 let ship_type = initial.ship_type.unwrap();
                 let have_container = initial.unit.as_ref()
                     .ok_or(error.err("initial.unit no data"))?
-                    .into_iter()
+                    .iter()
                     .any(|v| v.cargo_type == UnitCargoType::Container);
                 let wind: WindCtx = ctx.read();
                 let lever_diagram: LeverDiagramCtx = ctx.read();

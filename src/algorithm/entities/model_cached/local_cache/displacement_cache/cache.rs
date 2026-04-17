@@ -170,3 +170,51 @@ impl LocalCache for DisplacementCache {
         let _ = self.cache.insert(cache);
     }
 }
+//
+#[cfg(test)]
+impl DisplacementCache {
+    /// Создает "фейковый" кэш гидростатики для тестов.
+    /// Позволяет задать предвычисленные значения без прогона тяжелых циклов.
+    pub fn create_test_fake(mock_cache_data: Option<Cache<f64>>) -> Self {
+        let dbg = Dbg::new("test", "FakeDisplacementCache");
+        Self {
+            dbg: dbg.clone(),
+            cache_path: PathBuf::from("/tmp/test_displacement_cache"),
+            heel_steps: Vec::new(),
+            trim_steps: Vec::new(),
+            draught_min: 1.,
+            draught_max: 10.,
+            draught_step: 1.,
+            shape: Arc::new(RwLock::new(DisplacementShape::new_uninit(&dbg, PathBuf::new(), None, 1.))),
+            cache: mock_cache_data,
+            thread_pool: Arc::new(ThreadPool::new("DisplacementCache::mock_empty", None)),
+            exit: Arc::new(AtomicBool::new(false)),
+        }
+    }
+    /// Вспомогательный метод для создания мока с уже заполненными
+    /// базовыми данными для одной точки (0 крена, 0 дифферента).
+    pub fn create_simple_mock(volume: f64, area_wl: f64) -> Self {
+        let dbg = sal_core::dbg::Dbg::new("test", "SimpleMockCache");
+        let cache = Cache::<f64>::new(&dbg);
+        let fake_data = vec![
+            vec![
+                0.0, 0.0, 0.0, volume, // result[0]
+                0.0, 0.0, -0.5,    // result[1,2,3] - Центр величины (x, y, z)
+                area_wl, // result[4]
+                0.0, 0.0, 0.0, // result[5,6,7] - Центр ВЛ
+                100.0, 500.0, // result[8,9] - Инерция x, y
+                10.0, 2.0, // result[10,11] - Длина и ширина ВЛ
+            ],
+            vec![
+                0.0, 0.0, 100.0, volume, // result[0]
+                0.0, 0.0, -0.5,    // result[1,2,3] - Центр величины (x, y, z)
+                area_wl, // result[4]
+                0.0, 0.0, 0.0, // result[5,6,7] - Центр ВЛ
+                100.0, 500.0, // result[8,9] - Инерция x, y
+                10.0, 2.0, // result[10,11] - Длина и ширина ВЛ
+            ],
+        ];
+        let _ = cache.init(fake_data);
+        Self::create_test_fake(Some(cache))
+    }
+}

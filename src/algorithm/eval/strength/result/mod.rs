@@ -20,7 +20,7 @@ impl Results {
 //
 impl IResults for Results {
     /// Добавление данных промежуточных значений
-    fn add_values(&self, name: &str, values: &Vec<f64>) {
+    fn add_values(&self, name: &str, values: &[f64]) {
         let mut data = self.values.borrow_mut();
         data.0.push(name.to_owned());
         let base_vec = &mut data.1;
@@ -34,7 +34,7 @@ impl IResults for Results {
         }
     }
     /// Добавление рассчитанных данных силы и момента
-    fn add_results(&self, name: &str, values: &Vec<f64>) {
+    fn add_results(&self, name: &str, values: &[f64]) {
         let mut data = self.results.borrow_mut();
         data.0.push(name.to_owned());
         let base_vec = &mut data.1;
@@ -59,9 +59,9 @@ impl IResults for Results {
 #[doc(hidden)]
 pub trait IResults {
     /// Добавление данных промежуточных значений
-    fn add_values(&self, name: &str, values: &Vec<f64>);
+    fn add_values(&self, name: &str, values: &[f64]);
     /// Добавление рассчитанных данных силы и момента
-    fn add_results(&self, name: &str, values: &Vec<f64>);
+    fn add_results(&self, name: &str, values: &[f64]);
     /// Получение данных промежуточных значений
     fn take_values(&self) -> (Vec<String>, Vec<Vec<f64>>);
     /// Получение рассчитанных данных силы и момента
@@ -73,8 +73,8 @@ pub struct FakeResults;
 #[doc(hidden)]
 #[allow(dead_code)]
 impl IResults for FakeResults {
-    fn add_values(&self, _: &str, _: &Vec<f64>) {}
-    fn add_results(&self, _: &str, _: &Vec<f64>) {}
+    fn add_values(&self, _: &str, _: &[f64]) {}
+    fn add_results(&self, _: &str, _: &[f64]) {}
     fn take_values(&self) -> (Vec<String>, Vec<Vec<f64>>) {
         (Vec::new(), Vec::new())
     }

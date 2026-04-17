@@ -39,9 +39,9 @@ impl SendSeakeepingResult {
 //
 impl Eval<(), EvalResult> for SendSeakeepingResult {
     fn eval(&self, _: ()) -> EvalResult {
-        let error = Error::new(&self.dbg, "eval");
+        let _error = Error::new(&self.dbg, "eval");
         match self.ctx.eval(()) {
-            Ok(mut ctx) => {
+            Ok(ctx) => {
                 let ship_id = ContextReadRef::<InitialCtx>::read_ref(&ctx).ship_id.clone();
                 // отправка результатов вычисления резонансных зон
                 log::info!("send_seakeeping begin");

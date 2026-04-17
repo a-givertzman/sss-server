@@ -39,8 +39,9 @@ impl Bound {
                 Bound::None => 0.,
                 Bound::Full => 1.,
                 r @ Bound::Value(_, _) => {
-                    r.length().expect("Bound part_ratio error")
-                        / self.length().expect("Bound part_ratio error")
+                    let ratio = r.length().expect("Bound part_ratio error")
+                        / self.length().expect("Bound part_ratio error");
+                    if ratio > 1.0 - 1e-9 { 1.0 } else { ratio }
                 }
             },
         )

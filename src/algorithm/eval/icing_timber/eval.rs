@@ -12,16 +12,15 @@ use crate::{
     prelude::{ContextWrite, InitialCtx},
 };
 use sal_core::{dbg::Dbg, error::Error};
-///
-/// Расчет площади обледенения горизонтальных поверхностей палубного лесного груза
+//
 pub struct IcingTimberEval {
     dbg: Dbg,
     ctx: Box<dyn Eval<(), EvalResult> + Send + Sync>,
 }
-//
-//
+/// Площади горизонтальных поверхностей и
+/// площади парусности судна для расчета остойчивости
 impl IcingTimberEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -43,7 +42,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                 let initial: &InitialCtx = ctx.read_ref();
                 let unit: Vec<_> = match initial.unit.as_ref() {
                     Some(data) => data
-                        .into_iter()
+                        .iter()
                         .filter(|v| v.icing_area.is_some())
                         .collect(),
                     None => return Err(error.err("Read unit error: no data!")),
@@ -106,7 +105,7 @@ impl Eval<(), EvalResult> for IcingTimberEval {
                                 return Err(error.pass_with("Read unit horizontal_area error", err));
                             }
                         };
-                        match u.icing_area(&bound_x, &Bound::Full) {
+                        match u.icing_area(bound_x, &Bound::Full) {
                             Ok((area, _, _)) => {
                                 full_current_area += area;
                             }

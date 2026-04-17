@@ -58,11 +58,11 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
                             Device {}
                         }).collect();
                         log::debug!("{dbg}.eval | Configured {} devices", devices.len());
-                        let mut cycle = ServiceCycle::new(&dbg.to_string(), Duration::from_millis(10));
+                        let mut cycle = ServiceCycle::new(dbg.to_string(), Duration::from_millis(10));
                         'main: loop {
                             cycle.start();
                             for dev in &mut devices {
-                                *dev = Device::from(dev.clone());
+                                *dev = dev.clone();
                                 //
                                 // Prepare event & send Event
                                 let event = Event::from(

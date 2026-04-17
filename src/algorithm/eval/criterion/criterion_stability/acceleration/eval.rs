@@ -18,7 +18,7 @@ pub struct AccelerationEval {
 //
 //
 impl AccelerationEval {
-    ///
+    //
     pub fn new(parent: impl Into<String>, ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static) -> Self {
         let dbg = Dbg::new(parent, "AccelerationEval");
         Self {

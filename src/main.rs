@@ -1,4 +1,4 @@
-// #![feature(try_trait_v2)]
+#![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 mod algorithm;
 mod app;
 mod conf;
@@ -57,10 +57,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model_name = conf.api.model.name.clone();
     let cache_dir: PathBuf = ("assets/cache/".to_owned() + &model_name).into();
     let model_dir: PathBuf = ("assets/model/".to_owned() + &model_name).into();
-    let mut dso_angles = vec![-60., -50., -40., -30., -12., 12., 30., 40., 50., 60.];
-    dso_angles.append(&mut ((-11..=11).map(|v| (v as f64) * 5.).collect())); // -55, -50 .. 55
-    dso_angles.append(&mut ((-8..=8).map(|v| v as f64).collect()));
-    dso_angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+    let mut dso_angles: Vec<_> = (-120..=120).map(|v| (v as f64) * 0.5 as f64).collect();
+    dso_angles.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     dso_angles.dedup();
     let model_cached = model_cached::ModelCached::new(
         &dbg,

@@ -57,3 +57,5 @@ strum_macros = "~0.27"
 kanal = "~0.1"
 papaya = "~0.2"
 parking_lot = "~0.12"
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "katex-header.html" ]

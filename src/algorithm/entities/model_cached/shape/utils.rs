@@ -86,7 +86,7 @@ pub fn write_stl(path: &PathBuf, mesh: &TriMesh) -> Result<(), Error> {
     let mut binary_stl = Vec::<u8>::new();
     stl_io::write_stl(&mut binary_stl, triangles.iter())
         .map_err(|err| error.pass_with("stl_io::write_stl", err.to_string()))?;
-    let mut buffer = std::fs::File::create(&path).map_err(|err| {
+    let mut buffer = std::fs::File::create(path).map_err(|err| {
         error.pass_with(format!("File::create, path:{:?}", path), err.to_string())
     })?;
     buffer.write_all(&binary_stl).map_err(|err| {

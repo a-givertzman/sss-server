@@ -1,21 +1,15 @@
 use super::Zg;
 use crate::{
-    algorithm::{
-        context::context_access::{ContextRead, ContextReadRef},
-        eval::*,
-    },
+    algorithm::eval::*,
     kernel::{
         Eval,
         types::{Arc, eval_result::EvalResult},
     },
-    prelude::{ContextWrite, InitialCtx},
+    prelude::ContextWrite,
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{
-    sync::Stack,
-    thread_pool::{JoinHandle, Scheduler, ThreadPool},
-};
-use std::collections::{HashMap, VecDeque};
+use sal_sync::thread_pool::ThreadPool;
+use std::collections::HashMap;
 
 // unsafe impl Send for StabilityAreaEval {}
 // unsafe impl Sync for StabilityAreaEval {}
@@ -31,7 +25,7 @@ pub struct ZgEval {
 //
 //
 impl ZgEval {
-    ///
+    //
     pub fn new(
         thread_pool: Arc<ThreadPool>,
         parent: impl Into<String>,

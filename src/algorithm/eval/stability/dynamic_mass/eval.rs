@@ -23,7 +23,7 @@ pub struct DynamicMassStabEval {
 //
 //
 impl DynamicMassStabEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

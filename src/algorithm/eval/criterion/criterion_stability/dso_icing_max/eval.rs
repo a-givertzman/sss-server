@@ -15,7 +15,7 @@ pub struct DSOIcingMaxEval {
 //
 //
 impl DSOIcingMaxEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<Zg, EvalResult> + Send + Sync + 'static,

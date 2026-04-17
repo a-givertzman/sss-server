@@ -1,4 +1,4 @@
-//! Критерии проверки остойчивости судна
+//! [Критерии проверки остойчивости судна](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section01_list.md)
 
 use strum_macros::FromRepr;
 use sal_core::error::Error;

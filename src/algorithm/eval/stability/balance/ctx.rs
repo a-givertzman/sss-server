@@ -1,10 +1,6 @@
 use bincode::{Decode, Encode};
-
 use crate::algorithm::entities::{Position, ship_model::stability_result::{BulkResult, LiquidResult}};
-
-
-
-///
+//
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct StabilityBalanceCtx {
     /// Крен, градусы
