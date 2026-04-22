@@ -10,6 +10,8 @@ mod tests_eval {
     use std::{
         path::PathBuf, sync::Once, time::Duration
     };
+    use parking_lot::RwLock;
+    use sal_core::dbg::Dbg;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{
         DebugSession, 
@@ -17,13 +19,13 @@ mod tests_eval {
     };
     use crate::{
         algorithm::{
-            entities::{Bounds, model_cached::load_stl}, 
+            entities::{Bounds, model_cached::{DisplacementShape, Shape}}, 
             eval::room_element_report::{
                 room_element_report_ctx::RoomElementReportCtx, 
                 room_element_report_eval::RoomElementReportEval
             }
         }, 
-        kernel::Eval, prelude::{
+        kernel::{Eval, types::Arc}, prelude::{
             Context, 
             ContextRead, 
             InitialCtx
@@ -59,39 +61,48 @@ mod tests_eval {
         let test_data = [
             (
                 1,
-                5,
-                "D:\\work_projects\\sss-server\\src\\tests\\unit\\algorithm\\reports\\test_files\\tanks_1.stl",
-                "D:\\work_projects\\sss-server\\src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
-            )
+                1,
+                "src\\tests\\unit\\algorithm\\reports\\test_files\\tanks_1.stl",
+                "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
+            ),
+            // (
+            //     2,
+            //     2,
+            //     "src\\tests\\unit\\algorithm\\reports\\test_files\\502.stl",
+            //     "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
+            // )
         ];
         for (step, id_tank, tank_path, style_path) in test_data.iter() {
-            let mut initial = InitialCtx::new(
+            let initial = InitialCtx::new(
                 "0",
                 "Unit-test",
                 Bounds::from_min_max(0., 100., 20).unwrap(),
             );
-            let mut ctx = MocEval {
+            let ctx = MocEval {
                 ctx: Context::new(initial),
             };
-            match load_stl(&PathBuf::from(tank_path)) {
-                Ok(tank) => {
-                    match RoomElementReportEval::new(
-                        "dbg", 
-                        ctx,
-                        tank,
-                        PathBuf::from(style_path)
-                    ).eval(()) {
-                        Ok(ctx) => {
-                            let result = ContextRead::<RoomElementReportCtx>::read(&ctx).result;
-                            std::fs::File::create("index.html").unwrap();
-                            std::fs::write("index.html", result).unwrap();
-                            log::debug!("{dbg} | Result html stored into 'index.html'");
-                            log::debug!("{dbg} | All done");
-                        },
-                        Err(err) => panic!("step {} \nerror: {:#?}", step, err),
-                    }
+            let mut displacement_shape = DisplacementShape::new_uninit(
+                &Dbg::new("Test", "RoomElementReportEval"), 
+                tank_path.into(), 
+                None, 
+                1.0,
+            );
+            let _ = displacement_shape.init();
+            match RoomElementReportEval::new(
+                "dbg", 
+                ctx,
+                tank_path.into(),
+                PathBuf::from(style_path),
+                Arc::new(RwLock::new(displacement_shape)),
+            ).eval(()) {
+                Ok(ctx) => {
+                    let result = ContextRead::<RoomElementReportCtx>::read(&ctx).result;
+                    std::fs::File::create("index.html").unwrap();
+                    std::fs::write("index.html", result).unwrap();
+                    log::debug!("{dbg} | Result html stored into 'index.html'");
+                    log::debug!("{dbg} | All done");
                 },
-                Err(e) => log::error!("Error to load stl file to TriMesh: {:?}", e),
+                Err(err) => panic!("step {} \nerror: {:#?}", step, err),
             }
         }
         test_duration.exit();

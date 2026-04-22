@@ -260,76 +260,44 @@ impl DisplacementShape {
         trim: f64,
         draught: f64,
     ) -> Result<(f64, f64, f64, f64), Error> {
-        let error = Error::new(&self.dbg, "displacement");
+        let error = Error::new(&self.dbg, "draught_size");
         let position = self
             .position(heel, trim, draught)
             .map_err(|err| error.pass_with("self.position", err))?;
-        let mut src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
+        let src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
         let src_aabb = src_mesh.aabb(&Isometry::identity());
-        let mut mesh;
+        let current_src = src_mesh;
         let mut epsilon = self.epsilon;
+        let mut mesh_part;
         loop {
-            let result = src_mesh.split(&position, &Vector::z_axis(), 0., self.epsilon);
-            mesh = match result {
-                parry3d_f64::query::SplitResult::Pair(mut mesh, _) => {
-                    if let Err(error) = mesh
-                        .set_flags(TriMeshFlags::all())
-                        .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
-                    {
-                        log::error!("{}", error);
-                    }
-                    mesh
+            let result = current_src.split(&position, &Vector::z_axis(), 0., epsilon);
+            mesh_part = match result {
+                parry3d_f64::query::SplitResult::Pair(mut m, _) => {
+                    let _ = m.set_flags(TriMeshFlags::all());
+                    m
                 }
-                parry3d_f64::query::SplitResult::Negative => {
-                    return Ok((
-                         (src_aabb.maxs.x - src_aabb.mins.x),
-                        (src_aabb.maxs.y - src_aabb.mins.y),
-                        (src_aabb.maxs.z - src_aabb.mins.z),
-                        src_aabb.mins.z,
-                    ));
-                }
+                parry3d_f64::query::SplitResult::Negative => src_mesh.clone(),
                 parry3d_f64::query::SplitResult::Positive => {
-                    return Ok((
-                        0.0,
-                        0.0,
-                        0.0,
-                        position.rotation.coords[2],
-                    ));
+                    // Если над водой, размеры нулевые
+                    return Ok((0.0, 0.0, 0.0, src_aabb.mins.z));
                 }
             };
-            let aabb = mesh.aabb(&Isometry::identity());
-            if aabb.mins.x + epsilon < src_aabb.mins.x
-                || aabb.maxs.x - epsilon > src_aabb.maxs.x
-                || aabb.mins.y + epsilon < src_aabb.mins.y
-                || aabb.maxs.y - epsilon > src_aabb.maxs.y
-                || aabb.mins.z + epsilon < src_aabb.mins.z
-                || aabb.maxs.z - epsilon > src_aabb.maxs.z
+            let aabb = mesh_part.aabb(&Isometry::identity());
+            if aabb.mins.x + epsilon < src_aabb.mins.x || aabb.maxs.x - epsilon > src_aabb.maxs.x 
             {
-                let error = format!(
-                    "{} part error: wrong aabb, rebuild! epsilon:{epsilon} src_aabb:{:?} res_aabb:{:?}",
-                    self.dbg, src_aabb, aabb
-                );
-                log::warn!("{error}");
-                src_mesh = &mesh;
-                epsilon = epsilon * 2.;
+                epsilon *= 2.0;
+                if epsilon > 1.0 { break; }
                 continue;
             }
             break;
         }
-        if let Err(error) = mesh
-            .set_flags(TriMeshFlags::all())
-            .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
-        {
-            log::error!("{}", error);
-        }
-        let aabb = mesh
-            .aabb(&Isometry::identity());
-        Ok((
-            (aabb.maxs.x - aabb.mins.x),
-            (aabb.maxs.y - aabb.mins.y),
-            (aabb.maxs.z - aabb.mins.z),
-            aabb.mins.z,
-        ))
+        let aabb = mesh_part.aabb(&Isometry::identity());
+        let length = aabb.maxs.x - aabb.mins.x; // L
+        let width = aabb.maxs.y - aabb.mins.y;  // B
+        let height = aabb.maxs.z - aabb.mins.z; // H
+        let min_z = aabb.mins.z;                // Минимальная отметка (Z min)
+        println!("{:?}", min_z);
+        Ok((length, width, height, min_z))
     }
     ///
     /// Полный размер модели (длина, ширина, высота, минимальная высота)
