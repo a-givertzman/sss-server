@@ -65,11 +65,10 @@ impl Eval<(), EvalResult> for StrengthBalanceEval {
                     bulk: static_mass.bulk.clone(),
                     liquid: static_mass.liquid.clone(),                    
                     gaseous: static_mass.gaseous,
-                    //    damaged_compartment: loads.damaged_compartment, //TODO
+                    damaged_compartment: initial.damaged_compartment.clone(), //
                     bounds: bounds.clone(),
                     epsilon: 0.00000001,
                 };
-                //    damaged_compartment: loads.damaged_compartment, //TODO
                 let result = self
                     .model
                     .read()

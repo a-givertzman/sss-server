@@ -150,6 +150,7 @@ impl EvalEx<CalculusQuery, EvalResult> for Calculus {
                                     &query.ship_id.to_string(),
                                     &query.project_id,
                                     bounds,
+                                    Vec::new(), // damaged compartments
                                 )),
                             ),
                         ),

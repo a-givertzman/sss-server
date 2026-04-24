@@ -395,20 +395,30 @@ impl ModelCached {
             guard
                 .init()
                 .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let (level_max, volume_max) = compartments_max
-                .get(name)
-                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            let (level_max, volume_max) =
+                if let Some((level_max, volume_max)) = compartments_max.get(name) {
+                    (*level_max, Some(*volume_max))
+                } else {
+                    (None, None)
+                };
             guard
-                .calc_coeff(*volume_max, *level_max)
+                .calc_coeff(volume_max, level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
         }
-        /*     TODO - пока не используются, потом будет отдельный расчет
-        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
-            damaged_compartment
-                .write()
+        for (name, compartment) in self.damaged_compartments.iter_mut() {
+            let mut guard = compartment.write();
+            guard
                 .init()
-                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
-        }*/
+                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?;
+            let volume_max = if let Some((_, volume_max)) = compartments_max.get(name) {
+                Some(*volume_max)
+            } else {
+                None
+            };
+            guard.calc_coeff(volume_max).map_err(|err| {
+                error.pass_with(format!("damaged_compartment:{name}.calc_coeff"), err)
+            })?;
+        }
         self.windage_area
             .init()
             .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
@@ -544,8 +554,8 @@ impl ModelCached {
         compartments_max: HashMap<String, (Option<f64>, f64)>,
     ) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_compartments");
-        let mut errors = Vec::new();
-        let mut cache_map = IndexMap::new();
+       let mut errors = Vec::new();
+   /*      let mut cache_map = IndexMap::new();
         for (name, compartment) in &mut self.compartments {
             //        println!("model_cached rebuild compartment:{name}");
             let mut guard = compartment.write();
@@ -556,11 +566,14 @@ impl ModelCached {
             //  for (name, compartment) in &self.compartments {
             //      println!("model_cached build_bounded compartment:{code}");
             //        guard.init().map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
-            let (level_max, volume_max) = compartments_max
-                .get(name)
-                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            let (level_max, volume_max) =
+                if let Some((level_max, volume_max)) = compartments_max.get(name) {
+                    (*level_max, Some(*volume_max))
+                } else {
+                    (None, None)
+                };
             guard
-                .calc_coeff(*volume_max, *level_max)
+                .calc_coeff(volume_max, level_max)
                 .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
             let mut compartment_bounded = guard
                 .build_bounded(bounds.clone(), self.bounds_level_step)
@@ -572,12 +585,20 @@ impl ModelCached {
         }
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
-        /*  TODO - пока не используются, потом будет отдельный расчет
-         for (name, compartment) in &mut self.damaged_compartments {
-            if let Err(error) = compartment.write().rebuild() {
+  */      for (name, compartment) in &mut self.damaged_compartments {
+            let mut guard = compartment.write();
+            let volume_max = if let Some((_, volume_max)) = compartments_max.get(name) {
+                Some(*volume_max)
+            } else {
+                None
+            };
+            if let Err(error) = guard.rebuild() {
                 errors.push((("damaged_compartment ".to_owned() + name), error));
             }
-        }*/
+            guard
+                .calc_coeff(volume_max)
+                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
+        }
         if !errors.is_empty() {
             return Err(error.pass_with(
                 "rebuild_compartments",
@@ -586,7 +607,6 @@ impl ModelCached {
                 }),
             ));
         }
-
         Ok(())
     }
     ///
@@ -599,7 +619,7 @@ impl ModelCached {
             .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
         Ok(())
     }
-    ///  Пересчет кэшей без шпаций
+    /*   ///  Пересчет кэшей без шпаций
     #[allow(dead_code)]
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         log::info!("rebuild_caches begin");
@@ -672,7 +692,7 @@ impl ModelCached {
         self.compartments_bounded
             .insert(bounds.len_qnt(), cache_map);
         Ok(())
-    }
+    }*/
     //
     pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
         let error = Error::new(&self.dbg, "body_size");
@@ -717,6 +737,7 @@ impl ModelCached {
         let mut liquid = Vec::new();
         let mut bulk = Vec::new();
         let mut gaseous = Vec::new();
+        // TODO не учитывается при расчете просности! let mut damaged_compartments = Vec::new();
         let displacement_bounded = self
             .displacement_bounded
             .get(&query.bounds.len_qnt())
@@ -907,6 +928,108 @@ impl ModelCached {
                         Err(err) => errors.push(err),
                     };
                 }
+                // расчет объема и его распределения в поврежденных отсеках
+         /*       let damaged_compartment_results = Arc::new(Stack::new());
+                for code in query.damaged_compartment {                 
+                    let error_ = error.err(format!("damaged_compartment {code} work"));
+                    let density = query.water_density;
+                    match self.compartments.get(&code) {
+                        Some(compartment) => {
+                            let task_results = damaged_compartment_results.clone();
+                            let epsilon = epsilon;
+                            let code = cargo.code.clone();
+                            let cargo = cargo.clone();
+                            let error_ = error.clone();
+                            let compartment = compartment.clone();
+                            let thread_name = format!("{}.process_liquid code:{}", &self.dbg, code);
+                            //    log::trace!("Starting thread {thread_name}");
+                            let handle = scheduler
+                                .spawn_named(thread_name, move || {
+                                    let res = compartment
+                                        .read()
+                                        .get_for_stability(
+                                            heel,
+                                            trim,
+                                            cargo.volume,
+                                            epsilon,
+                                            cargo.use_max_moment,
+                                            cargo.is_cargo_tank,
+                                        )
+                                        .map_err(|err| error_.pass_with("compartment.get", err))?;
+                                    task_results.push((
+                                        code.clone(),
+                                        stability_result::LiquidResult::new(
+                                            code.clone(),
+                                            cargo.assignment_id,
+                                            cargo.assigment_type,
+                                            cargo.mass,
+                                            res.volume_center,
+                                            res.level,
+                                            res.volume,
+                                            res.inertia_trans_x,
+                                            res.inertia_long_y,
+                                            res.max_inertia_trans_x,
+                                        ),
+                                    ));
+                                    Ok(())
+                                })
+                                .map_err(|err| error.pass_with(format!("spawn for {}", cargo.code), err));
+                            match handle {
+                                Ok(task) => tasks.push(task),
+                                Err(err) => {
+                                    let error = error.pass_with(format!("handle for {}", cargo.code), err);
+                                    log::error!("{}", error);
+                                    errors.push(error);
+                                }
+                            };
+                        }
+                        None => {
+                            let error = error.err(format!("no compartment: {}", cargo.code));
+                            log::error!("{}", error);
+                            errors.push(error);
+                        }
+                    }
+
+                    let compartment_bounded = compartments_bounded
+                        .get(&code)
+                        .ok_or(error_.err(format!("compartments_bounded.get no code:{code}")))?
+                        .clone();
+                    let trim = trim;
+
+                    let volume = cargo.volume;
+                    let epsilon = volume * epsilon_mass / mass_sum;
+                    let results_ = liquid_results.clone();
+                    let thread_name =
+                        format!("{}.balance_strength liquid code:{}", &self.dbg, cargo.code);
+                    //     log::trace!("Starting thread {thread_name}");
+                    let handle = scheduler
+                        .spawn_named(thread_name, move || {
+                            let volume_bounded = compartment_bounded
+                                .read()
+                                .get_from_volume(volume, trim, epsilon)
+                                .map_err(|err| {
+                                    error_.pass_with(
+                                        format!("compartment_bounded.get, code:{code}"),
+                                        err,
+                                    )
+                                })?;
+                            //         println!("model_cached code:{code} volume:{volume} volume_sum:{}", volume_bounded.iter().sum::<f64>());
+                            results_.push(balance::liquid_result::LiquidResult::new(
+                                code,
+                                assigment_type,
+                                cargo_type,
+                                volume_bounded.into_iter().map(|v| v * density).collect(),
+                            ));
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error.pass_with("scheduler.spawn".to_string(), err.to_string())
+                        });
+                    match handle {
+                        Ok(task) => tasks.push(task),
+                        Err(err) => errors.push(err),
+                    };
+                }*/
                 let hull_results = Arc::new(Stack::new());
                 let results_ = hull_results.clone();
                 let displacement_bounded = displacement_bounded.clone();
@@ -1033,7 +1156,7 @@ impl ModelCached {
                 moment_const: query.moment_const,
                 bulk: query.bulk.clone(),
                 liquid: query.liquid.clone(),
-                damaged_compartment: Vec::new(),
+                damaged_compartment: query.damaged_compartment.clone(),
                 epsilon,
             })
             .map_err(|err| error.pass_with("self.floating_position", err))?;
@@ -1546,6 +1669,7 @@ impl ModelCached {
         let (mass_damaged_compartment, moment_damaged_compartment) = self
             .calc_damaged_compartments(damaged_compartment, heel, trim, draught, water_density)
             .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
+        dbg!(mass_damaged_compartment, moment_damaged_compartment);
         let mass_sum = mass_sum + mass_damaged_compartment;
         let displacement = mass_sum / water_density;
         // считаем корпус с учетом изменения массы

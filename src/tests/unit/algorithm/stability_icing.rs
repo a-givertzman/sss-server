@@ -100,6 +100,7 @@ fn stability_icing() {
         "0",
         "MomentTest",
         Bounds::from_min_max(0., 100., 100).unwrap(),
+        Vec::new()
     );
     let ctx = Context::new(initial)
         .write(icing_coeff)

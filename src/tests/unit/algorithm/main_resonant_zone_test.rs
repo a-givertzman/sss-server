@@ -58,6 +58,7 @@ fn main_resonant_zone() {
                 "0",
                 "Unit-test",
                 Bounds::from_min_max(0., 100., 20).unwrap(),
+                Vec::new()
             )),
         };
         ctx.ctx.write_params(ParameterID::RollPeriod, 1./roll_frequency);

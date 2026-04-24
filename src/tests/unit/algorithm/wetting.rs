@@ -125,7 +125,7 @@ mod tests {
         };
 
         // 3. Создаем InitialCtx и наполняем его данными
-        let mut initial = InitialCtx::new("1", "NULL", bounds);
+        let mut initial = InitialCtx::new("1", "NULL", bounds, Vec::new());
         initial.unit = Some(vec![unit1, unit2]); // Прокидываем грузы
 
         let ctx = Context::new(initial);

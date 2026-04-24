@@ -69,13 +69,19 @@ impl CompartmentCache {
         }
     }
     /// Расчет [коэффициента проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
-    pub fn calc_coeff(&mut self, volume_max: f64, level_max: Option<f64>) -> Result<(), Error> {
+    pub fn calc_coeff(&mut self, volume_max: Option<f64>, level_max: Option<f64>) -> Result<(), Error> {
         let error = Error::new(self.dbg(), "calc_coeff");
         let volume_brutto = self.cache.as_ref().ok_or(error.pass("no cache"))?.disp(3).1;
-        self.volume_max = Some(volume_max);
+        self.volume_max = if volume_max.is_some() {
+            volume_max
+        } else if volume_brutto > 0. {
+            Some(volume_brutto)
+        } else {
+            Err(error.pass("no volume_max"))?
+        };
         self.level_max = level_max;
         self.coeff = Some(if volume_brutto > 0. {
-            volume_max / volume_brutto
+            volume_max.unwrap_or(volume_brutto) / volume_brutto
         } else {
             1.
         });
