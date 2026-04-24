@@ -737,6 +737,7 @@ impl ModelCached {
         let mut liquid = Vec::new();
         let mut bulk = Vec::new();
         let mut gaseous = Vec::new();
+        // TODO не учитывается при расчете просности! let mut damaged_compartments = Vec::new();
         let displacement_bounded = self
             .displacement_bounded
             .get(&query.bounds.len_qnt())
@@ -1668,6 +1669,7 @@ impl ModelCached {
         let (mass_damaged_compartment, moment_damaged_compartment) = self
             .calc_damaged_compartments(damaged_compartment, heel, trim, draught, water_density)
             .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
+        dbg!(mass_damaged_compartment, moment_damaged_compartment);
         let mass_sum = mass_sum + mass_damaged_compartment;
         let displacement = mass_sum / water_density;
         // считаем корпус с учетом изменения массы
