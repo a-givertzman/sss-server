@@ -205,7 +205,6 @@ impl RoomElementReportEval {
                 vec![]
             }
         };
-        println!("{:?}", draught_steps);
         let result = doc
         .section(|section| {
             section

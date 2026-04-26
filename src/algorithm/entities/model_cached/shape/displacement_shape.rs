@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::algorithm::entities::model_cached::shape::utils;
-use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl};
+use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, write_stl};
 use crate::algorithm::entities::{Bound, Position};
 
 #[derive(Clone)]
@@ -139,14 +139,9 @@ impl DisplacementShape {
         draught: f64,
     ) -> Result<(f64, Position), Error> {
         let error = Error::new(&self.dbg, "displacement");
-        // println!("{}.displacement | start {:3} {:3} {:3}", &self.dbg, heel, trim, draught);
         let position = self
             .position(heel, trim, draught)
             .map_err(|err| error.pass_with("self.position", err))?;
-        //let cuboid_half_size = 1000.;
-        // let cuboid = Cuboid::new(Vector3::repeat(cuboid_half_size));
-        //    let mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
-        // println!("{}.displacement | intersection_with_cuboid {:3} {:3} {:3}", &self.dbg, heel, trim, draught);
         let mut src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
         let src_aabb = src_mesh.aabb(&Isometry::identity());
         let mut mesh;
@@ -201,6 +196,18 @@ impl DisplacementShape {
             .map_err(|err| error.pass_with("mesh.set_flags", err.to_string()))
         {
             log::error!("{}", error);
+        }
+        match write_stl(&PathBuf::from("src\\tests\\unit\\algorithm\\reports\\mesh.stl"), &mesh) {
+            Ok(_) => {},
+            Err(_) => {},
+        }
+        let position = self
+            .position_yz(heel, trim, draught)
+            .map_err(|err| error.pass_with("self.position", err))?;
+        mesh.transform_vertices(&position);
+        match write_stl(&PathBuf::from("src\\tests\\unit\\algorithm\\reports\\rotated_mesh.stl"), &mesh) {
+            Ok(_) => {},
+            Err(_) => {},
         }
         let properties = super::properties(&mesh, 1.);
         //    println!("{}.displacement | mass_properties {:3} {:3} {:3} {:3} {:3} {:3} {:3} {:3}", &self.dbg, heel, trim, draught, position.translation.x, position.translation.y, position.translation.z, properties.0, properties.1);
@@ -296,7 +303,6 @@ impl DisplacementShape {
         let width = aabb.maxs.y - aabb.mins.y;  // B
         let height = aabb.maxs.z - aabb.mins.z; // H
         let min_z = aabb.mins.z;                // Минимальная отметка (Z min)
-        println!("{:?}", min_z);
         Ok((length, width, height, min_z))
     }
     ///

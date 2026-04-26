@@ -31,6 +31,14 @@ pub trait Shape {
             .ok_or(Error::new(self.dbg(), "position").err("no center"))?;
         Ok(position(center, heel, trim, draught))
     }
+    ///
+    /// Расчет положения корпуса
+    fn position_yz(&self, heel: f64, trim: f64, draught: f64) -> Result<Isometry3<f64>, Error> {
+        let center = self
+            .center()
+            .ok_or(Error::new(self.dbg(), "position").err("no center"))?;
+        Ok(position_yz(center, heel, trim, draught))
+    }
     /// Разбиение меша по высоте на draught_qnt_steps шагов.
     /// Макимальный и минимальный уровень считаются с учетом наклона
     fn draught_by_step(&self, step: f64, max_heel: f64, max_trim: f64) -> Result<Vec<f64>, Error> {
@@ -162,12 +170,18 @@ pub fn position(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> Iso
     Isometry::from_parts(translation, rotation)
 }
 ///
-/// Расчёт положения нижний точки корпуса
-pub fn transform_point(p: &Point3<f64>, heel: f64, trim: f64) -> Point3<f64> {
+/// Расчет положения корпуса без смещения по X
+pub fn position_yz(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> Isometry3<f64> {
     let heel_rad = heel.to_radians();
     let trim_rad = trim.to_radians();
-    let heel_rot = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), heel_rad);
-    let transformed_x = heel_rot.transform_vector(&Vector3::y_axis());
-    let trim_rot = UnitQuaternion::from_axis_angle(&UnitVector3::new_normalize(transformed_x), trim_rad);
-    (heel_rot * trim_rot).transform_point(p)
+    let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+    let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+    let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
+    let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+    let rotation = heel_rotation * trim_rotation;
+    let mut center = center.clone();
+    center.z += draught;
+    let point = rotation.transform_point(&center);
+    let translation = Translation3::new(0.0, 0.0, 0.0);
+    Isometry::from_parts(translation, rotation)
 }
