@@ -181,7 +181,6 @@ pub fn position_yz(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> 
     let rotation = heel_rotation * trim_rotation;
     let mut center = center.clone();
     center.z += draught;
-    let point = rotation.transform_point(&center);
     let translation = Translation3::new(0.0, 0.0, 0.0);
     Isometry::from_parts(translation, rotation)
 }

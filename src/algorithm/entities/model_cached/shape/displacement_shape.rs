@@ -1,13 +1,13 @@
 use log::Log;
 use nalgebra::*;
-use parry3d_f64::shape::{Cuboid, TriMesh, TriMeshFlags};
+use parry3d_f64::shape::{Cuboid, Shape as _, TriMesh, TriMeshFlags};
 use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::algorithm::entities::model_cached::shape::utils;
-use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, write_stl};
+use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, volume, write_stl};
 use crate::algorithm::entities::{Bound, Position};
 
 #[derive(Clone)]
@@ -197,21 +197,276 @@ impl DisplacementShape {
         {
             log::error!("{}", error);
         }
-        match write_stl(&PathBuf::from("src\\tests\\unit\\algorithm\\reports\\mesh.stl"), &mesh) {
-            Ok(_) => {},
-            Err(_) => {},
-        }
-        let position = self
-            .position_yz(heel, trim, draught)
-            .map_err(|err| error.pass_with("self.position", err))?;
-        mesh.transform_vertices(&position);
-        match write_stl(&PathBuf::from("src\\tests\\unit\\algorithm\\reports\\rotated_mesh.stl"), &mesh) {
-            Ok(_) => {},
-            Err(_) => {},
-        }
         let properties = super::properties(&mesh, 1.);
         //    println!("{}.displacement | mass_properties {:3} {:3} {:3} {:3} {:3} {:3} {:3} {:3}", &self.dbg, heel, trim, draught, position.translation.x, position.translation.y, position.translation.z, properties.0, properties.1);
         Ok(properties)
+    }
+    ///
+    /// Расчёт площади и центра ватерлинии на заданной осадке.
+    ///
+    /// Метод выполняет геометрическое сечение 3D-мешa горизонтальной плоскостью
+    /// на уровне `draught` и вычисляет характеристики полученной ватерлинии.
+    /// - `mesh` — треугольная поверхность корпуса (`TriMesh`);
+    /// - `draught` — осадка, на которой выполняется сечение [м].
+    pub fn waterline(
+        &self,
+        mesh: &TriMesh,
+        draught: f64
+    ) -> (f64, Position) {
+        let cuboid_half_size = 1000.;
+        let hdz = 0.005;
+        let cuboid = Cuboid::new(Vector3::new(cuboid_half_size, cuboid_half_size, hdz));
+        let plane_pos = Isometry::<f64, nalgebra::UnitQuaternion<f64>, 3>::translation(0.0, 0.0, draught);
+        let wl_result = mesh.intersection_with_cuboid(
+            &Isometry::identity(),
+            false,
+            &cuboid,
+            &plane_pos,
+            false,
+            self.epsilon,
+        );
+        let (wl_area, wl_center) = match wl_result {
+            Ok(Some(mut wl_mesh)) => {
+                let _ = wl_mesh.set_flags(TriMeshFlags::all());
+                let (area, pos) = super::properties(&wl_mesh, 0.5 / hdz);
+                (area, pos)
+            },
+            _ => (0.0, Position::new(0.0, 0.0, draught)),
+        };
+        (wl_area, wl_center)
+    }
+    ///
+    /// Подсчёт момента инерции
+    fn calculate_inertia(&self, wl_mesh: &TriMesh, draught: f64) -> Result<(f64, f64), Error> {
+        let result = wl_mesh
+            .intersection_with_plane(&Isometry::identity(), &Vector3::z_axis(), draught, self.epsilon);
+        match result {
+            parry3d_f64::query::IntersectResult::Intersect(polyline) => {
+                let (mut min_x, mut max_x, mut min_y, mut max_y) =
+                    (f64::MAX, f64::MIN, f64::MAX, f64::MIN);
+                let vertices: Vec<_> = polyline
+                    .vertices()
+                    .iter()
+                    .map(|p| {
+                        min_x = min_x.min(p.x);
+                        max_x = max_x.max(p.x);
+                        min_y = min_y.min(p.y);
+                        max_y = max_y.max(p.y);
+                        Point2::new(p.x, p.y)
+                    })
+                    .collect();
+                let indices = polyline.indices();
+                let max_delta = (max_y - min_y).max(max_x - min_x) as u32;
+                let resolution = (max_delta * 100).min(self.resolution);
+                if resolution < 2 {
+                    return Ok((0., 0.));
+                }
+                let mut voxel_set = parry2d_f64::transformation::voxelization::VoxelSet::voxelize(
+                    &vertices,
+                    indices,
+                    resolution,
+                    parry2d_f64::transformation::voxelization::FillMode::FloodFill {
+                        detect_cavities: false,
+                        detect_self_intersections: false,
+                    },
+                    false,
+                );
+                let scale = voxel_set.scale;
+                let qrt_scale = scale * scale;
+                let voxels_volume = voxel_set.compute_volume();
+                let voxel_volume = voxel_set.voxel_volume();
+                let (v_x, v_y) = voxel_set
+                    .voxels()
+                    .iter()
+                    .fold((0., 0.), |(v_x, v_y), voxel| {
+                        (v_x + voxel.coords.x as f64, v_y + voxel.coords.y as f64)
+                    });
+                let voxel_area_center_x = v_x * voxel_volume / voxels_volume;
+                let voxel_area_center_y = v_y * voxel_volume / voxels_volume;
+                voxel_set.compute_bb();
+                let max_bb = voxel_set.max_bb_voxels();
+                let x_array: Vec<_> = (0..=max_bb.x)
+                    .map(|v| v as f64 - voxel_area_center_x)
+                    .map(|v| v * v)
+                    .collect();
+                let y_array: Vec<_> = (0..=max_bb.y)
+                    .map(|v| v as f64 - voxel_area_center_y)
+                    .map(|v| v * v)
+                    .collect();
+                let (i_x, i_y) = voxel_set
+                    .voxels()
+                    .iter()
+                    .fold((0., 0.), |(i_x, i_y), voxel| {
+                        (
+                            i_x + y_array[voxel.coords.y as usize].clone(),
+                            i_y + x_array[voxel.coords.x as usize],
+                        )
+                    });
+                let i_x = i_x * qrt_scale * voxel_volume;
+                let i_y = i_y * qrt_scale * voxel_volume;
+                Ok((i_x, i_y))
+            }
+            parry3d_f64::query::IntersectResult::Negative => Ok((0., 0.)),
+            parry3d_f64::query::IntersectResult::Positive => Ok((0., 0.)),
+        }
+    }
+    ///
+    /// Вычисляет гидростатические параметры точки начала отсчета (KDP) и формирует шаги осадки.
+    /// * `lowest_center_point` — Центр величины или геометрический центр (локальный).
+    /// * `mp_center_point` — Проекция центра на основную плоскость (Baseline, Z=0).
+    /// * `high_mesh_point` — Самая высокая точка меша (локальный максимум Z).
+    /// * `low_mesh_point` — Самая низкая точка меша в мировых координатах после наклона.
+    /// result: `(baseline_distance, start_point_world)`
+    pub fn main_surface_distance(
+        &self,
+        ship_to_world: &Isometry<f64, Unit<Quaternion<f64>>, 3>,
+        lowest_center_point: OPoint<f64, Const<3>>,
+        mp_center_point: OPoint<f64, Const<3>>,
+        low_mesh_point_z: f64,
+    ) -> (f64, OPoint<f64, Const<3>>) {
+        let center_world = ship_to_world.transform_point(&lowest_center_point);
+        let baseline_proj_world = ship_to_world.transform_point(&mp_center_point);
+        let axis_direction = baseline_proj_world - center_world;
+        // t = (Z_цели - Z_старта) / V_z
+        let t = (low_mesh_point_z - center_world.z) / axis_direction.z;
+        let intersection_world = center_world + axis_direction * t;
+        // Расстояние в мировых координатах (между точкой касания и проекцией ОП)
+        let baseline_distance = nalgebra::distance(&intersection_world, &baseline_proj_world);
+        (baseline_distance, intersection_world)
+    }
+    ///
+    /// Вычисляет дискретные точки изменения ватерлинии при погружении/осадке судна.
+    ///
+    /// Функция строит последовательность точек вдоль оси погружения (в мировых координатах),
+    /// начиная от заданной начальной ватерлинии и заканчивая заданной отметкой по оси Z.
+    /// - `ship_to_world` — преобразование из локальной системы судна в мировую;
+    /// - `start_waterline_point_world` — начальная точка ватерлинии в мировых координатах;
+    /// - `lowest_center_point_local` — нижняя опорная точка в локальных координатах;
+    /// - `mp_center_point_local` — опорная точка (например, МП) в локальных координатах;
+    /// - `end_z_world` — конечная отметка по оси Z (мировая система координат);
+    /// - `draught_step` — шаг дискретизации изменения осадки
+    pub fn waterline_steps(
+        &self,
+        ship_to_world: &Isometry<f64, Unit<Quaternion<f64>>, 3>,
+        start_waterline_point_world: OPoint<f64, Const<3>>, 
+        lowest_center_point_local: OPoint<f64, Const<3>>,
+        mp_center_point_local: OPoint<f64, Const<3>>,
+        end_z_world: f64,
+        draught_step: f64,
+    ) -> Vec<OPoint<f64, Const<3>>> {
+        let mut result = Vec::new();
+        // Направление оси вдоль которой движемся (в мировых координатах)
+        let center_world = ship_to_world.transform_point(&lowest_center_point_local);
+        let baseline_proj_world = ship_to_world.transform_point(&mp_center_point_local);
+        // Вектор оси от центра к ОП (нормированный)
+        let axis_vec = (center_world - baseline_proj_world).normalize();
+        let start = start_waterline_point_world;
+        let mut curr_p = start;
+        let mut next_dist_p = draught_step;
+        loop {
+            if curr_p.z >= end_z_world {
+                break;
+            }
+            result.push(curr_p);
+            curr_p = start + (axis_vec * next_dist_p);
+            next_dist_p += draught_step;
+        }
+        // Добавляем финальную точку, соответствующую полному погружению
+        // Чтобы найти её точно на оси, нужно решить: start_z + (axis_vec.z * t) = end_z
+        let t_final = (end_z_world - start_waterline_point_world.z) / axis_vec.z;
+        result.push(start_waterline_point_world + axis_vec * t_final);
+        result
+    }
+    ///
+    /// Пошаговый расчёт водоизмещения и характеристик плавучести.
+    ///
+    /// Выполняет дискретный анализ погружения 3D-модели корпуса судна
+    /// при заданных углах крена и дифферента.
+    /// - `heel` — угол крена [рад или град, в зависимости от модели];
+    /// - `trim` — угол дифферента;
+    /// - `draught_step` — шаг дискретизации по осадке.
+    pub fn step_displacement(
+        &self,
+        heel: f64,
+        trim: f64,
+        draught_step: f64
+    ) -> Result<Vec<(f64, OPoint<f64, Const<3>>, f64, OPoint<f64, Const<3>>, f64, f64, f64, f64)>, Error> {
+        let error = Error::new(&self.dbg, "step_displacement");
+        let mut mesh_in_world = self.mesh.as_ref().ok_or(error.err("no mesh"))?.clone();
+        let (_, local_vol_center) = super::properties(&mesh_in_world, 1.0);
+        let center_point_local = OPoint::<f64, Const<3>>::new(local_vol_center.x(), local_vol_center.y(), local_vol_center.z());
+        let baseline_proj_local = OPoint::<f64, Const<3>>::new(center_point_local.x, center_point_local.y, 0.0);
+        mesh_in_world.transform_vertices(&self.position_yz(heel, trim, 0.0).map_err(|err| error.pass_with("ship_to_world_transform", err))?);
+        let ship_to_world = self.position_yz(-heel, trim, 0.0)
+            .map_err(|err| error.pass_with("ship_to_world_transform", err))?;
+        let world_to_ship = ship_to_world.inverse();
+        let world_bounds = mesh_in_world.compute_local_aabb();
+        let (dist_from_baseline, start_waterline_point) = self.main_surface_distance(
+            &ship_to_world,
+            center_point_local,
+            baseline_proj_local,
+            world_bounds.mins.z
+        );
+        let waterline_steps = self.waterline_steps(
+            &ship_to_world, 
+            start_waterline_point, 
+            center_point_local, 
+            baseline_proj_local, 
+            world_bounds.maxs.z, 
+            draught_step
+        );
+        let mut results = Vec::new();
+        let cut_axis = Vector3::z_axis();
+        for step in waterline_steps {
+            let (wl_area, wl_center_world) = self.waterline(&mesh_in_world, step.z);
+            let (ix, iy) = self.calculate_inertia(&mesh_in_world, step.z).unwrap_or((0.0, 0.0));
+            let relative_draught = nalgebra::distance(&step, &start_waterline_point);
+            match mesh_in_world.split(&Isometry::identity(), &cut_axis, step.z, self.epsilon) {
+                parry3d_f64::query::SplitResult::Pair(submerged_part, _) => {
+                    let (vol, vol_center_w) = super::properties(&submerged_part, 1.0);
+                    let vol_center_ship = world_to_ship.transform_point(&OPoint::<f64, Const<3>>::new(vol_center_w.x(), vol_center_w.y(), vol_center_w.z()));
+                    let wl_center_ship = world_to_ship.transform_point(&OPoint::<f64, Const<3>>::new(wl_center_world.x(), wl_center_world.y(), wl_center_world.z()));
+                    results.push((
+                        vol,
+                        vol_center_ship,
+                        wl_area,
+                        wl_center_ship,
+                        ix, iy,
+                        relative_draught,
+                        dist_from_baseline
+                    ));
+                },
+                parry3d_f64::query::SplitResult::Negative => {
+                    // Весь меш ниже уровня воды
+                    let (vol, vol_center_w) = super::properties(&mesh_in_world, 1.0);
+                    let vol_center_ship = world_to_ship.transform_point(&OPoint::<f64, Const<3>>::new(vol_center_w.x(), vol_center_w.y(), vol_center_w.z()));
+                    results.push((
+                        vol, 
+                        vol_center_ship, 
+                        wl_area, 
+                        OPoint::<f64, Const<3>>::new(0.0, 0.0, 0.0), 
+                        0.0, 
+                        0.0, 
+                        relative_draught, 
+                        dist_from_baseline
+                    ));
+                },
+                parry3d_f64::query::SplitResult::Positive => {
+                    // Весь меш выше уровня воды
+                    results.push((
+                        0.0, 
+                        OPoint::<f64, Const<3>>::new(0.0, 0.0, 0.0), 
+                        wl_area, 
+                        OPoint::<f64, Const<3>>::new(0.0, 0.0, 0.0), 
+                        0.0, 
+                        0.0, 
+                        0.0, 
+                        dist_from_baseline
+                    ));
+                },
+            }
+        }
+        Ok(results)
     }
     ///
     /// Расчет площади ватерлинии судна и положение ее центра в связанной с судной системой координат
@@ -258,52 +513,6 @@ impl DisplacementShape {
             log::error!("{}", error);
         }
         Ok(super::properties(&mesh, 0.5 / hdz))
-    }
-    ///
-    /// Размер модели по ватерлинии (длина, ширина, высота, минимальная высота)
-    pub fn draught_size(
-        &self,
-        heel: f64,
-        trim: f64,
-        draught: f64,
-    ) -> Result<(f64, f64, f64, f64), Error> {
-        let error = Error::new(&self.dbg, "draught_size");
-        let position = self
-            .position(heel, trim, draught)
-            .map_err(|err| error.pass_with("self.position", err))?;
-        let src_mesh = self.mesh.as_ref().ok_or(error.err("no mesh"))?;
-        let src_aabb = src_mesh.aabb(&Isometry::identity());
-        let current_src = src_mesh;
-        let mut epsilon = self.epsilon;
-        let mut mesh_part;
-        loop {
-            let result = current_src.split(&position, &Vector::z_axis(), 0., epsilon);
-            mesh_part = match result {
-                parry3d_f64::query::SplitResult::Pair(mut m, _) => {
-                    let _ = m.set_flags(TriMeshFlags::all());
-                    m
-                }
-                parry3d_f64::query::SplitResult::Negative => src_mesh.clone(),
-                parry3d_f64::query::SplitResult::Positive => {
-                    // Если над водой, размеры нулевые
-                    return Ok((0.0, 0.0, 0.0, src_aabb.mins.z));
-                }
-            };
-            let aabb = mesh_part.aabb(&Isometry::identity());
-            if aabb.mins.x + epsilon < src_aabb.mins.x || aabb.maxs.x - epsilon > src_aabb.maxs.x 
-            {
-                epsilon *= 2.0;
-                if epsilon > 1.0 { break; }
-                continue;
-            }
-            break;
-        }
-        let aabb = mesh_part.aabb(&Isometry::identity());
-        let length = aabb.maxs.x - aabb.mins.x; // L
-        let width = aabb.maxs.y - aabb.mins.y;  // B
-        let height = aabb.maxs.z - aabb.mins.z; // H
-        let min_z = aabb.mins.z;                // Минимальная отметка (Z min)
-        Ok((length, width, height, min_z))
     }
     ///
     /// Полный размер модели (длина, ширина, высота, минимальная высота)

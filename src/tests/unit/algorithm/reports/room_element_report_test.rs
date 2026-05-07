@@ -59,20 +59,34 @@ mod tests_eval {
         let test_duration = TestDuration::new(dbg, Duration::from_secs(1000));
         test_duration.run().unwrap();
         let test_data = [
-            (
-                1,
-                1,
-                "src\\tests\\unit\\algorithm\\reports\\test_files\\tanks_1.stl",
-                "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
-            ),
+            // (
+            //     1,
+            //     1,
+            //     "src\\tests\\unit\\algorithm\\reports\\test_files\\tanks_1.stl",
+            //     "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
+            // ),
             // (
             //     2,
             //     2,
             //     "src\\tests\\unit\\algorithm\\reports\\test_files\\502.stl",
             //     "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
-            // )
+            // ),
+            // (
+            //     3,
+            //     2,
+            //     "src\\tests\\unit\\algorithm\\reports\\test_files\\221_P.stl",
+            //     "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css"
+            // ),
+            (
+                3,
+                2,
+                vec![0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 5.0, 5.0, 5.0],
+                vec![0.0, 5.0, 10.0, 0.0, 5.0, 10.0, 0.0, 5.0, 10.0],
+                "src\\tests\\unit\\algorithm\\reports\\test_files\\305_P.stl",
+                "src\\tests\\unit\\algorithm\\reports\\test_files\\style.css",
+            ),
         ];
-        for (step, id_tank, tank_path, style_path) in test_data.iter() {
+        for (step, id_tank, heel, trim, tank_path, style_path) in test_data.iter() {
             let initial = InitialCtx::new(
                 "0",
                 "Unit-test",
@@ -91,14 +105,15 @@ mod tests_eval {
             match RoomElementReportEval::new(
                 "dbg", 
                 ctx,
-                tank_path.into(),
                 PathBuf::from(style_path),
                 Arc::new(RwLock::new(displacement_shape)),
+                heel.to_vec(),
+                trim.to_vec(),
             ).eval(()) {
                 Ok(ctx) => {
                     let result = ContextRead::<RoomElementReportCtx>::read(&ctx).result;
-                    std::fs::File::create("index.html").unwrap();
-                    std::fs::write("index.html", result).unwrap();
+                    std::fs::File::create(format!("src\\tests\\unit\\algorithm\\reports\\output_files\\report.html")).unwrap();
+                    std::fs::write(format!("src\\tests\\unit\\algorithm\\reports\\output_files\\report.html"), result).unwrap();
                     log::debug!("{dbg} | Result html stored into 'index.html'");
                     log::debug!("{dbg} | All done");
                 },
