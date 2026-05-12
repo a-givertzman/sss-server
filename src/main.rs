@@ -2,7 +2,7 @@
 mod algorithm;
 mod app;
 mod conf;
-mod infrostructure;
+mod infrostructure; 
 mod kernel;
 mod prelude;
 mod server;
