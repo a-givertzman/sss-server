@@ -7,7 +7,7 @@ mod tests {
     use sal_core::dbg::Dbg;
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    //  #[ignore = "too slow, run only in release mode"]
+//  #[ignore = "too slow, run only in release mode"]
     #[test]
     fn area_shape_windage() {
         DebugSession::new()

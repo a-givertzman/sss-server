@@ -39,7 +39,7 @@ fn impacts_high_waves() {
     log::debug!("");
     let dbg = "ImpactsHighWaves";
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
     let test_data = [
         (

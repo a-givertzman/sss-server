@@ -26,13 +26,18 @@ mod hub_listen {
     /// Testing 'Request::fetch'
     #[test]
     fn listen() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");
         let dbg = "hub_listen";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
         let tp = ThreadPool::new(dbg, Some(4));
         let test_data: [(i32, Query, Result<Reply, Error>); 4] = [

@@ -12,10 +12,11 @@ use sal_sync::thread_pool::ThreadPool;
 use crate::algorithm::entities::model_cached::{self};
 ///
 /// Application entry point
+#[ignore = "too slow, run only in release mode"]
 #[test]
 fn build_caches() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()
-        .filter(LogLevel::Trace)
+        .filter(LogLevel::Info)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)

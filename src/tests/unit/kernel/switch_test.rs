@@ -25,7 +25,12 @@ mod switch {
     ///
     /// Testing 'Switch::link'
     fn req() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");

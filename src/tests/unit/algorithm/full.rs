@@ -28,7 +28,7 @@ use crate::prelude::{Context, Initial, InitialCtx};
 #[test]
 fn full() -> Result<(), Box<dyn std::error::Error>> {
     DebugSession::new()
-        .filter(LogLevel::Trace)
+        .filter(LogLevel::Info)
         .module("api_tools", LogLevel::Error)
         .module("sal_sync", LogLevel::Error)
         .module("ena", LogLevel::Error)

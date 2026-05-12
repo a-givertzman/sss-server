@@ -32,7 +32,12 @@ fn init_each() -> () {}
 #[ignore = "no target values"]
 #[test]
 fn calculated_windage_area_ark() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     let dbg = Dbg::new("test models", "calculated_windage_area_ark");

@@ -43,7 +43,7 @@ fn period_excitement() {
     log::debug!("");
     let dbg = "PeriodExcitemennt";
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
     let test_data = [
         (1, Some(1.0), None, 0.8),

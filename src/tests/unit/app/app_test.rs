@@ -26,7 +26,12 @@ mod app {
     ///
     /// Testing such functionality / behavior
     fn new() {
-        DebugSession::new().filter(LogLevel::Info).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");

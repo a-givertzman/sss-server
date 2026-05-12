@@ -154,7 +154,12 @@ fn cache_value_disp_opt() {
 /// Test failure initializing of [Cache] instance.
 #[test]
 fn init_cache_table_from_inconsistent_files() {
-    DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     let callee = "init_cache_table_from_inconsistent_files";

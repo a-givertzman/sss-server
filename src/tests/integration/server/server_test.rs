@@ -34,8 +34,10 @@ fn init_each() -> () {}
 #[test]
 fn query_calculus() {
     DebugSession::new()
-        .filter(LogLevel::Debug)
-        .module("sal_sync::thread_pool", LogLevel::Info)
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
         .init();
     init_once();
     init_each();

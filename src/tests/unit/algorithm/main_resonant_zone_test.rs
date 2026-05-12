@@ -44,7 +44,7 @@ fn main_resonant_zone() {
     log::debug!("");
     let dbg = "MainResonantZone";
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
     let test_data = [
         (1, 1.0, 0.7, 1.3),

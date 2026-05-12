@@ -8,7 +8,12 @@ mod tests {
 
     #[test]
     fn bounds_from_n() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         println!();
         let self_id = "test Bounds create from_n";
         println!("{}", self_id);
@@ -34,7 +39,12 @@ mod tests {
 
     #[test]
     fn bounds_from_frames() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         println!();
         let self_id = "test Bounds create from_frames";
         println!("{}", self_id);
@@ -60,7 +70,12 @@ mod tests {
 
     #[test]
     fn bounds_intersect() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         println!();
         let self_id = "test Bounds intersect";
         println!("{}", self_id);

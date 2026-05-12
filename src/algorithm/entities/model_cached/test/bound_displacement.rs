@@ -828,7 +828,12 @@ static TARGET_3500_5: [f64; 196] = [
 //#[ignore = "too slow, run only in release mode"]
 #[test]
 fn bound_displacement_sofia() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     let dbg = Dbg::new("test model_cached", "bound_displacement_sofia");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(3000));
