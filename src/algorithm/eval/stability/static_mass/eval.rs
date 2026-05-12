@@ -20,7 +20,7 @@ pub struct StaticMassStabEval {
 //
 //
 impl StaticMassStabEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -78,8 +78,7 @@ impl Eval<(), EvalResult> for StaticMassStabEval {
                         .filter(|v| {
                             v.cargo_type == UnitCargoType::GrainBulkhead && v.bound_x().is_ok()
                         })
-                        .map(|v| v.bound_x().unwrap().center())
-                        .flatten()
+                        .filter_map(|v| v.bound_x().unwrap().center())
                         .collect();
                     let (mass_unit, moment_unit) = unit
                         .iter()

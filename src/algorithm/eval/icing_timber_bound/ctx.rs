@@ -1,4 +1,3 @@
-//! Ограничение горизонтальной площади обледенения палубного груза - леса
 use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 use crate::algorithm::entities::Bound;
@@ -14,7 +13,8 @@ pub enum IcingTimberType {
     #[serde(alias = "bow")]
     Bow,
 }
-//
+///
+/// Ограничение горизонтальной площади обледенения палубного груза - леса
 impl IcingTimberType {
     pub fn from_str(src: &str) -> Result<Self, Error> {
         Ok(match src.trim().to_lowercase().as_str() {

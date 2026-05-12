@@ -10,7 +10,12 @@ mod tests {
     
     #[test]
     fn draught() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         let dbg = Dbg::own("test draught");
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
         test_duration.run().unwrap();

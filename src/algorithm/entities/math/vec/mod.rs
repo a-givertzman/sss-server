@@ -15,7 +15,7 @@ use sal_core::error::Error;
 /// ```
 /// # #![allow(unused_mut)]
 /// let mut res: Vec<f64> = vec![1., 2., 3.].sum_above();
-/// asserteq!(res, vec![0., 1., 3., 6.,]);
+/// assert_eq!(res, vec![0., 1., 3., 6.,]);
 /// ```
 pub trait SumAbove<T> {
     fn sum_above(&self) -> Vec<T>;
@@ -40,7 +40,7 @@ impl SumAbove<f64> for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![1., 2., 3.];
 /// vec.shift(1.);
-/// asserteq!(vec, vec![ 2., 3., 4.,]);
+/// assert_eq!(vec, vec![ 2., 3., 4.,]);
 /// ```
 pub trait Shift {
     #[allow(unused)]
@@ -62,7 +62,7 @@ impl Shift for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![1., 2., 3.];
 /// vec.div_single(2.);
-/// asserteq!(vec, vec![0.5, 1., 1.5,]);
+/// assert_eq!(vec, vec![0.5, 1., 1.5,]);
 /// ```
 pub trait DivideSingle {
     #[allow(unused)]
@@ -84,7 +84,7 @@ impl DivideSingle for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![1., 2., 3.];
 /// vec.mul_single(2.);
-/// asserteq!(vec, vec![2., 4., 6.,]);
+/// assert_eq!(vec, vec![2., 4., 6.,]);
 /// ```
 pub trait MultipleSingle {
     fn mul_single(&mut self, rhs: f64);
@@ -105,7 +105,7 @@ impl MultipleSingle for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![1., 2., 3.];
 /// vec.add_vec(vec![3., 4., 5.]);
-/// asserteq!(vec, vec![4., 6., 8.,]);
+/// assert_eq!(vec, vec![4., 6., 8.,]);
 /// ```
 pub trait AddVec {
     #[allow(unused)]
@@ -132,7 +132,7 @@ impl AddVec for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![1., 2., 3.];
 /// vec.sub_vec(vec![3., 4., 5.]);
-/// asserteq!(vec, vec![-2., -2., -2.,]);
+/// assert_eq!(vec, vec![-2., -2., -2.,]);
 /// ```
 pub trait SubVec {
     fn sub_vec(&mut self, rhs: &Self) -> Result<(), Error>;
@@ -158,7 +158,7 @@ impl SubVec for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![1., 2., 3.];
 /// vec.mul_vec(vec![3., 4., 5.]);
-/// asserteq!(vec, vec![3., 8., 15.,]);
+/// assert_eq!(vec, vec![3., 8., 15.,]);
 /// ```
 pub trait MultipleVec {
     #[allow(unused)]
@@ -185,7 +185,7 @@ impl MultipleVec for Vec<f64>  {
 /// # #![allow(unused_mut)]
 /// let mut vec: Vec<f64> = vec![2., 4., 6.];
 /// vec.div_vec(vec![1., 2., 3.]);
-/// asserteq!(vec, vec![2., 2., 2.,]);
+/// assert_eq!(vec, vec![2., 2., 2.,]);
 /// ```
 pub trait DivideVec {
     #[allow(unused)]

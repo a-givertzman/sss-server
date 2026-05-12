@@ -18,7 +18,7 @@ pub struct DraftMarkEval {
 //
 //
 impl DraftMarkEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -52,7 +52,7 @@ impl Eval<(), EvalResult> for DraftMarkEval {
                             v.x(),
                             v.y(),
                             v.z(),
-                            v.z() - draught.value(&v),
+                            v.z() - draught.value(v),
                         ));
                     }
                     z_fix.sort_by(|a, b| {

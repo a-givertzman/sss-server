@@ -25,13 +25,18 @@ mod request {
     ///
     /// Testing 'Request::fetch'
     fn basic() {
-        DebugSession::new().filter(LogLevel::Info).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");
         let dbg = "request";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
         let test_data: [(usize, InitialCtx, MokUserReplyTestCtx); 2] = [
             (

@@ -45,8 +45,8 @@ impl Draught {
     /// Расчет осадок
     /// (draught_bow, draught_stern, draught_mean)
     pub fn calculate(&self) -> (f64, f64, f64) {
-        let theta_rad = self.heel.min(89.9999999).max(-89.9999999).to_radians();
-        let phi_rad = self.trim.min(89.9999999).max(-89.9999999).to_radians();
+        let theta_rad = self.heel.clamp(-89.9999999, 89.9999999).to_radians();
+        let phi_rad = self.trim.clamp(-89.9999999, 89.9999999).to_radians();
         let tg_theta = theta_rad.tan();
         let cos_theta = theta_rad.cos();        
         let tg_phi = phi_rad.tan();

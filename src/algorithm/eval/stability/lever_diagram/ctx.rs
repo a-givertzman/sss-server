@@ -18,9 +18,11 @@ pub struct LeverDiagramCtx {
     pub theta_max: f64,
     /// Углы максимумов диаграммы плеч статической остойчивости
     pub max_angles: Vec<(f64, f64)>,
-    ///  Угол входа в воду кромки палубы, градусы
+    /// [Угол входа в воду кромки палубы](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part04_stability/chapter04_deckAnglesSubmergence/chapter04_deckAnglesSubmergence.md),
+    /// градусы
     pub entry_angle: f64,
-    ///  Угол заливания отверстий, градусы
+    /// [Угол заливания отверстий](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part04_stability/chapter03_floodingAngles/chapter03_floodingAngles.md),
+    /// градусы
     pub flooding_angle: f64,
 }
 //
@@ -81,7 +83,7 @@ impl LeverDiagramCtx {
             .last()
             .ok_or(Error::new(
                 "LeverDiagram",
-                format!("dso_lever_max segment error: no values!"),
+                "dso_lever_max segment error: no values!".to_string(),
             ))?
             .1)
     }
@@ -129,9 +131,7 @@ pub(crate) fn angle(
                 step = -step / 2.;
                 last_delta_moment = delta_moment;
             }
-            angle = (angle + step)
-                .min(MAX_LEVER_ANGLE_CALC)
-                .max(-MAX_LEVER_ANGLE_CALC);
+            angle = (angle + step).clamp(-MAX_LEVER_ANGLE_CALC, MAX_LEVER_ANGLE_CALC);
         }
         Ok(angle)
     };

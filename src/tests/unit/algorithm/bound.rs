@@ -8,7 +8,12 @@ mod tests {
     
     #[test]
     fn bound_intersect() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         println!();
         let self_id = "test Bound intersect";
         println!("{}", self_id);
@@ -31,7 +36,12 @@ mod tests {
 
     #[test]
     fn bound_part_ratio() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         println!();
         let self_id = "test Bound part_ratio";
         println!("{}", self_id);
@@ -56,7 +66,12 @@ mod tests {
 
     #[test]
     fn bound_center() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         println!();
         let self_id = "test Bound center";
         println!("{}", self_id);

@@ -24,7 +24,7 @@ pub struct ResultCriterionEval {
 //
 //
 impl ResultCriterionEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         api_client: Arc<ApiClient>,

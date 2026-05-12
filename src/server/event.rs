@@ -83,14 +83,14 @@ impl<QueryId: Debug + Copy> Event<QueryId> {
         match serde_json::to_vec(&reply) {
             Ok(bytes) => Self {
                 id: event_id,
-                query_id: query_id,
-                cot: cot,
+                query_id,
+                cot,
                 content: Content::Json,
                 bytes,
             },
             Err(err) => Self {
                 id: event_id,
-                query_id: query_id,
+                query_id,
                 cot: Self::error_cot(cot),
                 content: Content::Json,
                 bytes: serde_json::to_vec(

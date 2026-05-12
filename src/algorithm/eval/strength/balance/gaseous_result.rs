@@ -2,7 +2,7 @@ use bincode::{Decode, Encode};
 
 use crate::algorithm::entities::data::loads::AssignmentType;
 ///
-/// TODO: Type doc here
+/// Результат расчета по газообразным грузам
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct GaseousResult {
     /// ID помещения
@@ -12,9 +12,9 @@ pub struct GaseousResult {
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,
 }
-///
+//
 impl GaseousResult {
-    ///
+    //
     pub fn new(
         code: String, 
         assigment_type: AssignmentType, 

@@ -44,8 +44,7 @@ impl Eval<(), EvalResult> for ApparentFrequenciesEval {
                     .ok_or(error.err("voyage error: no data!"))?;
                 let vmax = voyage.operational_speed;
                 let period_excitement = ContextRead::<PeriodExcitementCtx>::read(&ctx)
-                    .period_excitement
-                    .clone();
+                    .period_excitement;
                 let course_angle_of_wave: Vec<f64> = (0..=3600).map(|x| x as f64 / 10.0).collect();
                 let vessel_speeds: Vec<f64> = (0..=(vmax.ceil() as isize * 10))
                     .map(|x| x as f64 / 10.0)

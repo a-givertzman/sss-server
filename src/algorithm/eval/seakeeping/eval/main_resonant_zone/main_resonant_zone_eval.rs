@@ -1,11 +1,9 @@
 use sal_core::dbg::Dbg;
 
 use crate::algorithm::eval::seakeeping::eval::main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx;
-use crate::algorithm::eval::seakeeping::eval::roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx;
 use crate::kernel::Eval;
 use crate::kernel::types::eval_result::EvalResult;
 use crate::prelude::ContextParamsRead;
-use crate::prelude::ContextRead;
 use crate::prelude::ContextWrite;
 ///
 /// Расчет [основной зоны резонанса бортовой качки](https://github.com/a-givertzman/sss/blob/50-guidance-to-the-master-according-to-msc1-circ1228/design/algorithm/part06_seakeeping/part06_seakeeping.md#условия-возникновения-опасных-явлений)

@@ -30,7 +30,7 @@ impl<K: Debug + Copy> EvalEx<Request<K>, EvalResult<K>> for SelectDevInfo {
             .map_err(|_| error.err(format!("Query::DeviceInfo expected, but found {:?}", req.query_id)))?;
         //
         // Do something woth incomong query...
-        let dev_id = query.dev_id.clone();
+        let _dev_id = query.dev_id.clone();
         //
         // Generate and return reply to the request
         Ok(Some(req.reply(Reply::DeviceInfo(DeviceInfo {}))))

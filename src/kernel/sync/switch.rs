@@ -71,7 +71,7 @@ impl Switch {
     pub fn link(&self) -> Link {
         let (loc_send, rem_recv) = kanal::unbounded();
         let (rem_send, loc_recv) = kanal::unbounded();
-        let remote = Link::new(&format!("{}:{}", self.name, self.subscribers.len()), rem_send, rem_recv);
+        let remote = Link::new(format!("{}:{}", self.name, self.subscribers.len()), rem_send, rem_recv);
         let key = remote.name().join();
         self.subscribers.insert(String::clone(&key), loc_send);
         let receivers = self.receivers.clone();

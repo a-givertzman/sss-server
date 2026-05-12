@@ -40,7 +40,7 @@ impl AreaShape {
     /// * scale - масштаб модели для ее приведения к метрам (1000: модель в мм)
     /// * resolution - точность расчета площади парусности
     /// * voxels - силуэт разбитый на квадратные примитивы - воксели,
-    /// [смещение по х относительно center, [массив координат вокселей по z]]
+    ///  [смещение по х относительно center, [массив координат вокселей по z]]
     /// * voxel_scale - размер вокселя
     pub fn new(
         parent: &Dbg,
@@ -103,8 +103,8 @@ impl AreaShape {
         };
         // разбиваем поверхность полученного над водой объема на воксели
         let voxel_set = parry3d_f64::transformation::voxelization::VoxelSet::voxelize(
-            &mesh.vertices(),
-            &mesh.indices(),
+            mesh.vertices(),
+            mesh.indices(),
             self.resolution,
             parry3d_f64::transformation::voxelization::FillMode::SurfaceOnly,
             false,
@@ -224,5 +224,58 @@ impl Shape for AreaShape {
     //
     fn center(&self) -> Option<&Point3<f64>> {
         self.center.as_ref()
+    }
+}
+//
+#[cfg(test)]
+impl AreaShape {
+    /// Создает "фейковую" модель для тестирования расчетов площадей и прочности.
+    /// * `scale` - масштаб модели (например, 1.0 для метров).
+    /// * `voxel_scale` - размер стороны вокселя (например, 0.1).
+    /// * `voxels` - предопределенные срезы по X и массив координат Z для них.
+    pub fn create_test_fake(
+        scale: f64,
+        resolution: u32,
+        voxel_scale: f64,
+        voxels: Vec<(f64, Vec<f64>)>,
+    ) -> Self {
+        // Вычисляем границы по X на основе переданных вокселей
+        let bound_x = if let (Some(first), Some(last)) = (voxels.first(), voxels.last()) {
+            Some((first.0, last.0))
+        } else {
+            None
+        };
+
+        Self {
+            // Создаем чистый Dbg для тестов с фиксированным путем
+            dbg: sal_core::dbg::Dbg::new("test", "FakeAreaShape"),
+            // Сетку (mesh) в тестах заменяем на None, чтобы не грузить тяжелые STL файлы
+            mesh: None,
+            path: None,
+            additional_path: None,
+            // Смещение миделя по умолчанию ставим в ноль
+            center: Some(Point3::new(0.0, 0.0, 0.0)),
+            scale,
+            resolution,
+            voxels: Some(voxels),
+            voxel_scale: Some(voxel_scale),
+            bound_x,
+        }
+    }
+
+    /// Вспомогательный метод для быстрой генерации плоского прямоугольного "борта"
+    /// (например, для проверки формул вычисления площадей проекции)
+    pub fn create_test_rectangle(x_len: usize, z_len: usize, step: f64) -> Self {
+        let mut voxels = Vec::with_capacity(x_len);
+        for x_idx in 0..x_len {
+            let x = x_idx as f64 * step;
+            let mut z_coords = Vec::with_capacity(z_len);
+            for z_idx in 0..z_len {
+                z_coords.push(z_idx as f64 * step);
+            }
+            voxels.push((x, z_coords));
+        }
+
+        Self::create_test_fake(1.0, 1, step, voxels)
     }
 }

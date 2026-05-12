@@ -12,7 +12,7 @@ use crate::{
 };
 use sal_core::{dbg::Dbg, error::Error};
 ///
-/// Учет обледенения судна [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part02_mass/chapter02_icing.md]
+/// Учет обледенения судна
 pub struct IcingStabEval {
     dbg: Dbg,
     model: Arc<RwLock<ShipModel>>,
@@ -47,10 +47,10 @@ impl Eval<(), EvalResult> for IcingStabEval {
                 let unit_area: UnitAreaCtx = ctx.read();
                 let (av_cs_dmin, mv_cs_dmin) = match self.model.read().static_area_v() {
                     Ok((area, moment)) => (area, moment),
-                    Err(err) => return Err(error.pass_with("model.static_area_h", err)),
+                    Err(err) => return Err(error.pass_with("model.static_area_v", err)),
                 };                
                 let (a_ice_hdeck, a_ice_shift) = match self.model.read().static_area_h() {
-                    Ok((area, moment)) => (area, moment),
+                    Ok((area, position)) => (area, position),
                     Err(err) => return Err(error.pass_with("model.static_area_h", err)),
                 };  
                 // Масса льда на площади парусности          

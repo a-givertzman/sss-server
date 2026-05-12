@@ -22,13 +22,18 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn test_task_cycle() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     log::debug!("");
     let dbg = Dbg::own("query_calculus");
     log::debug!("{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     test_duration.exit();

@@ -51,7 +51,7 @@ fn main_resonant_zone_speed_filter() {
     log::debug!("");
     let dbg = "MainResonantZoneSpeedFilterEval";
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
     let test_data = [
         (

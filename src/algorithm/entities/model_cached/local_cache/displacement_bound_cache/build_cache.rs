@@ -112,7 +112,7 @@ impl BuildDisplacementBoundCache {
             let _errors = errors.clone();
             let _error = error.clone();
             let shape = Arc::clone(&shape);
-            let bound = bound.clone();
+            let bound = *bound;
             let center = match bound.center() {
                 Some(center) => center,
                 None => {

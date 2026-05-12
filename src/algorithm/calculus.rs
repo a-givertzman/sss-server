@@ -9,7 +9,7 @@ use crate::{algorithm::{entities::ship_model::ship_model::ShipModel,
             balance::eval::StabilityBalanceEval, dynamic_mass::eval::DynamicMassStabEval, icing::eval::IcingStabEval, lever_diagram::eval::LeverDiagramEval, metacentric_height::eval::MetacentricHeightEval, roll_amplitude::eval::RollingAmplitudeEval, roll_period::eval::RollingPeriodEval, static_mass::eval::StaticMassStabEval, wind::eval::WindEval, windage::eval::WindageEval
         }, strength::{
             area::eval::AreaStrEval, balance::eval::StrengthBalanceEval, dynamic_mass::eval::DynamicMassStrEval, icing::eval::IcingStrEval, result::eval::ResultStrEval, static_mass::eval::StaticMassStrEval
-        }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::{Zg, eval::ZgEval}        
+        }, unit_area::eval::UnitAreaEval, wetting::eval::WettingEval, zg::eval::ZgEval        
     }}, 
     conf::Conf, 
     infrostructure::ApiClient, 
@@ -23,7 +23,7 @@ use crate::{algorithm::{entities::ship_model::ship_model::ShipModel,
 };
 
 ///
-/// Evaluates entair ship calculations
+/// [Evaluates entair ship calculations](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part01_general/chapter03_calcProcedure.md)
 pub struct Calculus {
     dbg: Dbg,
     conf: Conf,

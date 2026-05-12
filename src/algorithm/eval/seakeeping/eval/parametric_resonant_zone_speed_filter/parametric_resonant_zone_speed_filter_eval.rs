@@ -62,7 +62,7 @@ impl Eval<(), EvalResult> for ParametricResonantZoneSpeedFilterEval {
                             let contour = GrahamScan::new(cluster).eval();
                             result.push(contour);
                         }
-                        return ctx.write(
+                        ctx.write(
                             ParametricResonantZoneSpeedFilterCtx {
                                 parametric_resonant_zone_speed_filter: result,
                             }
@@ -71,7 +71,7 @@ impl Eval<(), EvalResult> for ParametricResonantZoneSpeedFilterEval {
                     None => {
                         let mut result: Vec<Vec<(f64, f64)>> = Vec::new();
                         result.push(GrahamScan::new(param_zone).eval());
-                        return ctx.write(
+                        ctx.write(
                             ParametricResonantZoneSpeedFilterCtx {
                                 parametric_resonant_zone_speed_filter: result,
                             }

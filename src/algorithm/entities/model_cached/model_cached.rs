@@ -2,7 +2,7 @@ use super::{LocalCache, ModelCachedConf};
 use crate::{
     algorithm::{
         entities::{
-            AddVec, Bounds, Curve, ICurve, Moment, Position,
+            AddVec, Bounds, Moment, Position,
             model_cached::{
                 AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
@@ -220,14 +220,8 @@ impl ModelCached {
         let compartments = pathes
             .iter()
             .filter(|path: &&PathBuf| path.file_name().is_some())
-            .map(|path| {
-                let Some(name) = path.file_stem() else {
-                    return None;
-                };
-                let Some(name) = name.to_str() else {
-                    return None;
-                };
-                let name = name.to_string();
+            .filter_map(|path| {
+                let name = path.file_stem()?.to_str()?.to_string();
                 let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
                     &dbg,
                     path.clone(),
@@ -249,12 +243,11 @@ impl ModelCached {
                     ))),
                 ))
             })
-            .flat_map(|v| v)
             .collect();
         let damaged_compartments = pathes
             .iter()
             .filter(|path: &&PathBuf| path.file_name().is_some())
-            .map(|path| {
+            .filter_map(|path| {
                 let Some(name) = path.file_stem() else {
                     return None;
                 };
@@ -287,7 +280,6 @@ impl ModelCached {
                     ))),
                 ))
             })
-            .flat_map(|v| v)
             .collect();
         let model_cached = Self {
             dbg: dbg.clone(),
@@ -320,7 +312,7 @@ impl ModelCached {
             hold_compartments_bounded: IndexMap::new(),
             thread_pool,
         };
-     //   dbg!(model_cached.compartments.len());
+        //   dbg!(model_cached.compartments.len());
         Ok(model_cached)
     }
     /// reload all shapes
@@ -335,7 +327,7 @@ impl ModelCached {
             let shape = shape.clone();
             let task_results = task_results.clone();
             let thread_name = format!("{}.reload_shapes displacement_shape {name}", &self.dbg);
-        //    log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
@@ -354,21 +346,21 @@ impl ModelCached {
             let shape = self.windage_shape.clone();
             let task_results = task_results.clone();
             let thread_name = format!("{}.reload_shapes windage_shape", &self.dbg);
-        //    log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let mut guard = shape.write();
                     task_results.push(guard.init());
                     Ok(())
                 })
-                .map_err(|err| error.pass_with(format!("spawn task area_shape"), err.to_string()));
+                .map_err(|err| error.pass_with("spawn task area_shape".to_string(), err.to_string()));
             match handle {
                 Ok(task) => tasks.push(task),
                 Err(err) => errors.push(err),
             };
         }
         for task in tasks {
-         //   log::trace!("join thread {}", task.name());
+            //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -395,7 +387,7 @@ impl ModelCached {
         let error = Error::new(self.dbg.clone(), "init");
         self.displacement
             .init()
-            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+            .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
         for (name, compartment) in self.compartments.iter_mut() {
             let mut guard = compartment.write();
             guard
@@ -417,7 +409,7 @@ impl ModelCached {
         }*/
         self.windage_area
             .init()
-            .map_err(|err| error.pass_with(format!("displacement.init"), err))?;
+            .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
         let bounds_qnt = bounds.len_qnt();
         let displacement_shape = self
             .displacement_shapes
@@ -434,7 +426,7 @@ impl ModelCached {
         );
         displacement_bound
             .init()
-            .map_err(|err| error.pass_with(format!("displacement_bound.init"), err))?;
+            .map_err(|err| error.pass_with("displacement_bound.init".to_string(), err))?;
         self.displacement_bounded
             .insert(bounds_qnt, Arc::new(RwLock::new(displacement_bound)));
         let mut cache_map = IndexMap::new();
@@ -463,15 +455,14 @@ impl ModelCached {
         for (code, codes_array) in new_hold_compartments {
             if !self.hold_compartments.contains_key(code) {
                 let compartments: Vec<_> = codes_array
-                    .into_iter()
+                    .iter()
                     .filter_map(|code| self.compartments.get(code))
-                    .map(|v| Arc::clone(v))
+                    .map(Arc::clone)
                     .collect();
-                let new_hold_compartment = Arc::new(RwLock::new(HoldCompartmentCache::new(
-                    &self.dbg,
-                    code,
-                    compartments,
-                ).map_err(|err| error.pass(err))?));
+                let new_hold_compartment = Arc::new(RwLock::new(
+                    HoldCompartmentCache::new(&self.dbg, code, compartments)
+                        .map_err(|err| error.pass(err))?,
+                ));
                 self.hold_compartments
                     .insert(code.to_owned(), new_hold_compartment);
             }
@@ -485,9 +476,9 @@ impl ModelCached {
                 };
                 if !hold_compartments_bounded.contains_key(code) {
                     let compartments_bounded: Vec<_> = codes_array
-                        .into_iter()
+                        .iter()
                         .filter_map(|code| compartments_bounded.get(code))
-                        .map(|v| Arc::clone(v))
+                        .map(Arc::clone)
                         .collect();
                     let new_hold_compartment_bounded = Arc::new(RwLock::new(
                         HoldCompartmentBoundCache::new(&self.dbg, code, compartments_bounded),
@@ -501,19 +492,101 @@ impl ModelCached {
         Ok(())
     }
     ///
-    ///
-    /// Generates and reload the internal caches.
-    ///
-    /// The field `caches` contains cache keys to update.
-    /// Remaining it empty builds and reloads all the caches.
-    ///
-    /// Note that it may take some time to complete
-    /// due to the size of datasets and algorithm complexity.
-    ///
-    /// # Errors
-    /// Internally it creates worker threads while building.
-    /// The result error is a collection of all failed worker errors joined by '\n'.
+    /// Пересчет кэшей корпуса
     #[allow(dead_code)]
+    pub fn rebuild_hull(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        log::info!("rebuild_hull begin");
+        let error = Error::new(&self.dbg, "rebuild_hull");
+        let mut errors = Vec::new();
+        // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
+        if let Err(error) = self.displacement.rebuild() {
+            errors.push(("displacement".to_owned(), error));
+        }
+        let displacement_shape = self
+            .displacement_shapes
+            .get("hull")
+            .ok_or(error.err("no displacement_shape"))?;
+        let mut displacement_bound = DisplacementBoundCache::new(
+            &self.dbg,
+            displacement_shape.clone(),
+            self.cache_dir.clone().join("disp_bounded"),
+            self.bounds_level_step,
+            self.model_x,
+            bounds.clone(),
+            Arc::clone(&self.thread_pool),
+        );
+        displacement_bound
+            .rebuild()
+            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
+        self.displacement_bounded
+            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
+        self.windage_area
+            .rebuild(bounds, self.ship_length_lbp)
+            .map_err(|err| error.pass_with("windage_area.rebuild", err))?;         
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_hull",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }
+        log::info!("rebuild_hull finish");
+        Ok(())
+    }
+    ///  Пересчет кэшей отсеков
+    #[allow(dead_code)]
+    pub fn rebuild_compartments(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error: Error = Error::new(&self.dbg, "rebuild_compartments");
+        let mut errors = Vec::new();
+        for (name, compartment) in &mut self.compartments {
+            //        println!("model_cached rebuild compartment:{name}");
+            if let Err(error) = compartment.write().rebuild() {
+                errors.push((("compartment ".to_owned() + name), error));
+            }
+        }
+        let mut cache_map = IndexMap::new();
+        for (code, compartment) in &self.compartments {
+            //      println!("model_cached build_bounded compartment:{code}");
+            let mut compartment_bounded = compartment
+                .read()
+                .build_bounded(bounds.clone(), self.bounds_level_step)
+                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
+            compartment_bounded
+                .rebuild()
+                .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
+            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
+        }             
+        self.compartments_bounded
+            .insert(bounds.len_qnt(), cache_map);
+        /*  TODO - пока не используются, потом будет отдельный расчет
+         for (name, compartment) in &mut self.damaged_compartments {
+            if let Err(error) = compartment.write().rebuild() {
+                errors.push((("damaged_compartment ".to_owned() + name), error));
+            }
+        }*/          
+        if !errors.is_empty() {
+            return Err(error.pass_with(
+                "rebuild_hull",
+                errors.iter().fold(String::new(), |acc, (key, err)| {
+                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
+                }),
+            ));
+        }        
+        Ok(())
+    }
+    ///
+    /// Пересчет кэшей боковой поверхности корпуса
+    #[allow(dead_code)]
+    pub fn rebuild_windage(&mut self, bounds: &Bounds) -> Result<(), Error> {
+        let error: Error = Error::new(&self.dbg, "rebuild_windage");
+        self.windage_area
+            .rebuild(bounds, self.ship_length_lbp)
+            .map_err(|err| error.pass_with("windage_area.rebuild", err))?; 
+        Ok(())
+    }    
+    ///  Пересчет кэшей без шпаций
+    #[allow(dead_code)]    
     pub fn rebuild_caches(&mut self) -> Result<(), Error> {
         log::info!("rebuild_caches begin");
         let error = Error::new(&self.dbg, "rebuild_caches");
@@ -545,7 +618,7 @@ impl ModelCached {
         log::info!("rebuild_caches finish");
         Ok(())
     }
-    //
+    ///   Пересчет кэшей со шпациями
     #[allow(dead_code)]
     pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
         let error: Error = Error::new(&self.dbg, "rebuild_bounds");
@@ -656,7 +729,7 @@ impl ModelCached {
             let compartments_bounded = compartments_bounded.clone();
             let results_ = gaseous_results.clone();
             let thread_name = format!("{}.balance_strength gaseous code:{}", &self.dbg, cargo.code);
-        //    log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let compartment_bounded = compartments_bounded
@@ -675,7 +748,7 @@ impl ModelCached {
                     ));
                     Ok(())
                 })
-                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+                .map_err(|err| error.pass_with("scheduler.spawn".to_string(), err.to_string()));
             match handle {
                 Ok(task) => tasks.push(task),
                 Err(err) => errors.push(err),
@@ -696,7 +769,7 @@ impl ModelCached {
             let epsilon = query.epsilon;
             let results_ = bulk_results.clone();
             let thread_name = format!("{}.balance_strength bulk code:{}", &self.dbg, cargo.code);
-        //    log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
             let handle = scheduler
                 .spawn_named(thread_name, move || {
                     let volume_bounded = if let Some(compartment) =
@@ -725,14 +798,14 @@ impl ModelCached {
                     ));
                     Ok(())
                 })
-                .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+                .map_err(|err| error.pass_with("scheduler.spawn".to_string(), err.to_string()));
             match handle {
                 Ok(task) => tasks.push(task),
                 Err(err) => errors.push(err),
             };
         }
         for task in tasks {
-        //    log::trace!("join thread {}", task.name());
+            //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -744,7 +817,7 @@ impl ModelCached {
             while !gaseous_results.is_empty() {
                 if let Some(data) = gaseous_results.pop() {
                     res.add_vec(&data.mass_values).map_err(|err| {
-                        error.pass_with(format!("mass_distr.add_vec(gaseous)"), err.to_string())
+                        error.pass_with("mass_distr.add_vec(gaseous)".to_string(), err.to_string())
                     })?;
                     gaseous.push(data);
                 }
@@ -791,7 +864,7 @@ impl ModelCached {
                     let results_ = liquid_results.clone();
                     let thread_name =
                         format!("{}.balance_strength liquid code:{}", &self.dbg, cargo.code);
-               //     log::trace!("Starting thread {thread_name}");
+                    //     log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let volume_bounded = compartment_bounded
@@ -813,7 +886,7 @@ impl ModelCached {
                             Ok(())
                         })
                         .map_err(|err| {
-                            error.pass_with(format!("scheduler.spawn"), err.to_string())
+                            error.pass_with("scheduler.spawn".to_string(), err.to_string())
                         });
                     match handle {
                         Ok(task) => tasks.push(task),
@@ -824,7 +897,7 @@ impl ModelCached {
                 let results_ = hull_results.clone();
                 let displacement_bounded = displacement_bounded.clone();
                 let thread_name = format!("{}.balance_strength displacement_bounded", &self.dbg);
-            //    log::trace!("Starting thread {thread_name}");
+                //    log::trace!("Starting thread {thread_name}");
                 let handle = scheduler
                     .spawn_named(thread_name, move || {
                         results_.push(displacement_bounded.read().get(trim, draught));
@@ -832,7 +905,7 @@ impl ModelCached {
                     })
                     .map_err(|err| {
                         error.pass_with(
-                            format!("scheduler.spawn displacement_bounded"),
+                            "scheduler.spawn displacement_bounded".to_string(),
                             err.to_string(),
                         )
                     });
@@ -841,7 +914,7 @@ impl ModelCached {
                     Err(err) => errors.push(err),
                 };
                 for task in tasks {
-               //     log::trace!("join thread {}", task.name());
+                    //     log::trace!("join thread {}", task.name());
                     if let Err(err) = task.join() {
                         let error = error.pass_with("task join", err.to_string());
                         log::error!("{}", error);
@@ -1007,7 +1080,7 @@ impl ModelCached {
             bow_area,
         })
     }
-    /// Расчет равновесного положения
+    /// Расчет [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
     pub(crate) fn floating_position(
         &self,
         query: FloatingPositionQuery,
@@ -1026,7 +1099,7 @@ impl ModelCached {
             .moment_bulk_floating(&query.bulk, query.epsilon)
             .map_err(|err| error.pass_with("self.bulk_moment", err))?;
         let mass_bulk = query.bulk.iter().map(|v| v.mass).sum::<f64>();
-    //       dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
+        //       dbg!(mass_bulk, moment_bulk.to_pos(mass_bulk));
         let mass_liquid = query.liquid.iter().map(|v| v.mass).sum::<f64>();
         let mass_sum = query.mass_const + mass_bulk + mass_liquid; // постоянная масса
         let moment_sum = query.moment_const + moment_bulk; // постоянный момент
@@ -1113,24 +1186,22 @@ impl ModelCached {
                     return Ok(result);
                 }
             }
-            if let Some(old_d_v) = d_v {
-                if old_d_v.signum() != new_d_v.signum() {
+            if let Some(old_d_v) = d_v
+                && old_d_v.signum() != new_d_v.signum() {
                     step_trim *= 0.1;
                     step_heel *= 3.;
                 }
-            }
             d_v = Some(new_d_v);
-            if let Some(old_d_m) = d_m {
-                if old_d_m.signum() != new_d_m.signum() {
+            if let Some(old_d_m) = d_m
+                && old_d_m.signum() != new_d_m.signum() {
                     step_heel *= 0.1;
                     step_trim *= 3.;
                 }
-            }
             d_m = Some(new_d_m);
-       //        println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
-        //            epsilon, heel, trim, draught, new_d_v, new_d_m);
-            trim = trim + step_trim * new_d_v.signum();
-            heel = heel + step_heel * new_d_m.signum();
+            //        println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
+            //            epsilon, heel, trim, draught, new_d_v, new_d_m);
+            trim += step_trim * new_d_v.signum();
+            heel += step_heel * new_d_m.signum();
             draught = new_draught;
         }
         Err(error.err(format!("query:{:?} error: no result", query)))
@@ -1238,8 +1309,8 @@ impl ModelCached {
                     )
                     .map_err(|err| error.pass(err))?;
                 //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
-                if epsilon >= trim_epsilon {
-                    if epsilon >= new_d_v.abs() {
+                if epsilon >= trim_epsilon
+                    && epsilon >= new_d_v.abs() {
                         let delta_moment_liquid = self
                             .moment_liquid_dso_abs_moment(
                                 &query.liquid,
@@ -1275,22 +1346,20 @@ impl ModelCached {
                         };
                         let min_angle = |angles: &[Position]| {
                             let mut angles: Vec<_> =
-                                angles.iter().map(|v| current_draught(v)).collect();
-                            angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                                angles.iter().map(&current_draught).collect();
+                            angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
                             angles.first().unwrap_or(max_heel).to_owned()
                         };
                         entry_angle.push((heel, min_angle(opening)));
                         flooding_angle.push((heel, min_angle(deck_angle_point)));
                         break;
                     }
-                }
-                if let Some(old_d_v) = d_v {
-                    if old_d_v.signum() != new_d_v.signum() {
-                        step_trim = step_trim * 0.5;
+                if let Some(old_d_v) = d_v
+                    && old_d_v.signum() != new_d_v.signum() {
+                        step_trim *= 0.5;
                     }
-                }
                 d_v = Some(new_d_v);
-                trim = trim + step_trim * new_d_v.signum();
+                trim += step_trim * new_d_v.signum();
                 draught = new_draught;
             }
         }
@@ -1384,8 +1453,8 @@ impl ModelCached {
                     .map_err(|err| error.pass(err))?;
                 //       println!("sdffsz model_cached dso heel:{:.3} i:{_i} shift_liquid:{}, trim:{:.3} step_trim:{:.3} epsilon:{:.3} trim_epsilon:{:.3} d_v:{:.3} new_d_v:{:.3} ",
                 //          heel, moment_liquid_floating.to_pos(mass_liquid).print(), trim, step_trim, epsilon, trim_epsilon, d_v.unwrap_or(0.), new_d_v);
-                if epsilon >= trim_epsilon {
-                    if epsilon >= new_d_v.abs() {
+                if epsilon >= trim_epsilon
+                    && epsilon >= new_d_v.abs() {
                         let l = {
                             let [_, tcg, vcg] = cg.values();
                             let [_, tcb, vcb] = disp_result.volume_center.values();
@@ -1396,11 +1465,11 @@ impl ModelCached {
                             //             println!("{heel} {lv};");
                             let ld = tcg * cos_theta + vcg * sin_theta;
                             let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
-                            let l = lv - ld - delta_l;
+                            
                             //   println!("model_cached "heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
                             //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
                             //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
-                            l
+                            lv - ld - delta_l
                         };
                         dso.push((heel, l));
                         let tg_t = trim.to_radians().tan();
@@ -1412,22 +1481,20 @@ impl ModelCached {
                         };
                         let min_angle = |angles: &[Position]| {
                             let mut angles: Vec<_> =
-                                angles.iter().map(|v| current_draught(v)).collect();
-                            angles.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+                                angles.iter().map(&current_draught).collect();
+                            angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
                             angles.first().unwrap_or(max_heel).to_owned()
                         };
                         flooding_angle.push((heel, min_angle(opening)));
                         entry_angle.push((heel, min_angle(deck_angle_point)));
                         break;
                     }
-                }
-                if let Some(old_d_v) = d_v {
-                    if old_d_v.signum() != new_d_v.signum() {
-                        step_trim = step_trim * 0.5;
+                if let Some(old_d_v) = d_v
+                    && old_d_v.signum() != new_d_v.signum() {
+                        step_trim *= 0.5;
                     }
-                }
                 d_v = Some(new_d_v);
-                trim = trim + step_trim * new_d_v.signum();
+                trim += step_trim * new_d_v.signum();
                 draught = new_draught;
             }
         }
@@ -1445,8 +1512,8 @@ impl ModelCached {
         }*/
         Ok((dso, entry_angle, flooding_angle))
     }
-    /// Расчет итерации в расчете равновесного положения и диаграммы
-    /// возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
+    /// Расчет итерации в расчете [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
+    /// и диаграммы. Возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
     fn position(
         &self,
         heel: f64,
@@ -1463,7 +1530,7 @@ impl ModelCached {
         // учет изменения водоизмещения из-за поврежденных отсеков
         // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
         let (mass_damaged_compartment, moment_damaged_compartment) = self
-            .calc_damaged_compartments(&damaged_compartment, heel, trim, draught, water_density)
+            .calc_damaged_compartments(damaged_compartment, heel, trim, draught, water_density)
             .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
         let mass_sum = mass_sum + mass_damaged_compartment;
         let displacement = mass_sum / water_density;
@@ -1503,10 +1570,10 @@ impl ModelCached {
             let my_plane = HalfSpace::new(Vector3::z_axis());
             let cg_local = cg - cb;
             let cg_local = rotation.transform_point(&cg_local.into());
-            let cg_h_local = my_plane.project_local_point(&cg_local.into(), false).point;
-            let cg_h = rotation.inverse_transform_point(&cg_h_local.into());
-            let cg_h = cb + cg_h.into();
-            cg_h
+            let cg_h_local = my_plane.project_local_point(&cg_local, false).point;
+            let cg_h = rotation.inverse_transform_point(&cg_h_local);
+            
+            cb + cg_h.into()
         };
         // Определение посадки судна для следующего шага
         let cb_v = {
@@ -1514,20 +1581,20 @@ impl ModelCached {
             let my_plane = HalfSpace::new(Vector3::y_axis());
             let cb_local = cb - cg;
             let cb_local = rotation.transform_point(&cb_local.into());
-            let cg_v_local = my_plane.project_local_point(&cb_local.into(), false).point;
-            let cg_v = rotation.inverse_transform_point(&cg_v_local.into());
-            let cb_v = cg + cg_v.into();
-            cb_v
+            let cg_v_local = my_plane.project_local_point(&cb_local, false).point;
+            let cg_v = rotation.inverse_transform_point(&cg_v_local);
+            
+            cg + cg_v.into()
         };
         let cb_m = {
             // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
             let my_plane = HalfSpace::new(Vector3::x_axis());
             let cb_local = cb - cg;
             let cb_local = rotation.transform_point(&cb_local.into());
-            let cb_m_local = my_plane.project_local_point(&cb_local.into(), false).point;
-            let cb_m = rotation.inverse_transform_point(&cb_m_local.into());
-            let cb_m = cg + cb_m.into();
-            cb_m
+            let cb_m_local = my_plane.project_local_point(&cb_local, false).point;
+            let cb_m = rotation.inverse_transform_point(&cb_m_local);
+            
+            cg + cb_m.into()
         };
         // проекция точки cg_m на вертикальную плоскость параллельную основной линии
         let cg_m_h = {
@@ -1536,16 +1603,16 @@ impl ModelCached {
             let cg_m_local = cb_m - cg;
             let cg_m_local = rotation.transform_point(&cg_m_local.into());
             let cg_m_h_local = my_plane
-                .project_local_point(&cg_m_local.into(), false)
+                .project_local_point(&cg_m_local, false)
                 .point;
-            let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local.into());
-            let cg_m_h = cg + cg_m_h.into();
-            cg_m_h
+            let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local);
+            
+            cg + cg_m_h.into()
         };
         let d_v = cg_h.x() - cb_v.x();
         let d_m = cg_m_h.y() - cb_m.y();
-      //   println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
-      //          heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
+        //   println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
+        //          heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
         //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
         //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
@@ -1563,10 +1630,9 @@ impl ModelCached {
             let code = cargo.code.clone();
             let error_ = error.err(format!("compartment_{code} bulk work"));
             let cargo = cargo.clone();
-            let epsilon = epsilon;
             let results_ = task_results.clone();
             let thread_name = format!("{}.process_bulk code:{code}", &self.dbg);
-        //    log::trace!("Starting thread {thread_name}");
+            //    log::trace!("Starting thread {thread_name}");
             if let Some(hold_compartment) = self.hold_compartments.get(&code) {
                 let hold_compartment = Arc::clone(hold_compartment);
                 let handle = scheduler
@@ -1575,7 +1641,7 @@ impl ModelCached {
                             .read()
                             .get_level(0., 0., cargo.volume, epsilon)
                             .map_err(|err| error_.pass_with("hold_compartment.get", err))?;
-               //         dbg!(&code, cargo.mass, compartment_result.volume_center);
+                        //         dbg!(&code, cargo.mass, compartment_result.volume_center);
                         results_.push(stability_result::BulkResult::new(
                             //       cargo_id,
                             code,
@@ -1590,7 +1656,7 @@ impl ModelCached {
                         ));
                         Ok(())
                     })
-                    .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+                    .map_err(|err| error.pass_with("scheduler.spawn".to_string(), err.to_string()));
                 match handle {
                     Ok(task) => tasks.push(task),
                     Err(err) => errors.push(err),
@@ -1622,7 +1688,7 @@ impl ModelCached {
                         ));
                         Ok(())
                     })
-                    .map_err(|err| error.pass_with(format!("scheduler.spawn"), err.to_string()));
+                    .map_err(|err| error.pass_with("scheduler.spawn".to_string(), err.to_string()));
                 match handle {
                     Ok(task) => tasks.push(task),
                     Err(err) => errors.push(err),
@@ -1630,7 +1696,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-        //    log::trace!("join thread {}", task.name());
+            //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1689,13 +1755,13 @@ impl ModelCached {
             match self.compartments.get(&cargo.code) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
-                    let epsilon = epsilon.clone();
+                    let epsilon = epsilon;
                     let code = cargo.code.clone();
                     let cargo = cargo.clone();
                     let error_ = error.clone();
                     let compartment = compartment.clone();
                     let thread_name = format!("{}.process_liquid code:{}", &self.dbg, code);
-                //    log::trace!("Starting thread {thread_name}");
+                    //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1719,9 +1785,9 @@ impl ModelCached {
                                     res.volume_center,
                                     res.level,
                                     res.volume,
-                                    res.inertia_trans_x,    
-                                    res.inertia_long_y,  
-                                    res.max_inertia_trans_x,   
+                                    res.inertia_trans_x,
+                                    res.inertia_long_y,
+                                    res.max_inertia_trans_x,
                                 ),
                             ));
                             Ok(())
@@ -1744,7 +1810,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-         //   log::trace!("join thread {}", task.name());
+            //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1817,14 +1883,13 @@ impl ModelCached {
             match self.compartments.get(&cargo.code) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
-                    let epsilon = epsilon.clone();
                     let error_ = error.clone();
                     let code = cargo.code.clone();
                     let cargo = cargo.clone();
                     let compartment = compartment.clone();
                     let thread_name =
                         format!("{}.moment_liquid_dso_abs_moment code:{}", &self.dbg, code);
-                //    log::trace!("Starting thread {thread_name}");
+                    //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1863,7 +1928,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-         //   log::trace!("join thread {}", task.name());
+            //   log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -1919,7 +1984,6 @@ impl ModelCached {
             match self.compartments.get(&cargo.code) {
                 Some(compartment) => {
                     let task_results = task_results.clone();
-                    let epsilon = epsilon.clone();
                     let error_ = error.clone();
                     let code = cargo.code.clone();
                     let cargo = cargo.clone();
@@ -1928,7 +1992,7 @@ impl ModelCached {
                         "{}.moment_liquid_dso_surface_moment code:{}",
                         &self.dbg, code
                     );
-                //    log::trace!("Starting thread {thread_name}");
+                    //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             let res = compartment
@@ -1963,7 +2027,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-        //    log::trace!("join thread {}", task.name());
+            //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -2015,7 +2079,7 @@ impl ModelCached {
                     let _error = error.clone();
                     let thread_name =
                         format!("{}.calc_damaged_compartments code:{}", &self.dbg, code);
-                //    log::trace!("Starting thread {thread_name}");
+                    //    log::trace!("Starting thread {thread_name}");
                     let handle = scheduler
                         .spawn_named(thread_name, move || {
                             task_results.push((code, compartment.read().get(heel, trim, draught)));
@@ -2045,7 +2109,7 @@ impl ModelCached {
             }
         }
         for task in tasks {
-        //    log::trace!("join thread {}", task.name());
+            //    log::trace!("join thread {}", task.name());
             if let Err(err) = task.join() {
                 let error = error.pass_with("task join", err.to_string());
                 log::error!("{}", error);
@@ -2080,5 +2144,88 @@ impl ModelCached {
             |(mass_sum, moment_sum), (_, mass, moment)| (mass_sum + mass, moment_sum + *moment),
         );
         Ok(result)
+    }
+}
+//
+#[cfg(test)]
+impl ModelCached {
+    /// Создает пустую заглушку ModelCached для тестов
+    pub fn mock_empty() -> Self {
+        let dbg = Dbg::new("test", "ModelCachedMock");
+
+        // Создаем пустую форму парусности
+        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(
+            100,
+            10,
+            1.,
+        )));
+
+        Self {
+            dbg: dbg.clone(),
+            ship_length_lbp: 100.0,
+            model_x: 0.0,
+            draught_min: 1.0,
+            hull_draught_step: 0.1,
+            bounds_level_step: 0.1,
+            cache_dir: PathBuf::from("/tmp"),
+            dso_angles: vec![],
+            displacement_shapes: IndexMap::new(),
+            windage_shape,
+            displacement: DisplacementCache::create_simple_mock(10000., 10000.,),
+            compartments: IndexMap::new(),
+            hold_compartments: IndexMap::new(),
+            damaged_compartments: IndexMap::new(),
+            windage_area: WindageArea::create_simple_mock(Vec::new()),
+            displacement_bounded: IndexMap::new(),
+            compartments_bounded: IndexMap::new(),
+            hold_compartments_bounded: IndexMap::new(),
+            thread_pool: Arc::new(ThreadPool::new("ModelCached::mock_empty", None)),
+        }
+    }
+    /// Создает заглушку ModelCached для тестов прочности
+    /// с предустановленным распределением парусности
+    pub fn mock_with_strength_areas(windage_area_str: Vec<f64>) -> Self {
+        let dbg = sal_core::dbg::Dbg::new("test", "ModelCachedMockStrength");
+
+        // 1. Создаем пустую базовую форму парусности
+        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(
+            100,
+            10,
+            1.0,
+        )));
+
+        // 2. Используем ваш метод для создания мока WindageArea
+        // Он запишет переданный вектор в поле values и создаст нужные пустые заглушки
+        let mock_windage = WindageArea::create_simple_mock(windage_area_str);
+
+        Self {
+            dbg: dbg.clone(),
+            ship_length_lbp: 100.0,
+            model_x: 0.0,
+            draught_min: 1.0,
+            hull_draught_step: 0.1,
+            bounds_level_step: 0.1,
+            cache_dir: std::path::PathBuf::from("/tmp"),
+            dso_angles: vec![],
+            displacement_shapes: indexmap::IndexMap::new(),
+            windage_shape,
+            
+            // Используем ваш простой мок гидростатики
+            displacement: DisplacementCache::create_simple_mock(10000.0, 10000.0),
+            
+            compartments: indexmap::IndexMap::new(),
+            hold_compartments: indexmap::IndexMap::new(),
+            damaged_compartments: indexmap::IndexMap::new(),
+            
+            // Записываем наш мок парусности с готовыми значениями!
+            windage_area: mock_windage,
+            
+            displacement_bounded: indexmap::IndexMap::new(),
+            compartments_bounded: indexmap::IndexMap::new(),
+            hold_compartments_bounded: indexmap::IndexMap::new(),
+            
+            // Создаем безопасный пул потоков
+            thread_pool: Arc::new(sal_sync::thread_pool::ThreadPool::new("ModelCached::mock_with_strength_areas", None)),
+        }
     }
 }

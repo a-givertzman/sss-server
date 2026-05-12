@@ -37,7 +37,7 @@ impl Hub {
     ///
     /// Returns new connected `Link`
     pub fn link(&self) -> Link {
-        let (local, remote) = Link::split(&format!("{}:{}", self.name, self.links.len()));
+        let (local, remote) = Link::split(format!("{}:{}", self.name, self.links.len()));
         let key = remote.name().join();
         self.links.insert(key, local);
         remote
@@ -68,21 +68,15 @@ impl Hub {
                     let (id, link) = entry.pair();
                     match link.recv_timeout(timeout) {
                         Ok(event) => {
-                            match event {
-                                Some(event) => {
-                                    log::trace!("{dbg}.listen | Link({id}) Received event: {:#?}", event);
-                                    match (op)(event, link.sender()) {
-                                        Some(reply) => {
-                                            log::debug!("{dbg}.listen | Link({id}) Reply event: {:#?}", reply);
-                                            if let Err(err) = link.send(reply) {
-                                                let err = error.pass_with(format!("Link({id}) Send reply error"), err.to_string());
-                                                log::error!("{}", err);
-                                            }
-                                        }
-                                        None => {}
+                            if let Some(event) = event {
+                                log::trace!("{dbg}.listen | Link({id}) Received event: {:#?}", event);
+                                if let Some(reply) = (op)(event, link.sender()) {
+                                    log::debug!("{dbg}.listen | Link({id}) Reply event: {:#?}", reply);
+                                    if let Err(err) = link.send(reply) {
+                                        let err = error.pass_with(format!("Link({id}) Send reply error"), err.to_string());
+                                        log::error!("{}", err);
                                     }
                                 }
-                                None => {}
                             }
                         }
                         Err(_) => closed_links.push(id.to_owned())

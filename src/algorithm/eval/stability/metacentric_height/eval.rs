@@ -24,7 +24,7 @@ pub struct MetacentricHeightEval {
 //
 //
 impl MetacentricHeightEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,
@@ -36,8 +36,7 @@ impl MetacentricHeightEval {
             ctx: Box::new(ctx),
         }
     }
-    ///
-    ///
+    //
     fn calc(&self, mut ctx: Context, z_g_fix: Zg) -> EvalResult {
         let error = Error::new(&self.dbg, "calc");
         // суммарная масса судна

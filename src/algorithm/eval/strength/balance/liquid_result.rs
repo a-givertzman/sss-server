@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use crate::algorithm::entities::data::loads::{AssignmentType, LiquidCargoType};
 ///
-/// TODO: Type doc here
+/// Результат расчета по жидким грузам
 #[derive(Debug, Clone, Decode, Encode)]
 pub struct LiquidResult {
     /// ID помещения
@@ -15,9 +15,9 @@ pub struct LiquidResult {
     /// Распределение массы по шпациям
     pub mass_values: Vec<f64>,
 }
-///
+//
 impl LiquidResult {
-    ///
+    //
     pub fn new(
         code: String,
         assigment_type: AssignmentType,

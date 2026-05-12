@@ -66,16 +66,16 @@ impl Eval<(), EvalResult> for MainResonantZoneSpeedFilterEval {
                             let contour = GrahamScan::new(cluster).eval();
                             result.push(contour);
                         }
-                        return ctx.write(MainResonantZoneSpeedFilterCtx {
+                        ctx.write(MainResonantZoneSpeedFilterCtx {
                             main_resonant_zone_speed_filter: result,
-                        });
+                        })
                     }
                     None => {
                         let mut result: Vec<Vec<(f64, f64)>> = Vec::new();
                         result.push(main_zone.clone());
-                        return ctx.write(MainResonantZoneSpeedFilterCtx {
+                        ctx.write(MainResonantZoneSpeedFilterCtx {
                             main_resonant_zone_speed_filter: result,
-                        });
+                        })
                     }
                 }
             }

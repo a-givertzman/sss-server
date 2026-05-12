@@ -9,7 +9,8 @@ impl RecalculationCourseAngular {
     ///
     /// Перевод в северо-восточную систему координат
     pub fn to_northeastern(course_angle: f64, array: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
-        let result = array
+        
+        array
         .iter()
         .map(|(angle, speed)| {
             if (angle + course_angle) >= 360.0 {
@@ -23,13 +24,13 @@ impl RecalculationCourseAngular {
                     *speed,
                 )
             }
-        }).collect::<Vec<(f64, f64)>>();
-        return result;
+        }).collect::<Vec<(f64, f64)>>()
     }
     ///
     /// Перевод курсовые углы волнения относительно ДП судна
     pub fn to_course_angle(course_angle: f64, array: Vec<(f64, f64)>) -> Vec<(f64,f64)> {
-        let result = array
+        
+        array
         .iter()
         .map(|(angle, speed)| {
             if (angle - course_angle) < 0.0 {
@@ -43,7 +44,6 @@ impl RecalculationCourseAngular {
                     *speed,
                 )
             }
-        }).collect::<Vec<(f64, f64)>>();
-        return result;
+        }).collect::<Vec<(f64, f64)>>()
     }
 }

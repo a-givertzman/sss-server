@@ -38,7 +38,12 @@ fn init_each() -> () {}
 #[ignore = "too slow, run only in release mode"]
 #[test]
 fn calculated_windage_area_sofia() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
     init_once();
     init_each();
     let dbg = Dbg::new("test models", "calculated_windage_area_sofia");

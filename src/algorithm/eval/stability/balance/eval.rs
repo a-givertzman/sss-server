@@ -17,7 +17,6 @@ use crate::{
 };
 use sal_core::{dbg::Dbg, error::Error};
 use std::sync::Arc;
-
 ///
 /// Расчет равновесного положения судна
 pub struct StabilityBalanceEval {
@@ -29,7 +28,7 @@ pub struct StabilityBalanceEval {
 //
 //
 impl StabilityBalanceEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         api_client: Arc<ApiClient>,
@@ -191,7 +190,7 @@ impl std::fmt::Debug for StabilityBalanceEval {
 pub fn send_bulk_param(
     dbg: &Dbg,
     api_client: &ApiClient,
-    data: &Vec<BulkResult>,
+    data: &[BulkResult],
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_bulk_param");
     log::info!("send_bulk_param begin");
@@ -221,7 +220,7 @@ pub fn send_bulk_param(
 pub fn send_liquid_param(
     dbg: &Dbg,
     api_client: &ApiClient,
-    data: &Vec<LiquidResult>,
+    data: &[LiquidResult],
 ) -> Result<(), Error> {
     let error = Error::new(dbg, "send_liquid_param");
     log::info!("send_liquid_param begin");

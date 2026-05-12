@@ -66,7 +66,7 @@ impl InitialCtx {
     /// - 'ship_id' - the identifier of the ship in the database
     pub fn new(ship_id: &str, project_id: &str, bounds: Bounds) -> Self {
         Self {
-            ship_id: format!("{ship_id}"),
+            ship_id: ship_id.to_string(),
             project_id: project_id.to_owned(),
             bounds: Some(bounds),
             ..Default::default()

@@ -26,7 +26,12 @@ mod link {
     /// Testing 'Link::call'
     #[test]
     fn call() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");
@@ -64,7 +69,12 @@ mod link {
     /// Testing 'Link::recv'
     #[test]
     fn recv() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");
@@ -105,7 +115,12 @@ mod link {
     /// Testing 'Link::try_recv'
     #[test]
     fn try_recv() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");
@@ -162,7 +177,12 @@ mod link {
     /// Testing 'Link::recv_timeout'
     #[test]
     fn recv_timeout() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+            DebugSession::new()
+        .filter(LogLevel::Info)
+        .module("api_tools", LogLevel::Error)
+        .module("sal_sync", LogLevel::Error)
+        .module("ena", LogLevel::Error)
+        .init();
         init_once();
         init_each();
         log::debug!("");

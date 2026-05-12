@@ -16,7 +16,7 @@ pub struct BowBoardEval {
 //
 //
 impl BowBoardEval {
-    ///
+    //
     pub fn new(
         parent: impl Into<String>,
         ctx: impl Eval<(), EvalResult> + Send + Sync + 'static,

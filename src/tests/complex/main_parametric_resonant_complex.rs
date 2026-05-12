@@ -41,7 +41,7 @@ mod main_parametric_resonant_complex {
         log::debug!("");
         let dbg = "eval";
         log::debug!("\n{}", dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
         let test_data = [(1, 30.0, 1.0, 1.0, 1.0)];
         for (step, wave_length, roll_period, vmax, _c) in test_data.iter() {

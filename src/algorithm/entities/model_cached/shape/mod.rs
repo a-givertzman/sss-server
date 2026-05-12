@@ -123,7 +123,7 @@ pub fn position(center: &Point3<f64>, heel: f64, trim: f64, draught: f64) -> Iso
     let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
     let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
     let rotation = heel_rotation * trim_rotation;
-    let mut center = center.clone();
+    let mut center = *center;
     center.z += draught;
     let point = rotation.transform_point(&center);
     let translation = Translation3::new(-point.x, -point.y, -point.z);
