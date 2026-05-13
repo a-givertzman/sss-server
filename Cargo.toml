@@ -16,16 +16,15 @@ debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.2" }
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
+sal_3dlib_core = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", package = "sal-3dlib-core", branch = "new_algorithm" }
+sal_3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", package = "sal-3dlib", branch = "new_algorithm" }
 #
 # 3D Libs
 obj = "~0.10"
 stl_io = "~0.10"
-#parry3d-f64 = "~0.25"
-#parry2d-f64 = "~0.25"
-#parry3d-f64 = { path = "../parry/crates/parry3d-f64/" } 
-#parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } 
-parry3d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
-parry2d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
+parry3d-f64 = "~0.26"
+parry2d-f64 = "~0.26"
+
 #
 # Time
 chrono = "~0.4"

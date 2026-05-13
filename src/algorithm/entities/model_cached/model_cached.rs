@@ -4,10 +4,10 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaResult, AreaShape, CompartmentBoundCache, CompartmentCache,
+                AreaResult, CompartmentBoundCache, CompartmentCache,
                 DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
-                DisplacementCacheResult, DisplacementShape, Draught, HoldCompartmentBoundCache,
-                HoldCompartmentCache, Shape, WindageArea,
+                DisplacementCacheResult, Draught, HoldCompartmentBoundCache,
+                HoldCompartmentCache, WindageArea,
             },
             ship_model::{
                 stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
@@ -140,9 +140,6 @@ pub struct ModelCached {
     cache_dir: PathBuf,
     /// Angles for DSO
     dso_angles: Vec<f64>,
-    /// Privides access to structure of the 3D element
-    displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>>,
-    windage_shape: Arc<RwLock<AreaShape>>,
     /// Provides a number of calculations:
     /// - cache for model, [heel, trim, draught, volume, x, y, z, area, x, y, z, l_x, l_y ]
     displacement: DisplacementCache,
@@ -175,29 +172,11 @@ impl ModelCached {
     ) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
-        let mut displacement_shapes: IndexMap<String, Arc<RwLock<DisplacementShape>>> =
-            IndexMap::new();
         let model_x = Some(conf.model_x);
-        let displacement_shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-            &dbg,
-            conf.model_dir.clone().join(PathBuf::from("hull.stl")),
-            model_x,
-            conf.model_scale,
-        )));
-        displacement_shapes.insert("hull".to_owned(), displacement_shape.clone());
-        let windage_shape = Arc::new(RwLock::new(AreaShape::new_uninit(
-            &dbg,
-            conf.model_dir.clone().join(PathBuf::from("hull.stl")),
-            Some(conf.model_dir.clone().join(PathBuf::from("additionals"))),
-            model_x,
-            conf.model_scale,
-        )));
         let windage_area = WindageArea::new(
             &dbg,
-            windage_shape.clone(),
             conf.cache_dir.clone(),
             conf.draught_min,
-            Arc::clone(&thread_pool),
         );
         let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
@@ -222,24 +201,13 @@ impl ModelCached {
             .filter(|path: &&PathBuf| path.file_name().is_some())
             .filter_map(|path| {
                 let name = path.file_stem()?.to_str()?.to_string();
-                let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-                    &dbg,
-                    path.clone(),
-                    None,
-                    conf.model_scale,
-                )));
-                displacement_shapes.insert(name.clone(), shape.clone());
                 Some((
                     name.clone(),
                     Arc::new(RwLock::new(CompartmentCache::new(
                         &dbg,
-                        shape.clone(),
                         conf.cache_dir.clone().join(PathBuf::from("compartments")),
                         name.clone(),
-                        conf.compartment_heel_steps.clone(),
-                        conf.compartment_trim_steps.clone(),
                         conf.compartment_level_step_qnt,
-                        Arc::clone(&thread_pool),
                     ))),
                 ))
             })
@@ -255,28 +223,16 @@ impl ModelCached {
                     return None;
                 };
                 let name = name.to_string();
-                let shape = Arc::new(RwLock::new(DisplacementShape::new_uninit(
-                    &dbg,
-                    path.clone(),
-                    Some(conf.model_x),
-                    conf.model_scale,
-                )));
-                displacement_shapes.insert(name.clone() + "_damaged", shape.clone());
                 Some((
                     name.clone(),
                     Arc::new(RwLock::new(DamagedCompartmentCache::new(
                         &dbg,
-                        shape.clone(),
                         conf.cache_dir
                             .clone()
                             .join(PathBuf::from("damaged_compartments")),
                         name.clone(),
-                        conf.hull_heel_steps.clone(),
-                        conf.hull_trim_steps.clone(),
                         conf.hull_draught_min,
                         conf.hull_draught_max,
-                        conf.hull_draught_step,
-                        Arc::clone(&thread_pool),
                     ))),
                 ))
             })
@@ -290,18 +246,9 @@ impl ModelCached {
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
             dso_angles: conf.dso_angles.clone(),
-            displacement_shapes,
-            windage_shape,
             displacement: DisplacementCache::new(
                 &dbg,
-                displacement_shape.clone(),
                 conf.cache_dir.clone(),
-                conf.hull_heel_steps.clone(),
-                conf.hull_trim_steps.clone(),
-                conf.hull_draught_min,
-                conf.hull_draught_max,
-                conf.hull_draught_step,
-                Arc::clone(&thread_pool),
             ),
             compartments,
             hold_compartments: IndexMap::new(),
@@ -314,68 +261,6 @@ impl ModelCached {
         };
         //   dbg!(model_cached.compartments.len());
         Ok(model_cached)
-    }
-    /// reload all shapes
-    pub fn reload_shapes(&mut self) -> Result<(), Error> {
-        let error = Error::new(&self.dbg, "reload_shapes");
-        let mut errors = Vec::new();
-        let mut tasks: Vec<JoinHandle<_>> = vec![];
-        let task_results = Arc::new(Stack::new());
-        let scheduler = self.thread_pool.scheduler();
-        // Сначала считаем модели в разных потоках
-        for (name, shape) in &self.displacement_shapes {
-            let shape = shape.clone();
-            let task_results = task_results.clone();
-            let thread_name = format!("{}.reload_shapes displacement_shape {name}", &self.dbg);
-            //    log::trace!("Starting thread {thread_name}");
-            let handle = scheduler
-                .spawn_named(thread_name, move || {
-                    let mut guard = shape.write();
-                    task_results.push(guard.init());
-                    Ok(())
-                })
-                .map_err(|err| {
-                    error.pass_with(format!("spawn task displacement_shape {name}"), err)
-                });
-            match handle {
-                Ok(task) => tasks.push(task),
-                Err(err) => errors.push(err),
-            };
-        }
-        {
-            let shape = self.windage_shape.clone();
-            let task_results = task_results.clone();
-            let thread_name = format!("{}.reload_shapes windage_shape", &self.dbg);
-            //    log::trace!("Starting thread {thread_name}");
-            let handle = scheduler
-                .spawn_named(thread_name, move || {
-                    let mut guard = shape.write();
-                    task_results.push(guard.init());
-                    Ok(())
-                })
-                .map_err(|err| error.pass_with("spawn task area_shape".to_string(), err.to_string()));
-            match handle {
-                Ok(task) => tasks.push(task),
-                Err(err) => errors.push(err),
-            };
-        }
-        for task in tasks {
-            //   log::trace!("join thread {}", task.name());
-            if let Err(err) = task.join() {
-                let error = error.pass_with("task join", err.to_string());
-                log::error!("{}", error);
-                errors.push(error);
-            }
-        }
-        if !errors.is_empty() {
-            return Err(error.pass_with(
-                "rebuild_caches",
-                errors
-                    .iter()
-                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
-            ));
-        }
-        Ok(())
     }
     /// инициализация кэшей заранее посчитанными данными
     pub fn init(
@@ -411,18 +296,11 @@ impl ModelCached {
             .init()
             .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
         let bounds_qnt = bounds.len_qnt();
-        let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
         let displacement_bound = DisplacementBoundCache::new(
             &self.dbg,
-            displacement_shape.clone(),
             self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
             self.model_x,
             bounds.clone(),
-            Arc::clone(&self.thread_pool),
         );
         displacement_bound
             .init()
@@ -491,189 +369,9 @@ impl ModelCached {
         }
         Ok(())
     }
-    ///
-    /// Пересчет кэшей корпуса
-    #[allow(dead_code)]
-    pub fn rebuild_hull(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        log::info!("rebuild_hull begin");
-        let error = Error::new(&self.dbg, "rebuild_hull");
-        let mut errors = Vec::new();
-        // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
-            errors.push(("displacement".to_owned(), error));
-        }
-        let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-        let mut displacement_bound = DisplacementBoundCache::new(
-            &self.dbg,
-            displacement_shape.clone(),
-            self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
-            self.model_x,
-            bounds.clone(),
-            Arc::clone(&self.thread_pool),
-        );
-        displacement_bound
-            .rebuild()
-            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
-        self.displacement_bounded
-            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-        self.windage_area
-            .rebuild(bounds, self.ship_length_lbp)
-            .map_err(|err| error.pass_with("windage_area.rebuild", err))?;         
-        if !errors.is_empty() {
-            return Err(error.pass_with(
-                "rebuild_hull",
-                errors.iter().fold(String::new(), |acc, (key, err)| {
-                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
-                }),
-            ));
-        }
-        log::info!("rebuild_hull finish");
-        Ok(())
-    }
-    ///  Пересчет кэшей отсеков
-    #[allow(dead_code)]
-    pub fn rebuild_compartments(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        let error: Error = Error::new(&self.dbg, "rebuild_compartments");
-        let mut errors = Vec::new();
-        for (name, compartment) in &mut self.compartments {
-            //        println!("model_cached rebuild compartment:{name}");
-            if let Err(error) = compartment.write().rebuild() {
-                errors.push((("compartment ".to_owned() + name), error));
-            }
-        }
-        let mut cache_map = IndexMap::new();
-        for (code, compartment) in &self.compartments {
-            //      println!("model_cached build_bounded compartment:{code}");
-            let mut compartment_bounded = compartment
-                .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
-            compartment_bounded
-                .rebuild()
-                .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
-            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
-        }             
-        self.compartments_bounded
-            .insert(bounds.len_qnt(), cache_map);
-        /*  TODO - пока не используются, потом будет отдельный расчет
-         for (name, compartment) in &mut self.damaged_compartments {
-            if let Err(error) = compartment.write().rebuild() {
-                errors.push((("damaged_compartment ".to_owned() + name), error));
-            }
-        }*/          
-        if !errors.is_empty() {
-            return Err(error.pass_with(
-                "rebuild_hull",
-                errors.iter().fold(String::new(), |acc, (key, err)| {
-                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
-                }),
-            ));
-        }        
-        Ok(())
-    }
-    ///
-    /// Пересчет кэшей боковой поверхности корпуса
-    #[allow(dead_code)]
-    pub fn rebuild_windage(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        let error: Error = Error::new(&self.dbg, "rebuild_windage");
-        self.windage_area
-            .rebuild(bounds, self.ship_length_lbp)
-            .map_err(|err| error.pass_with("windage_area.rebuild", err))?; 
-        Ok(())
-    }    
-    ///  Пересчет кэшей без шпаций
-    #[allow(dead_code)]    
-    pub fn rebuild_caches(&mut self) -> Result<(), Error> {
-        log::info!("rebuild_caches begin");
-        let error = Error::new(&self.dbg, "rebuild_caches");
-        let mut errors = Vec::new();
-        // Считаем кэши, они сами по себе многопоточны, поэтому делить на потоки нет смысла
-        if let Err(error) = self.displacement.rebuild() {
-            errors.push(("displacement".to_owned(), error));
-        }
-        for (name, compartment) in &mut self.compartments {
-            //        println!("model_cached rebuild compartment:{name}");
-            if let Err(error) = compartment.write().rebuild() {
-                errors.push((("compartment ".to_owned() + name), error));
-            }
-        }
-        /*  TODO - пока не используются, потом будет отдельный расчет
-         for (name, compartment) in &mut self.damaged_compartments {
-            if let Err(error) = compartment.write().rebuild() {
-                errors.push((("damaged_compartment ".to_owned() + name), error));
-            }
-        }*/
-        if !errors.is_empty() {
-            return Err(error.pass_with(
-                "rebuild_caches",
-                errors.iter().fold(String::new(), |acc, (key, err)| {
-                    format!("{acc}\n\tIn cache {:?} was error: {err}", key)
-                }),
-            ));
-        }
-        log::info!("rebuild_caches finish");
-        Ok(())
-    }
-    ///   Пересчет кэшей со шпациями
-    #[allow(dead_code)]
-    pub fn rebuild_bounds(&mut self, bounds: &Bounds) -> Result<(), Error> {
-        let error: Error = Error::new(&self.dbg, "rebuild_bounds");
-        let displacement_shape = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?;
-        let mut displacement_bound = DisplacementBoundCache::new(
-            &self.dbg,
-            displacement_shape.clone(),
-            self.cache_dir.clone().join("disp_bounded"),
-            self.bounds_level_step,
-            self.model_x,
-            bounds.clone(),
-            Arc::clone(&self.thread_pool),
-        );
-        displacement_bound
-            .rebuild()
-            .map_err(|err| error.pass_with("displacement_bound.rebuild", err))?;
-        self.displacement_bounded
-            .insert(bounds.len_qnt(), Arc::new(RwLock::new(displacement_bound)));
-        self.windage_area
-            .rebuild(bounds, self.ship_length_lbp)
-            .map_err(|err| error.pass_with("windage_area.rebuild", err))?;
-        let mut cache_map = IndexMap::new();
-        for (code, compartment) in &self.compartments {
-            //      println!("model_cached build_bounded compartment:{code}");
-            let mut compartment_bounded = compartment
-                .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
-            compartment_bounded
-                .rebuild()
-                .map_err(|err| error.pass_with("compartment_bounded.rebuild", err))?;
-            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
-        }
-        self.compartments_bounded
-            .insert(bounds.len_qnt(), cache_map);
-        Ok(())
-    }
-    //
-    pub fn body_size(&self) -> Result<(f64, f64, f64), Error> {
-        let error = Error::new(&self.dbg, "body_size");
-        let (x, y, z, _) = self
-            .displacement_shapes
-            .get("hull")
-            .ok_or(error.err("no displacement_shape"))?
-            .read()
-            .size()
-            .map_err(|err| error.pass_with("loa", err))?;
-        Ok((x, y, z))
-    }
     //
     pub fn bounded_windage_area(&self) -> Result<Vec<f64>, Error> {
-        self.windage_area.bounded_windage_area().map_err(|err| {
+        self.windage_area.bounded_windage_area(self.bounds).map_err(|err| {
             Error::new(&self.dbg, "bounded_windage_area")
                 .pass_with("self.windage_area.bounded_windage_area", err)
         })
