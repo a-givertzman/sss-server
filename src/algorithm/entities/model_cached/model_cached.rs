@@ -19,7 +19,8 @@ use crate::{
 };
 use core::f64;
 use indexmap::IndexMap;
-use parry3d_f64::{glamx::DQuat, math::*, query::PointQuery, shape::HalfSpace};
+use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
+use parry3d_f64::{query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -1304,8 +1305,8 @@ impl ModelCached {
         //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
     }*/
-    /// Расчет итерации в расчете равновесного положения
-    /// и диаграммы. Возвращает (draught, d_v, d_m, cg, displacement, disp_result)
+    /// Расчет итерации в расчете [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
+    /// и диаграммы. Возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
     fn position(
         &self,
         heel: f64,
@@ -1343,10 +1344,10 @@ impl ModelCached {
         let rotation = {
             let heel_rad = -heel.to_radians();
             let trim_rad = trim.to_radians();
-            let trim_rotation = DQuat::from_axis_angle(Vec3::Y, trim_rad);
-            let transformed_x_axis = trim_rotation.mul_vec3(Vec3::X);
-            let transformed_x_axis = transformed_x_axis.normalize();
-            let heel_rotation = DQuat::from_axis_angle(transformed_x_axis, heel_rad);
+            let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
+            let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
+            let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
+            let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
             heel_rotation * trim_rotation
         };
         // центр тяжести корпуса
@@ -1356,79 +1357,57 @@ impl ModelCached {
             moment_sum.to_pos(mass_sum)
         };
         //    dbg!(cg);
-
-        // Конвертация типов в Vec3 для проведения вычислений
-        let cb_glam: Vec3 = cb.into();
-        let cg_glam: Vec3 = cg.into();
-
-        // Определение невязки cg_h
+        // Определение невязки
         let cg_h = {
-            // Через центр плавучести CB проводится горизонтальная плоскость (нормаль Z)
-            let normal = Vec3::Z;
-            let cg_local = cg_glam - cb_glam;
-            let cg_local_transformed = rotation.mul_vec3(cg_local);
-            // Воспроизведение parry::HalfSpace::project_local_point
-            let cg_h_local = cg_local_transformed - cg_local_transformed.dot(normal) * normal;
-            let cg_h_transformed = rotation.inverse().mul_vec3(cg_h_local);
+            // Через центр плавучести CB проводится горизонтальная плоскость
+            let my_plane = HalfSpace::new(Vector3::z_axis());
+            let cg_local = cg - cb;
+            let cg_local = rotation.transform_point(&cg_local.into());
+            let cg_h_local = my_plane.project_local_point(&cg_local, false).point;
+            let cg_h = rotation.inverse_transform_point(&cg_h_local);
 
-            cb_glam + cg_h_transformed
+            cb + cg_h.into()
         };
-
-        // Определение посадки судна для следующего шага cb_v
+        // Определение посадки судна для следующего шага
         let cb_v = {
-            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии (нормаль Y)
-            let normal = Vec3::Y;
-            let cb_local = cb_glam - cg_glam;
-            let cb_local_transformed = rotation.mul_vec3(cb_local);
-            // Воспроизведение parry::HalfSpace::project_local_point
-            let cg_v_local = cb_local_transformed - cb_local_transformed.dot(normal) * normal;
-            let cg_v_transformed = rotation.inverse().mul_vec3(cg_v_local);
+            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
+            let my_plane = HalfSpace::new(Vector3::y_axis());
+            let cb_local = cb - cg;
+            let cb_local = rotation.transform_point(&cb_local.into());
+            let cg_v_local = my_plane.project_local_point(&cb_local, false).point;
+            let cg_v = rotation.inverse_transform_point(&cg_v_local);
 
-            cg_glam + cg_v_transformed
+            cg + cg_v.into()
         };
-
-        // Определение посадки судна для следующего шага cb_m
         let cb_m = {
-            // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю (нормаль X)
-            let normal = Vec3::X;
-            let cb_local = cb_glam - cg_glam;
-            let cb_local_transformed = rotation.mul_vec3(cb_local);
-            // Воспроизведение parry::HalfSpace::project_local_point
-            let cb_m_local = cb_local_transformed - cb_local_transformed.dot(normal) * normal;
-            let cb_m_transformed = rotation.inverse().mul_vec3(cb_m_local);
+            // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
+            let my_plane = HalfSpace::new(Vector3::x_axis());
+            let cb_local = cb - cg;
+            let cb_local = rotation.transform_point(&cb_local.into());
+            let cb_m_local = my_plane.project_local_point(&cb_local, false).point;
+            let cb_m = rotation.inverse_transform_point(&cb_m_local);
 
-            cg_glam + cb_m_transformed
+            cg + cb_m.into()
         };
-
-        // проекция точки cg_m на вертикальную плоскость параллельную основной линии cg_m_h
+        // проекция точки cg_m на вертикальную плоскость параллельную основной линии
         let cg_m_h = {
-            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии (нормаль Y)
-            let normal = Vec3::Y;
-            let cg_m_local = cb_m - cg_glam;
-            let cg_m_local_transformed = rotation.mul_vec3(cg_m_local);
-            // Воспроизведение parry::HalfSpace::project_local_point
-            let cg_m_h_local = cg_m_local_transformed - cg_m_local_transformed.dot(normal) * normal;
-            let cg_m_h_transformed = rotation.inverse().mul_vec3(cg_m_h_local);
+            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
+            let my_plane = HalfSpace::new(Vector3::y_axis());
+            let cg_m_local = cb_m - cg;
+            let cg_m_local = rotation.transform_point(&cg_m_local.into());
+            let cg_m_h_local = my_plane.project_local_point(&cg_m_local, false).point;
+            let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local);
 
-            cg_glam + cg_m_h_transformed
+            cg + cg_m_h.into()
         };
-
-        // Конвертация промежуточных точек обратно в тип Position, используемый в проекте
-        let cg_h_pos: Position = cg_h.into();
-        let cb_v_pos: Position = cb_v.into();
-        let cb_m_pos: Position = cb_m.into();
-        let cg_m_h_pos: Position = cg_m_h.into();
-
-        let d_v = cg_h_pos.x() - cb_v_pos.x();
-        let d_m = cg_m_h_pos.y() - cb_m_pos.y();
-        
+        let d_v = cg_h.x() - cb_v.x();
+        let d_m = cg_m_h.y() - cb_m.y();
         //   println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
-        //          heel, trim, draught, cg.print(), cb.print(), cg_h_pos.print(), cb_v_pos.print(), cb_m_pos.print(), d_v, d_m);
+        //          heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
         //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
-        //          heel, cg.y(), cb.y(), cg_h_pos.y(), cb_v_pos.y(), d_m);
-        
+        //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
         Ok((draught, d_v, d_m, cg, displacement, disp_result))
-    }    
+    }
     // Считаем сыпучие грузы.
     // На них крен и дифферент не влияет.
     fn process_bulk(&self, bulks: &Vec<BulkData>, epsilon: f64) -> Result<Vec<BulkResult>, Error> {
