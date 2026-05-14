@@ -4,7 +4,6 @@ use std::{
     ops::{Add, AddAssign, Sub},
 };
 use bincode::{Decode, Encode};
-use parry3d_f64::math::Vec3;
 use serde::{Deserialize, Serialize};
 //
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Decode, Encode, PartialEq, Default)]
@@ -88,14 +87,14 @@ impl From<Position> for [f64; 3] {
     }
 }
 //
-impl From<Position> for Vec3 {
+impl From<Position> for nalgebra::Point3<f64> {
     fn from(val: Position) -> Self {
-        Vec3::new(val.x, val.y, val.z)
+        nalgebra::Point3::new(val.x, val.y, val.z)
     }
 }
 //
-impl From<Vec3> for Position {
-    fn from(v: Vec3) -> Self {
+impl From<nalgebra::Point3<f64>> for Position {
+    fn from(v: nalgebra::Point3<f64>) -> Self {
         Self::new(v.x, v.y, v.z)
     }
 }
@@ -105,4 +104,3 @@ impl From<(f64, f64, f64)> for Position {
         Self::new(v.0, v.1, v.2)
     }
 }
-
