@@ -1,10 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{
-    algorithm::entities::{
-        Bounds,
-    },
-};
+use crate::algorithm::entities::Bounds;
 use sal_3dlib::WindageProfile;
 use sal_core::{dbg::Dbg, error::Error};
 ///
@@ -57,7 +53,7 @@ impl WindageArea {
     pub fn init(&mut self, bounds: Bounds) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
         self.windage_area = Some(
-            WindageProfile::read(&self.cache_dir.join("windage")).map_err(|err| error.pass(err))?
+            WindageProfile::read(&self.cache_dir.join("windage")).map_err(|err| error.pass(err))?,
         );
         self.bounds = Some(bounds);
         Ok(())
@@ -102,17 +98,16 @@ impl WindageArea {
         let windage_area = self
             .windage_area
             .as_ref()
-            .ok_or(error.pass("no windage_area"))?;            
-        let bounds = self
-            .bounds
-            .as_ref()
-            .ok_or(error.pass("no bounds"))?;      
-        let x_max = windage_area.x_min + windage_area.step*windage_area.columns.len() as f64;
-        let src_bounds = 
+            .ok_or(error.pass("no windage_area"))?;
+        let bounds = self.bounds.as_ref().ok_or(error.pass("no bounds"))?;
+        let x_max = windage_area.x_min + windage_area.step * windage_area.columns.len() as f64;
+        let src_bounds =
             Bounds::from_min_max(windage_area.x_min, x_max, windage_area.columns.len())
                 .map_err(|err| error.pass(err))?;
         let src_values = windage_area.calculate_area_array(self.draught_min, 0.);
-        bounds.intersect(&src_bounds, &src_values).map_err(|err| error.pass(err)) 
+        bounds
+            .intersect(&src_bounds, &src_values)
+            .map_err(|err| error.pass(err))
     }
     /// Расчет площади проекции по правилу дополнительного запаса плавучести в носу
     /// [https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter02_draftCriteria/section04_bowBuoyancy.md]
@@ -121,42 +116,47 @@ impl WindageArea {
         let windage_area = self
             .windage_area
             .as_ref()
-            .ok_or(error.pass("no windage_area"))?;        
-        windage_area.bow_area(draught, trim).map_err(|err| error.pass(err))
-    }  
+            .ok_or(error.pass("no windage_area"))?;
+        windage_area
+            .bow_area(draught, trim)
+            .map_err(|err| error.pass(err))
+    }
 }
-/*
 //
 #[cfg(test)]
 impl WindageArea {
     /// Создает "фейковый" объект парусности для тестов.
     /// Позволяет передать уже готовые (замоканные) кэши и значения,
     /// чтобы не производить тяжелые расчеты и дисковые операции.
-    pub fn create_test_fake(draught_min: f64, values: Option<Vec<f64>>) -> Self {
-        Self {
-            dbg: sal_core::dbg::Dbg::new("test", "FakeWindageArea"),
-            cache_dir: PathBuf::from("/tmp/test_windage_cache"),
-            windage_area: None,
-            values,
-            draught_min,
-        }
-    }
-
-    /// Вспомогательный метод для создания мока с простейшими плоскими ответами.
-    /// Подойдет для интеграционных тестов физики, где просто нужны конкретные цифры парусности.
-    pub fn create_simple_mock(
-        mock_values: Vec<f64>, //распределение площади парусности по шпациям
+    pub fn create_test_fake(
+        midel_dx: f64,
+        draught_min: f64,
+        lbp: f64,
+        values: Vec<f64>,
     ) -> Self {
+        use sal_3dlib::WindageColumn;
+        let x_min = midel_dx - lbp/2.;
+        let x_max = midel_dx + lbp/2.;
+        let bounds = Bounds::from_min_max(x_min, x_max, values.len()).unwrap();
+        let step = (x_max - x_min) / values.len() as f64;
+        let columns = values.iter()
+                    .map(|v| WindageColumn {
+                        intervals: vec![(draught_min, draught_min + v/step)],
+                    })
+                    .collect();
         Self {
             dbg: sal_core::dbg::Dbg::new("test", "SimpleMockWindageArea"),
             cache_dir: PathBuf::from("/tmp/test_windage_cache"),
-            shape: Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.))),
-            thread_pool: Arc::new(ThreadPool::new("WindageArea::mock_empty", None)),
-            windage_area: None,
-            bow_area: None,
-            values: Some(mock_values),
-            draught_min: 1.,
+            windage_area: Some(WindageProfile {
+                x_min,
+                step,
+                midel_dx,
+                draught_min,
+                lbp,
+                columns,
+            }),
+            draught_min,
+            bounds: Some(bounds),
         }
     }
 }
-*/
