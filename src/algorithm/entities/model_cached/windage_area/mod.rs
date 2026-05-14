@@ -73,9 +73,9 @@ impl WindageArea {
             av_cs_dmin,
             mv_x_cs_dmin,
             mv_z_cs_dmin,
-            delta_av: av_cs - av_cs_dmin,
-            delta_mv_x: mv_x - mv_x_cs_dmin,
-            delta_mv_z: mv_z - mv_z_cs_dmin,
+            delta_av: av_cs_dmin - av_cs,
+            delta_mv_x: mv_x_cs_dmin - mv_x,
+            delta_mv_z: mv_z_cs_dmin - mv_z,
             area_volume_z,
         };
         Ok(res)
