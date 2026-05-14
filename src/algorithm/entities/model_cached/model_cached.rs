@@ -267,7 +267,7 @@ impl ModelCached {
             .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
         let displacement_bound = DisplacementBoundCache::new(
             &self.dbg,
-            self.cache_dir.clone().join("disp_bounded"),
+            self.cache_dir.clone().join("distr"),
             self.model_x,
             bounds.clone(),
         );
