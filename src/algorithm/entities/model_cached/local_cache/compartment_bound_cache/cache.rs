@@ -17,7 +17,6 @@ use std::{
 pub struct CompartmentBoundCache {
     dbg: Dbg,
     cache_path: PathBuf,
-    level_step: f64,
     volume_max: f64,
     /// [коэффициент проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
     coeff: Option<f64>,
@@ -35,14 +34,12 @@ impl CompartmentBoundCache {
         parent: &Dbg,
         volume_max: f64,
         cache_dir: PathBuf,
-        level_step: f64,
         bounds: Bounds,
     ) -> Self {
         let dbg = Dbg::new(parent, "CompartmentBoundCache".to_string());
         let cache_path = cache_dir.join(format!("{}", bounds.len_qnt()));
         Self {
             volume_max,
-            level_step,
             coeff: None,
             bounds,
             caches: OnceLock::new(),

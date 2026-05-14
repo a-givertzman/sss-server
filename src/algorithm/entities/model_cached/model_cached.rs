@@ -4,10 +4,9 @@ use crate::{
         entities::{
             AddVec, Bounds, Moment, Position,
             model_cached::{
-                AreaResult, CompartmentBoundCache, CompartmentCache,
-                DamagedCompartmentCache, DisplacementBoundCache, DisplacementCache,
-                DisplacementCacheResult, Draught, HoldCompartmentBoundCache,
-                HoldCompartmentCache, WindageArea,
+                AreaResult, CompartmentBoundCache, CompartmentCache, DamagedCompartmentCache,
+                DisplacementBoundCache, DisplacementCache, DisplacementCacheResult, Draught,
+                HoldCompartmentBoundCache, HoldCompartmentCache, WindageArea,
             },
             ship_model::{
                 stability_result::{BalanceStabilityResult, BulkResult, LiquidResult},
@@ -20,8 +19,7 @@ use crate::{
 };
 use core::f64;
 use indexmap::IndexMap;
-use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
-use parry3d_f64::{query::PointQuery, shape::HalfSpace};
+use parry3d_f64::{glamx::DQuat, math::*, query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -172,13 +170,8 @@ impl ModelCached {
     ) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "ModelCached");
         let error = Error::new(&dbg, "new");
-        let model_x = Some(conf.model_x);
-        let windage_area = WindageArea::new(
-            &dbg,
-            conf.cache_dir.clone(),
-            conf.draught_min,
-        );
-        let path = conf.model_dir.clone().join(PathBuf::from("compartments"));
+        let windage_area = WindageArea::new(&dbg, conf.cache_dir.clone(), conf.draught_min);
+        let path = conf.cache_dir.clone().join(PathBuf::from("compartments"));
         let pathes: Vec<_> = match std::fs::read_dir(&path) {
             Ok(dir) => dir
                 .into_iter()
@@ -196,6 +189,7 @@ impl ModelCached {
                 Vec::new()
             }
         };
+        let displacement = DisplacementCache::new(&dbg, conf.cache_dir.clone());
         let compartments = pathes
             .iter()
             .filter(|path: &&PathBuf| path.file_name().is_some())
@@ -246,10 +240,7 @@ impl ModelCached {
             bounds_level_step: conf.bounds_level_step,
             cache_dir: conf.cache_dir.clone(),
             dso_angles: conf.dso_angles.clone(),
-            displacement: DisplacementCache::new(
-                &dbg,
-                conf.cache_dir.clone(),
-            ),
+            displacement,
             compartments,
             hold_compartments: IndexMap::new(),
             damaged_compartments,
@@ -270,32 +261,10 @@ impl ModelCached {
     ) -> Result<(), Error> {
         //    dbg!(self.dbg.clone(), "init");
         let error = Error::new(self.dbg.clone(), "init");
+        let bounds_qnt = bounds.len_qnt();
         self.displacement
             .init()
             .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
-        for (name, compartment) in self.compartments.iter_mut() {
-            let mut guard = compartment.write();
-            guard
-                .init()
-                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
-            let (level_max, volume_max) = compartments_max
-                .get(name)
-                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
-            guard
-                .calc_coeff(*volume_max, *level_max)
-                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
-        }
-        /*     TODO - пока не используются, потом будет отдельный расчет
-        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
-            damaged_compartment
-                .write()
-                .init()
-                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
-        }*/
-        self.windage_area
-            .init()
-            .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
-        let bounds_qnt = bounds.len_qnt();
         let displacement_bound = DisplacementBoundCache::new(
             &self.dbg,
             self.cache_dir.clone().join("disp_bounded"),
@@ -307,19 +276,45 @@ impl ModelCached {
             .map_err(|err| error.pass_with("displacement_bound.init".to_string(), err))?;
         self.displacement_bounded
             .insert(bounds_qnt, Arc::new(RwLock::new(displacement_bound)));
-        let mut cache_map = IndexMap::new();
-        for (code, compartment) in &self.compartments {
-            let mut compartment_bounded = compartment
-                .read()
-                .build_bounded(bounds.clone(), self.bounds_level_step)
-                .map_err(|err| error.pass_with("compartment_bounded.build_bounded", err))?;
+        let mut compartments_bounded = IndexMap::new();
+        for (name, compartment) in self.compartments.iter_mut() {
+            let mut guard = compartment.write();
+            guard
+                .init()
+                .map_err(|err| error.pass_with(format!("compartment:{name}.init"), err))?;
+            let (level_max, volume_max) = compartments_max
+                .get(name)
+                .ok_or(error.err(format!("compartments_volume_max.get(&name) {name}")))?;
+            guard
+                .calc_coeff(*volume_max, *level_max)
+                .map_err(|err| error.pass_with(format!("compartment:{name}.calc_coeff"), err))?;
+            let mut compartment_bounded = CompartmentBoundCache::new(
+                &self.dbg,
+                *volume_max,
+                self.cache_dir
+                    .clone()
+                    .join("compartments")
+                    .join(format!("{name}"))
+                    .join("distr"),
+                bounds.clone(),
+            );
             compartment_bounded
                 .init()
                 .map_err(|err| error.pass_with("compartment_bounded.init", err))?;
-            cache_map.insert(code.clone(), Arc::new(RwLock::new(compartment_bounded)));
+            compartments_bounded.insert(name.clone(), Arc::new(RwLock::new(compartment_bounded)));
         }
         self.compartments_bounded
-            .insert(bounds.len_qnt(), cache_map);
+            .insert(bounds_qnt, compartments_bounded);
+        /*     TODO - пока не используются, потом будет отдельный расчет
+        for (name, damaged_compartment) in self.damaged_compartments.iter_mut() {
+            damaged_compartment
+                .write()
+                .init()
+                .map_err(|err| error.pass_with(format!("damaged_compartment:{name}.init"), err))?
+        }*/
+        self.windage_area
+            .init(bounds.clone())
+            .map_err(|err| error.pass_with("displacement.init".to_string(), err))?;
         Ok(())
     }
     /// Пересчет композитных отсеков трюма. Каждый расчет список таких отсеков обновляется
@@ -371,10 +366,12 @@ impl ModelCached {
     }
     //
     pub fn bounded_windage_area(&self) -> Result<Vec<f64>, Error> {
-        self.windage_area.bounded_windage_area(self.bounds).map_err(|err| {
-            Error::new(&self.dbg, "bounded_windage_area")
-                .pass_with("self.windage_area.bounded_windage_area", err)
-        })
+        self.windage_area
+            .bounded_windage_area()
+            .map_err(|err| {
+                Error::new(&self.dbg, "bounded_windage_area")
+                    .pass_with("self.windage_area.bounded_windage_area", err)
+            })
     }
     /// Расчет параметров поверхности
     pub fn windage_area(&self, draught: f64) -> Result<AreaResult, Error> {
@@ -885,16 +882,18 @@ impl ModelCached {
                 }
             }
             if let Some(old_d_v) = d_v
-                && old_d_v.signum() != new_d_v.signum() {
-                    step_trim *= 0.1;
-                    step_heel *= 3.;
-                }
+                && old_d_v.signum() != new_d_v.signum()
+            {
+                step_trim *= 0.1;
+                step_heel *= 3.;
+            }
             d_v = Some(new_d_v);
             if let Some(old_d_m) = d_m
-                && old_d_m.signum() != new_d_m.signum() {
-                    step_heel *= 0.1;
-                    step_trim *= 3.;
-                }
+                && old_d_m.signum() != new_d_m.signum()
+            {
+                step_heel *= 0.1;
+                step_trim *= 3.;
+            }
             d_m = Some(new_d_m);
             //        println!("hdghdfgdvb model_cached floating_position: {_i}, epsilon:{} h:{:.3}, t:{:.3}, draught:{:.3}, d_v:{}, d_m:{}",
             //            epsilon, heel, trim, draught, new_d_v, new_d_m);
@@ -1007,55 +1006,54 @@ impl ModelCached {
                     )
                     .map_err(|err| error.pass(err))?;
                 //   println!("sdffsz model_cached dso heel:{heel} i:{_i}, epsilon:{epsilon} trim_epsilon:{trim_epsilon} d_v:{new_d_v}");
-                if epsilon >= trim_epsilon
-                    && epsilon >= new_d_v.abs() {
-                        let delta_moment_liquid = self
-                            .moment_liquid_dso_abs_moment(
-                                &query.liquid,
-                                heel,
-                                trim,
-                                balanced_heel,
-                                balanced_trim,
-                                epsilon,
-                            )
-                            .map_err(|err| error.pass_with("self.moment_liquid", err))?;
-                        let l = {
-                            let [_, tcg, vcg] = cg.values();
-                            let [_, tcb, vcb] = disp_result.volume_center.values();
-                            let sin_theta = heel.to_radians().sin();
-                            let cos_theta = heel.to_radians().cos();
-                            let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
-                            let lv = tcb * cos_theta + vcb * sin_theta;
-                            //             println!("{heel} {lv};");
-                            let ld = tcg * cos_theta + vcg * sin_theta;
-                            let delta_l = delta_moment_liquid * sin_delta_angle / mass_sum;
-                            let l = lv - ld - delta_l;
-                            //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
-                            println!("{heel} {trim} {delta_moment_liquid} {delta_l} {lv} {l};");
-                            l
-                        };
-                        dso.push((heel, l));
-                        let tg_t = trim.to_radians().tan();
-                        let tg_h = heel.to_radians().tan();
-                        let cos_h = heel.to_radians().cos();
-                        let current_draught = |p: &Position| {
-                            let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
-                            p.z() - draught - d_zi
-                        };
-                        let min_angle = |angles: &[Position]| {
-                            let mut angles: Vec<_> =
-                                angles.iter().map(&current_draught).collect();
-                            angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
-                            angles.first().unwrap_or(max_heel).to_owned()
-                        };
-                        entry_angle.push((heel, min_angle(opening)));
-                        flooding_angle.push((heel, min_angle(deck_angle_point)));
-                        break;
-                    }
+                if epsilon >= trim_epsilon && epsilon >= new_d_v.abs() {
+                    let delta_moment_liquid = self
+                        .moment_liquid_dso_abs_moment(
+                            &query.liquid,
+                            heel,
+                            trim,
+                            balanced_heel,
+                            balanced_trim,
+                            epsilon,
+                        )
+                        .map_err(|err| error.pass_with("self.moment_liquid", err))?;
+                    let l = {
+                        let [_, tcg, vcg] = cg.values();
+                        let [_, tcb, vcb] = disp_result.volume_center.values();
+                        let sin_theta = heel.to_radians().sin();
+                        let cos_theta = heel.to_radians().cos();
+                        let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
+                        let lv = tcb * cos_theta + vcb * sin_theta;
+                        //             println!("{heel} {lv};");
+                        let ld = tcg * cos_theta + vcg * sin_theta;
+                        let delta_l = delta_moment_liquid * sin_delta_angle / mass_sum;
+                        let l = lv - ld - delta_l;
+                        //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                        println!("{heel} {trim} {delta_moment_liquid} {delta_l} {lv} {l};");
+                        l
+                    };
+                    dso.push((heel, l));
+                    let tg_t = trim.to_radians().tan();
+                    let tg_h = heel.to_radians().tan();
+                    let cos_h = heel.to_radians().cos();
+                    let current_draught = |p: &Position| {
+                        let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                        p.z() - draught - d_zi
+                    };
+                    let min_angle = |angles: &[Position]| {
+                        let mut angles: Vec<_> = angles.iter().map(&current_draught).collect();
+                        angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                        angles.first().unwrap_or(max_heel).to_owned()
+                    };
+                    entry_angle.push((heel, min_angle(opening)));
+                    flooding_angle.push((heel, min_angle(deck_angle_point)));
+                    break;
+                }
                 if let Some(old_d_v) = d_v
-                    && old_d_v.signum() != new_d_v.signum() {
-                        step_trim *= 0.5;
-                    }
+                    && old_d_v.signum() != new_d_v.signum()
+                {
+                    step_trim *= 0.5;
+                }
                 d_v = Some(new_d_v);
                 trim += step_trim * new_d_v.signum();
                 draught = new_draught;
@@ -1151,46 +1149,45 @@ impl ModelCached {
                     .map_err(|err| error.pass(err))?;
                 //       println!("sdffsz model_cached dso heel:{:.3} i:{_i} shift_liquid:{}, trim:{:.3} step_trim:{:.3} epsilon:{:.3} trim_epsilon:{:.3} d_v:{:.3} new_d_v:{:.3} ",
                 //          heel, moment_liquid_floating.to_pos(mass_liquid).print(), trim, step_trim, epsilon, trim_epsilon, d_v.unwrap_or(0.), new_d_v);
-                if epsilon >= trim_epsilon
-                    && epsilon >= new_d_v.abs() {
-                        let l = {
-                            let [_, tcg, vcg] = cg.values();
-                            let [_, tcb, vcb] = disp_result.volume_center.values();
-                            let sin_theta = heel.to_radians().sin();
-                            let cos_theta = heel.to_radians().cos();
-                            let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
-                            let lv = tcb * cos_theta + vcb * sin_theta;
-                            //             println!("{heel} {lv};");
-                            let ld = tcg * cos_theta + vcg * sin_theta;
-                            let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
-                            
-                            //   println!("model_cached "heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
-                            //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
-                            //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
-                            lv - ld - delta_l
-                        };
-                        dso.push((heel, l));
-                        let tg_t = trim.to_radians().tan();
-                        let tg_h = heel.to_radians().tan();
-                        let cos_h = heel.to_radians().cos();
-                        let current_draught = |p: &Position| {
-                            let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
-                            p.z() - draught - d_zi
-                        };
-                        let min_angle = |angles: &[Position]| {
-                            let mut angles: Vec<_> =
-                                angles.iter().map(&current_draught).collect();
-                            angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
-                            angles.first().unwrap_or(max_heel).to_owned()
-                        };
-                        flooding_angle.push((heel, min_angle(opening)));
-                        entry_angle.push((heel, min_angle(deck_angle_point)));
-                        break;
-                    }
+                if epsilon >= trim_epsilon && epsilon >= new_d_v.abs() {
+                    let l = {
+                        let [_, tcg, vcg] = cg.values();
+                        let [_, tcb, vcb] = disp_result.volume_center.values();
+                        let sin_theta = heel.to_radians().sin();
+                        let cos_theta = heel.to_radians().cos();
+                        let sin_delta_angle = (heel - balanced_heel).to_radians().sin();
+                        let lv = tcb * cos_theta + vcb * sin_theta;
+                        //             println!("{heel} {lv};");
+                        let ld = tcg * cos_theta + vcg * sin_theta;
+                        let delta_l = moment_liquid_surface * sin_delta_angle / mass_sum;
+
+                        //   println!("model_cached "heel:{heel} trim:{trim} shift_liquid:{} delta_l:{delta_l} lv:{lv} l:{l}", moment_liquid_floating.to_pos(mass_liquid).print(), );
+                        //   println!("model_cached dso heel:{heel} trim:{trim} moment_liquid_dso:{moment_liquid_dso} delta_moment_liquid:{delta_moment_liquid} delta_l:{delta_l} lv:{lv} l:{l}");
+                        //     println!("{heel} {trim} {moment_liquid_surface} {delta_l} {lv} {l};");
+                        lv - ld - delta_l
+                    };
+                    dso.push((heel, l));
+                    let tg_t = trim.to_radians().tan();
+                    let tg_h = heel.to_radians().tan();
+                    let cos_h = heel.to_radians().cos();
+                    let current_draught = |p: &Position| {
+                        let d_zi = p.y() * tg_h + (p.x() - self.model_x) * tg_t / cos_h;
+                        p.z() - draught - d_zi
+                    };
+                    let min_angle = |angles: &[Position]| {
+                        let mut angles: Vec<_> = angles.iter().map(&current_draught).collect();
+                        angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                        angles.first().unwrap_or(max_heel).to_owned()
+                    };
+                    flooding_angle.push((heel, min_angle(opening)));
+                    entry_angle.push((heel, min_angle(deck_angle_point)));
+                    break;
+                }
                 if let Some(old_d_v) = d_v
-                    && old_d_v.signum() != new_d_v.signum() {
-                        step_trim *= 0.5;
-                    }
+                    && old_d_v.signum() != new_d_v.signum()
+                {
+                    step_trim *= 0.5;
+                }
                 d_v = Some(new_d_v);
                 trim += step_trim * new_d_v.signum();
                 draught = new_draught;
@@ -1249,10 +1246,10 @@ impl ModelCached {
         let rotation = {
             let heel_rad = -heel.to_radians();
             let trim_rad = trim.to_radians();
-            let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
-            let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
-            let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
-            let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
+            let trim_rotation = DQuat::from_axis_angle(Vec3::Y, trim_rad);
+            let transformed_x_axis = trim_rotation.mul_vec3(Vec3::X);
+            let transformed_x_axis = Vec3::from(transformed_x_axis).normalize();
+            let heel_rotation = DQuat::from_axis_angle(transformed_x_axis, heel_rad);
             heel_rotation * trim_rotation
         };
         // центр тяжести корпуса
@@ -1265,46 +1262,40 @@ impl ModelCached {
         // Определение невязки
         let cg_h = {
             // Через центр плавучести CB проводится горизонтальная плоскость
-            let my_plane = HalfSpace::new(Vector3::z_axis());
+            let my_plane = HalfSpace::new(Vec3::Z);
             let cg_local = cg - cb;
-            let cg_local = rotation.transform_point(&cg_local.into());
-            let cg_h_local = my_plane.project_local_point(&cg_local, false).point;
-            let cg_h = rotation.inverse_transform_point(&cg_h_local);
-            
+            let cg_local = rotation.mul_vec3(cg_local.into());
+            let cg_h_local = my_plane.project_local_point(cg_local, false).point;
+            let cg_h = rotation.inverse().mul_vec3(cg_h_local);
             cb + cg_h.into()
         };
         // Определение посадки судна для следующего шага
         let cb_v = {
             // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
-            let my_plane = HalfSpace::new(Vector3::y_axis());
+            let my_plane = HalfSpace::new(Vec3::Y);
             let cb_local = cb - cg;
-            let cb_local = rotation.transform_point(&cb_local.into());
-            let cg_v_local = my_plane.project_local_point(&cb_local, false).point;
-            let cg_v = rotation.inverse_transform_point(&cg_v_local);
-            
+            let cb_local = rotation.mul_vec3(cb_local.into());
+            let cg_v_local = my_plane.project_local_point(cb_local, false).point;
+            let cg_v = rotation.inverse().mul_vec3(cg_v_local);
             cg + cg_v.into()
         };
         let cb_m = {
             // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
-            let my_plane = HalfSpace::new(Vector3::x_axis());
+            let my_plane = HalfSpace::new(Vec3::X);
             let cb_local = cb - cg;
-            let cb_local = rotation.transform_point(&cb_local.into());
-            let cb_m_local = my_plane.project_local_point(&cb_local, false).point;
-            let cb_m = rotation.inverse_transform_point(&cb_m_local);
-            
+            let cb_local = rotation.mul_vec3(cb_local.into());
+            let cb_m_local = my_plane.project_local_point(cb_local, false).point;
+            let cb_m = rotation.inverse().mul_vec3(cb_m_local);
             cg + cb_m.into()
         };
         // проекция точки cg_m на вертикальную плоскость параллельную основной линии
         let cg_m_h = {
             // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
-            let my_plane = HalfSpace::new(Vector3::y_axis());
+            let my_plane = HalfSpace::new(Vec3::Y);
             let cg_m_local = cb_m - cg;
-            let cg_m_local = rotation.transform_point(&cg_m_local.into());
-            let cg_m_h_local = my_plane
-                .project_local_point(&cg_m_local, false)
-                .point;
-            let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local);
-            
+            let cg_m_local = rotation.mul_vec3(cg_m_local.into());
+            let cg_m_h_local = my_plane.project_local_point(cg_m_local, false).point;
+            let cg_m_h = rotation.inverse().mul_vec3(cg_m_h_local);
             cg + cg_m_h.into()
         };
         let d_v = cg_h.x() - cb_v.x();
@@ -1844,6 +1835,7 @@ impl ModelCached {
         Ok(result)
     }
 }
+/*
 //
 #[cfg(test)]
 impl ModelCached {
@@ -1852,11 +1844,7 @@ impl ModelCached {
         let dbg = Dbg::new("test", "ModelCachedMock");
 
         // Создаем пустую форму парусности
-        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(
-            100,
-            10,
-            1.,
-        )));
+        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.)));
 
         Self {
             dbg: dbg.clone(),
@@ -1869,7 +1857,7 @@ impl ModelCached {
             dso_angles: vec![],
             displacement_shapes: IndexMap::new(),
             windage_shape,
-            displacement: DisplacementCache::create_simple_mock(10000., 10000.,),
+            displacement: DisplacementCache::create_simple_mock(10000., 10000.),
             compartments: IndexMap::new(),
             hold_compartments: IndexMap::new(),
             damaged_compartments: IndexMap::new(),
@@ -1886,11 +1874,7 @@ impl ModelCached {
         let dbg = sal_core::dbg::Dbg::new("test", "ModelCachedMockStrength");
 
         // 1. Создаем пустую базовую форму парусности
-        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(
-            100,
-            10,
-            1.0,
-        )));
+        let windage_shape = Arc::new(RwLock::new(AreaShape::create_test_rectangle(100, 10, 1.0)));
 
         // 2. Используем ваш метод для создания мока WindageArea
         // Он запишет переданный вектор в поле values и создаст нужные пустые заглушки
@@ -1907,23 +1891,27 @@ impl ModelCached {
             dso_angles: vec![],
             displacement_shapes: indexmap::IndexMap::new(),
             windage_shape,
-            
+
             // Используем ваш простой мок гидростатики
             displacement: DisplacementCache::create_simple_mock(10000.0, 10000.0),
-            
+
             compartments: indexmap::IndexMap::new(),
             hold_compartments: indexmap::IndexMap::new(),
             damaged_compartments: indexmap::IndexMap::new(),
-            
+
             // Записываем наш мок парусности с готовыми значениями!
             windage_area: mock_windage,
-            
+
             displacement_bounded: indexmap::IndexMap::new(),
             compartments_bounded: indexmap::IndexMap::new(),
             hold_compartments_bounded: indexmap::IndexMap::new(),
-            
+
             // Создаем безопасный пул потоков
-            thread_pool: Arc::new(sal_sync::thread_pool::ThreadPool::new("ModelCached::mock_with_strength_areas", None)),
+            thread_pool: Arc::new(sal_sync::thread_pool::ThreadPool::new(
+                "ModelCached::mock_with_strength_areas",
+                None,
+            )),
         }
     }
 }
+*/

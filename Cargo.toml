@@ -45,7 +45,7 @@ dashmap = "~6.1"
 #
 # Math
 splines = "~5.0"
-nalgebra = "~0.34"
+# nalgebra = "~0.34"
 # glam = { version = "0.24", features = ["bytemuck"] }
 #
 # Helpful macros for working with enums and strings

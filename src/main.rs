@@ -56,29 +56,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model_x = conf.api.model.midel_x;
     let model_name = conf.api.model.name.clone();
     let cache_dir: PathBuf = ("assets/cache/".to_owned() + &model_name).into();
-    let model_dir: PathBuf = ("assets/model/".to_owned() + &model_name).into();
     let mut dso_angles: Vec<_> = (-120..=120).map(|v| (v as f64) * 0.5 as f64).collect();
     dso_angles.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     dso_angles.dedup();
     let model_cached = model_cached::ModelCached::new(
         &dbg,
         model_cached::ModelCachedConf {
-            model_dir,
             cache_dir,
-            model_scale: 1000.,
             model_x,
-            hull_heel_steps: vec![
-                -60., -50., -45., -40., -35., -30., -25., -20., -15., -10., -5., -2., -1., -0.5,
-                -0.2, 0., 0.2, 0.5, 1., 2., 5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 60.,
-            ],
-            hull_trim_steps: vec![
-                -40., -30., -25., -20., -15., -12.5, -10., -7.5, -5., -3., -2., -1., -0.5, -0.2,
-                0., 0.2, 0.5, 1., 2., 3., 5., 7.5, 10., 12.5, 20., 25., 30., 40.,
-            ],
-            compartment_heel_steps: vec![
-                -60., -30., -15., -10., -5., -2., 0., 2., 5., 10., 15., 30., 60.,
-            ],
-            compartment_trim_steps: vec![-40., -20., -10., -5., -2., 0., 2., 5., 10., 20., 40.],
             ship_length_lbp: 130.5,
             draught_min: 2.001,
             hull_draught_min: 0.5,

@@ -34,6 +34,7 @@ pub struct WindageArea {
     cache_dir: PathBuf,
     windage_area: Option<WindageProfile>,
     draught_min: f64,
+    bounds: Option<Bounds>,
 }
 //
 //
@@ -48,15 +49,17 @@ impl WindageArea {
             dbg,
             cache_dir,
             windage_area: None,
+            bounds: None,
             draught_min,
         }
     }
     /// инициализация заранее посчитанными данными
-    pub fn init(&mut self) -> Result<(), Error> {
+    pub fn init(&mut self, bounds: Bounds) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "init");
         self.windage_area = Some(
             WindageProfile::read(&self.cache_dir.join("windage")).map_err(|err| error.pass(err))?
         );
+        self.bounds = Some(bounds);
         Ok(())
     }
     /// Расчет площади и центра площади парусности
@@ -94,12 +97,16 @@ impl WindageArea {
     }
     /// Расчет распределения площади парусности
     /// Возвращает набор значений (начало площади по x, конец площади по x, массив значений площади)
-    pub fn bounded_windage_area(&self, bounds: Bounds) -> Result<Vec<f64>, Error> {
+    pub fn bounded_windage_area(&self) -> Result<Vec<f64>, Error> {
         let error = Error::new(&self.dbg, "bounded_windage_area");
         let windage_area = self
             .windage_area
             .as_ref()
             .ok_or(error.pass("no windage_area"))?;            
+        let bounds = self
+            .bounds
+            .as_ref()
+            .ok_or(error.pass("no bounds"))?;      
         let x_max = windage_area.x_min + windage_area.step*windage_area.columns.len() as f64;
         let src_bounds = 
             Bounds::from_min_max(windage_area.x_min, x_max, windage_area.columns.len())
@@ -118,6 +125,7 @@ impl WindageArea {
         windage_area.bow_area(draught, trim).map_err(|err| error.pass(err))
     }  
 }
+/*
 //
 #[cfg(test)]
 impl WindageArea {
@@ -151,3 +159,4 @@ impl WindageArea {
         }
     }
 }
+*/
