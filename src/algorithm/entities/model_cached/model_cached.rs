@@ -19,8 +19,7 @@ use crate::{
 };
 use core::f64;
 use indexmap::IndexMap;
-use nalgebra::{UnitQuaternion, UnitVector3, Vector3};
-use parry3d_f64::{query::PointQuery, shape::HalfSpace};
+use parry3d_f64::{glamx::DQuat, math::Vec3, query::PointQuery, shape::HalfSpace};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     sync::Stack,
@@ -1206,7 +1205,7 @@ impl ModelCached {
         }*/
         Ok((dso, entry_angle, flooding_angle))
     }
-  /*  /// Расчет итерации в расчете [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
+    /// Расчет итерации в расчете [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
     /// и диаграммы. Возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
     fn position(
         &self,
@@ -1295,109 +1294,6 @@ impl ModelCached {
             let cg_m_local = rotation.mul_vec3(cg_m_local.into());
             let cg_m_h_local = my_plane.project_local_point(cg_m_local, false).point;
             let cg_m_h = rotation.inverse().mul_vec3(cg_m_h_local);
-            cg + cg_m_h.into()
-        };
-        let d_v = cg_h.x() - cb_v.x();
-        let d_m = cg_m_h.y() - cb_m.y();
-        //   println!("hdghdfgdvb model_cached position: heel:{:.3} trim:{:.3} draught:{:.3}  cg:{}, cb:{} cg_h:{} cb_v:{} cb_m:{} d_v:{:.3}, d_m:{:.3}",
-        //          heel, trim, draught, cg.print(), cb.print(), cg_h.print(), cb_v.print(), cb_m.print(), d_v, d_m);
-        //  println!("hdghdfgdvb model_cached position: heel:{} cg:{}, cb:{} cg_h:{} cb_v:{} d_m:{}",
-        //          heel, cg.y(), cb.y(), cg_h.y(), cb_v.y(), d_m);
-        Ok((draught, d_v, d_m, cg, displacement, disp_result))
-    }*/
-    /// Расчет итерации в расчете [равновесного положения](https://github.com/a-givertzman/sss/blob/master/design/algorithm/part03_draft/chapter01_floatingPosition/chapter01_floatingPosition.md)
-    /// и диаграммы. Возвращает (draught, d_v, d_m, cg, displacement, disp_result, mass_shift_z)
-    fn position(
-        &self,
-        heel: f64,
-        trim: f64,
-        draught: f64,
-        water_density: f64,
-        epsilon: f64,
-        mass_sum: f64,        // постоянная масса mass_const + mass_bulk + mass_liquid
-        moment_sum: Position, // постоянный момент moment_const + moment_bulk
-        moment_liquid: Moment,
-        damaged_compartment: &Vec<String>,
-    ) -> Result<(f64, f64, f64, Position, f64, DisplacementCacheResult), Error> {
-        let error = Error::new(&self.dbg, "_floating_position");
-        // учет изменения водоизмещения из-за поврежденных отсеков
-        // поврежденные отсеки есть только в аварийном расчете, иначе список пустой
-        let (mass_damaged_compartment, moment_damaged_compartment) = self
-            .calc_damaged_compartments(damaged_compartment, heel, trim, draught, water_density)
-            .map_err(|err| error.pass_with("self.calc_damaged_compartments", err))?;
-        let mass_sum = mass_sum + mass_damaged_compartment;
-        let displacement = mass_sum / water_density;
-        // считаем корпус с учетом изменения массы
-        let disp_result = self
-            .displacement
-            .get(heel, trim, mass_sum / water_density, epsilon)
-            .map_err(|err| {
-                error.pass_with(
-                    format!(
-                        "self.displacement.get heel:{heel} trim:{trim} displacement:{displacement}"
-                    ),
-                    err,
-                )
-            })?;
-        let (draught, cb) = (disp_result.draught, disp_result.volume_center);
-        // расчет ориентации корпуса
-        let rotation = {
-            let heel_rad = -heel.to_radians();
-            let trim_rad = trim.to_radians();
-            let trim_rotation = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), trim_rad);
-            let transformed_x_axis = trim_rotation.transform_vector(&Vector3::x_axis());
-            let transformed_x_axis = UnitVector3::new_normalize(transformed_x_axis);
-            let heel_rotation = UnitQuaternion::from_axis_angle(&transformed_x_axis, heel_rad);
-            heel_rotation * trim_rotation
-        };
-        // центр тяжести корпуса
-        let cg: Position = {
-            //        dbg!(moment_sum, moment_liquid, mass_sum);
-            let moment_sum = moment_sum + moment_liquid + moment_damaged_compartment;
-            moment_sum.to_pos(mass_sum)
-        };
-        //    dbg!(cg);
-        // Определение невязки
-        let cg_h = {
-            // Через центр плавучести CB проводится горизонтальная плоскость
-            let my_plane = HalfSpace::new(Vector3::z_axis());
-            let cg_local = cg - cb;
-            let cg_local = rotation.transform_point(&cg_local.into());
-            let cg_h_local = my_plane.project_local_point(&cg_local, false).point;
-            let cg_h = rotation.inverse_transform_point(&cg_h_local);
-
-            cb + cg_h.into()
-        };
-        // Определение посадки судна для следующего шага
-        let cb_v = {
-            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
-            let my_plane = HalfSpace::new(Vector3::y_axis());
-            let cb_local = cb - cg;
-            let cb_local = rotation.transform_point(&cb_local.into());
-            let cg_v_local = my_plane.project_local_point(&cb_local, false).point;
-            let cg_v = rotation.inverse_transform_point(&cg_v_local);
-
-            cg + cg_v.into()
-        };
-        let cb_m = {
-            // Через центр плавучести CG проводится вертикальная плоскость параллельная миделю
-            let my_plane = HalfSpace::new(Vector3::x_axis());
-            let cb_local = cb - cg;
-            let cb_local = rotation.transform_point(&cb_local.into());
-            let cb_m_local = my_plane.project_local_point(&cb_local, false).point;
-            let cb_m = rotation.inverse_transform_point(&cb_m_local);
-
-            cg + cb_m.into()
-        };
-        // проекция точки cg_m на вертикальную плоскость параллельную основной линии
-        let cg_m_h = {
-            // Через центр плавучести CG проводится вертикальная плоскость параллельная основной линии
-            let my_plane = HalfSpace::new(Vector3::y_axis());
-            let cg_m_local = cb_m - cg;
-            let cg_m_local = rotation.transform_point(&cg_m_local.into());
-            let cg_m_h_local = my_plane.project_local_point(&cg_m_local, false).point;
-            let cg_m_h = rotation.inverse_transform_point(&cg_m_h_local);
-
             cg + cg_m_h.into()
         };
         let d_v = cg_h.x() - cb_v.x();

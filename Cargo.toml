@@ -20,7 +20,7 @@ sal_3dlib_core = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", p
 sal_3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", package = "sal-3dlib", branch = "new_algorithm" }
 #
 # 3D Libs
-parry3d-f64 = "~0.25"
+parry3d-f64 = "~0.26"
 #
 # Time
 chrono = "~0.4"
@@ -41,7 +41,6 @@ dashmap = "~6.1"
 #
 # Math
 splines = "~5.0"
-nalgebra = "~0.34"
 #
 # Helpful macros for working with enums and strings
 strum = "~0.27"
