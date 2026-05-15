@@ -14,8 +14,6 @@ mod compartment_bound_cache;
 mod displacement_cache;
 mod compartment_cache;
 mod damaged_compartment_cache;
-mod windage_cache;
-mod bow_area_cache;
 mod hold_compartment_cache;
 mod hold_compartment_bound_cache;
 
@@ -26,8 +24,6 @@ pub(crate) use compartment_bound_cache::*;
 pub(crate) use displacement_cache::*;
 pub(crate) use compartment_cache::*;
 pub(crate) use damaged_compartment_cache::*;
-pub(crate) use windage_cache::*;
-pub(crate) use bow_area_cache::*;
 pub(crate) use hold_compartment_cache::*;
 pub(crate) use hold_compartment_bound_cache::*;
 

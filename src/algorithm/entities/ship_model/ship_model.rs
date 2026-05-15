@@ -572,7 +572,6 @@ fn opening(
     Ok(data.data())
 }
 
-
 #[cfg(test)]
 impl ShipModel {
     /// Создает "фейковую" модель судна для тестов физики

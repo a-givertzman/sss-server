@@ -1,4 +1,4 @@
-use crate::algorithm::entities::{cache::Cache, model_cached::read};
+use crate::algorithm::entities::{Cache, model_cached::read};
 use sal_core::{dbg::Dbg, error::Error};
 use std::path::PathBuf;
 
@@ -42,17 +42,6 @@ pub(crate) trait LocalCache {
 
     fn set_cache(&mut self, cache: Cache<f64>);
     ///
-    /// Sends exit signal to hawy calculations
-    fn exit(&self);
-    ///
-    /// Remove exit signal
-    fn clear_exit(&self);
-    ///
-    /// Builds and stores the cache dataset.
-    ///
-    /// This method spawns a worker thread internally and returns its handler.
-    fn calculate(&mut self) -> Vec<Error>;
-    ///
     /// Returns approximated values based on given set.
     fn get(&self, approx_vals: &[f64]) -> Result<Vec<f64>, Error> {
         let error = Error::new(self.dbg(), "get");
@@ -61,24 +50,6 @@ pub(crate) trait LocalCache {
             .as_ref()
             .ok_or(error.pass("no cache"))?
             .get(approx_vals))
-    }
-    /// Rebuilds a cache
-    /// - takes new model
-    /// - do calculations
-    /// - stores calculated table
-    /// - loads recalculated table
-    fn rebuild(&mut self) -> Result<(), Error> {
-        self.clear_exit();
-        let errors = self.calculate();
-        if !errors.is_empty() {
-            return Err(Error::new(self.dbg(), "rebuild").pass_with(
-                "calculate",
-                errors
-                    .iter()
-                    .fold(String::new(), |acc, err| acc + &format!(" error: {err}")),
-            ));
-        }
-        Ok(())
     }
     /// инициализация кэша заранее посчитанными данными
     fn init(&mut self) -> Result<(), Error> {

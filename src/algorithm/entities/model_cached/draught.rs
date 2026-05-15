@@ -1,4 +1,5 @@
-use nalgebra::Point3;
+use parry3d_f64::math::Vec3;
+
 ///
 /// Осадкт судна. Считаются из осадки на миделе и параметров судна
 pub struct Draught {
@@ -50,12 +51,12 @@ impl Draught {
         let tg_theta = theta_rad.tan();
         let cos_theta = theta_rad.cos();        
         let tg_phi = phi_rad.tan();
-        let draught = |point: Point3<f64>| {
+        let draught = |point: Vec3| {
             self.draught_mid + point.y * tg_theta + (point.x - self.midel_x) * tg_phi / cos_theta
         };
-        let bow = Point3::new(self.length_lbp, 0.0, -self.draught_mid);
-        let stern = Point3::new(0., 0.0, -self.draught_mid);
-        let mean = Point3::new(self.waterline_x, self.waterline_y, -self.draught_mid);
+        let bow = Vec3::new(self.length_lbp, 0.0, -self.draught_mid);
+        let stern = Vec3::new(0., 0.0, -self.draught_mid);
+        let mean = Vec3::new(self.waterline_x, self.waterline_y, -self.draught_mid);
         (draught(bow), draught(stern), draught(mean))
     }
 }

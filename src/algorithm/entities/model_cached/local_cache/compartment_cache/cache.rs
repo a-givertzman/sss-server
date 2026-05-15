@@ -1,26 +1,21 @@
 use crate::{
     algorithm::entities::{
         Bounds, Curve, ICurve, Position,
-        cache::Cache,
+        Cache,
         model_cached::{
-            CompartmentBoundCache, CompartmentCacheResult, DisplacementShape, get_from_level, get_from_volume, local_cache::LocalCache, save
+            CompartmentBoundCache, CompartmentCacheResult, get_from_level, get_from_volume, local_cache::LocalCache
         },
     },
-    kernel::types::{Arc, RwLock},
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::ThreadPool;
 use std::{
     path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, Ordering},
 };
 ///
 /// Pre-calculated cache for floating position algorithm.
 pub struct CompartmentCache {
     dbg: Dbg,
     cache_dir: PathBuf,
-    heel_steps: Vec<f64>,
-    trim_steps: Vec<f64>,
     level_step_qnt: usize,
     /// Максимальный объем отсека из БД (Нетто)
     volume_max: Option<f64>,
@@ -28,12 +23,8 @@ pub struct CompartmentCache {
     level_max: Option<f64>,
     /// коэффициент проницаемости
     coeff: Option<f64>,
-    /// Model representation used for cache calculation.
-    shape: Arc<RwLock<DisplacementShape>>,
     /// Cache read from `self.file_path`.
     cache: Option<Cache<f64>>,
-    thread_pool: Arc<ThreadPool>,
-    exit: Arc<AtomicBool>,
 }
 //
 //
@@ -44,19 +35,12 @@ impl CompartmentCache {
     /// * volume_max - полный объем из бд
     pub fn new(
         parent: &Dbg,
-        shape: Arc<RwLock<DisplacementShape>>,
         cache_dir: impl AsRef<Path>,
         compartment_id: String,
-        heel_steps: Vec<f64>,
-        trim_steps: Vec<f64>,
         level_step_qnt: usize,
-        thread_pool: Arc<ThreadPool>,
     ) -> Self {
         let dbg = Dbg::new(parent, format!("CompartmentCache_{compartment_id}"));
         Self {
-            shape,
-            heel_steps,
-            trim_steps,
             level_step_qnt,
             volume_max: None,
             level_max: None,
@@ -64,8 +48,6 @@ impl CompartmentCache {
             cache: None,
             cache_dir: cache_dir.as_ref().join(compartment_id),
             dbg,
-            thread_pool,
-            exit: Arc::new(AtomicBool::new(false)),
         }
     }
     /// Расчет [коэффициента проницаемости](https://github.com/a-givertzman/sss/blob/master/design/algorithm-simply/part02_mass/chapter04_volumeNetto.md)
@@ -309,26 +291,6 @@ impl CompartmentCache {
         })
     }    
     //
-    pub fn build_bounded(
-        &self,
-        bounds: Bounds,
-        level_step: f64,
-    ) -> Result<CompartmentBoundCache, Error> {
-        let volume_max = *self
-            .volume_max
-            .as_ref()
-            .ok_or(Error::new(self.dbg(), "build_bounded").err("no volume_max"))?;
-        Ok(CompartmentBoundCache::new(
-            &self.dbg,
-            self.shape.clone(),
-            volume_max,
-            self.cache_dir.clone().join("distr"),
-            level_step,
-            bounds,
-            Arc::clone(&self.thread_pool),
-        ))
-    }
-    //
     pub fn level_max(&self) -> Option<f64> {
         self.level_max
     }
@@ -340,44 +302,6 @@ impl CompartmentCache {
 //
 //
 impl LocalCache for CompartmentCache {
-    //
-    fn calculate(&mut self) -> Vec<Error> {
-        let error = Error::new(&self.dbg, "calculate");
-        let (data, mut errors) = super::build_cache::BuildCompartmentCache::new(
-            &self.dbg,
-            self.shape.clone(),
-            self.heel_steps.clone(),
-            self.trim_steps.clone(),
-            self.level_step_qnt,
-            Arc::clone(&self.thread_pool),
-            self.exit.clone(),
-        )
-        .build();
-        if !errors.is_empty() {
-            return errors;
-        }
-        let cache = if let Some(cache) = self.cache.take() {
-            cache
-        } else {
-            Cache::<f64>::new(&self.dbg)
-        };
-        if let Err(err) = cache.init(data.clone()) {
-            errors.push(error.pass_with("self.cache.get_mut", err));
-        }
-        self.set_cache(cache);
-        if let Err(err) = save(&self.dbg, &self.cache_path(), data) {
-            errors.push(error.pass_with("save data", err));
-        }
-        errors
-    }
-    //
-    fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst)
-    }
-    //
-    fn clear_exit(&self) {
-        self.exit.store(false, Ordering::SeqCst)
-    }
     //
     fn dbg(&self) -> &Dbg {
         &self.dbg

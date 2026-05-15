@@ -1,4 +1,3 @@
-mod cache;
 mod apparent_frequencies_test;
 mod stability_icing;
 mod strength_icing;
@@ -11,12 +10,9 @@ mod parametric_resonant_zone_test;
 mod period_excitement_test;
 mod strength_area;
 mod wetting;
-mod displacement_shape;
-mod area_shape;
 mod bound;
 mod bounds;
 mod draught;
-mod build_caches;
 mod strength;
 mod full;
 
