@@ -29,6 +29,8 @@ stl_io = "~0.10"
 #parry2d-f64 = { path = "../parry/crates/parry2d-f64/" } 
 parry3d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
 parry2d-f64 = { git = "https://github.com/KnstAnt/parry.git" }
+sal-3dlib = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", branch = "new_algorithm" }
+sal-3dlib-core = { git = "https://github.com/a-givertzman/rust-sal-3dlib.git", branch = "new_algorithm" }
 #
 # Time
 chrono = "~0.4"
