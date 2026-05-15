@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         Position,
-        cache::Cache,
+        Cache,
         model_cached::{get_from_level, local_cache::LocalCache},
     },
 };

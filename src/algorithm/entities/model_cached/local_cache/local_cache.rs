@@ -1,4 +1,4 @@
-use crate::algorithm::entities::{cache::Cache, model_cached::read};
+use crate::algorithm::entities::{Cache, model_cached::read};
 use sal_core::{dbg::Dbg, error::Error};
 use std::path::PathBuf;
 

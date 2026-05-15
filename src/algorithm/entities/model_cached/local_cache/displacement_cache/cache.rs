@@ -1,6 +1,6 @@
 use crate::algorithm::entities::{
     Position,
-    cache::Cache,
+    Cache,
     model_cached::{DisplacementCacheResult, get_from_volume, local_cache::LocalCache},
 };
 use sal_core::{dbg::Dbg, error::Error};

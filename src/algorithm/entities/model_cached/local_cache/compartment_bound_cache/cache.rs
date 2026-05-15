@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         Bounds, MultipleSingle,
-        cache::Cache,
+        Cache,
         model_cached::read,
     },
 };

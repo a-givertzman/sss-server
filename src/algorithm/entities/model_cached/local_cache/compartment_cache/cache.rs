@@ -1,7 +1,7 @@
 use crate::{
     algorithm::entities::{
         Bounds, Curve, ICurve, Position,
-        cache::Cache,
+        Cache,
         model_cached::{
             CompartmentBoundCache, CompartmentCacheResult, get_from_level, get_from_volume, local_cache::LocalCache
         },
