@@ -5,7 +5,6 @@ use sal_core::dbg::Dbg;
 use sal_core::error::Error;
 use std::path::PathBuf;
 use std::time::Duration;
-
 use crate::algorithm::entities::model_cached::shape::utils;
 use crate::algorithm::entities::model_cached::{Shape, compartment_center, load_stl, volume, write_stl};
 use crate::algorithm::entities::{Bound, Position};

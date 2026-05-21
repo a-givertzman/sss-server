@@ -1,12 +1,6 @@
 use std::path::PathBuf;
 use html_builder::{
-    Document,
-    colspan,
-    rowspan,
-    table,
-    th,
-    thead,
-    tr
+    Document, Translation, colspan, rowspan, table, th, thead, tr
 };
 use std::borrow::Cow;
 use nalgebra::{Const, OPoint};
@@ -116,20 +110,60 @@ impl RoomElementReportEval {
         style_path: &PathBuf,
         id_tank: usize, 
         name_tank: String, 
-        type_tank: String, 
+        type_tank: String,
     ) -> Document {
+        let translation = vec![
+            (
+                "Отчёт по элементам помещений",
+                "Room elements report",
+            ),
+            (
+                r#"Отчет "Элементы помещения""#,
+                r#"Report "Room elements""#,
+            ),
+            (
+                " Углы и координаты приведены в связанной с судном системе координат. \
+                Уровни отсчитываются по оси, проходящей через центр полного объема цистерны.",
+                " Angles and coordinates are given in the ship-bound coordinate system. \
+                Levels are measured along the axis passing through the centre of the tank's full volume.",
+            ),
+            ("Район расположения, шп.", "Location area, fr."),
+            ("Коэффициент проницаемости", "Permeability coefficient"),
+            ("Полный объем нетто [м³]", "Net full volume [m³]"),
+            ("Максимальный момент инерции IX [м⁴]", "Maximum moment of inertia IX [m⁴]"),
+            ("Крен [град]", "Heel [deg]"),
+            ("Дифферент [град]", "Trim [deg]"),
+            ("Уровень", "Level"),
+            ("Объём [м³]", "Volume [m³]"),
+            ("Координаты центра объёма", "Volume centre coordinates"),
+            ("Элементы свободной поверхности", "Free surface elements"),
+            ("от нижней точки помещения [м]", "from the lowest point of the room [m]"),
+            ("от ОП [м]", "from BP [m]"),
+            ("X [м]", "X [m]"),
+            ("Y [м]", "Y [m]"),
+            ("Z [м]", "Z [m]"),
+            ("Площадь [м²]", "Area [m²]"),
+            ("Координаты центра площади", "Area centre coordinates"),
+            ("Момент инерции", "Moment of inertia"),
+            ("IX [м⁴]", "IX [m⁴]"),
+            ("IY [м⁴]", "IY [m⁴]"),
+        ]
+        .into_iter()
+        .map(|(key, val)| (key.to_string(), val.to_string()));
         Document::new()
+        .localize(Translation::new(translation))
         .title("Отчёт по элементам помещений")
         .style(std::fs::read_to_string(style_path).expect("Error to read `style.css` file"))
         .header(|header| header
             .class("main-header")
             .h1(|el| el
                 .class("main-title")
-                .text(format!(r#"Отчет "Элементы помещения": {:?} {:?} {:?}"#, type_tank, id_tank, name_tank))
+                .text(r#"Отчет "Элементы помещения""#)
+                .text(format!(r#"": {:?} {:?} {:?}"#, type_tank, id_tank, name_tank))
             )
             .text(|el| el 
                 .text(
-                    " Углы и координаты приведены в связанной с судном системе координат. 
+                    " Углы и координаты приведены в связанной с судном системе координат. \
                     Уровни отсчитываются по оси, проходящей через центр полного объема цистерны."
                 )
             )
@@ -440,8 +474,8 @@ impl Eval<(), EvalResult> for RoomElementReportEval {
                         self.init_document(
                             &self.style,
                             id_tank, 
-                            name_tank, 
-                            type_tank, 
+                            name_tank,
+                            type_tank,
                         ), 
                         location_area, 
                         permeability_coefficient,
