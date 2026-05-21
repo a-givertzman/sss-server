@@ -17,6 +17,9 @@ api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = 
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
 #
+# HTML-builder
+html-builder = { git = "https://github.com/a-givertzman/html-builder", tag = "0.1.0" }
+#
 # 3D Libs
 obj = "~0.10"
 stl_io = "~0.10"

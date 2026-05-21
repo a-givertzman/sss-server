@@ -1,10 +1,21 @@
 use nalgebra::*;
-use obj::{Obj, ObjData};
-use parry3d_f64::shape::{TriMesh, TriMeshFlags};
+use obj::{
+    Obj, 
+    ObjData
+};
+use parry3d_f64::math::{
+    Isometry, 
+    Vector, 
+    Real
+};
+use parry3d_f64::shape::{
+    Shape, 
+    TriMesh, 
+    TriMeshFlags
+};
 use sal_core::error::Error;
 use std::io::Write;
 use std::path::PathBuf;
-
 use crate::algorithm::entities::Position;
 ///
 /// Load data from .obj file
@@ -113,4 +124,32 @@ pub fn properties(mesh: &TriMesh, density: f64) -> (f64, Position) {
 pub fn volume(mesh: &TriMesh) -> f64 {
     let inv_mass = parry3d_f64::shape::Shape::mass_properties(mesh, 1.).inv_mass;
     if inv_mass > 0. { 1. / inv_mass } else { 0. }
+}
+/// Поворот модели
+pub fn rotate(mesh: &TriMesh, angle_x: Real, angle_y: Real, angle_z: Real) -> TriMesh {
+    let mut tank_rotated = mesh.clone();
+    let aabb = tank_rotated.compute_local_aabb();
+    let center = aabb.center();
+    let rotation = UnitQuaternion::from_axis_angle(&Vector::x_axis(), angle_x) * 
+                   UnitQuaternion::from_axis_angle(&Vector::z_axis(), angle_z) * 
+                   UnitQuaternion::from_axis_angle(&Vector::y_axis(), angle_y);
+    let translation_to_origin = Isometry::translation(-center.x, -center.y, -center.z);
+    let translation_back = Isometry::translation(center.x, center.y, center.z);
+    let rotate_iso = Isometry::from_parts(Vector::zeros().into(), rotation);
+    let transform = translation_back * rotate_iso * translation_to_origin;
+    tank_rotated.transform_vertices(&transform);
+    tank_rotated
+}
+/// Площадь меша
+pub fn square(mesh: &TriMesh) -> f64 {
+    let vertices = mesh.vertices();
+    let indices = mesh.indices();
+    indices.iter().map(|tri| {
+        let v0 = vertices[tri[0] as usize];
+        let v1 = vertices[tri[1] as usize];
+        let v2 = vertices[tri[2] as usize];
+        let side1 = v1 - v0;
+        let side2 = v2 - v0;
+        0.5 * side1.cross(&side2).norm()
+    }).sum()
 }

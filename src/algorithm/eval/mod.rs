@@ -5,6 +5,7 @@ pub mod criterion;
 pub mod parameters;
 pub mod icing_coeff;
 pub mod icing_timber_bound;
+pub mod reports;
 pub mod icing_timber;
 pub mod wetting;
 pub mod unit_area;
@@ -13,6 +14,7 @@ pub mod zg;
 pub mod seakeeping;
 
 pub use icing_coeff::ctx::IcingCoeffCtx;
+pub use reports::room_element_report;
 pub use wetting::ctx::WettingCtx;
 pub use unit_area::ctx::UnitAreaCtx;
 pub use zg::ctx::ZgCtx;

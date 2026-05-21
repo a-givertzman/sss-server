@@ -1,0 +1,98 @@
+/* --- базовое --- */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+    color: #111;
+}
+
+main {
+    max-width: 1100px;
+    margin: 20px auto;
+}
+
+/* --- секции --- */
+section {
+    background: #fff;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+}
+
+/* --- заголовки --- */
+h1 {
+    font-size: 22px;
+    margin: 0;
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+/* --- таблица (главное) --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+/* ВСЯ сетка */
+table, th, td {
+    border: 1px solid #000;
+}
+
+/* ячейки */
+th, td {
+    padding: 6px 8px;
+}
+
+/* заголовок */
+thead th {
+    background: #f0f0f0;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* тело таблицы */
+tbody td {
+    text-align: right; /* числа вправо */
+}
+
+/* первый столбец (если текст) */
+tbody td:first-child {
+    text-align: center;
+}
+
+/* строки */
+tr {
+    height: 28px;
+}
+
+/* --- аккуратность для больших таблиц --- */
+
+/* фикс для длинных заголовков */
+th {
+    white-space: nowrap;
+}
+
+/* перенос если надо */
+td {
+    white-space: nowrap;
+}
+
+/* --- визуальные улучшения --- */
+
+/* лёгкий hover */
+tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* секции (цвета как у тебя были) */
+.section-1 { border-left: 4px solid #3b82f6; }
+.section-2 { border-left: 4px solid #10b981; }
+.section-3 { border-left: 4px solid #6366f1; }
+.section-4 { border-left: 4px solid #f59e0b; }
+.section-5 { border-left: 4px solid #8b5cf6; }
+.section-6 { border-left: 4px solid #ef4444; }

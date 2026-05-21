@@ -2,16 +2,9 @@ use super::context::Context;
 use crate::algorithm::{
     context::testing_ctx::TestingCtx,
     eval::{
-        criterion::*,
-        icing_timber::ctx::IcingTimberCtx,
-        icing_timber_bound::ctx::IcingTimberBoundCtx,
-        parameters::*,
-        seakeeping::eval::{
+        criterion::*, icing_timber::ctx::IcingTimberCtx, icing_timber_bound::ctx::IcingTimberBoundCtx, parameters::*, room_element_report::room_element_report_ctx::RoomElementReportCtx, seakeeping::eval::{
             apparent_frequencies::apparent_frequencies_ctx::ApparentFrequenciesCtx, hitting_zones::hitting_point_ctx::HittingZonesCtx, impacts_high_waves::impacts_high_waves_ctx::ImpactsHighWavesCtx, main_resonant_zone::main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_ctx::MainResonantZoneSpeedFilterCtx, move_broching_filter::move_broching_filter_ctx::MoveBrochingFilterCtx, parametric_resonant_zone::parametric_resonant_zone_ctx::ParametricResonantZoneCtx, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_ctx::ParametricResonantZoneSpeedFilterCtx, period_excitement::period_excitement_ctx::PeriodExcitementCtx, roll_frequency_eval::roll_frequency_ctx::RollingFrequencyCtx
-        },
-        stability::*,
-        strength::*,
-        *,
+        }, stability::*, strength::*, *
     },
     initial::initial_ctx::InitialCtx,
 };
@@ -720,5 +713,17 @@ impl ContextRead<DraftMarkCtx> for Context {
 impl ContextWrite<()> for Context {
     fn write(self, _: ()) -> Result<Self, Error> {
         Result::Ok(self)
+    }
+}
+//
+impl ContextWrite<RoomElementReportCtx> for Context {
+    fn write(mut self, value: RoomElementReportCtx) -> Result<Self, Error> {
+        self.room_element_report = Some(value);
+        Result::Ok(self)
+    }
+}
+impl ContextRead<RoomElementReportCtx> for Context {
+    fn read(&self) -> RoomElementReportCtx {
+        self.room_element_report.clone().unwrap()
     }
 }
