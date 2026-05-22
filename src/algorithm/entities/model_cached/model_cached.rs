@@ -1,8 +1,8 @@
 use super::{LocalCache, ModelCachedConf};
+use sal_3dlib_core::math::*;
 use crate::{
     algorithm::{
         entities::{
-            AddVec, Bounds, Moment, Position,
             model_cached::{
                 AreaResult, CompartmentBoundCache, CompartmentCache, DamagedCompartmentCache,
                 DisplacementBoundCache, DisplacementCache, DisplacementCacheResult, Draught,

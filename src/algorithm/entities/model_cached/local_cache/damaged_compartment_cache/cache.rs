@@ -1,10 +1,10 @@
 use crate::{
     algorithm::entities::{
-        Position,
         Cache,
         model_cached::{get_from_level, local_cache::LocalCache},
     },
 };
+use sal_3dlib_core::math::Position;
 use sal_core::{dbg::Dbg, error::Error};
 use std::{
     path::{Path, PathBuf},

@@ -1,7 +1,7 @@
 //! Промежуточные структуры для serde_json для парсинга данных
 //! Высота борта на носовом перпендикуляре
 //! относительно центра корпуса судна
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::Position;
 use super::{DataArray, PointData};
 /// Высота борта на носовом перпендикуляре судна относительно центра
 pub type BowBoardDataArray = DataArray<PointData>;

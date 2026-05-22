@@ -1,4 +1,3 @@
-use crate::algorithm::entities::{Curve, ICurve, SumAbove};
 use crate::algorithm::eval::strength::result::{IResults, Results};
 use crate::algorithm::eval::strength::{DynamicMassCtx, StrengthBalanceCtx};
 use crate::infrostructure::ApiClient;
@@ -6,11 +5,11 @@ use crate::kernel::types::Arc;
 use crate::{
     algorithm::{
         context::context_access::ContextReadRef,
-        entities::{MultipleSingle, SubVec},
     },
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, InitialCtx},
 };
+use sal_3dlib_core::math::*;
 use sal_core::{dbg::Dbg, error::Error};
 
 ///

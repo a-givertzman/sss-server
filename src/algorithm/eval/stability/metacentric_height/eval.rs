@@ -1,4 +1,3 @@
-use crate::algorithm::entities::math::liquid::*;
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::stability::{MetacentricHeightCtx, StabilityBalanceCtx};
 use crate::algorithm::eval::zg::Zg;
@@ -13,6 +12,7 @@ use crate::{
     kernel::types::{Arc, RwLock, eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{DeltaMH, FreeSurfaceMoment};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Диаграмма плеч статической и динамической остойчивости

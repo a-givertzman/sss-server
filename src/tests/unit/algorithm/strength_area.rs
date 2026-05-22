@@ -4,16 +4,13 @@ mod tests {
     use crate::algorithm::eval::strength::area::eval::AreaStrEval;
     use crate::prelude::ContextWrite;
     use crate::{
-        algorithm::{
-            entities::{Bound, Bounds},
-            eval::strength::AreaStrCtx, // Используем правильный контекст площадей
-        },
+        algorithm::eval::strength::AreaStrCtx, // Используем правильный контекст площадей
         kernel::Eval,
         prelude::{Context, InitialCtx},
         kernel::types::{Arc, RwLock, eval_result::EvalResult},
     };
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use sal_core::dbg::Dbg;
+    use sal_3dlib_core::math::Bounds;
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
 

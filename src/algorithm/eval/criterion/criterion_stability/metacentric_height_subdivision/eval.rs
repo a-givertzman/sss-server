@@ -1,6 +1,6 @@
 use crate::algorithm::eval::criterion::*;
 use crate::algorithm::eval::stability::*;
-use crate::algorithm::entities::{Curve, ICurve};
+use sal_3dlib_core::math::*;
 use crate::{
     algorithm::eval::{parameters::ParameterID, zg::Zg},
     kernel::{Eval, types::eval_result::EvalResult},

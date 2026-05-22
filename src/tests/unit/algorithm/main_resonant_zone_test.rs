@@ -1,6 +1,6 @@
 use crate::{
     algorithm::{
-        context::context_access::ContextRead, entities::Bounds, eval::{
+        context::context_access::ContextRead, eval::{
             parameters::ParameterID, 
             seakeeping::eval::main_resonant_zone::{
                 main_resonant_zone_ctx::MainResonantZoneCtx, 
@@ -11,6 +11,7 @@ use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextParamsWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{Bound, Bounds};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 #[cfg(test)]
 use std::{sync::Once, time::Duration};

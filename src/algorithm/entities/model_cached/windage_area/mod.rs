@@ -1,6 +1,5 @@
 use std::path::PathBuf;
-
-use crate::algorithm::entities::Bounds;
+use sal_3dlib_core::math::*;
 use sal_3dlib::WindageProfile;
 use sal_core::{dbg::Dbg, error::Error};
 ///

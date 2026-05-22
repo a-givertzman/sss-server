@@ -1,4 +1,4 @@
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::*;
 use crate::algorithm::entities::model_cached::DsoResult;
 use crate::algorithm::entities::ship_model::BalanceStabilityQuery;
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
@@ -9,7 +9,7 @@ use crate::kernel::Eval;
 use crate::kernel::types::Arc;
 use crate::prelude::{ContextParamsWrite, ContextReadRef, InitialCtx};
 use crate::{
-    algorithm::{context::context_access::ContextRead, entities::math::curve::*, eval::zg::Zg},
+    algorithm::{context::context_access::ContextRead, eval::zg::Zg},
     kernel::types::eval_result::EvalResult,
     prelude::ContextWrite,
 };

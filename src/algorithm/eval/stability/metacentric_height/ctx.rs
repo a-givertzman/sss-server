@@ -1,4 +1,4 @@
-use crate::algorithm::entities::DeltaMH;
+use sal_3dlib_core::math::*;
 
 /// Результаты расчета исправленной метацентрической высоты
 #[derive(Debug, Clone)]

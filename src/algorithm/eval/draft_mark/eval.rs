@@ -1,6 +1,7 @@
 use super::DraftMarkResult;
 use crate::algorithm::context::context_access::ContextParamsWrite;
-use crate::algorithm::entities::{Curve, Draught, ICurve};
+use sal_3dlib_core::math::*;
+use crate::algorithm::entities::draught::Draught;
 use crate::algorithm::eval::{DraftMarkCtx, parameters::ParameterID};
 use crate::{
     algorithm::context::context_access::ContextReadRef,

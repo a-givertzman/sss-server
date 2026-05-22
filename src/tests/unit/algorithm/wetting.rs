@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests {
+    use sal_3dlib_core::math::Bounds;
     use crate::algorithm::context::context_access::ContextRead;
     use crate::{
-        algorithm::{
-            entities::Bounds,
-            eval::{WettingCtx, wetting::eval::WettingEval},
-        },
+        algorithm::eval::{WettingCtx, wetting::eval::WettingEval},
         kernel::Eval,
         prelude::{Context, InitialCtx},
         kernel::types::eval_result::EvalResult,

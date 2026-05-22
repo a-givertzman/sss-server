@@ -1,4 +1,4 @@
-use crate::algorithm::entities::Draught;
+use crate::algorithm::entities::draught::Draught;
 use crate::algorithm::eval::criterion::*;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},

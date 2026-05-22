@@ -1,5 +1,4 @@
 use crate::algorithm::context::context_access::ContextReadRef;
-use crate::algorithm::entities::{Bound, Moment};
 use crate::algorithm::eval::parameters::ParameterID;
 use crate::algorithm::eval::wetting::ctx::WettingCtx;
 use crate::kernel::Eval;
@@ -8,6 +7,7 @@ use crate::{
     kernel::types::eval_result::EvalResult,
     prelude::{ContextWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{Bound, Moment};
 use sal_core::{dbg::Dbg, error::Error};
 
 ///

@@ -2,8 +2,8 @@ mod grain_moment;
 mod volume_max;
 pub mod ship_model;
 pub mod stability_result;
-
-use crate::algorithm::entities::{Bounds, Moment, data::loads::{AssignmentType, LiquidCargoType}};
+use sal_3dlib_core::math::*;
+use crate::algorithm::entities::data::loads::{AssignmentType, LiquidCargoType};
 
 ///
 /// Структура для ввода данных расчета баланса судна.

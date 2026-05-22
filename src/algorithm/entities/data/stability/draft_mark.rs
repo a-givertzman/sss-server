@@ -2,7 +2,7 @@
 //! Координаты отметок заглубления на корпусе судна
 //! относительно центра корпуса судна
 use std::collections::HashMap;
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::Position;
 use super::{DataArray, PointData};
 /// Координаты отметок заглубления на корпусе судна
 /// относительно центра

@@ -2,7 +2,6 @@ use crate::{
     algorithm::{
         context::context_access::ContextReadRef,
         entities::{
-            AddVec, Bound, Bounds,
             data::loads::{AssignmentType, UnitCargoType},
         },
         eval::{
@@ -13,7 +12,7 @@ use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextRead, ContextWrite, InitialCtx},
 };
-use core::f64;
+use sal_3dlib_core::math::*;
 use sal_core::{dbg::Dbg, error::Error};
 use std::collections::HashMap;
 

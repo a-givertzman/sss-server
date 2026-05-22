@@ -3,7 +3,8 @@ use std::collections::HashMap;
 
 use sal_core::error::Error;
 use serde::Deserialize;
-use crate::algorithm::entities::{Position, data::DataArray, ship_model::GaseousData};
+use sal_3dlib_core::math::Position;
+use crate::algorithm::entities::{data::DataArray, ship_model::GaseousData};
 use super::AssignmentType;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]

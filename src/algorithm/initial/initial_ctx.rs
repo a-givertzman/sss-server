@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use crate::algorithm::entities::Bounds;
+use sal_3dlib_core::math::Bounds;
+
 use crate::algorithm::entities::data::stability::ship_type::ShipType;
 use crate::algorithm::entities::data::strength::strength_limit::StrengthLimitDataArray;
 use crate::algorithm::entities::data::{loads::*, stability::{*, multipler_s::MultiplerSArray}, Ship, Voyage};

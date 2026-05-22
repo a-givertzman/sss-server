@@ -1,6 +1,5 @@
 use crate::algorithm::context::context_access::ContextReadRef;
 use crate::algorithm::entities::data::loads::UnitCargoType;
-use crate::algorithm::entities::{AddVec, Bound, Bounds};
 use crate::algorithm::eval::WettingCtx;
 use crate::algorithm::eval::strength::IcingStrCtx;
 use crate::algorithm::eval::strength::static_mass::ctx::StaticMassStrCtx;
@@ -9,6 +8,7 @@ use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{AddVec, Bound, Bounds};
 use sal_core::{dbg::Dbg, error::Error};
 
 ///

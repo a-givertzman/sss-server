@@ -1,5 +1,4 @@
 use crate::algorithm::context::context_access::ContextParamsRead;
-use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::stability::{MetacentricHeightCtx, RollingAmplitudeCtx, RollingPeriodCtx, StabilityBalanceCtx};
 use crate::algorithm::eval::zg::Zg;
 use crate::{
@@ -12,6 +11,7 @@ use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{ContextWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{Curve, ICurve};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет амплитуды качки судна

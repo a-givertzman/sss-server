@@ -1,10 +1,10 @@
 use crate::{
     algorithm::entities::{
-        Bounds, MultipleSingle,
         Cache,
         model_cached::read,
     },
 };
+use sal_3dlib_core::math::*;
 use sal_core::{dbg::Dbg, error::Error};
 use std::{
     path::PathBuf,

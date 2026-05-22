@@ -2,7 +2,7 @@ mod cache;
 
 pub(crate) use cache::*;
 
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::Position;
 
 /// Данные из кэша значений по отсекам
 #[derive(Debug)]

@@ -7,7 +7,7 @@ use crate::{
     prelude::*,
     kernel::{Eval, types::eval_result::EvalResult},
 };
-use crate::algorithm::entities::{ Curve, ICurve };
+use sal_3dlib_core::math::*;
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критерия ускорения 𝐾∗

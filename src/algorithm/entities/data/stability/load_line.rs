@@ -1,6 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных
 //! Координаты осадок судна относительно центра корпуса судна
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::Position;
 use super::{DataArray, PointData};
 /// Координаты осадок судна относительно центра
 pub type LoadLineDataArray = DataArray<PointData>;

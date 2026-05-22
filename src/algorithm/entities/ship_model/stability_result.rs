@@ -1,6 +1,6 @@
 use bincode::{Decode, Encode};
-
-use crate::algorithm::entities::{Position, data::loads::AssignmentType};
+use sal_3dlib_core::math::Position;
+use crate::algorithm::entities::{data::loads::AssignmentType};
 ///
 /// Структура для данных результата расчета баланса судна для остойчивости.
 /// Содержит массу судна, грузов и положение зерновых перегородок

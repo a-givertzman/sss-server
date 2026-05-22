@@ -1,6 +1,6 @@
 //! Результаты расчета диаграммы плеч статической и динамической остойчивости
 //
-use crate::algorithm::entities::math::curve::*;
+use sal_3dlib_core::math::{Curve, ICurve};
 use sal_core::error::Error;
 
 // Максимальный угол для расчета диаграммы, градусы

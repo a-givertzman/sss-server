@@ -1,9 +1,10 @@
 use crate::{
     algorithm::entities::{
-        Moment, model_cached::{CompartmentCache, CompartmentCacheResult, local_cache::LocalCache},
+        model_cached::{CompartmentCache, CompartmentCacheResult, local_cache::LocalCache},
     },
     kernel::types::{Arc, RwLock},
 };
+use sal_3dlib_core::math::*;
 use sal_core::{dbg::Dbg, error::Error};
 use std::sync::atomic::AtomicBool;
 

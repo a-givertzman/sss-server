@@ -1,5 +1,5 @@
 //! Промежуточные структуры для serde_json для парсинга данных судна
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::Position;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

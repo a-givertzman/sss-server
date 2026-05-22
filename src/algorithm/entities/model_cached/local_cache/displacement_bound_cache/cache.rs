@@ -1,4 +1,5 @@
-use crate::algorithm::entities::{Bounds, Cache, model_cached::read};
+use crate::algorithm::entities::{Cache, model_cached::read};
+use sal_3dlib_core::math::Bounds;
 use sal_core::{dbg::Dbg, error::Error};
 use std::{path::PathBuf, sync::OnceLock};
 ///

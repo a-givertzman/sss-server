@@ -1,6 +1,6 @@
 #[cfg(test)]
 use crate::algorithm::entities::ship_model::ship_model::ShipModel;
-use crate::algorithm::entities::{Bounds, Moment, Position};
+use sal_3dlib_core::math::*;
 use crate::algorithm::eval::icing_timber::ctx::IcingTimberCtx;
 use crate::algorithm::eval::stability::IcingStabCtx;
 use crate::algorithm::eval::stability::icing::eval::IcingStabEval;

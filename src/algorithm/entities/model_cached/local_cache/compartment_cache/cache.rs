@@ -1,12 +1,12 @@
 use crate::{
     algorithm::entities::{
-        Bounds, Curve, ICurve, Position,
         Cache,
         model_cached::{
             CompartmentBoundCache, CompartmentCacheResult, get_from_level, get_from_volume, local_cache::LocalCache
         },
     },
 };
+use sal_3dlib_core::math::*;
 use sal_core::{dbg::Dbg, error::Error};
 use std::{
     path::{Path, PathBuf},

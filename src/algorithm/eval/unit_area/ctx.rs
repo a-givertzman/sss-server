@@ -1,4 +1,4 @@
-use crate::algorithm::entities::Moment;
+use sal_3dlib_core::math::Moment;
 
 /// Площади поверхности грузов
 #[derive(Debug, Clone)]

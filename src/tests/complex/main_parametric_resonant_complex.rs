@@ -6,10 +6,11 @@ use crate::{
 mod main_parametric_resonant_complex {
     use crate::{
         algorithm::{
-            context::context_access::ContextRead, entities::{Bounds, data::Voyage}, eval::{parameters::ParameterID, seakeeping::eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::{main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_eval::MainResonantZoneEval}, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval}}
+            context::context_access::ContextRead, entities::data::Voyage, eval::{parameters::ParameterID, seakeeping::eval::{apparent_frequencies::apparent_frequencies_eval::ApparentFrequenciesEval, main_resonant_zone::{main_resonant_zone_ctx::MainResonantZoneCtx, main_resonant_zone_eval::MainResonantZoneEval}, main_resonant_zone_speed_filter::main_resonant_zone_speed_filter_eval::MainResonantZoneSpeedFilterEval, parametric_resonant_zone::parametric_resonant_zone_eval::ParametricResonantZoneEval, parametric_resonant_zone_speed_filter::parametric_resonant_zone_speed_filter_eval::ParametricResonantZoneSpeedFilterEval, period_excitement::period_excitement_eval::PeriodExcitementEval}}
         }, kernel::Eval, prelude::{Context, ContextParamsWrite, InitialCtx}, tests::complex::main_parametric_resonant_complex::MocEval
     };
     use debugging::session::debug_session::{DebugSession, LogLevel};
+use sal_3dlib_core::math::Bounds;
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     ///

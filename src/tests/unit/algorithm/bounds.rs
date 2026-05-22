@@ -2,9 +2,9 @@
 
 mod tests {
     use debugging::session::debug_session::{DebugSession, LogLevel};
+    use sal_3dlib_core::math::{Bound, Bounds};
     use std::time::Duration;
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::algorithm::entities::{Bound, Bounds};
 
     #[test]
     fn bounds_from_n() {

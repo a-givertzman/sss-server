@@ -1,11 +1,11 @@
-use crate::algorithm::entities::Moment;
 use crate::algorithm::eval::UnitAreaCtx;
 use crate::kernel::Eval;
 use crate::{
-    algorithm::{context::context_access::ContextReadRef, entities::Bound},
+    algorithm::{context::context_access::ContextReadRef},
     kernel::types::eval_result::EvalResult,
     prelude::{ContextWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{Bound, Moment};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Площади боковой поверхности грузов

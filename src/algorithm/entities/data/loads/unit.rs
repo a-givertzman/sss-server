@@ -1,8 +1,9 @@
 //! Промежуточные структуры для serde_json для парсинга данных груза
 use super::{AssignmentType, UnitCargoType};
-use crate::algorithm::entities::{Bound, Moment, Position, data::DataArray};
+use crate::algorithm::entities::data::DataArray;
 use sal_core::error::Error;
 use serde::Deserialize;
+use sal_3dlib_core::math::*;
 ///
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct LoadUnitData {

@@ -1,6 +1,4 @@
 //! Представление модели судна
-use crate::algorithm::entities::Curve;
-use crate::algorithm::entities::Position;
 use crate::algorithm::entities::data::PointDataArray;
 use crate::algorithm::entities::data::serde_parser::IFromJson;
 use crate::algorithm::entities::data::stability::horizontal_area::HStabArea;
@@ -16,7 +14,7 @@ use crate::algorithm::entities::ship_model::grain_moment::GrainMomentDataArray;
 use crate::algorithm::entities::ship_model::stability_result::BalanceStabilityResult;
 use crate::algorithm::entities::ship_model::volume_max::MaxDataArray;
 use crate::algorithm::entities::ship_model::*;
-use crate::algorithm::entities::{Bound, Bounds};
+use sal_3dlib_core::math::*;
 use crate::algorithm::eval::strength::StrengthBalanceCtx;
 use crate::infrostructure::ApiClient;
 use sal_core::dbg::Dbg;

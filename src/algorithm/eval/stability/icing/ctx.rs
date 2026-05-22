@@ -1,4 +1,4 @@
-use crate::algorithm::entities::Moment;
+use sal_3dlib_core::math::*;
 ///
 /// Учет обледенения судна
 #[derive(Debug, Clone, PartialEq)]

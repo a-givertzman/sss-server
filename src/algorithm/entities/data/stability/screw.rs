@@ -2,7 +2,7 @@
 //! Координаты и диаметр винтов
 //! относительно центра корпуса судна
 use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::Position;
+use sal_3dlib_core::math::Position;
 use super::DataArray;
 /// Координаты и диаметр винтов  относительно центра судна
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

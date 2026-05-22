@@ -1,11 +1,12 @@
 use crate::algorithm::eval::criterion::*;
 use crate::algorithm::eval::stability::*;
-use crate::algorithm::entities::math::curve::*;
 use crate::algorithm::eval::zg::Zg;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::*,
 };
+use sal_3dlib_core::math::Curve;
+use sal_3dlib_core::math::ICurve;
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// Расчет критерия максимум диаграммы статической остойчивости

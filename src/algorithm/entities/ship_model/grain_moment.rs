@@ -1,5 +1,6 @@
 //! Промежуточные структуры для serde_json для парсинга данных объемного кренящего момента для зерна
-use crate::algorithm::entities::{Curve, ICurve as _, data::DataArray};
+use crate::algorithm::entities::data::DataArray;
+use sal_3dlib_core::math::*;
 use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

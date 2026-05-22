@@ -1,7 +1,7 @@
 use crate::{
     algorithm::{
         context::context_access::ContextRead,
-        entities::{Bounds, data::Voyage},
+        entities::data::Voyage,
         eval::seakeeping::eval::period_excitement::{
             period_excitement_ctx::PeriodExcitementCtx,
             period_excitement_eval::PeriodExcitementEval,
@@ -10,6 +10,7 @@ use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
     prelude::{Context, ContextWrite, InitialCtx},
 };
+use sal_3dlib_core::math::{Bound, Bounds};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 #[cfg(test)]
 use std::{sync::Once, time::Duration};

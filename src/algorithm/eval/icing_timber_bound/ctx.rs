@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::algorithm::entities::Bound;
+use sal_3dlib_core::math::*;
 /// Тип обледенения горизонтальной площади палубного груза - леса
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IcingTimberType {

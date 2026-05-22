@@ -1,5 +1,5 @@
-use crate::algorithm::entities::{Moment, ship_model::{BulkData, GaseousData, LiquidData}};
-
+use crate::algorithm::entities::{ ship_model::{BulkData, GaseousData, LiquidData}};
+use sal_3dlib_core::math::*;
 ///
 /// Общая структура для ввода данных. Содержит все данные
 /// для расчетов.

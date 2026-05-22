@@ -1,6 +1,6 @@
 use crate::algorithm::context::context_access::ContextReadRef;
-use crate::algorithm::entities::Draught;
 use crate::algorithm::eval::criterion::*;
+use crate::algorithm::entities::draught::Draught;
 use crate::prelude::InitialCtx;
 use crate::{
     kernel::{Eval, types::eval_result::EvalResult},
