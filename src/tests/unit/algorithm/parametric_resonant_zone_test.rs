@@ -56,7 +56,8 @@ fn parametric_resonant_zone() {
                 Bounds::from_min_max(0., 100., 20).unwrap(),
             )),
         };
-        ctx.ctx.write_params(ParameterID::RollPeriod, 1./roll_frequency);
+        let pi = std::f64::consts::PI;
+        ctx.ctx.write_params(ParameterID::RollPeriod, 2.0 * pi/roll_frequency);
         let result = ParametricResonantZoneEval::new("parametric_resonant_zone", ctx).eval(());
         match result {
             Ok(ctx) => {

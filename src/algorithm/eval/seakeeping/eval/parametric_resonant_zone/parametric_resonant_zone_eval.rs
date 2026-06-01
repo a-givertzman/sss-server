@@ -35,7 +35,8 @@ impl Eval<(), EvalResult> for ParametricResonantZoneEval {
     fn eval(&self, _: ()) -> EvalResult {
         match self.ctx.eval(()) {
             Ok(ctx) => {
-                let roll_frequency = ctx.read_params(crate::algorithm::eval::parameters::ParameterID::RollPeriod);
+                let pi = std::f64::consts::PI;
+                let roll_frequency = 2.0 * pi / ctx.read_params(crate::algorithm::eval::parameters::ParameterID::RollPeriod);
                 let left_side = 1.9 * roll_frequency;
                 let right_side = 2.1 * roll_frequency;
                 let result = ParametricResonantZoneCtx {
