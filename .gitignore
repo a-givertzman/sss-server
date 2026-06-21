@@ -34,4 +34,5 @@ desktop.ini
 # too heavy
 assets/model/sofia/additionals/*
 src/algorithm/entities/model_cached/test/sofia/*
+src\tests\unit\algorithm\reports\test_files\SURF_Sofiya.stl
 
